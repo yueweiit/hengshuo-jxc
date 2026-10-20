@@ -1,0 +1,41 @@
+server:
+  address: ${JXC_BIND_ADDRESS:127.0.0.1}
+  port: ${JXC_PORT:8080}
+spring:
+  application:
+    name: hengshuo-jxc
+  datasource:
+    url: ${JXC_DB_URL:jdbc:postgresql://127.0.0.1:55438/jxc}
+    username: ${JXC_DB_USER:jxc_app}
+    password: ${JXC_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 12
+      connection-timeout: 5000
+      data-source-properties:
+        options: "-c statement_timeout=15000 -c lock_timeout=5000 -c idle_in_transaction_session_timeout=30000"
+  flyway:
+    user: ${JXC_MIGRATION_USER:jxc_owner}
+    password: ${JXC_MIGRATION_PASSWORD:}
+    placeholders:
+      runtimeRole: ${JXC_DB_USER:jxc_app}
+  jackson:
+    deserialization:
+      use-big-decimal-for-floats: true
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 2MB
+jxc:
+  storage:
+    endpoint: ${JXC_STORAGE_ENDPOINT:}
+    access-key: ${JXC_STORAGE_ACCESS_KEY:}
+    secret-key: ${JXC_STORAGE_SECRET_KEY:}
+    bucket: ${JXC_STORAGE_BUCKET:}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

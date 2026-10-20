@@ -1,0 +1,63 @@
+# Dedicated JXC infrastructure only. Never attach this to an existing unrelated cluster or volume.
+name: hengshuo-infrastructure
+services:
+  postgres:
+    image: ${JXC_POSTGRES_IMAGE:?Set reviewed target PostgreSQL 16 full imageId or repository@sha256 digest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${JXC_EXPECT_DATABASE:?Set exact dedicated database}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin
+    secrets: [postgres_admin]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - type: bind
+        source: ${JXC_WAL_ARCHIVE_DIR:?Set independently mounted archive path}
+        target: /archive
+      - ./archive-wal.sh:/opt/jxc/archive-wal.sh:ro
+    command: [postgres, -c, wal_level=replica, -c, archive_mode=on, -c, "archive_command=/opt/jxc/archive-wal.sh %p %f", -c, archive_timeout=60s, -c, max_wal_senders=5]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging: {driver: json-file, options: {max-size: "20m", max-file: "5"}}
+    networks: [backend]
+  objects:
+    image: ${JXC_OBJECT_IMAGE:?Set reviewed target SeaweedFS full imageId or repository@sha256 digest}
+    platform: linux/amd64
+    user: "1000:1000"
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:rw,nosuid,noexec,size=64m,uid=1000,gid=1000,mode=0700"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    command:
+      - mini
+      - -dir=/data
+      - -ip=127.0.0.1
+      - -ip.bind=0.0.0.0
+      - -s3.port=9000
+      - -admin.ui=false
+      - -master.telemetry=false
+      - -webdav=false
+      - -filer.tusBasePath=
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -s3.iam=false
+      - -s3.autoCreateBucket=false
+      - -s3.allowDeleteBucketNotEmpty=false
+      - -s3.config=/run/secrets/object_s3_config
+    secrets: [object_s3_config]
+    volumes: [object_data:/data]
+    logging: {driver: json-file, options: {max-size: "20m", max-file: "5"}}
+    networks: [backend]
+volumes:
+  postgres_data: {external: true, name: "${JXC_PG_VOLUME:?Set explicitly created persistent PostgreSQL volume}"}
+  object_data: {external: true, name: "${JXC_OBJECT_VOLUME:?Set explicitly created persistent object volume}"}
+networks:
+  backend: {external: true, name: "${JXC_BACKEND_NETWORK:?Set dedicated application network}"}
+secrets:
+  postgres_admin: {file: "${JXC_SECRET_DIR:?Set private secret directory}/postgres_admin"}
+  object_s3_config: {file: "${JXC_SECRET_DIR:?Set private secret directory}/object_s3_runtime.json"}

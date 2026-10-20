@@ -1,0 +1,2111 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-20T00:52:10.322621+00:00",
+  "backendRuntimeSourcesMatchVerifiedBuildInputs": true,
+  "backendRuntimeSourceFileCount": 270,
+  "frontendExportInputFileCount": 638,
+  "frontendArtifactFileCount": 184,
+  "applicationJarSha256": "061a0faa2b84e03b795a21e67cdc1eeb0ed2b7c6ccacb7001b2eaba7ea681b9c",
+  "frontendDistManifestSha256": "c9e8c3f1b59ec65a4845c35dc2dd98698c7b996846f87926704a874edf726c92",
+  "frontendDistCanonicalSha256": "c9e8c3f1b59ec65a4845c35dc2dd98698c7b996846f87926704a874edf726c92",
+  "frontendSourceSha256": "398ed09f24cae1e780a50c26022914924d6f9e449c3ec0e85f11a7b284fc9fbd",
+  "backendVerifiedSourceManifestSha256": "fb6b8897159783f28fde4f62a961e317a6ab4ec95d040903c41a6e00f87b4a20",
+  "liveJarBytesMatch": true,
+  "liveFrontendBytesMatch": true,
+  "ready": true,
+  "verificationType": "Backend deployed artifact byte equality plus frozen runtime source binding; frontend rebuilt from the public candidate and every184 output file equals deployed bytes.",
+  "reproducibleBuildClaimed": false,
+  "knownTestOnlyDifference": "The PostgreSQL test image identifier is pinned to the actual verified amd64 image only in the prior exported test fixture; all production sources and descriptors match.",
+  "productionHostDetailsIncluded": false,
+  "productionBusinessDataIncluded": false,
+  "credentialsIncluded": false,
+  "sourceBindingMethod": "Current runtime sources and complete retained secondary export were compared to the build-time verified source manifest. The original backend execution directory is now partial, so no complete reproducible rebuild is claimed.",
+  "checkedAtClientTime": "2026-10-20T08:52:10.322621+08:00",
+  "publicationScope": {
+    "runtimeSourceChanges": false,
+    "databaseMigrationChanges": false,
+    "privateHistoryPublished": false,
+    "productionBusinessDataPublished": false,
+    "changes": "Public documentation, generic environment templates, ignored private outputs, an unexecuted acceptance template, and one verification-report sentence only."
+  },
+  "note": "Detailed production receipts remain private. Previously executed source tests and this publication check are separate evidence.",
+  "publicationVerifiedAtClientTime": "2026-10-20T09:04:55.018366+08:00",
+  "frontendWorkspaceInputsMatchFrozenExportBeforePublicDocumentationSanitization": true,
+  "reproducibleBuildLimitation": "No fresh backend rebuild was performed. Documentation and environment-template generalization are intentional publication-only differences; runtime Java/Vue/SQL/POM inputs are unchanged.",
+  "publicationValidation": {
+    "frontendTests": {
+      "tests": 308,
+      "pass": 308,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "frontendBuildExitCode": 0,
+    "contractsCheckExitCode": 0,
+    "frontendRebuiltFileCount": 184,
+    "frontendRebuiltBytesMatchLive": true,
+    "operationsTestsPassed": 127,
+    "operationsTestsSkipped": 9,
+    "operationsFailures": 0,
+    "skippedBoundary": "Nine optional full database/object recovery safety tests require their explicit isolated live-test configuration and were not rerun for publication. Existing actual deployed-backend535PG+7pure results remain separate historical evidence.",
+    "newBusinessTests": 0,
+    "unexecutedAcceptanceTemplateCases": 38,
+    "unexecutedTemplateCountryCaseCombinations": 50,
+    "gitleaksVersion": "8.30.1",
+    "publicTreeSecretFindings": 0,
+    "knownOperatorCredentialsFound": false,
+    "scannerException": "Only a fixed synthetic attachment object path in a TemporaryDirectory recovery fixture; exact rule, file and value. Same-file synthetic GitHub token detection verified."
+  },
+  "backendPublishedRuntimeFiles": [
+    {
+      "path": "jxc-server/jxc-app/pom.xml",
+      "sha256": "85da3f03ec662255c4a71adad2192d161acd9d6ac3c9dea5f9f08feb68a5890d"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/JxcApplication.java",
+      "sha256": "a46349144521b48cc1f6b729476e90716eb94eeabe6449ecae39af54585e2b1f"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/RuntimeRoleVerifier.java",
+      "sha256": "807be2770ce94400b33b8d5ccd8d88221e9c94cffed2a2e16c7c36d3a6e1e74a"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/bootstrap/BootstrapCommand.java",
+      "sha256": "cb67d93bed578f2433eef69a3214e8f77445506481a37382ea3f3ff650cef472"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/bootstrap/BootstrapService.java",
+      "sha256": "2e4782539ffb06160581fd25f4bd688438bb417b29f46f4d3e938fe26466e2a3"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/migration/MigrationMain.java",
+      "sha256": "6933cd5b223d19a578f94afa959f5c5b6910e2c506ff0603e666e7ac4c5e8d5d"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/ops/HealthcheckMain.java",
+      "sha256": "e736ae9999f4f8ed38f327731d2ea4820e3e3075f03a4c8ce0e6e6c90b4aea21"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/ops/ProductionCapabilitiesHealthIndicator.java",
+      "sha256": "00d88b728fb30d4651dca2ee684ec6f7f7918bb15cdc2378290f23f768688847"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/java/com/hs/jxc/ops/ProductionIdentityVerifier.java",
+      "sha256": "6274983a1712d7e136eb995637fc8226d718220f77be63b95e60f72fd4b76d13"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/application-production.yml",
+      "sha256": "09610d0e4632fd588218cbc8576614384273265dc0324324f3be1815cbe728f8"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/application.yml",
+      "sha256": "de3318cebbf26af47ed54d9fa26e7fc841d9f55937032849b73a75a136850b26"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V001__security_and_master.sql",
+      "sha256": "8305ca809bd08695060803a3f36d3164c164e3bb893551b2824773993010af62"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V002__period_event_idempotency.sql",
+      "sha256": "77833bc7dd3bfb07ac78a992656e6217f0c7eac52936472587ebdfb1a89cebbe"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V003_1__masters_inventory_cost_sources.sql",
+      "sha256": "935641791f52fb33c159c5d4c47dd6184780f84b9f4213a7f9f94efbde3108f3"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V003_2__purchase_logistics.sql",
+      "sha256": "0e327f803c241e6581a1ea58ff50ea609de0d1873306fa8da50f0bf14994f00b"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V003_3__sales_receivables.sql",
+      "sha256": "8b1f797a2003287670acd10020f91cbf3bf62d2135b96905ecd22e4f3cf553dc"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V004_1__purchase_source_integrity.sql",
+      "sha256": "db760cbcf5055793cb74b5a84ad27bb71d323cc3876fe1298ce8e4a9522f696a"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V004__payables_returns.sql",
+      "sha256": "668b652137256ab6e70c327347333b771d4f3ca7523bb5fe71029977fc2bbe1e"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V005__cost_valuation.sql",
+      "sha256": "5cad63aac26eb989e0206879a1aac3e7d62c1ec5c66bb6fdc32d8f0d7276fd68"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V006_1__accounting_mapping.sql",
+      "sha256": "28dd0ae477d677eea693b10ad7c4c3a469b6295cd0fdc1bbcda2b4255e3d3ccf"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V006_2__financial_reference_configuration.sql",
+      "sha256": "4d3835c31021113ad8e4cad51078bd0e3b37acae3ce9ef76ec2d696cd7ad8efa"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V006__ledger_vouchers.sql",
+      "sha256": "098a873bb4e9710e31d458f03c642350a392b7f59dacc06bd59ed33cea0f0981"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V007_1__financial_reports.sql",
+      "sha256": "f71e51ba10597ac72ab39cf0258ea409dabadf21733b1f12c60764ca2dddcfb7"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V007_2__workbench_exports.sql",
+      "sha256": "5b1a4ce284b0be17bea75deda331d657dd126c65366124b71aef15dd2e7060a6"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V007_3__financial_event_guard_compatibility.sql",
+      "sha256": "e043cf89e7dce7e1f4ed229ea36e7f14ce85f832191103ede3fc780fb9a840da"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V007__period_closing.sql",
+      "sha256": "2f4a6fab3579992c51280baf6f30a451ce4ac054c54da3bb5994bebcaa8635e5"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V008__operational_write_freeze.sql",
+      "sha256": "a8540d6ca900f59b7c9327010162392ae5e607e90a72cd813e46944def1f3d50"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V009_1__country_templates_and_numbering.sql",
+      "sha256": "b20e3cba7dd88cf97846122d0eab712df6242939b7fcab1eb7c072cecd8fd255"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V009_2__watchers_and_workflow_delegation.sql",
+      "sha256": "dc570c351ee6487b8cc290ec48885bd74e35449a2a41e54689ca78c0b1693423"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V009_3__country_trade_lifecycle.sql",
+      "sha256": "86890bab75b5780e2ba310b3aa342e870a63b9a1936301d5f80a98b9b2922327"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V010_1__job_execution_intents.sql",
+      "sha256": "f25bd911d1264937a17c9d68f39ec131024f9e8df25a9f11851d9ba7c7c0b9c1"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V010_2__native_financial_openings.sql",
+      "sha256": "405fcc8db56a246c5c2e0445bf2df1126ac9a0c0d79083cf2a762f4169d6e118"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V010_3__payable_recognition_rules.sql",
+      "sha256": "bf22410c98574e3eea57c3ded203776156d033f7f0fee35b7d6e62dcde45090d"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V010_4__worker_runtime.sql",
+      "sha256": "4afcad5bb9c09d16de9e3b9a350bbef5031528d06902d73b8034c7f4cca2f9e8"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V010_5__opening_subledger_source_proof.sql",
+      "sha256": "890ee63efdaa13e2cccc8df938d9f99513918c60089ef15f04a41ba9e36d504e"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V011_1__unified_import.sql",
+      "sha256": "9330e42f1254ec664968d9a1042e687eb3cab25baaa3e116296ee3aabc071248"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V011_2__inventory_closure.sql",
+      "sha256": "dbe6939dff8e5636e782ea41008af6602e0f156ddede47a63eaf8a407fa08036"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V011_3__receivable_openings.sql",
+      "sha256": "f9bd9c998f514dd467fdc0bff9d8eb8d1d176fa99f56c3a2616b24ec0cb3c126"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V011_4__purchase_transit_openings.sql",
+      "sha256": "e2c4e0e38f96d072daac06176ed9943360b8934b08d51b958de21c2917c3c226"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V011_5__immutable_import_attempts.sql",
+      "sha256": "6ef5101ff6728ac9d5a76fb55562fa4666b07f8e00942b68573222b406a60d78"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V011_6__replenishment_source_foreign_keys.sql",
+      "sha256": "15f99543d1dfa08eba974d05bcdffd0f6935ec7db3f06659537fa88ec534b3e0"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V011_7__opening_purchase_quantity_boundary.sql",
+      "sha256": "c6d1e385d7fdf64a7a64349aea9db7fe1a52043d58e6381031960f2491b3226a"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V012_1__master_dictionary.sql",
+      "sha256": "333e3a96e8d2178019892ec4af29a56024a11f9edf9522ef940309c8c7669b42"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V012_2__report_template_source.sql",
+      "sha256": "17ac009b021246842c3cc803c56fa101079571c034172673c3601b2ad906cc0a"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_1__country_mutation_lifecycle.sql",
+      "sha256": "3d5c94207d16ec019e10f938c6d025112d7bbb1b55fb4f1ebb1a7a4aaf9696e0"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_2__deferred_opening_lifecycle_proof.sql",
+      "sha256": "e285138b3f123a5f258ba168825bdbbaf82d1c839b33b70e2255f6339bb3dedb"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_3__country_template_snapshot_freeze.sql",
+      "sha256": "872a07a550adfa76031884c625c8b105cf9e21abee3da8ad4986dad45833d337"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_4__native_opening_cutoff_proof.sql",
+      "sha256": "73c8432da7ebd28d7f339ae2773e1668ae2cd901c874aacf58eb8b3137906f21"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_5__native_opening_supply_periods.sql",
+      "sha256": "e9f25e5b58e736d3e49f5497361032c018658df43d94a917c45b08edb7dff734"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_6__opening_container_continuation.sql",
+      "sha256": "47ec39b249dcf2a23e910942343b6d9e57b5a8ef637870b19c3d68dd5ebe06dd"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_7__shipment_measurement_and_receipt_confirmation.sql",
+      "sha256": "e17c1a12fe7fcb7802884103262bf7fa19e29c2fa943b7d3aae8abe53d1568e4"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_8__zero_posting_event_interpretation.sql",
+      "sha256": "dc9b805e8c4e44f3f07e13fe4eecabc9fd3d2c8244aeac77d51acc51528de89a"
+    },
+    {
+      "path": "jxc-server/jxc-app/src/main/resources/db/migration/V013_9__confirmed_bill_cost_assignment.sql",
+      "sha256": "499c8e2b3b07671334717949b34cd7a47063907e6ff8360e51ab09764bd274b7"
+    },
+    {
+      "path": "jxc-server/jxc-common/pom.xml",
+      "sha256": "623a2f7b853ddcee64de6e5b0bd87c30a44ec7603c8f97fdf978100f4d70528a"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/api/ApiEnvelope.java",
+      "sha256": "a6abc669ea42b4d7bd0f6cf220d14bf8a9718c211ed4bec038132d479321bbc7"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/api/ApiException.java",
+      "sha256": "cbcf347978b1db751aa47f87425e4d321ae2ac3648cfff23a0fd0179d8eaee70"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/api/ApiExceptionAdvice.java",
+      "sha256": "2c695038794dfc837cf0cae72ee948380830d3c7ad68e00cad33359314ff14f2"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/api/Digests.java",
+      "sha256": "c01c81faf45e72692559b1843b45fb7ed889de7bf1eb76ed322efed444bef213"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/api/Inputs.java",
+      "sha256": "e16b381bef03b0a48694bf55aa0c24022ef4f3375153062d38d5402a88cd147a"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/api/JsonCodec.java",
+      "sha256": "7be24920a50d8902955610fe8611acfd824292de00504badb6bca7998b1bd8a4"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/audit/AuditWriter.java",
+      "sha256": "f70742e488b8f0bb0d2820e89c653ac3ffdc3060648aab93c6f070ae7d1147d1"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/context/RequestContext.java",
+      "sha256": "33de7c3f858ab93c63a55413fd29bb0b8bd59a1eb83c6a5146ac392cdd8763ef"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/context/RequestContextHolder.java",
+      "sha256": "7b3f802d85e70ffcc280695a0903b4bcbb3fc344821a4fdd25fa3435f76a3b8b"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/db/BookGate.java",
+      "sha256": "5e32fcf43e340270b33b2a2a1254800afe72ccac120763ec8cacfe7ee4677ad1"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/db/DbContext.java",
+      "sha256": "d931eb0c048ee2252f2dad19c0cb2f3e8404a9b19e7511cb8086ee569d9b622f"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/db/DbRows.java",
+      "sha256": "2bf0e422885f7982576c3a56d2518572f2367533eb6e9cb498d0b97f77f1c623"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/event/OutboxPublisher.java",
+      "sha256": "d07f357e964e8d1122413071d7698b7572894e6cbb12466c8895db58d2c1567b"
+    },
+    {
+      "path": "jxc-server/jxc-common/src/main/java/com/hs/jxc/common/idempotency/IdempotencyExecutor.java",
+      "sha256": "66932a1ecd5be52a2040b6ea0f04b631e0430796f7c84bdb85b9193da10347c8"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap-api/pom.xml",
+      "sha256": "2bbb8f2600fc1414c71cedaa492d1f9bfa34c21f6bf825eb90c40b516c719509"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap-api/src/main/java/com/hs/jxc/ap/api/CostPayableBasisApi.java",
+      "sha256": "19b9811bf7249eaab1b93cdb48f06fcd103ce685304f250d66a54528752b9938"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap-api/src/main/java/com/hs/jxc/ap/api/CreditNoteApi.java",
+      "sha256": "b498a6e4dd3db55d548e0aff300d4642c3cc5f7aede7bee46d4b800dabb89346"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap-api/src/main/java/com/hs/jxc/ap/api/SourceUsageApi.java",
+      "sha256": "d1c9cb3e2edaa69847d402263476074a4c821f25832da53b09af76253cd5dea6"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/pom.xml",
+      "sha256": "f7ffe01cfd2f6bff06f1694ee66069032fc733c83960981c772e4a419344116e"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/ApOpeningImportHandler.java",
+      "sha256": "1e4622de2a4d258d359ba562caa09c6a087a97d458d56947ca6e5d093387a613"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/ApStatementJobHandler.java",
+      "sha256": "4f3605e3c3cfeb2212b91642376d6efe95e5fb1a345d5431f364fc5e15aa5de4"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/CostPayableBasisController.java",
+      "sha256": "3dfcf3c6547eecc08516e614647200caf46953b283466f1058dc199dcc2bf38b"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/CostPayableBasisService.java",
+      "sha256": "b48e6b3f0db8b6b0c30baf0d149f9db363cf8cb6e24e42630ba8049be0a05641"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayableRecognitionController.java",
+      "sha256": "54441651f1ec572ced88099a920ecb3941500629567898d55f038d00bb299eed"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayableRecognitionService.java",
+      "sha256": "73f387cba54fd569835eb349b033555861383b5abb212902e4e0409b63f4c164"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "sha256": "cdb15a6a67d6b52da7b3cf5f76007f39135c055e968f24454f359e1f99075d8f"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesFinancialSources.java",
+      "sha256": "6d40c333e2e5cee2096e47bf70b5444f1056e43d9a5967df0a2bf72a50e8eb05"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesService.java",
+      "sha256": "7d4461ac2f4e565316d2986f59afc4cdbdb69e191dfb9009f72556ccbab4269b"
+    },
+    {
+      "path": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/SourceUsageService.java",
+      "sha256": "3c021317fb74ab0e4e554cf95179270770db8b15acf6f98089e8f2311bb7d83e"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar-api/pom.xml",
+      "sha256": "f12cbdc87c8c8cc6ae28a3b6c1f364c650afa4939e2fd19411d2901acdd8f911"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar-api/src/main/java/com/hs/jxc/ar/api/ArReturnApi.java",
+      "sha256": "c886f3bd3d5ce2ea25637935379f2bdfe7dc974b0115da69380c34cf77958775"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar-api/src/main/java/com/hs/jxc/ar/api/ArSalesApi.java",
+      "sha256": "db09fce160ebfd1f9b42b582ef927d1876f0b511a1c3d80105990898e0a55b6e"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar/pom.xml",
+      "sha256": "d4daa9b5dfe0d0ca2c0704f32246ebbe23a4fc2b5c22828a3a7afea78f72dad0"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "sha256": "e291f8a49d7538f2cdaf68eac815320df2ea58dba461832d193823bef9eb5811"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesFinancialSources.java",
+      "sha256": "7ae4a3aabbacf8f1ca37d5689128962c6471273dad9862e72325a0d187d622f5"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesImportHandler.java",
+      "sha256": "6d9a174efb502c866eca7a2e8ae176f7e4d24dbf02de5a0ffe576a9f04b0bda2"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesService.java",
+      "sha256": "3a2134d54c93fe492fdd8cc3d478583ffb4412d8b188b6ba33b846be0bd35894"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesStatementExport.java",
+      "sha256": "0a28328402ba48e2b503ce45cce5f20c09dcbf5a508ad35c4ae498fdc1600ec0"
+    },
+    {
+      "path": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesWorkItems.java",
+      "sha256": "8e740ff37a474b932e38503a118418ac4c72205830299f502375ab7346999090"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst-api/pom.xml",
+      "sha256": "771e840eab86a24fb026799a138f9bca8844f8c0c09d64678a01e2401207101c"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst-api/src/main/java/com/hs/jxc/cst/api/CostApi.java",
+      "sha256": "825e21a9727efffb1735d7eeecd091f4285c0611e8f69591d0696f361235763f"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst-api/src/main/java/com/hs/jxc/cst/api/CostPurchaseReference.java",
+      "sha256": "1713822bb10d9b3b0769a5e5855abdbebe6a437786cb66e63dc7fa6a88a54b10"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst-api/src/main/java/com/hs/jxc/cst/api/FeeCostReconciler.java",
+      "sha256": "98ec4c76e15c3e154f00f41b9af733208ac8d9ac2cee1057761c80da30090f8f"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst-api/src/main/java/com/hs/jxc/cst/api/ProfitSourceProvider.java",
+      "sha256": "56cbf7349b6609fde69bf35254442a72975af720ffbcd5fe54680eef0f4d1458"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst-api/src/main/java/com/hs/jxc/cst/api/ReturnCostReconciler.java",
+      "sha256": "b185cb1d862bce989c96c7588e80376c6bbfe24695a114165aaaae03ef73edb8"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst-api/src/main/java/com/hs/jxc/cst/api/TransferCostReconciler.java",
+      "sha256": "c7c18e77b96f79750af30a9c4d9ce95845b419118e86a1ad50b715eab9b1845e"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/pom.xml",
+      "sha256": "134082e8e9f34da1653dcd101378a6df168e6258d94c1d0ecb84874691762852"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostFactsController.java",
+      "sha256": "b29634b8ac2f742b8617e5b502a6d536396d26cdf8530a9cd783f84c90195a04"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "sha256": "3e83c38605111f5e8cd965cd4b1554425036981141c0c6e80dcdfe02a1e3cd3a"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java",
+      "sha256": "029da79d8e97cdb268dd9af2cdb63b379e89b58b1e9b7401a1c11413e6af130d"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitService.java",
+      "sha256": "265143863eae4422b6ef38816013bbf11e5d4ff7d3785c0b82f1d159d38fe694"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/service/CostInventoryAccountingService.java",
+      "sha256": "c40a97669d13d707944f5c71d26fec8798917f07658358a9edaa16fba6b9cf24"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/service/CostService.java",
+      "sha256": "5643e889d27bb3e07e20263f647653b363d8568addd1a7737b82691212949a0e"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/service/CostValuationService.java",
+      "sha256": "6972860918544b46bfc03dc7fac788261fa8c4eab0672803cf97bab914317592"
+    },
+    {
+      "path": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/service/ReturnCostAllocation.java",
+      "sha256": "019ee697d09475f65e6dbedaac22f3213697628dea01095dcb71f933c10ea503"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/pom.xml",
+      "sha256": "7bf8e1baff55ec84d2b3f0c1cc4829c1fbec78badb7ad17ee46b213cb1645595"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingAmounts.java",
+      "sha256": "312a6442f0c542f85aa24abee96706e1272ab70435fa0f32af7581078f5dd054"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "sha256": "534eca3d4993c78176d7d64a5d001c5b84c3c9c2674c42bd04b9574ff969d992"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingService.java",
+      "sha256": "5dc5aa4d182105e2b57be2ab36f978a5321f3c7b662b3e0f54c34d9c6567a03e"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingWorker.java",
+      "sha256": "ae49ea29272465351ce7170fb225e4852da82b29ba3adcdcfe9b1534a796f199"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/api/FinancialReferenceProvider.java",
+      "sha256": "32f94be7c54cee44429923166fa7dc8a6db3c7cf4adfcfeec23cdd9e59579d68"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/api/FinancialSourceProvider.java",
+      "sha256": "f2c0629358832bf5d181fea587b175e7a3a5c4232f1da88a43615080af8c2859"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/api/LedgerApi.java",
+      "sha256": "25c2b5519e0d1fbee2e8e179a4939219e08d1c3a8fb0fbe5eec3fdf00d436dd6"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/api/PeriodApi.java",
+      "sha256": "afa3678871d93e3125a66efd8d404a0081707e2a3dcf60ff3a9fe65d418e26fa"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/api/ReportApi.java",
+      "sha256": "799af1aee06e873685c0110f79b3e769afa7453c952d6dc67335b220a3e10d08"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/api/SnapshotApi.java",
+      "sha256": "7699a00303c161ccdee58ae186cc4f8d0ca82942d330910fd1a85fc7612e24b2"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/bridge/OrganizationFinancialReferences.java",
+      "sha256": "bee55af787bf07b43b3be4db075e39a4edbbcbb3787bbdef28c98a7e862c3d12"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java",
+      "sha256": "254a3c784d4ae4aef753017e2aec747dcd2dc48cb906d6980a64c5ec019dd57d"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingService.java",
+      "sha256": "a4013dde3f4c13c0878298b6bc5f1c98700eec34b8372cfbbcd8d1ca9fce7f8c"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/SnapshotService.java",
+      "sha256": "f65797be70a5abeeb01f8ab5b0207f1f79ce07f6b05d74ef3b3550f8073c47ff"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/controller/FoundationFinanceController.java",
+      "sha256": "b8392dcd0d14f7cd51d363095370a8076e7d346984fb479d125e921c1dabc336"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "sha256": "ade67c37c89cb2aeb6c71fa3d8e62ca3d520f94b49b1f2b698f32476c1b17612"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerDocumentPolicies.java",
+      "sha256": "3fa4aba2829e1035edc71a63060a74a13ae9c4657f8e8844840e5a7d4c316860"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerJobHandler.java",
+      "sha256": "053f4502ded01fca3aa1b1451803f00a6f6aa3f5838c0f6387d48f24a56bde12"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerOpeningImportHandler.java",
+      "sha256": "6b33a05a8f767908e91e4c9ab8bfa9145602609688630970a03fc4730d525ec8"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerService.java",
+      "sha256": "c070c5065e06a35987fc106539eaaf406612ff96ba79f6cc275ebb59b8c8182f"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerValidation.java",
+      "sha256": "be37a43ccce2d038d7e83780c1c273b5807b9c3834e3de9710e0dbb0e7b48c63"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/FinanceTemplateContributor.java",
+      "sha256": "8ec0d68a04bbc475c1ee6557b9ef567a0c5d44082d2a660a53a7bae5fb8e7778"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/FinancialReportJobHandler.java",
+      "sha256": "2ce7c5f6aa76b3838e4fc97113e7d6e006207c827cbee231fafeabf5ec893309"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java",
+      "sha256": "0289106b0bb927adc884a993aed123aa368723e88f337426be0b4f88b8a3c085"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportFacts.java",
+      "sha256": "5f5f83478015119c5fcd19c57db12b38949f1b1a28776659b33c238a001b6386"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportRules.java",
+      "sha256": "051a022b39cbfc77584840808f0868ed63dbe46e53577a96ab90c4ee22246896"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportService.java",
+      "sha256": "ca20331d3a6e9145557cc62177186e3814b21dca9e1276a8992d235691b49d53"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/service/BookResolver.java",
+      "sha256": "f2b35ed1e287b7efde496df028964986805d8aa30a2adfcf1965add53a329281"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/service/BookService.java",
+      "sha256": "6e55d8f8aadd322aaf4739fa59db416c7f0c302fce9d04ffbedccc5cf973a32e"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/service/ExportPeriodContext.java",
+      "sha256": "86de4f784f1c51f4b05b90abfcd763eda2d7f4caaf69ffed52f735cacda262ad"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/service/PeriodGuard.java",
+      "sha256": "179e3840e9016b7c94587fcabab63429120aae495b1f4c9f4ffd85d3f2448af1"
+    },
+    {
+      "path": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/workbench/FinancialWorkItems.java",
+      "sha256": "1f76409e064e73ecabf59dab0e5fafd9c21004ec52427d4697f39d4ed94e649f"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv-api/pom.xml",
+      "sha256": "3eec4713f8b0e2608d2ed996ee4bce4f621c2d42be53aecd6b41cb43cf27b93a"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv-api/src/main/java/com/hs/jxc/inv/api/InventoryApi.java",
+      "sha256": "1e0df1ebbe3bd43d02b5c055e6985723a9eb750f72bd01935cd3698c3a05b772"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/pom.xml",
+      "sha256": "83d701409ef57c7458e6f2b7e18f2dcce8cc1ba4fb471171674898f46eabd4f5"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "sha256": "773d4567b099ecd7412411c31d6485ef7277a4adb2fd060497397ff26c7ee2cb"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "sha256": "4ee33d631aa8be2aba82539ab9a8ff486d81d788c2b491dc01f425b9eb814d63"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/ClassificationTemplateContributor.java",
+      "sha256": "bb59d70e78efb105fb9f392a4f66bd150ea41c6ab23ce0faa18e95a84d91912d"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/InventoryAnalysisWorker.java",
+      "sha256": "2b5106beeafacf6e61e29425174a16b15d70b039ec40a0bb3837e44845f80f97"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/InventoryClassification.java",
+      "sha256": "118c2b2383c3178cf82f5ffc0ec27f1da5708b29b1f998a778d27c99420430a2"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/InventoryDocuments.java",
+      "sha256": "f303ca8610f73731e72f5f1b78796842cc7ffe2d52812f31dab214bcfec82aad"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/InventoryFinancialSources.java",
+      "sha256": "f51513cfc18be33192f9943756a506f7a66400de5d720d040c04dbc4f22734ea"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/InventoryImportHandler.java",
+      "sha256": "29426318826d9695f110583dfea10861980eb3fe4e3fede946372a02ac7b1a58"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/InventoryService.java",
+      "sha256": "7449aac467bc9b1df80cbae037c1cf01662e836ba0b0f0f0a131a711e187e7c8"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/InventoryWorkItems.java",
+      "sha256": "5adf9151e21520b55343e8ba53ed1b5d8940e4ec1714bdebd32b93519ea4123b"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/ReplenishmentService.java",
+      "sha256": "a827270ab7d37632a851ed6322a7c41bb12c7926eac5e774383431d1bec1e484"
+    },
+    {
+      "path": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/service/StockAlertEvaluator.java",
+      "sha256": "f646d7ff37a52e649dbfcdca76f27a68c1be453519a918557d616ea4c8e6da0d"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs-api/pom.xml",
+      "sha256": "adf90a81be7392a84b8739382c2a65b42a3ab6a6b36b927ca00d31942d18ba8d"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs-api/src/main/java/com/hs/jxc/lgs/api/LogisticsApi.java",
+      "sha256": "2e804f2ec9302442d635daa72ba8325e1a241a798377e4abe2886f1dc49d6cb5"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs/pom.xml",
+      "sha256": "f3a151a4fcb840506e585fa04d26cb19d4f5eb50c9fad799967bea49fd1922bf"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "sha256": "0aa2e06d410d48c69b55db81571fd85769100eebc698e44a83f22bf33fa74037"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsFinancialSources.java",
+      "sha256": "5efbaf4434e78991a7124a39ca2726580cb66e1e082b1de15f80784ff4b1dc6c"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsService.java",
+      "sha256": "57ff3359bc4694f15bbaa6dd693fe540a93bebd8c63d228f1bcc3ef3eb3e6aee"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsWorkItems.java",
+      "sha256": "c0e630c81b43fc03e7045effa80f57245665f69ab38fc18545d3e35c554f9ac2"
+    },
+    {
+      "path": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/TransitOpeningImportHandler.java",
+      "sha256": "8f23ff5f91d18438021ed2f25b7c6570c2551ae37d576294d3ab3e427a83289d"
+    },
+    {
+      "path": "jxc-server/jxc-module-md-api/pom.xml",
+      "sha256": "be62e163f91474bb0fca443da4558c920e33354f20a65e199ba8a1fb9fd5da78"
+    },
+    {
+      "path": "jxc-server/jxc-module-md-api/src/main/java/com/hs/jxc/md/api/FxApi.java",
+      "sha256": "1529b3704e8345977f27a7ed166d5672635b00b24a426080111af8521fd1dfc4"
+    },
+    {
+      "path": "jxc-server/jxc-module-md-api/src/main/java/com/hs/jxc/md/api/MasterProductApi.java",
+      "sha256": "889b3e8004c86f3d540ed92b6f6cb8f16291d9c88e0802e0e61ea000e1963625"
+    },
+    {
+      "path": "jxc-server/jxc-module-md-api/src/main/java/com/hs/jxc/md/api/MasterReferenceApi.java",
+      "sha256": "79ad81817cb5acfad061f6deb0ad8248c30d77963645e676f7ce5b3a215f1bfb"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/pom.xml",
+      "sha256": "c4d71c63a156b1c8df81b818629429c448bcdcdc6045d44c310e3305b01a0f64"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/BankAccountCipher.java",
+      "sha256": "11e76b16d030bc01f6aa80bfdc139bd7cd5f0a9f3bde42b5a81de8eacd0e3334"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "sha256": "3c67a0ab8d02bebc305e7e16e97bc8faad6ba766a35535a19d95d2c8750ba42a"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterService.java",
+      "sha256": "e488090ef2ecfda25658f963debc93a3cfc78a6c25a0138f5e0a60af92a3fbdf"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/FundAccountController.java",
+      "sha256": "5c98189fdf024c3c11b8ad30ac0d0256b26a7166553c51d0a2a41c8bb52278c1"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/FundAccountService.java",
+      "sha256": "f75a7e1c8e61aaa3f83d126789204fda717e3831010faf3f5a7996377ce6af94"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/MasterFinancialReferences.java",
+      "sha256": "11962dedb50fe8ade1e31fdf25cc8bd1cf1ab16513e182410ccde020d6c1fbc5"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/MasterImportHandler.java",
+      "sha256": "0cdb3b4f92f6768fb6c9d0cf368d91f0af9c4a485779b954446bf2c0f772f70d"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/MasterTemplateContributor.java",
+      "sha256": "fcdd2427a6bb8b714cc4e919047f3c820b5293bc88ca51e9b431fa7dacc2cffe"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "sha256": "aa2d5c3e73be6bb52fcd70642002cddeaab4bfbfa09253fd4c0d7c8961622e3e"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierService.java",
+      "sha256": "f4144f4814932ce063a4c5c31c8504a086c568a7a7b9b775d802fc9bccfa02e1"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "sha256": "ced18f2532fce427d837703295c16ff479e58d9cc8c912dd3bf26ccefeebddd7"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "sha256": "0bb81cb82b133e4122269031cad476cfe7104c363ea53e02a6aec9d6f9d9f6b5"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/service/FxService.java",
+      "sha256": "536fc86bbe1560166ab848b1af87e82196cd8f3911e34e0c9bc012bc78eaa243"
+    },
+    {
+      "path": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/service/MasterProductService.java",
+      "sha256": "2a7b575d707dd4c0ea7eed859c163c92e580d1551dfc8730852cd9427cedccb5"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur-api/pom.xml",
+      "sha256": "5f23d2ee78c356f5dcf2b8c75e8a68eedfb7e23f8cd960c69db1d0ba489a690e"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur-api/src/main/java/com/hs/jxc/pur/api/SupplyApi.java",
+      "sha256": "5d5c3db738c65bda16f323805080d472706bf7c44293715620af88669e7d83a8"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur/pom.xml",
+      "sha256": "b9352947270ec1a65c287694ac160d93300dd3d73e1212d444d8009b3e3d5ac1"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "sha256": "e28aea23c06170e44530301f9aa59da0beb1c2f3f028e4697cec8b52614c3c4c"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseFinancialSources.java",
+      "sha256": "a3778382c0bbfaeca7e748cd546d199c286c54e70c59c58d8cca4cc5cd9438d2"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseOpeningImportHandler.java",
+      "sha256": "5976a6d85484bec7c3db5f8aaeafaa865771a524637f3426d01d7020915c04ab"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseService.java",
+      "sha256": "0f5fd3526683b9e984d50c5796c1683b3896376c51406b658a3ad86807ddd198"
+    },
+    {
+      "path": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseWorkItems.java",
+      "sha256": "37ac755ceaf8ec9df09897ffd9e9abe3db78466dac30a8e281d7a3ba98da442e"
+    },
+    {
+      "path": "jxc-server/jxc-module-rtn/pom.xml",
+      "sha256": "dc3108150d7f68478a6b890afaba68a1476f1309e25906c813740e5833030939"
+    },
+    {
+      "path": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnWorkItems.java",
+      "sha256": "0cfb1c30a54f164a92f2837274d0aecab2bf5fcc48faa61cc5dff094f0ee0f53"
+    },
+    {
+      "path": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "sha256": "40b7ee20e0815a7faf30b91516ecbad9884c59df52330e573b680eff2e646665"
+    },
+    {
+      "path": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsFinancialSources.java",
+      "sha256": "e75bd78af9152d00b2a16339e2ad23497defffffbe43d821635d9e35a13155d4"
+    },
+    {
+      "path": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsProfitSources.java",
+      "sha256": "ccff3354becdacd12ec634df87f81f5f10ff313f64f3a524b823f0fbfcfbaf2e"
+    },
+    {
+      "path": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsService.java",
+      "sha256": "484941e63cb562d802136275be54a7e95dd98c1e8d0761acd938a45e04606a1d"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal-api/pom.xml",
+      "sha256": "0c4b097d9ffac6a92941ca92e62e35ca2b66dd6751c0f17702d9b612ee10539f"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal-api/src/main/java/com/hs/jxc/sal/api/SalesSourceApi.java",
+      "sha256": "fff68a829464ed747ab6143005bffd77d3708e58ea447ee6c7e9a576df07c8bd"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal-api/src/main/java/com/hs/jxc/sal/api/SalesStatsApi.java",
+      "sha256": "057f18a586fc06dd3c340830ab1914e8bcea77ea542c06a2f09a3a7ce418c2e9"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/pom.xml",
+      "sha256": "e4cf9b30172cbc6fbae110b4effbaee921ee2244f7e75e587213e9af481e1da9"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/PriceImportHandler.java",
+      "sha256": "6781dd2e65c64c3c661c430ed2d50cb614f76251efcd39bd2551263e00a6dbd7"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "sha256": "1069c7ddeffb9a7fdc615c04f3206e40e23486f90c5570c204354281e87b939f"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesFinancialSources.java",
+      "sha256": "f01f8fbd51da3c64b1821bceb351c6afbbb0cd4b56bd790ee4f70eef61afe783"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesProfitSources.java",
+      "sha256": "e8c4135ee4ba0426be8f9e2480499fb5b32d5690856088c43929ceae2950c8d4"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesService.java",
+      "sha256": "1858965f892f86bf3e3828012ac68674af84d4758ac2a96e4e3cf83d0031fcdb"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesStatsService.java",
+      "sha256": "73fbfd3e43d082222e5152e767d8c400c5fba6900b1fc10b4f875d41ff36225b"
+    },
+    {
+      "path": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesWorkItems.java",
+      "sha256": "6d89394ae7311f94137ec3abe42fbd060e13d37de583e3a7f35f5ccbcd29d9f1"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/pom.xml",
+      "sha256": "14764425418791651d4f1a4d46de951309774e16195003025d375952294182da"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentController.java",
+      "sha256": "c4a4787177556a6d40f4446165de4e125d592338f167336c26939de26666f3bc"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentObjectStore.java",
+      "sha256": "69167e8fd6b833739581e46a44526dbc8bfdbefb68670028b073e191f4ffcde0"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentService.java",
+      "sha256": "368b1e9896667132bd80a858e8179a5781d24667f2f5f6851d017e398470e219"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/event/TransactionalEventConsumer.java",
+      "sha256": "b4c2de01e34b2a3a7098dd0e2a916b99908cc466f0d1679a4556cab39ff40aa6"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/MasterLookupController.java",
+      "sha256": "1ff18509212003f68b9398ca4f081bb9f75e31435b419eaf3c456d513bc431c7"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "sha256": "0cca2560419b7c75b7fd59f5f3fa972ff10b65114fcd7c75ab8d01f7606db11c"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgService.java",
+      "sha256": "8590cd8ddc934199e2b03457d89b22f91682efc3e2a64651d1770794198e913a"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/mapper/CurrencyMapper.java",
+      "sha256": "db46be071594c314b20730b27d9c91debf2217f6b315baba697986c5bc51396f"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/api/Access.java",
+      "sha256": "493f695f9658bbeb334c8b19782d7c75edd2a16568499389426205901b1af134"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/api/ConfigReadinessContributor.java",
+      "sha256": "05495a92c7b1f4a48b1eb976f842d351b328d1d4a5565e52e39ae64d9187c340"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/api/DataScope.java",
+      "sha256": "d3a9fc51f4bae9ba015d91ae62122e61376dd2ba5ff32b1070a9387057f71160"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/api/OrganizationReferenceApi.java",
+      "sha256": "61aed2d2482d73c8c1b45d06bae45937591469dfed85f30bdc563df3fc1dc14e"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/api/StoreFundAccountPort.java",
+      "sha256": "9e065cea2603eb86d77fe3fdc9b89d43497ffceb46ed8135a5b94efe1c38f576"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/api/TemplateStructureContributor.java",
+      "sha256": "32ed60bd95ec300cdad95ee932cbbfaf4aaedac70e06d20f7f8f7d6060fd89d9"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/AuditQueryController.java",
+      "sha256": "c6fdb6020973dec5a3a60a6139ad6907ccb70c3b448815c115be424e3d98baa9"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/AuthController.java",
+      "sha256": "59cf37e80251bc8f199c62681e46cb157b492a4555ec3bf075cb18de3c8c9af9"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "sha256": "8a6f674d89099d204c78f959885b6b669eb5f25e48c6433ee97ade64d58b1f8e"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "sha256": "46a68a807fd8b92c20cdd1198a01273d396991fbeff47e78ecdc49ebe61d679b"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java",
+      "sha256": "7c21b8a381d585c46847f6dc1310a9c4f9099a8bd56c0ebdebada3cb9a25b413"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "sha256": "189ef789cbdaa87b4dfe6370afd427decc1eeca9e9505d9fc2ee85ae9dae65d1"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "sha256": "3909c20d79f9ed272eedf8aaa9659ccfc2139898ef19ba4395ecbe2605d4901d"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportHandler.java",
+      "sha256": "19026116e321c181a749608033dc9076b0258376e3f708133b0e1a652f65c388"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportScope.java",
+      "sha256": "26bcd213a0957215303f12ac053f7d96f01cb59d91e96fc1a65e882de1ece234"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportService.java",
+      "sha256": "ded408efcca9c26a5102c5bbc1e2ad3a452c8525848ec75ba1078fbff646629b"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/CountryWorkProvider.java",
+      "sha256": "d762477800444ff0b5966a0009f9b73d1d537e3b8146838619ddfaa3dce71042"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/CsvFiles.java",
+      "sha256": "80dc1264f33acefc34e09909140f315b506c889d4fcd535acb3dca548814f9e1"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/JobApi.java",
+      "sha256": "ce1c27c5146c0ed362f16d9f43c92c55ce85cebaf9dee090cdcf1a8847c163a6"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/JobHandler.java",
+      "sha256": "89fb402360339a97e75c1407f0038a8c193de6744b1feb7ad2685754d5d010a1"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/JobRecoveryWorker.java",
+      "sha256": "8b9b6315b4f6ff359c6a342173bced7c67cf22e3a83c0f2ed6e287c5ef2e3019"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/JobService.java",
+      "sha256": "058bc4a1aa4dd9882d1561d53fb74d3ea3385fc6d0aee514408551f0a4406f36"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkItemProvider.java",
+      "sha256": "468638b781996c9d1ebc442fe05c26850a94c39bee7c07f0960dd57be79e6c43"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "sha256": "b5ec16a3484ef279a7bdb92c3a024e6f6e52702399cbc68723b11802a3a2ebb3"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchService.java",
+      "sha256": "cfd6a27291095aac0a4156664a7581e257ac46e82a9f1a1c3288e05709f2cf16"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchTimerWorker.java",
+      "sha256": "41db7ea059854cdcf1b00f0b4f25972c18e33f93d116607d0806f9ef980ae2de"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkerRuntime.java",
+      "sha256": "ecfb68049835e9f60c80bab140b7f9243556ca8bc258e3c2517d08fe4b7314ea"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/security/SecurityConfig.java",
+      "sha256": "1bac896f1f6abaf5fca9e343d06ef2481e1fd80cf0445c096d2180a98dbbc6ab"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/security/SessionAuthenticationFilter.java",
+      "sha256": "16f5fd57999b79c41382adc0b5482f14616fe2076f373c34918a2c7abc8222ca"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/AuditQueryService.java",
+      "sha256": "ea8b2cca6b0a249854a4e2c767a376925620877b4764b1329a7c3c6dfa12a435"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/AuthorizationService.java",
+      "sha256": "f6fd84c94578a9f81ab8208a07267890e574b26d1fa710eb5a0f1e94a931b05f"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/BasicDocumentPolicies.java",
+      "sha256": "21e9ad32b335f81320b13a41d0212863d13ca3dc5cbfcf0906c57e92fc230f68"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/ConfigReadinessService.java",
+      "sha256": "b46e3f0a677101aa3841fe99d4324037d93526e6121b4987e371bdb9adaceecd"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/CountryCalendar.java",
+      "sha256": "2c1c9a89695444d2c143ce349762b39e2da3e799c24141cfc29eddda613a4944"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/CountryConfigurationService.java",
+      "sha256": "19e2318c45810cd4b9a533902ecc1b69dbca6f11cfcaabd92100685ebd62eec0"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/CountryLifecycle.java",
+      "sha256": "d0a85f951a6adddd1e26e1de1c47e10060e662659e61ef4c4f92c3cb703f6680"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/DocumentAccessService.java",
+      "sha256": "a17294afc2c6601e0f9d3b6df66821f2184d661fe2c0282658016014f907edf1"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/DocumentGovernanceService.java",
+      "sha256": "9412737e1f53e8bd4b1243592628e4ce6a85c2be1389fbeea45bdc3869e18c78"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/DocumentGovernanceWorkItems.java",
+      "sha256": "90cdc9f80aae6b89c8d80b2643d2bef48d99f6e823ff81a45e8b61ad6aab8acc"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/DocumentNumberService.java",
+      "sha256": "8868f6668e5f87fe00c9e8334eaee7219b61d8e14779a0f3eef8476a3a1b98f5"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/FieldPolicyService.java",
+      "sha256": "e4b2da160d93c06bd0b09b2a39647e7f7d4eef0e02a7bda058aae87a86b5b23a"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/OrganizationReferenceService.java",
+      "sha256": "842f4134e10d27ee1158112da6c42b4f6c72539adb68285763596c37d8425fb7"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/PermissionCatalog.java",
+      "sha256": "5c9f1f677c352d4fe75aee2c8abd981872ac576d82d0c3ba92569e92bffb2497"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/SessionService.java",
+      "sha256": "572f1490574ab979c3e2698e271c45a0270b26be594a3913920d53254e1fbd30"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/SystemManagementService.java",
+      "sha256": "45215ad8dd6a0d1807fc544c8b9702090b18a03101fb10ca707806a0b358b363"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/service/SystemTemplateStructures.java",
+      "sha256": "b48f0a8a2e3e47fe1020deb6e9bcaa1ff0702bdce6a9227e9a57abd6bbc66722"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/api/WorkflowApi.java",
+      "sha256": "99f1b228508f16e207edb8bd09e0fbd3c27275c7b27c9b4b17b583ea2b89b556"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/api/WorkflowParticipant.java",
+      "sha256": "b3762d7777331537e557c2ee167688630d7c4e6d61a4cf5fc9b385f8a13351b2"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "sha256": "b2b3b9463f13051ac810aefd7bf81f0356e334056f3cb7ff3f597e644ad5d815"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/service/WorkflowService.java",
+      "sha256": "3902e90ec8cc0cf63434446ad82645edafd65c3c90a94155cd5dc2031544ec5b"
+    },
+    {
+      "path": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/service/WorkflowWorkItems.java",
+      "sha256": "211fb81bea147bc365b671e8a1d9e88b122e54bb1b8432ae04552ce9f1fc7c06"
+    },
+    {
+      "path": "jxc-server/pom.xml",
+      "sha256": "709ca2e02312d22d509aa24a15662dbf3eac891afce772ef730150847fb49b17"
+    }
+  ],
+  "frontendPublishedSourceFiles": [
+    {
+      "path": "jxc-web/.env.demo",
+      "sha256": "0dd4fefe1e3c34b46fd6df68ba8ad3363c9cc42d24f99d025e57ef56b43d9809"
+    },
+    {
+      "path": "jxc-web/.env.development",
+      "sha256": "1e6b39daead08ab7c083804e1926dfa9cec1c7062499909abd3df09a74e01df8"
+    },
+    {
+      "path": "jxc-web/.env.production",
+      "sha256": "0c4a80365aa7196cc562f70153b41f05e0f126f853c3cd6fea5e576d0074c44f"
+    },
+    {
+      "path": "jxc-web/.gitignore",
+      "sha256": "122d03c08cb99c1bbd545885169d39e763a2eed46ff30aa26a8e1014c28b684b"
+    },
+    {
+      "path": "jxc-web/README.md",
+      "sha256": "ceb38407f824f2e5e17992ed93b67700f1f81504514d77c8b4a5895a22f0a895"
+    },
+    {
+      "path": "jxc-web/index.html",
+      "sha256": "5f1039aaf95a371c7d9987751776f47100ecb8fe2c8892c241164af01f762961"
+    },
+    {
+      "path": "jxc-web/package-lock.json",
+      "sha256": "04901242b2fce92b5e66d321965bfa9d19f115c02d9ca2efe4475768234c8daf"
+    },
+    {
+      "path": "jxc-web/package.json",
+      "sha256": "91cd10dccd34c6239e4a2108f3f0203ab7705f5844f41a425107e7fdeba02d1e"
+    },
+    {
+      "path": "jxc-web/public/mockServiceWorker.js",
+      "sha256": "d64ddbbd4670681d6d57428dd384d18d1d3ea20414f6aee4059da6f41408d7e2"
+    },
+    {
+      "path": "jxc-web/scripts/contracts/generate.mjs",
+      "sha256": "1ae66b3fb400ed7b6614a63e71318d5dce3f2b869af8ed85c45af5468f52ecb4"
+    },
+    {
+      "path": "jxc-web/src/App.vue",
+      "sha256": "a3d7079f86d681f5f929208cb6bf3344227de149c24ff6ef0f29e6bfe6642d67"
+    },
+    {
+      "path": "jxc-web/src/api/attachment-download.ts",
+      "sha256": "42edfc52de6e858c75df0d787df18f2f16bfb48b49819bae2ba1b6540816ba95"
+    },
+    {
+      "path": "jxc-web/src/api/command-intent.ts",
+      "sha256": "bb109aa4daaa694f9d9736649e0be89b6980afe9b21711c58c6b27382e2eb2e6"
+    },
+    {
+      "path": "jxc-web/src/api/crud.ts",
+      "sha256": "3e63f887b92be6d0e691a77c87711d387c841b7ce680a7fcc28bcd4067d0a2f3"
+    },
+    {
+      "path": "jxc-web/src/api/http.ts",
+      "sha256": "1f936f179eafe10af8c1d3ecd2e67249c952d44457e43fd90a9412b965b11ef9"
+    },
+    {
+      "path": "jxc-web/src/api/mock-exit.ts",
+      "sha256": "ea352f3e5d29889c82e88e6393e2904a037d3abff43c98c932d1c2bcafe77ac5"
+    },
+    {
+      "path": "jxc-web/src/api/pagination.ts",
+      "sha256": "50880b9c5f138a1642e2615a75ea557236668d4ea3aabb12659b201cc8ac6075"
+    },
+    {
+      "path": "jxc-web/src/api/types.ts",
+      "sha256": "6a47011e556cf4794f6cdbe2208ee78110ae45cde3c759ecb2d9f30f22854441"
+    },
+    {
+      "path": "jxc-web/src/components/ApprovalPanel.vue",
+      "sha256": "e5d6fa1f0be382dc745964ceac5db5e736509bd94a7db5a607c996ba1c0276c4"
+    },
+    {
+      "path": "jxc-web/src/components/AuditTimeline.vue",
+      "sha256": "2ed6cd5bc85579d0770816e6bed4ac7348906e5134987682575a13a6af89cc94"
+    },
+    {
+      "path": "jxc-web/src/components/CountrySwitcher.vue",
+      "sha256": "ce7e768fd689e2ccd0b22da2f559b7b595cf23d7a7c07dd4f8741c40ec716976"
+    },
+    {
+      "path": "jxc-web/src/components/DateTimeText.vue",
+      "sha256": "17bbcbdaf18b922f4cb5b05a1d789b234e3eb21db4860abec390b36db13f6d66"
+    },
+    {
+      "path": "jxc-web/src/components/DocAttachment.vue",
+      "sha256": "80b32cbc308d7ebcbb5553e3ca56856582ede0941191f0e5f86d3bce393c00e0"
+    },
+    {
+      "path": "jxc-web/src/components/MoneyText.vue",
+      "sha256": "308267133fb65ca4f59d3da9df5e244ae6c728a76c244070bcf2c513ec396469"
+    },
+    {
+      "path": "jxc-web/src/components/PlaceholderPage.vue",
+      "sha256": "8a4bab972a91c9162b5eb3a2b53c2fc9d0b40aa62d44b236d2914adc6b8f8810"
+    },
+    {
+      "path": "jxc-web/src/components/QtyText.vue",
+      "sha256": "2c385bfc6375b70f752e003bca5d0c2ce12a50dbdcb1cdcf81f7952c60e581d1"
+    },
+    {
+      "path": "jxc-web/src/components/StatusTag.vue",
+      "sha256": "f37475d19ae07198a41aba53cdaafb4b92526945cd3cb81ae254fd40ca2cc7fc"
+    },
+    {
+      "path": "jxc-web/src/components/biz/ProductCell.vue",
+      "sha256": "e27588c2987dfcf29fbd37ca2d37a858d7bb5d31de66225689f14e40a99a402e"
+    },
+    {
+      "path": "jxc-web/src/components/biz/ScanInput.vue",
+      "sha256": "ace2334d5e7005189be0e53e81f6fbd7bc5ce9f7b6123591a44f6d51a9705a83"
+    },
+    {
+      "path": "jxc-web/src/components/crud/CrudPage.vue",
+      "sha256": "3f5cd0561546811a94e6d59b010b876bd458082cdb477e2f9d69925bef49deee"
+    },
+    {
+      "path": "jxc-web/src/components/crud/FieldInput.vue",
+      "sha256": "ca69020d9f433e869bd412cf14d1892a22d94cc55983c0c201c6aebcdb11fb1a"
+    },
+    {
+      "path": "jxc-web/src/components/crud/OptionText.vue",
+      "sha256": "f95dd442939cd534a5ab7615aae6880e7e9d58a9224b8d3ae469d9fecdc6bc63"
+    },
+    {
+      "path": "jxc-web/src/components/crud/types.ts",
+      "sha256": "a13964d946e5d7aa13d4157279a79413bb54c7988a6de7814993606d2427a394"
+    },
+    {
+      "path": "jxc-web/src/components/crud/useOptions.ts",
+      "sha256": "9f9655dcadc4fbc769ac067b631b7ca8f2ece2968a02ece1e11281a03035043b"
+    },
+    {
+      "path": "jxc-web/src/composables/useSwitchCountry.ts",
+      "sha256": "beed7ef0b253b013263b9adb29e28fd93f721b719b91e3ca0ed116583ef070c7"
+    },
+    {
+      "path": "jxc-web/src/directives/perm.ts",
+      "sha256": "f7d4acac72b89cb3650bbe402758e82313a6ba877948f559560d69aa9f1eff1a"
+    },
+    {
+      "path": "jxc-web/src/env.d.ts",
+      "sha256": "5743c034a34f35376c3a59118a3814d45ee8fb66197e9d62c8bdb55efe959dfd"
+    },
+    {
+      "path": "jxc-web/src/layouts/PcLayout.vue",
+      "sha256": "4b4ac1dff222a4f6214c12b298ae5a7e9ecf58380104c780625207e09f232c36"
+    },
+    {
+      "path": "jxc-web/src/layouts/components/HeaderBar.vue",
+      "sha256": "0a5a29a301c861639aa79037b39656b65cfd9973ca84cde48e8ce23aad16d015"
+    },
+    {
+      "path": "jxc-web/src/layouts/components/SideMenu.vue",
+      "sha256": "af02efd9621b1a62f3cd1ab56f80e874a5f3245086b112edd73a1efc60c243f6"
+    },
+    {
+      "path": "jxc-web/src/locales/es-MX.ts",
+      "sha256": "e752eea99ce4e6c978a2f1f9d45915f78c0cec25b0575066a17fb8226481668e"
+    },
+    {
+      "path": "jxc-web/src/locales/index.ts",
+      "sha256": "b13d439a2872aaab44da5dfbb4ef657d1f87da925168c6a0afe41d6d5f434f88"
+    },
+    {
+      "path": "jxc-web/src/locales/zh-CN.ts",
+      "sha256": "20565fa76675a605653018b1c88d1792a7227133d89ce86f5945023d46c200e3"
+    },
+    {
+      "path": "jxc-web/src/main.ts",
+      "sha256": "e31e7780dac2a1589a6257a7b65584bec848fefa50d084919a3d2a5e83e19a44"
+    },
+    {
+      "path": "jxc-web/src/mock/browser.ts",
+      "sha256": "c200f52d88a00e7eb324d85f30ebf740f6368e40494d0ac54be1281cbc44503f"
+    },
+    {
+      "path": "jxc-web/src/mock/crud.ts",
+      "sha256": "7d84a0c66cb8aeaaf848d88fad75d56aada18907acf34bd86d546d9cb0031cb2"
+    },
+    {
+      "path": "jxc-web/src/mock/db.ts",
+      "sha256": "c6e4ffcdbdcd89b80e138809cb724a2d532c8cc4fe1595b13601ed96a5c55dab"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/ai.ts",
+      "sha256": "46fec04f6c55650d81266db27128c1e0a5e6a8bedfe913c72a241217eea84025"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/ana.ts",
+      "sha256": "5c2ab93199dd2787fe60cc3a2a572b92cc2bc046cd2714d45164463de4566919"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/ap.ts",
+      "sha256": "f097539c7101418edea4c1e4877d97285fe3bb2fc3f513b19aa63c40fb7beac9"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/ar.ts",
+      "sha256": "ed0d5a637ea86cb1dee93c60e6e7700c9bcb4b47a6ee5780ddd51aab14f58bcb"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/auth.ts",
+      "sha256": "5cfaf49537091225cb6196ba05c01f66e2f0d893d78798b2d4a61323f09a6dc6"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/country.ts",
+      "sha256": "36238f04b9c0a2dcca9628244fa0e9326bcb3e6eb2ecd0ff2109800e63555839"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/cst.ts",
+      "sha256": "28a031bbfbbd37a3bc1342353d7182ea28109736f32a64931fb477bb384a9e74"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/cstOps.ts",
+      "sha256": "76de4c034aeb0b5ae95d1e0cdc698266c75299f719fc6ab91f62c1fefe657620"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/fin.ts",
+      "sha256": "31248b1cf1646593669d746d51c6e8a95c1cc2423fadf5bbbc93d609b0bcb98e"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/imp.ts",
+      "sha256": "042305b49845782bdb11405483f1377a7af69f03e69fc420223dffb972122167"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/inv.ts",
+      "sha256": "ac817f9550fc3c168f69ada31c82c94da88dc79cb6db2b5cc177095ab35a43c8"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/lgs.ts",
+      "sha256": "d5e58d9c7e8033c1565492304f1efeba6aaa1dbad2cba4095312cb9f460ad805"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/md.ts",
+      "sha256": "2cf2efdf47bbce88a78e4886c52295aacaed083c35aee3c14ccabed6331db490"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/org.ts",
+      "sha256": "5175ec3b27dc139031ed57a9c1a9a40f5f50323dc07218ea644318e6cd107d36"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/pur.ts",
+      "sha256": "e79cf5bad13d3f1d5e7c766292c4dc5d1883302778c16ff407ce87f84d49385d"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/rtn.ts",
+      "sha256": "1091493731493732f91d85b9ae09cb5d7464d13c90b829173dfbc3d58de76386"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/sal.ts",
+      "sha256": "ce127aad099d75c2ca85e87302de75700cf11d3f6d46f1748462257060309767"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/sys.ts",
+      "sha256": "5756248419e9ca9e0fa1b0c20aede39a221507c7c8f20f0dcd6210a78c36bad5"
+    },
+    {
+      "path": "jxc-web/src/mock/handlers/wf.ts",
+      "sha256": "f0223e4b50643a6d7d427d5bfba7356c1309fd1b94014afbd11ca32cc6cb361d"
+    },
+    {
+      "path": "jxc-web/src/mock/permissions.ts",
+      "sha256": "031d17c5636b635989323d97d1b24d699d8899667786220f88357d1601db12df"
+    },
+    {
+      "path": "jxc-web/src/mock/scenario.ts",
+      "sha256": "0047fd168e7f930af6cb555a3d5bb32ecd0af8afb7c6acc56aa39478a2c3679a"
+    },
+    {
+      "path": "jxc-web/src/mock/services/access.ts",
+      "sha256": "1e46ce4b583f7548f6801a9ad688a625f64856e4113ce1fa881f1458b7347164"
+    },
+    {
+      "path": "jxc-web/src/mock/services/approval.ts",
+      "sha256": "61c947c034a6960075440e805388aec5e1e976f21732cbdfd3fec38a8961f480"
+    },
+    {
+      "path": "jxc-web/src/mock/services/common.ts",
+      "sha256": "fd9775b89543eee4430d9862b66816f61bbefbc8953c86784d25023aa06c4dad"
+    },
+    {
+      "path": "jxc-web/src/mock/services/cost.ts",
+      "sha256": "39566b1333842a2800487fe6aa8d861f14c808e236329f25d43ae295e1cdcbbc"
+    },
+    {
+      "path": "jxc-web/src/mock/services/inventory.ts",
+      "sha256": "494a159847257f18708263ea4174838a594edd7f9f1f5ba6dbe5823ad7203343"
+    },
+    {
+      "path": "jxc-web/src/mock/services/period.ts",
+      "sha256": "8aa421a50af558c3ec011f04e57aa7f91db9f87b18a77fdcc2be734ffbbf7deb"
+    },
+    {
+      "path": "jxc-web/src/mock/utils.ts",
+      "sha256": "5085bf70b72a4aa483e91b5e7adcb43fed50909ddfbefa84f3e00e14742c4181"
+    },
+    {
+      "path": "jxc-web/src/modules/analysis/AiView.vue",
+      "sha256": "26cdaa30123d976d1b59fd111c6e2945dab97c18585b5f823e078b57cffe9be2"
+    },
+    {
+      "path": "jxc-web/src/modules/analysis/ProfitView.vue",
+      "sha256": "cb2899736184c2eca44ce229929d6ee86f367acdf184c420520ec5bc1a04c2e7"
+    },
+    {
+      "path": "jxc-web/src/modules/ap/ApBillList.vue",
+      "sha256": "0189b171b6b12ccfe0f8daaf151ef43f636924ddf86e4f16b73df9e7396c2c1c"
+    },
+    {
+      "path": "jxc-web/src/modules/ap/ApPaymentList.vue",
+      "sha256": "8405a90219fe8d3d8002cf118ef3329ea29948c3d5196432e66a4ddb5f152d8e"
+    },
+    {
+      "path": "jxc-web/src/modules/ap/ApPrepaymentList.vue",
+      "sha256": "58b75abfb1d6b283cbf5d39dd74b6ed68adcf41235426c17bc00e6f82f7d3d16"
+    },
+    {
+      "path": "jxc-web/src/modules/ap/ApSettlementList.vue",
+      "sha256": "dc2088e097853623c1f1dc544311c5de1defd50a31c44da7cf9662ae450ebe76"
+    },
+    {
+      "path": "jxc-web/src/modules/ap/PartnerLedger.vue",
+      "sha256": "6a859deb6d7ef2892b765ea8c7cf79dfb7d83087438dc3192b6b3a1e26780084"
+    },
+    {
+      "path": "jxc-web/src/modules/approval/ApprovalTaskList.vue",
+      "sha256": "d57e1003a537feb0c5de7fe178a68debadb7ea0265743e5e3497b339e0dc1bc7"
+    },
+    {
+      "path": "jxc-web/src/modules/ar/CreditRuleList.vue",
+      "sha256": "a67c88c733552e49c0d54b5af605fadf5681e4596a25cd7ddf9a80d1dd3a1caa"
+    },
+    {
+      "path": "jxc-web/src/modules/ar/CustomerLedger.vue",
+      "sha256": "05e0f1cd79da86a4999a67be067358ee098f133eea20d01c4ca9c5a93fd6348b"
+    },
+    {
+      "path": "jxc-web/src/modules/ar/ReceiptList.vue",
+      "sha256": "af24f6798f2ab6470c5700d121041474cb4525f43b1b603600e2736272ec6eae"
+    },
+    {
+      "path": "jxc-web/src/modules/ar/ReceivableList.vue",
+      "sha256": "698fd578724316048c5dc5a48aca08af37cd0a3f758c93f4dd587be4c71b0343"
+    },
+    {
+      "path": "jxc-web/src/modules/ar/StatementList.vue",
+      "sha256": "59b799e9908902ea4cbd707a6f37362b06f519bb190ea7f4cc4ef0ae6d1bd98e"
+    },
+    {
+      "path": "jxc-web/src/modules/ar/WriteoffList.vue",
+      "sha256": "3e8a939693a1778404f9a8664927626e9dbb22e281ed7fad8912238b47d87eca"
+    },
+    {
+      "path": "jxc-web/src/modules/auth/LoginView.vue",
+      "sha256": "dd45b5f81a89c82fb68a1fba4b8b4d547eb9af5cc334e177b6d96bdedc7a420d"
+    },
+    {
+      "path": "jxc-web/src/modules/cost/AdjustmentList.vue",
+      "sha256": "b36ceab09fad580f19385b5fb00a250b96dff36887442bdae9f977936ace2731"
+    },
+    {
+      "path": "jxc-web/src/modules/cost/AllocationList.vue",
+      "sha256": "15536dfd3b762b44265b1ca8eaf3c72c8b0105290f6246ad04d6b755fdb0585a"
+    },
+    {
+      "path": "jxc-web/src/modules/cost/CostTraceDrawer.vue",
+      "sha256": "50622a040252f8b2bd7d988b0a0dce109c6909148b7f3fc8e84d7df37815b977"
+    },
+    {
+      "path": "jxc-web/src/modules/cost/ExpenseList.vue",
+      "sha256": "e14a01af4ed80c308ffd3beec77d722bbbeae280893541e24b383f6906f8cf6f"
+    },
+    {
+      "path": "jxc-web/src/modules/cost/InboundCostList.vue",
+      "sha256": "9712f7af068984e2f8a0ec2c1e115a078b4d4b4a139c1cdb1c6687fa221d9e7f"
+    },
+    {
+      "path": "jxc-web/src/modules/error/ForbiddenView.vue",
+      "sha256": "24627b47f303c090877bc37f7e6bfe6396c9b5751da6087b8a9b6faf3ee4867a"
+    },
+    {
+      "path": "jxc-web/src/modules/error/NotFoundView.vue",
+      "sha256": "c540d5380d6eaa46fbce1a789909311272716cc49cf3908b1b712e6ddb7aa274"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/AccountList.vue",
+      "sha256": "2ebacbe2207814006084cb31c26db107e1912784b7e0d769c6fc8db8775bed07"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/BookList.vue",
+      "sha256": "654c5a6454ed4094f2b65cefdefed5bd7c92924b1f09bcac05e8822e204c59f3"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/ClosingView.vue",
+      "sha256": "4f66b05da1165d3a67b7256cff326b8bb64e3d0095d08b7a0f995865098a83d0"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/EventList.vue",
+      "sha256": "899bb87e695da936c840e7b0c1c1a581aa01c14a9f45660285e900521acdab7a"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/LedgerView.vue",
+      "sha256": "a657be76412ccc69ff1c1b4b0cbac79599f768e6e16284e6a784e17aa77cf30d"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/MappingList.vue",
+      "sha256": "f042a388ac13b16f1010b9ef5c730db816cc70da78b1434bdd496741909941fc"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/OpeningList.vue",
+      "sha256": "18254521419f09c07cac7b0dba01018e9412151699083c7dbfee1895fe48cd58"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/ReconcileView.vue",
+      "sha256": "f595988689c9990aa1b8060ccccb65df00795902fa15bd08b00cb1f76a55ce4d"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/ReportView.vue",
+      "sha256": "8f7d6f9750bd3de3350c514d9f3642f979ac165f1ced4a00c7343d98cad88f2f"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/TrialView.vue",
+      "sha256": "84d657c3e6e8f5322620244a1078c229ce55906353d9f85a7ed62e815b15ff29"
+    },
+    {
+      "path": "jxc-web/src/modules/finance/VoucherList.vue",
+      "sha256": "a8db99fd99fdffacd60c1cf5f0cd8699af8a62e23711c73efa02c61797f60792"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/AnalysisView.vue",
+      "sha256": "50d312e98c313b92fa1998816491aa1fa69afc50d9aec85506ffccb1445f969f"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/ClassifyRuleList.vue",
+      "sha256": "ab65d2a5873c4300fd64c6f39e2311c0985436be18ae0366458b2a9a2304aba9"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/FreezeForm.vue",
+      "sha256": "2fb378a31db681a2cd89a4fbedfa0a61f3f9ed4dcfd17d47c13dca26010d2501"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/FreezeList.vue",
+      "sha256": "54937e691756cf69df1b3ad876e677c3d42924d13f21e9ec2b1f9fd672901745"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/ReplenishmentList.vue",
+      "sha256": "3b28aa0517b36a79ddf3b720e35b4377147f3619aec65ea77fdd00d18485d27d"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/StockAlertList.vue",
+      "sha256": "6f09b8e76afbd90b77550f7ae7cbcddfc63ef41352b6352f2042da47f417cf03"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/StockLimitList.vue",
+      "sha256": "09af55d7d13c0081384c8e8c2a31a0c46a7dde1894efb73b69380ec0ab2d8d5b"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/StockList.vue",
+      "sha256": "6a65fe4cf987737a3a7876d3762a4f68f2c927940c99e74bf75bde0b3a59eea5"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/StockTxnList.vue",
+      "sha256": "75712bc74f61887150cb7fcb3e8b7b8202a7eaf4a553ceddf5ba5901d7ba92e5"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/StocktakeList.vue",
+      "sha256": "ca268843fa0982802681c32ec930d21756f4b0764524596e945c8f3d7f982ee2"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/TransferForm.vue",
+      "sha256": "b57822450e5ea660946e41df0d66b645d87ae8592908cc8e20cda03a72d51145"
+    },
+    {
+      "path": "jxc-web/src/modules/inventory/TransferList.vue",
+      "sha256": "0d0d7888fa7c21845504ab3ffca746fcda60d84ad0bdabde834a28fb584255ee"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/DeliveryList.vue",
+      "sha256": "12c52b8b9e3095baf67754572e8a62b6033520e389a7db4555aa544c7418bd49"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/DiscrepancyList.vue",
+      "sha256": "508b9354e9a5c2c23047beb296bccdec71917d5f2e1f7032ae3d5a03239efea6"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/FeeForm.vue",
+      "sha256": "9dcf019f06336aacdabafbcfbefd145084af4fe0228e24596c417e37380b3df1"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/HoldList.vue",
+      "sha256": "8099f82b711f3c054e74b56789212839f5755a69e184162890d55e2dcf64d27d"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/InTransitBoard.vue",
+      "sha256": "df4a2fab063ec0cf6d298acab9e4fc3ed291b8d368335e618c91541caa3b98bd"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/LgsFeeList.vue",
+      "sha256": "6842b8483bc0023af653274133d6d6e2a4fc4dffe1cc4e86be3ccb6e722886e4"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/LgsReceiptForm.vue",
+      "sha256": "c33ef62c8dfc8d58dd210b9bb2b4270dd4c3bdddec2bea805eeacad8dcf72e8b"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/LgsReceiptList.vue",
+      "sha256": "b4be359be6f7b0218df8be4e985249e2a96b700d6e606fcaa812ebb3a3348004"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
+      "sha256": "5e9509adddc0133115a7e572bb648382823c30019d4ca81cbfa7388987b723d1"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/ShipmentForm.vue",
+      "sha256": "3d64aea813990b672184e3914c42398bdc23154057f8e326d180022a21cb2bde"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/ShipmentList.vue",
+      "sha256": "31e9723f17b69b4c53584fbf27a98eef62a2a6c61c4e0076854733e786eae9ff"
+    },
+    {
+      "path": "jxc-web/src/modules/logistics/receipt.ts",
+      "sha256": "521cfc10bb21512b7cf1259565bc7b1922c08945d10b447a66479c95ef10429a"
+    },
+    {
+      "path": "jxc-web/src/modules/master/CountrySkuList.vue",
+      "sha256": "6bce2b795b5ee2e5654f53d03eabb9e5a6a6b068ec7fa8de58e805bebb8bdedc"
+    },
+    {
+      "path": "jxc-web/src/modules/master/CustomerGroupList.vue",
+      "sha256": "ae24ea22253272fc93b46030cd84049197f811251301b1ab0853560caccce877"
+    },
+    {
+      "path": "jxc-web/src/modules/master/CustomerList.vue",
+      "sha256": "d179b9f62fa3e25358b743d9da12f6d2e65099b3b24dc90107e369e8a8e396e2"
+    },
+    {
+      "path": "jxc-web/src/modules/master/DictList.vue",
+      "sha256": "830223985e3a76f42c9be081d3eb758e261d47a406ade240a60a12e7332913b3"
+    },
+    {
+      "path": "jxc-web/src/modules/master/ExchangeRateList.vue",
+      "sha256": "18a49c37dc05e1427f736eed7974f32b67eaa1272ef574fbdd2f9312ff0eb81c"
+    },
+    {
+      "path": "jxc-web/src/modules/master/ExpenseItemList.vue",
+      "sha256": "036d98777ef46e519ddd0a18fd53babf702c6f4fe3f945bb92627d0cf6e04ef5"
+    },
+    {
+      "path": "jxc-web/src/modules/master/FundAccountList.vue",
+      "sha256": "8b564a1fa0b192656ac587e79e180761ad3454ab28033eee3bd760c3b1ca03cb"
+    },
+    {
+      "path": "jxc-web/src/modules/master/PartnerList.vue",
+      "sha256": "3d0cd041cf6f1ad5647fb5c905508044d0f1466be3429dbcb88b754c72e9376f"
+    },
+    {
+      "path": "jxc-web/src/modules/master/ProductList.vue",
+      "sha256": "d4a9f1606e742321ba48a25595a0af15d83431c017c2aac3e962f313d81e3997"
+    },
+    {
+      "path": "jxc-web/src/modules/master/options.ts",
+      "sha256": "87258bbbf6f098c1f2cb11a47411273dcf1dd25db21a3c169a1aaf28b69d1bd7"
+    },
+    {
+      "path": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
+      "sha256": "6b1fae7636fda668155e0be03dedcad0aba038ed04b71858583c857759ca3e71"
+    },
+    {
+      "path": "jxc-web/src/modules/purchase/ExportNodeList.vue",
+      "sha256": "9945808531ad494812975b94598d75c569189d357f12b15ca50ae675015d546c"
+    },
+    {
+      "path": "jxc-web/src/modules/purchase/PurchaseOrderDetail.vue",
+      "sha256": "a11b5c8f789d4ec55958341f62ecb7cb5436287c4576d5159880b13714274f0c"
+    },
+    {
+      "path": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
+      "sha256": "fb10dd72d545c7a2b5fa8c6b1cd946251662e41ae1fe5eb7eadea4b28892adcf"
+    },
+    {
+      "path": "jxc-web/src/modules/purchase/PurchaseOrderList.vue",
+      "sha256": "bac3208fc9a4c8d6f44443b9867e98cf9ec226fca6cad2194660343d9e4f250f"
+    },
+    {
+      "path": "jxc-web/src/modules/returns/ClaimList.vue",
+      "sha256": "54c95e95e6f1cb8227cfeb04df4468d90e4670370b7b19bf8c97318a7aaf916f"
+    },
+    {
+      "path": "jxc-web/src/modules/returns/PurchaseReturnList.vue",
+      "sha256": "2bccdac278bbbf014710ae893566df87d8473b92f86cc44258faf75c7685d0ad"
+    },
+    {
+      "path": "jxc-web/src/modules/returns/RefundList.vue",
+      "sha256": "47b478469e377cd79b9451fbf0abd7e5a9f097bd07a1a28d7c3e94fa048d8a72"
+    },
+    {
+      "path": "jxc-web/src/modules/returns/SalesReturnList.vue",
+      "sha256": "e562cdac68b5293941f2684569fc6e0bb50c0b5c1dbe17d157591fe23fd21c7f"
+    },
+    {
+      "path": "jxc-web/src/modules/sales/OutboundList.vue",
+      "sha256": "96c080503a7e7067d0ed52e59b253a2c82e1addcbea8d29c38f197ccc23bc092"
+    },
+    {
+      "path": "jxc-web/src/modules/sales/PriceList.vue",
+      "sha256": "dcc74f4d7b69e0282d585911d9e8501b8de8eaa3211dacd3d2bcb0cea65878c5"
+    },
+    {
+      "path": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
+      "sha256": "157a130e87fd04c5514c47ee80f6efcf7713557f7fcf6b9d087832ef126e9432"
+    },
+    {
+      "path": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "sha256": "249404fca26607f29ebe709c9f1a4281fce4aff6440fb5f04aea0676c2e10a25"
+    },
+    {
+      "path": "jxc-web/src/modules/sales/SignList.vue",
+      "sha256": "09912973280796f980f550fa5e984694b489fa098158e769ef047812eb89c173"
+    },
+    {
+      "path": "jxc-web/src/modules/sales/StoreDaily.vue",
+      "sha256": "cc510461010411a6d17ee9588233529d320f9d282b23683ee655dbe4bf7489c3"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/AuditLogList.vue",
+      "sha256": "5780e0bddcf3cfbc5408a78cceeec09e0b6709405007d7ec7fbf906e674f7796"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/ImportCenter.vue",
+      "sha256": "cd1fdf5a7d4511596efe969f32c567de2788b6bdc3bc0c99e3c481ae3e2df74d"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/constants.ts",
+      "sha256": "444cea54d962037cd4791765d9c21e0e2df09f971c60f8a2ef52a6c9bc8e9837"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/country/CountryCloneWizard.vue",
+      "sha256": "52b2016e4d3c1dba90d1582261589117d5c83c090a17405ad6ca391e0a029185"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/country/CountryDetail.vue",
+      "sha256": "0d72648a1e6f48a97228609fed0a1a0e27bc6e5bb0e048f7759a4f55bdb1fb83"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/country/CountryList.vue",
+      "sha256": "fe8dc27c42f5ec20e8556d09d06f9a107dc1f43cdc480d85c0c09654fbdb922f"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/country/MissingList.vue",
+      "sha256": "1d4a193bd14ca447ed9f28773205a6b75f933c9dca97a750112dcdcacd6b8000"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/country/TemplateList.vue",
+      "sha256": "5905ebe2c8aadeefe9db75120ba72468939b2bb168218b613201f95e160860ab"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/country/types.ts",
+      "sha256": "f1ee21b9e5c147b9d1980f48a247b79e8f7335db259959efbbd6a149405223ed"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/org/EntityList.vue",
+      "sha256": "cd089ff6717957c9a764fd7d4afe153ca899b875a32bda9891d5617dde6d3ddb"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/org/StoreList.vue",
+      "sha256": "f0095b5d69c08ea083cdd52e1761268cc7cfc1e05281e47098531d9d0b41d064"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/org/WarehouseList.vue",
+      "sha256": "a31be4d2b6ca0a38bff858f6b137740f1f4244a9b2b28960aadfcbe763182b5a"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/perm/ApprovalRuleList.vue",
+      "sha256": "b46dad2522dff9232186c52c172f74d9c2e7021b6ab2d7b0c3fb4fbea9863f43"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/perm/DocWatcherList.vue",
+      "sha256": "2a84014799187bb2eefc935ac8e2e6594209ca288d034689b269e70a6f5d0058"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/perm/RoleList.vue",
+      "sha256": "30afb540736880d24cb79dc20a18b9b6319c0f9d08c7a0c47efb5858ee782715"
+    },
+    {
+      "path": "jxc-web/src/modules/settings/perm/UserList.vue",
+      "sha256": "939dc6c8cd631fafc4e452ffb64cd47bcf9dd4522dd99b1ffbfa3ad90a76cdc2"
+    },
+    {
+      "path": "jxc-web/src/modules/shared/bizOptions.ts",
+      "sha256": "22ece416e0bd6cb73b3cbd2a2064a4389b26da2b7a96e8f3085b54c2161ee4cf"
+    },
+    {
+      "path": "jxc-web/src/modules/workbench/JobList.vue",
+      "sha256": "6d0a07312cdc4a2e2a489e816de45ca2052daca088dad023c88d472ce3cc4b35"
+    },
+    {
+      "path": "jxc-web/src/modules/workbench/NotificationList.vue",
+      "sha256": "822aabc711be5fc44e4b71c0c03e58e5b72d5bb552df42b4ee4ecee5373eb5a1"
+    },
+    {
+      "path": "jxc-web/src/modules/workbench/WorkbenchView.vue",
+      "sha256": "354aa52cefa70abc7372eb8c5455e1f9a38cc09f3b9b48a3c46fb6bdd7b31243"
+    },
+    {
+      "path": "jxc-web/src/router/index.ts",
+      "sha256": "16d57558a98d82db20ee52624c7819624158d3417523efffe603fbdcb8b0c2ad"
+    },
+    {
+      "path": "jxc-web/src/router/routes.ts",
+      "sha256": "ba0c560492d96b14b7f6b4eb27d721a70ad255644c6155883b9b735ef36501ea"
+    },
+    {
+      "path": "jxc-web/src/stores/country.ts",
+      "sha256": "d677d6b21480afd348d1df96f9e542a8b14991fa1ac172bb25f3c23d28c85d71"
+    },
+    {
+      "path": "jxc-web/src/stores/options.ts",
+      "sha256": "53e7641c1a1e446e15a28e48583cda533cadf14b1c2745b03761b1cf79da5c95"
+    },
+    {
+      "path": "jxc-web/src/stores/todo.ts",
+      "sha256": "938156b6bd18cc23fad36679c90977943f4ecbe67ce36b7eeb404d7c8db71323"
+    },
+    {
+      "path": "jxc-web/src/stores/user.ts",
+      "sha256": "da2e9cb56dd152532c400402b32f0524314f66a12dcf7dde1de52a4f3e79ae87"
+    },
+    {
+      "path": "jxc-web/src/styles/index.scss",
+      "sha256": "404b3f6b2951c3e5efa09ff7010d53495472d353ddddc3dcef2639c4dd90e40b"
+    },
+    {
+      "path": "jxc-web/src/utils/action.ts",
+      "sha256": "d04c1eee872360b9187c6f45213c505ca27fa67eb3c27aa9ca505be3d74e5e8b"
+    },
+    {
+      "path": "jxc-web/src/utils/datetime.ts",
+      "sha256": "9d89c327aeb9027d751c72a80bc51b47af510b48ebf0c9d9335e18e8ee5ef728"
+    },
+    {
+      "path": "jxc-web/src/utils/finance-source.ts",
+      "sha256": "9b919eb61cb62964536325cb65b73ec14cfa807cedd6039e4db0a761fb2c98b5"
+    },
+    {
+      "path": "jxc-web/src/utils/format.ts",
+      "sha256": "110b34b94503194909c5e525255bf7ffe9b601cca4b570248cc0d093409a8927"
+    },
+    {
+      "path": "jxc-web/src/utils/session.ts",
+      "sha256": "dcd5f180b000f54be9c123f208f0ac7f4b03bcc624e99cce6a415d4090b48bf4"
+    },
+    {
+      "path": "jxc-web/src/utils/status.ts",
+      "sha256": "d7519361301c1ed16104e624303a40803b19f0dc3b128b57ad25b6796a3e9b3c"
+    },
+    {
+      "path": "jxc-web/tests/amounts.test.mjs",
+      "sha256": "c7998e324727c2ed9a9f680d1326fcc71bdb546f3969b40fc1eeba6733316e77"
+    },
+    {
+      "path": "jxc-web/tests/ap-finance-controls.test.mjs",
+      "sha256": "6897733241626c19b795d2c8b28d623a1e0cbca0ba6c2b32b5f63e33180f7be3"
+    },
+    {
+      "path": "jxc-web/tests/approval-rule-editor.test.mjs",
+      "sha256": "a9a28ab52270bedbd198a37c672208d18f0e9245fd04dc97a94bce33107d2ac7"
+    },
+    {
+      "path": "jxc-web/tests/approval-source-links.test.mjs",
+      "sha256": "e541a3fd59249c85506b590fd906019d60153be8259326ba99179061e833fe21"
+    },
+    {
+      "path": "jxc-web/tests/approval-task-summary.test.mjs",
+      "sha256": "b2f67c7793683ab25f8382f2b244032925cb0e21f375963b8acdf8559b818856"
+    },
+    {
+      "path": "jxc-web/tests/attachment-download.test.mjs",
+      "sha256": "376e56029caa31917b74e8770c27caa2c79c8179301b7918f26fb0035677711c"
+    },
+    {
+      "path": "jxc-web/tests/classification-effective-date.test.mjs",
+      "sha256": "baf7d06015930ec749b5ba637d887b72eaf9cb93ee7b1e7cf35d67a7c9a03460"
+    },
+    {
+      "path": "jxc-web/tests/command-intent.test.mjs",
+      "sha256": "d5a9a7a305a0cbe745792868e183201f1f84f3d934493617a499e8a46292ca6f"
+    },
+    {
+      "path": "jxc-web/tests/contract-baseline.test.mjs",
+      "sha256": "3d3610651ddd7be5a66efa9826a3183b9f0f28818b1f24ed48a0aa0837cba588"
+    },
+    {
+      "path": "jxc-web/tests/contracts/fixture-runner.mjs",
+      "sha256": "de051164cf99b0e0a8ef8201674a259bad9871cc92398a73e8295b9279a7f5e7"
+    },
+    {
+      "path": "jxc-web/tests/contracts/http-scenarios.json",
+      "sha256": "119d7794d27f6c618c1137e4c510b4cb122f3a424e080bbe4d3a7354b69d0600"
+    },
+    {
+      "path": "jxc-web/tests/contracts/load-pagination.mjs",
+      "sha256": "e25eb80a281602c79d19b0686a9406ba92db024a8119856ca5d1922233d4d83a"
+    },
+    {
+      "path": "jxc-web/tests/contracts/load-vue-script.mjs",
+      "sha256": "21a4a95e957b00dee63d60ed9764d87f0dd1ba2a7357c896afd3b09d408fa17c"
+    },
+    {
+      "path": "jxc-web/tests/cost-bill-assignment.test.mjs",
+      "sha256": "e4b2c78975bc2d81ff36d79b9acd1d12b624abed8515831c35e1f77686d131fb"
+    },
+    {
+      "path": "jxc-web/tests/cost-confirmation-date.test.mjs",
+      "sha256": "b99b09438a0127aad4055a9758aabd62be0c24eadc29f5e59af3cce7de1920e5"
+    },
+    {
+      "path": "jxc-web/tests/cost-expense-reference-scope.test.mjs",
+      "sha256": "d92e6a35913640a84b4f345212d73acafc7ce01c972c8ab6620bd0135f2b1537"
+    },
+    {
+      "path": "jxc-web/tests/cost-inventory.test.mjs",
+      "sha256": "1a72d4bdd42f577d58d144fd4fd3f94f96f4902ee1bee815082e1528b72789ab"
+    },
+    {
+      "path": "jxc-web/tests/cost-source-target.test.mjs",
+      "sha256": "2cfa2c24a25bb6a5439c32b08800f8a7b378570f5d8e8d1e754608543ad74350"
+    },
+    {
+      "path": "jxc-web/tests/cost-trace-native-ui.test.mjs",
+      "sha256": "b0f3e28f43028fcb638fb049ab98ec4bc9737c2a9fb97a9f190e3ce7df16e7f5"
+    },
+    {
+      "path": "jxc-web/tests/crud-intent.test.mjs",
+      "sha256": "b44bbb22a026e8618f8e08870c1365fad1f7794b87326bc8dcfbf3141bf66962"
+    },
+    {
+      "path": "jxc-web/tests/domestic-receipt-references.test.mjs",
+      "sha256": "0c5462ddb98c1341dcd1f4b0f4a7671fde493ecde5245136d2e424f2e99ca34a"
+    },
+    {
+      "path": "jxc-web/tests/exchange-rate-confirmation.test.mjs",
+      "sha256": "43924e514b12d526a81e6a1eba018d96555d10a0b321779267a166dc09c1d6de"
+    },
+    {
+      "path": "jxc-web/tests/expense-item-treatment.test.mjs",
+      "sha256": "a69319567fce0e9c6e3cf713d57878f120896db1c0dae399b3d0fb31d18444af"
+    },
+    {
+      "path": "jxc-web/tests/finance-mapping-mode.test.mjs",
+      "sha256": "e0a5f9cfc0f81523062dac6c9461621764ccc1e7f3f35b1492d28a156be96a96"
+    },
+    {
+      "path": "jxc-web/tests/finance.test.mjs",
+      "sha256": "06c8504863393c28eee911b3a2fdb8c8c135c36a5d656b0f376a26220f1459b9"
+    },
+    {
+      "path": "jxc-web/tests/grant-version.test.mjs",
+      "sha256": "4269da49b37371df8b998e1a0c9dc3dfdaa1e2f5c3ec204f09bd0cb663c9ea18"
+    },
+    {
+      "path": "jxc-web/tests/http-boundaries.test.mjs",
+      "sha256": "e99cd3ba646df188f1c686c1efd69815ae966db3ed2405a953d8f179a18e4f51"
+    },
+    {
+      "path": "jxc-web/tests/ledger-scope.test.mjs",
+      "sha256": "12f11aba7329c3b401e692757e512d441593ef5a5d4cbbf7145bdfe2208cf208"
+    },
+    {
+      "path": "jxc-web/tests/logistics-receipt-intent.test.mjs",
+      "sha256": "13647a06a4341b844e5d171600807279a1282b45d3e80ae07512288761d76dcc"
+    },
+    {
+      "path": "jxc-web/tests/logistics-receipt-projection.test.mjs",
+      "sha256": "32fc8914c2a90ea4d1a41edb018df82fff38786a0e8814540c6a5d8a02c98e6b"
+    },
+    {
+      "path": "jxc-web/tests/mock-exit.test.mjs",
+      "sha256": "0f046f784583e7371f039d75c3dce81c58f65beb19c55248c4ed223715c4e112"
+    },
+    {
+      "path": "jxc-web/tests/opening-transit-date.test.mjs",
+      "sha256": "9c5705c0e7053912af0889ab47953dcb4e2977c0181efa0309aba89a38558a78"
+    },
+    {
+      "path": "jxc-web/tests/pagination.test.mjs",
+      "sha256": "81f88df3b44dc64974daa9745311de3d68d5b6979721dd1d27addc06e5fc90d1"
+    },
+    {
+      "path": "jxc-web/tests/period-first-month.test.mjs",
+      "sha256": "76ac79c8391f25d8068745e96b2f23b5f4bf0169b6215705d12855b8cccc3ce8"
+    },
+    {
+      "path": "jxc-web/tests/permissions.test.mjs",
+      "sha256": "abf70f2f718f529e2d08a94f68d069c8fa3639f7489de31a00c6c0aaf14b4454"
+    },
+    {
+      "path": "jxc-web/tests/price-reference-permissions.test.mjs",
+      "sha256": "47b4b8b64d1c55da592832c24ff47d753c8de46fd070b4f44583b45a1a0378a7"
+    },
+    {
+      "path": "jxc-web/tests/product-category-editor.test.mjs",
+      "sha256": "e80c3371833d53442ba4455426b1878c7ca4eabeef6154ca067f015299443e00"
+    },
+    {
+      "path": "jxc-web/tests/profit-source-drill.test.mjs",
+      "sha256": "ce12346b11555294626ff16cb292d98d073dbc1a96b13ea5904ea80f10e8a667"
+    },
+    {
+      "path": "jxc-web/tests/purchase-order-price.test.mjs",
+      "sha256": "f82ba160796545d686c0a95481d4f4066109c92b59b3047226590cfa6586d5c2"
+    },
+    {
+      "path": "jxc-web/tests/report-template-editor.test.mjs",
+      "sha256": "3ed6b69e194b360f415b3e815a5124a1e233f21c15007ee3f9e2e08c507e3b0d"
+    },
+    {
+      "path": "jxc-web/tests/sales-attachment-permissions.test.mjs",
+      "sha256": "6cc10faf8e1f14f3034ea87bc3953cdf5ad5fbf4b6c23e4a3d1321847e489def"
+    },
+    {
+      "path": "jxc-web/tests/sales-book-references.test.mjs",
+      "sha256": "da06b57b743c0d9f8d8e679866701a5cf0fbc6a527be3d7bd2e0a4f61a5293a3"
+    },
+    {
+      "path": "jxc-web/tests/sales-detail-native-actions.test.mjs",
+      "sha256": "43a26b18b5e44012660bab4dab42ebdceeb152567e9787c84ebc109ad9033640"
+    },
+    {
+      "path": "jxc-web/tests/sales-order-edit.test.mjs",
+      "sha256": "7ac4428f6c502cb26d81e1d771fca6d94281a1976cb9a95bbcb9fd0816843ae9"
+    },
+    {
+      "path": "jxc-web/tests/scenario.test.mjs",
+      "sha256": "4a0c808ea52e07dcdf92de7f9dc571ab97d5d00ee05625220d680d876f1777c7"
+    },
+    {
+      "path": "jxc-web/tests/shipment-planned-time.test.mjs",
+      "sha256": "7f419898cf79adc8dd38ce22670bb87767b1072a08aadcb51ac03d407ffca710"
+    },
+    {
+      "path": "jxc-web/tests/shipment-source-dimensions.test.mjs",
+      "sha256": "dc98b0438ea01587a1830c4e586774adb8f671b392b8b8a344cf810381db8dac"
+    },
+    {
+      "path": "jxc-web/tests/support.mjs",
+      "sha256": "d10ec5a6e273a961366c794bd6220af9915f6f67a0f09597fc9413753918da77"
+    },
+    {
+      "path": "jxc-web/tsconfig.app.json",
+      "sha256": "fea103505484fb3fbc6501050316babae6f6b4c477ddc1fbe4f2d6c76e535125"
+    },
+    {
+      "path": "jxc-web/tsconfig.json",
+      "sha256": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808"
+    },
+    {
+      "path": "jxc-web/tsconfig.node.json",
+      "sha256": "5730d82a0499553060fccf7d8893941e68cd58c120378bbc60a7fcf641245bdf"
+    },
+    {
+      "path": "jxc-web/vite.config.ts",
+      "sha256": "bb82e969023c89e4d404cb6c33b41ede4c02c458cb486300cb95e64182c45867"
+    }
+  ]
+}

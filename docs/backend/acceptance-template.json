@@ -1,0 +1,773 @@
+{
+  "schemaVersion": 1,
+  "status": "NOT_RUN",
+  "items": [
+    {
+      "id": "A01",
+      "title": "中国采购与国内节点",
+      "pages": [
+        "/purchase/orders/:id"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "部分国内交付和出口登记后，`inv_stock_txn` 没有新增流水，`inv_stock_summary` 不变"
+      },
+      "browser": {
+        "steps": [
+          "创建CNY采购",
+          "审批",
+          "部分国内收货",
+          "出口；记录前后MX库存与原币价"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A02",
+      "title": "发运与运输方式",
+      "pages": [
+        "/logistics/shipments/:id",
+        "/inventory/stocks"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "海运和空运都能发运；发运后在途增加，可售数量不变；目的国、目的仓取自配置"
+      },
+      "browser": {
+        "steps": [
+          "分别创建海运/空运",
+          "发运；核对配置目的仓、在途增加、可售不变"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A03",
+      "title": "换柜与暂缓派送",
+      "pages": [
+        "/logistics/shipments/:id",
+        "/logistics/holds"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "`lgs_container` 保留原柜和新柜；暂缓记录有原因、责任人、费用；恢复后可以部分派送"
+      },
+      "browser": {
+        "steps": [
+          "登记换柜",
+          "暂缓原因责任人费用",
+          "部分解除",
+          "部分派送；保留原柜"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A04",
+      "title": "MX 部分实收",
+      "pages": [
+        "/logistics/receipts/:id"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "派送 50 件，实收 48 件：库存只加 48 件，`lgs_discrepancy` 有 2 件短缺且状态为 OPEN"
+      },
+      "browser": {
+        "steps": [
+          "派送50",
+          "实收48",
+          "确认；核对库存48及短缺2 OPEN"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A05",
+      "title": "内部代录",
+      "pages": [
+        "/sales/orders/new"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "业务员和门店都能录 MXN 订单；系统没有客户账号、商城、营销活动单"
+      },
+      "browser": {
+        "steps": [
+          "业务员和门店账号分别创建MXN销售草稿；确认内部代录入口"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A06",
+      "title": "单店与新增门店",
+      "pages": [
+        "/settings/stores"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "新增第 2 家门店后，可以独立配置仓库、账号、收款账户和数据范围；第 1 家门店的人员看不到第 2 家门店的单据"
+      },
+      "browser": {
+        "steps": [
+          "新增第二门店、仓、账号及收款账户",
+          "分配范围",
+          "两店互相访问应拒绝"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A07",
+      "title": "出库前附件",
+      "pages": [
+        "/sales/orders/:id"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "缺销售单据时返回 `SAL_ATTACHMENT_MISSING`；现款缺收款凭证或未确认足额到账时返回 `SAL_PAYMENT_NOT_CONFIRMED`；删除附件后再次拦截"
+      },
+      "browser": {
+        "steps": [
+          "缺销售附件出库失败",
+          "现款未足额到账失败",
+          "补齐",
+          "删除附件后再次失败"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A08",
+      "title": "赊销附件",
+      "pages": [
+        "/sales/orders/:id",
+        "/ar/writeoffs"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "赊销有销售单据和有效审批依据时可以出库，不要求收款凭证；回款后上传凭证并核销"
+      },
+      "browser": {
+        "steps": [
+          "赊销附单据审批",
+          "不上传收款凭证出库",
+          "后续到账凭证及核销"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A09",
+      "title": "用户配置授信",
+      "pages": [
+        "/ar/credit-rules"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "授权人员可以修改资格、额度、账期、逾期策略，修改生成新版本；没有 `ar:credit-rule:edit` 的用户返回 403"
+      },
+      "browser": {
+        "steps": [
+          "修改授信资格额度账期逾期策略",
+          "核对新版本",
+          "无编辑权限账号403"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A10",
+      "title": "出库生成应收",
+      "pages": [
+        "/sales/orders/:id",
+        "/ar/receivables"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "订单 20 件只出库 8 件：应收只对应 8 件的金额，不需要等签收；订单未交数量为 12 件"
+      },
+      "browser": {
+        "steps": [
+          "订单20审批",
+          "出库8",
+          "核对应收只含8、未交12、尚未签收"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A11",
+      "title": "现款预收核销",
+      "pages": [
+        "/ar/customers/:id"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "先确认足额收款，出库生成应收后自动核销；应收余额为 0，现金只记录一次，预收余额正确"
+      },
+      "browser": {
+        "steps": [
+          "现款足额到账",
+          "出库",
+          "自动核销",
+          "应收0且资金事实只一次"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A12",
+      "title": "信用预占转换",
+      "pages": [
+        "/ar/customers/:id"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "审批后有预占；出库后预占转为应收占用，已用额度不变；取消未交部分释放对应预占"
+      },
+      "browser": {
+        "steps": [
+          "审批后查看信用预占",
+          "部分出库转换",
+          "取消未交",
+          "核对释放与已用额度"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A13",
+      "title": "权限上线后分配",
+      "pages": [
+        "/settings/users",
+        "/workbench"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "新账号看不到任何业务数据；分配 MX 仓或门店后，页面、附件、导出、AI 取数同步遵守"
+      },
+      "browser": {
+        "steps": [
+          "新建账号无范围",
+          "列表空",
+          "授仓/店",
+          "页面附件导出AI一致",
+          "撤销后再读"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A14",
+      "title": "看单、抄送、审批",
+      "pages": [
+        "/approval/todo",
+        "/sales/outbounds"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "抄送人打开单据仍按原有范围校验；分仓订单只显示本仓的履约行；修改关键字段后出库返回 `WF_APPROVAL_INVALIDATED`"
+      },
+      "browser": {
+        "steps": [
+          "配置抄送",
+          "受限账号打开只见本仓履约",
+          "改关键字段后出库应失效"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A15",
+      "title": "差异化定价",
+      "pages": [
+        "/sales/orders/new",
+        "/sales/prices"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "同一 SKU 对不同客户命中不同专属价；调价后已批准订单的价格不变；退货使用原成交价"
+      },
+      "browser": {
+        "steps": [
+          "同SKU两客户专属价",
+          "批准订单",
+          "调价",
+          "旧订单不变",
+          "退货原价"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A16",
+      "title": "现金、转账与核销",
+      "pages": [
+        "/ar/receipts",
+        "/finance/ledgers"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "支持混合收款、多次收款；核销金额不超过已确认金额；现金日记账可查；系统没有交班功能"
+      },
+      "browser": {
+        "steps": [
+          "现金+转账多次到账",
+          "分次核销",
+          "超额拒绝",
+          "查日记账"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A17",
+      "title": "欠款对账与退款",
+      "pages": [
+        "/ar/customers/:id",
+        "/returns/refunds"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "欠款、到账、退货、预收分别可追溯；退款需审批，不超过可退余额；重复支付登记不重复扣减"
+      },
+      "browser": {
+        "steps": [
+          "生成客户期间对账",
+          "原单退货",
+          "审批退款",
+          "付款重复提交",
+          "余额不重扣"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A18",
+      "title": "MX 调拨与盘点",
+      "pages": [
+        "/inventory/transfers",
+        "/inventory/stocktakes"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "调出、在途、实收数量不重复计算；盘点差异审批后才调整；批次成本随货保留；没有库龄字段"
+      },
+      "browser": {
+        "steps": [
+          "调拨出库",
+          "分次收货",
+          "盘点差异",
+          "审批过账；核对两仓、在途和批次成本"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A19",
+      "title": "库存上下限与补货",
+      "pages": [
+        "/inventory/limits",
+        "/inventory/replenishments"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "按 SKU 和仓店设置上下限，低于下限或高于上限时触发对应预警；补货待办可关联采购单或调拨单"
+      },
+      "browser": {
+        "steps": [
+          "保存上下限",
+          "低/高库存预警",
+          "生成建议",
+          "人工决定",
+          "关联正常采购/调拨",
+          "分次履约",
+          "关闭"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A20",
+      "title": "库存与订单联合分类",
+      "pages": [
+        "/inventory/analysis"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "库存相同但有效订单量不同的商品，按配置得到不同标签；高库存高订单不只凭库存判为滞销；低库存低订单不只凭库存判为畅销；可以下钻到依据和订单"
+      },
+      "browser": {
+        "steps": [
+          "两商品同库存不同有效需求",
+          "配置联合条件",
+          "重算",
+          "比较标签",
+          "展开依据与原订单"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A21",
+      "title": "CNY 至 MXN 换算",
+      "pages": [
+        "/cost/inbound"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "采购保留 CNY 原价；入库成本按已确认汇率折算 MXN；缺汇率时为 `PENDING_RATE`，不能确认；改汇率后历史快照不变"
+      },
+      "browser": {
+        "steps": [
+          "CNY采购实收",
+          "缺汇率待定拒绝确认",
+          "确认汇率",
+          "确认成本",
+          "改汇率旧快照不变"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A22",
+      "title": "成本与费用分摊",
+      "pages": [
+        "/cost/allocations"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "分摊明细合计等于原费用（舍入差额由指定行吸收）；资本化费用不再计入期间费用；暂估与实际的差额有调整记录"
+      },
+      "browser": {
+        "steps": [
+          "费用按数量/重量分摊",
+          "合计守恒尾差",
+          "资本化",
+          "实际替代暂估仅差额"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A23",
+      "title": "供应商与物流商对账",
+      "pages": [
+        "/ap/partners/:id"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "采购和物流的应付、预付、付款、退货、结算差额都可查；币种清楚；对账单期末等于明细合计"
+      },
+      "browser": {
+        "steps": [
+          "供应商与物流商应付/预付/付款/退货/结算",
+          "生成期间对账",
+          "币种及期末合计"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A24",
+      "title": "凭证来源与记账",
+      "pages": [
+        "/finance/events",
+        "/finance/vouchers"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "同一事件只生成一张待审凭证（`source_event_id` 唯一）；应收已形成不代表已记账；未审核或借贷不平的凭证不能记账"
+      },
+      "browser": {
+        "steps": [
+          "同事件并发/重复生成凭证",
+          "只一张",
+          "未审/不平拒绝记账",
+          "审后记账"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A25",
+      "title": "凭证更正与账簿",
+      "pages": [
+        "/finance/ledgers"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "已记账的凭证不能修改或删除，只能冲销；总账、明细账、余额表可以下钻到凭证和原业务"
+      },
+      "browser": {
+        "steps": [
+          "记账后改删失败",
+          "授权冲销",
+          "账簿下钻原凭证/业务"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A26",
+      "title": "结账前核对",
+      "pages": [
+        "/finance/closing",
+        "/finance/reconcile"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "未记账业务、库存成本差异、往来与总账差异都可以定位；影响本期核算的差异未处理时不能结账"
+      },
+      "browser": {
+        "steps": [
+          "结账检查显示未记账/成本/往来差异",
+          "下钻",
+          "未处理不能关账"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A27",
+      "title": "期间锁与反结账",
+      "pages": [
+        "/finance/closing"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "结账后，该期间业务返回 `FIN_PERIOD_CLOSED`；授权反结账会校验后续依赖、记录原因并重新核对"
+      },
+      "browser": {
+        "steps": [
+          "关账",
+          "原期间业务拒绝",
+          "存在后续已关期间反结失败",
+          "授权写原因后重开/核对"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A28",
+      "title": "内部财务报表",
+      "pages": [
+        "/finance/reports"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "试算平衡与总账一致；资产负债表和利润表按映射生成；现金流量表按现金银行分类生成，而不是按销售额"
+      },
+      "browser": {
+        "steps": [
+          "查试算/总账/资产负债利润现金流",
+          "核对映射及现金银行分类",
+          "钻原凭证"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A29",
+      "title": "AI 与范围排除",
+      "pages": [
+        "/analysis/ai",
+        "/analysis/profit"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "盈亏分析可以追溯来源；缺成本时有标识；标明不含线下营销费；没有营销和库龄跌价功能；AI 没有写操作接口"
+      },
+      "browser": {
+        "steps": [
+          "利润查来源与缺成本",
+          "AI未配置明确提示",
+          "无写入口/营销/库龄功能"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A30",
+      "title": "重试与导入",
+      "pages": [
+        "各执行页面"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "并发出库不超卖；重复的收货、出库、到账、核销、退款、凭证生成都不重复计算；期初导入不与未完业务重复"
+      },
+      "browser": {
+        "steps": [
+          "真实文件上传预校验",
+          "预览",
+          "确认",
+          "重复确认/取消重验；并发出库/到账/退款/凭证各原页面重试"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A31",
+      "title": "有效订单数量口径",
+      "pages": [
+        "/inventory/analysis"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "已审批订单按有效数量计入，草稿、待审、取消部分排除；部分出库不重复计数；未发的有效需求仍计入；商品件数与订单张数分别显示"
+      },
+      "browser": {
+        "steps": [
+          "草稿/待审/批准/部分取消/部分出库订单",
+          "比较有效件数、订单张数及未交需求"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A32",
+      "title": "统计范围与规则配置",
+      "pages": [
+        "/inventory/classify-rules"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "修改周期或阈值后按新配置更新分类；门店与仓库的统计没有重复分配；缺数据或缺规则时显示待判断；缺货不自动等于畅销；命中依据可以进入原订单"
+      },
+      "browser": {
+        "steps": [
+          "变更周期/阈值新版本",
+          "按仓店重算",
+          "缺规则待判断",
+          "缺货低需求不自动畅销",
+          "钻订单"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A33",
+      "title": "国家模板创建",
+      "pages": [
+        "/settings/countries/clone"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "平台管理员可以选择墨西哥模板版本，预览复制清单，生成目标国家草稿并显示缺项，补齐后启用；国家管理员调用创建接口返回 403"
+      },
+      "browser": {
+        "steps": [
+          "平台发布MX版本",
+          "克隆预览",
+          "DRAFT缺项",
+          "逐项本地审核补齐",
+          "启用；国家管理员创建403"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A34",
+      "title": "跨国家权限隔离",
+      "pages": [
+        "全部"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "只有墨西哥权限的账号，通过编号、搜索、链接、附件、导入导出、报表、AI 都拿不到第二国家的数据（按 ID 访问返回 404）；复制不继承墨西哥人员权限和银行资料"
+      },
+      "browser": {
+        "steps": [
+          "MX账号改国家header/ID/搜索/直链/附件/导入导出/报表/AI访问第二国",
+          "拒绝且无复制人员银行"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A35",
+      "title": "当地配置生效",
+      "pages": [
+        "第二国家的各页面"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "测试国家使用本国本币、时区、仓店、财务映射；采购、销售、汇率、日结、凭证中没有错误套用 MXN 或墨西哥时区；必要配置缺失时拦截"
+      },
+      "browser": {
+        "steps": [
+          "第二国本币时区配置",
+          "故意留缺项 readiness阻止",
+          "补齐",
+          "业务/汇率/日结/凭证查当地值"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A36",
+      "title": "库存、往来、账簿独立",
+      "pages": [
+        "第二国家的各页面"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "复制不带墨西哥的库存、订单、欠款、收付款、凭证；第二国家的交易不改变墨西哥的数量和余额；同一 SKU 的分类只用本国数据；各国独立结账"
+      },
+      "browser": {
+        "steps": [
+          "克隆后余额与交易空",
+          "第二国独立期初/业务",
+          "MX前后数量金额一致",
+          "各国独立关账"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A37",
+      "title": "第二国家完整业务复用",
+      "pages": [
+        "与墨西哥相同的页面"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "不复制业务代码，用同一套核心功能完成测试国家的采购、入库、销售、出库应收、回款核销、退货、凭证、报表；同时回归墨西哥主流程"
+      },
+      "browser": {
+        "steps": [
+          "同一核心页面在MX和第二国各执行采购",
+          "入库",
+          "现款/赊销",
+          "应收核销",
+          "退货",
+          "凭证报表；逐国记录"
+        ],
+        "status": "NOT_RUN"
+      }
+    },
+    {
+      "id": "A38",
+      "title": "规则与模板版本独立",
+      "pages": [
+        "/settings/countries/:id"
+      ],
+      "status": "NOT_RUN",
+      "source": {
+        "acceptance": "修改墨西哥的价格、库存阈值、账务模板后，第二国家不变；模板升级可以预览，按国家确认；历史订单和已记账凭证保留原版本"
+      },
+      "browser": {
+        "steps": [
+          "改MX价/阈值/记账模板",
+          "第二国不变",
+          "升级预览",
+          "目标国确认",
+          "历史订单凭证不变"
+        ],
+        "status": "NOT_RUN"
+      }
+    }
+  ]
+}

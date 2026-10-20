@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "databaseName": "",
+  "operator": "",
+  "reason": "",
+  "currencies": [],
+  "country": {"code": "", "name": "", "defaultCurrency": "", "timezone": "", "status": "", "locale": "", "enabledModules": []},
+  "entity": {"code": "", "name": ""},
+  "book": {"code": "", "name": "", "baseCurrency": "", "status": ""},
+  "admin": {"username": "", "displayName": "", "password": "", "isPlatformAdmin": false},
+  "role": {"code": "", "name": "", "roleType": "", "permissions": [], "fieldPolicies": {"COST": "", "CUSTOMER_PRICE": "", "ORDER_TOTAL": "", "BANK_INFO": "", "PROFIT": "", "CREDIT": ""}},
+  "dataScope": {"scopeType": ""}
+}

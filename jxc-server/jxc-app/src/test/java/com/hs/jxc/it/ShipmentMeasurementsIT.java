@@ -1,0 +1,59 @@
+package com.hs.jxc.it;
+import static org.assertj.core.api.Assertions.*;
+import java.math.BigDecimal;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.hs.jxc.common.api.ApiException;
+import com.hs.jxc.lgs.api.LogisticsApi;
+import com.hs.jxc.sys.service.AuthorizationService;
+
+/** Original shipment commands persist reviewed inputs; reads and downstream allocation use the frozen owner basis. */
+class ShipmentMeasurementsIT extends SupplyFixtures {
+ @Autowired AuthorizationService authorization;@Autowired LogisticsApi logistics;
+ @SuppressWarnings("unchecked") List<Map<String,Object>> lines(Map<String,Object> row){return (List<Map<String,Object>>)row.get("lines");}
+ void number(Map<String,Object> row,String field,String expected){assertThat(row.get(field)).as(field).isNotNull();assertThat(new BigDecimal(row.get(field).toString())).as(field).isEqualByComparingTo(expected);}
+ Map<String,Object> sources(boolean knownSecond){
+  seed("UPDATE md_product SET gross_weight=1,volume=0.01 WHERE id=501");seed("INSERT INTO md_product(id,product_code,name,base_unit,gross_weight,volume) VALUES(502,'P2','Product 2','PCS',?,?)",knownSecond?new BigDecimal("2"):null,knownSecond?new BigDecimal("0.02"):null);seed("INSERT INTO md_country_sku(country_id,product_id) VALUES(101,502)");seed("INSERT INTO md_product_unit(product_id,unit,factor_to_base) VALUES(502,'PCS',1)");
+  var po=pur.create(c(),"orders",Map.of("bookId",601,"supplierId",801,"orderDate","2026-10-15","lines",List.of(Map.of("productId",501,"unit","PCS","qty",5,"unitPrice",2),Map.of("productId",502,"unit","PCS","qty",3,"unitPrice",4))),key());po=pur.action(c(),"orders",id(po),"submit",Map.of(),key());
+  var receipt=pur.create(c(),"domestic-receipts",Map.of("orderId",id(po),"receiptDate","2026-10-15","confirm",true,"lines",lines(po).stream().map(line->Map.of("orderLineId",id(line),"qualifiedQty",line.get("baseQty"))).toList()),key());
+  return pur.create(c(),"export-nodes",Map.of("exportDate","2026-10-15","declarationNo","MEASURE-SOURCE","confirm",true,"lines",lines(receipt).stream().map(line->Map.of("receiptLineId",id(line),"qty",line.get("qualifiedQty"))).toList()),key());
+ }
+ Map<String,Object> shipmentBody(Map<String,Object> source){return new LinkedHashMap<>(Map.of("bookId",601,"destWarehouseId",401,"carrierId",802,"transportMode","AIR","flightNo","MEASURE","awbNo","MEASURE","bizDate","2026-10-15","lines",lines(source).stream().map(line->Map.of("sourceLineId",id(line),"baseQty",line.get("qty"),"boxes",line.get("productId").toString().equals("501")?2:1,"unitWeight",999,"unitVolume",999)).toList()));}
+ Map<String,Object> receive(Map<String,Object> shipment){
+  long id=id(shipment);lgs.action(c(),"shipments",id,"submit",Map.of(),key());lgs.action(c(),"shipments",id,"dispatch",Map.of("actualEtd","2026-10-15T15:00:00Z"),key());for(String type:List.of("ARRIVED_PORT","CUSTOMS_RELEASED"))lgs.action(c(),"shipments",id,"nodes",Map.of("nodeType",type,"actualAt","2026-10-15T16:00:00Z"),key());
+  var delivery=lgs.create(c(),"deliveries",Map.of("shipmentId",id,"bizDate","2026-10-15","dispatch",true,"dispatchedAt","2026-10-15T17:00:00Z","lines",lines(shipment).stream().map(line->Map.of("shipmentLineId",id(line),"dispatchQty",line.get("baseQty"))).toList()),key());
+  return lgs.create(c(),"receipts",Map.of("deliveryId",id(delivery),"bizDate","2026-10-15","lines",lines(delivery).stream().map(line->Map.of("deliveryLineId",id(line),"goodQty",line.get("dispatchQty"))).toList()),key());
+ }
+ @Test void nativeShipmentRetainsBoxesAndFrozenUnitMeasurementsAcrossReadsAndDraftEdit(){
+  var exported=sources(true);var body=shipmentBody(exported);body.put("plannedEtd","2026-10-16T10:30:00-06:00");body.put("plannedEta","2026-10-20T18:30:00+08:00");var created=lgs.create(c(),"shipments",body,key());var detail=lgs.get(c(),"shipments",id(created));number(lines(detail).getFirst(),"boxes","2");number(detail,"totalBoxes","3");number(detail,"grossWeight","11");number(detail,"volume","0.11");number(lines(detail).getFirst(),"unitWeight","1");assertThat(java.time.OffsetDateTime.parse(detail.get("plannedEtd").toString()).toInstant()).isEqualTo(java.time.Instant.parse("2026-10-16T16:30:00Z"));assertThat(java.time.OffsetDateTime.parse(detail.get("plannedEta").toString()).toInstant()).isEqualTo(java.time.Instant.parse("2026-10-20T10:30:00Z"));
+  seed("UPDATE md_product SET gross_weight=10,volume=0.1 WHERE id=501");detail=lgs.get(c(),"shipments",id(created));number(detail,"grossWeight","11");number(detail,"volume","0.11");
+  var editedBody=new LinkedHashMap<>(body);editedBody.put("version",detail.get("version"));var editedLines=new ArrayList<>(lines(body));var first=new LinkedHashMap<>(editedLines.getFirst());first.put("baseQty",4);first.put("boxes",4);editedLines.set(0,first);editedBody.put("lines",editedLines);lgs.update(c(),"shipments",id(created),editedBody);detail=lgs.get(c(),"shipments",id(created));number(detail,"totalBoxes","5");number(detail,"grossWeight","46");number(detail,"volume","0.46");number(lines(detail).getFirst(),"boxes","4");
+  int events=owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class),audits=owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class);var list=(List<Map<String,Object>>)((Map<?,?>)lgs.list(c(),"shipments")).get("records");number(list.getFirst(),"totalBoxes","5");assertThat(owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class)).isEqualTo(events);assertThat(owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class)).isEqualTo(audits);
+ }
+ @Test void unknownDimensionsAndBoxesStayUnknownAndNativeCostTargetsNeverFallbackToChangedMaster(){
+  var exported=sources(false);var body=shipmentBody(exported);var inputs=new ArrayList<>(lines(body));var missing=new LinkedHashMap<>(inputs.get(1));missing.remove("boxes");inputs.set(1,missing);body.put("lines",inputs);var shipment=lgs.create(c(),"shipments",body,key());var detail=lgs.get(c(),"shipments",id(shipment));assertThat(detail).containsEntry("totalBoxes",null).containsEntry("grossWeight",null).containsEntry("volume",null);assertThat(lines(detail).get(1)).containsEntry("boxes",null).containsEntry("unitWeight",null).containsEntry("unitVolume",null);
+ }
+ @Test void nativeCostTargetsUseFrozenMeasurementsAndRejectRewritingTheDispatchedBasis(){
+  var shipment=lgs.create(c(),"shipments",shipmentBody(sources(false)),key());var receipt=receive(shipment);lgs.action(c(),"receipts",id(receipt),"confirm",Map.of(),key());seed("UPDATE md_product SET gross_weight=99,volume=9 WHERE id IN (501,502)");var targets=inCountry(101,()->logistics.costTargets(authorization.authorize(c()),id(shipment)));assertThat(targets).hasSize(2);assertThat(targets.getFirst().grossWeight()).isEqualByComparingTo("1");assertThat(targets.get(1).grossWeight()).isNull();assertThat(targets.get(1).volume()).isNull();
+  assertThatThrownBy(()->inCountry(101,()->jdbc.update("UPDATE lgs_shipment_line SET boxes=3 WHERE shipment_id=?",id(shipment)))).hasStackTraceContaining("BUSINESS_FACT_IMMUTABLE");
+ }
+ @Test void invalidLastBoxInputRollsBackTheNativeHeaderLinesAndSourcePlan(){
+  var exported=sources(true);var body=shipmentBody(exported);var inputs=new ArrayList<>(lines(body));var invalid=new LinkedHashMap<>(inputs.get(1));invalid.put("boxes",-1);inputs.set(1,invalid);body.put("lines",inputs);String intent=key();assertThatThrownBy(()->lgs.create(c(),"shipments",body,intent)).isInstanceOf(ApiException.class);for(String table:List.of("lgs_shipment","lgs_shipment_line"))assertThat(owner.queryForObject("SELECT count(*) FROM "+table,Integer.class)).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM sys_idempotency WHERE key=?",Integer.class,intent)).isZero();
+  invalid.put("boxes",1);inputs.set(1,invalid);body.put("lines",inputs);var saved=lgs.create(c(),"shipments",body,intent);number(lgs.get(c(),"shipments",id(saved)),"totalBoxes","3");
+ }
+ @Test void originalExportDtoKeepsProductQuantityAndOrderLabels(){
+  var exported=sources(true);var list=(List<Map<String,Object>>)((Map<?,?>)pur.list(c(),"export-nodes")).get("records");number(list.getFirst(),"totalQty","8");assertThat(list.getFirst().get("productSummary").toString()).contains("P","P2");var exportDetail=pur.get(c(),"export-nodes",id(exported));for(var line:lines(exportDetail))assertThat(line.get("orderNo")).isEqualTo(owner.queryForObject("SELECT doc_no FROM pur_order",String.class));
+ }
+ @Test void nativeReceiptConfirmationKeepsOwnerLabelsAndTheRealActorAndTime(){
+  var shipment=lgs.create(c(),"shipments",shipmentBody(sources(true)),key());var receipt=receive(shipment);var confirmed=lgs.action(c(),"receipts",id(receipt),"confirm",Map.of("confirmedBy",999,"confirmedAt","2000-01-01T00:00:00Z"),key());assertThat(confirmed.get("confirmedBy")).isNotNull();assertThat(confirmed.get("confirmedBy").toString()).isEqualTo("201");assertThat(confirmed.get("confirmedAt")).isNotNull();assertThat(confirmed.get("receivedByName").toString()).isNotBlank();for(String field:List.of("deliveryNo","shipmentNo","warehouseName"))assertThat(confirmed.get(field)).as(field).isNotNull();var before=owner.queryForMap("SELECT confirmed_by,confirmed_at FROM lgs_receipt WHERE id=?",id(receipt));lgs.action(c(),"receipts",id(receipt),"confirm",Map.of(),key());assertThat(owner.queryForMap("SELECT confirmed_by,confirmed_at FROM lgs_receipt WHERE id=?",id(receipt))).isEqualTo(before);assertThatThrownBy(()->inCountry(101,()->jdbc.update("UPDATE lgs_receipt SET confirmed_at=clock_timestamp() WHERE id=?",id(receipt)))).hasStackTraceContaining("BUSINESS_FACT_IMMUTABLE");
+ }
+ @Test void reopeningTheOriginalReceiptOnlyReturnsItsAuthorizedSourceWithoutCreatingOrChangingFacts(){
+  var shipment=lgs.create(c(),"shipments",shipmentBody(sources(true)),key());var receipt=receive(shipment);long delivery=((Number)receipt.get("deliveryId")).longValue();var original=owner.queryForMap("SELECT * FROM lgs_receipt WHERE id=?",id(receipt));int audits=owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class);
+  var reopened=new java.util.concurrent.atomic.AtomicReference<Map<String,Object>>();assertThatCode(()->reopened.set(lgs.create(c(),"receipts",Map.of("deliveryId",delivery),key()))).as("the original open intent reuses the authorized source identity").doesNotThrowAnyException();assertThat(id(reopened.get())).isEqualTo(id(receipt));assertThat(owner.queryForMap("SELECT * FROM lgs_receipt WHERE id=?",id(receipt))).isEqualTo(original);assertThat(owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class)).isEqualTo(audits);
+  assertThatThrownBy(()->lgs.create(c(),"receipts",Map.of("deliveryId",delivery,"lines",List.of(Map.of("deliveryLineId",id(lines(receipt).getFirst()),"goodQty",1))),key())).isInstanceOf(ApiException.class).extracting("code").isEqualTo("LGS_RECEIPT_EXISTS");
+  lgs.action(c(),"receipts",id(receipt),"confirm",Map.of(),key());var confirmed=owner.queryForMap("SELECT * FROM lgs_receipt WHERE id=?",id(receipt));assertThat(id(lgs.create(c(),"receipts",Map.of("deliveryId",delivery),key()))).isEqualTo(id(receipt));assertThat(owner.queryForMap("SELECT * FROM lgs_receipt WHERE id=?",id(receipt))).isEqualTo(confirmed);assertThat(owner.queryForObject("SELECT count(*) FROM lgs_receipt",Integer.class)).isEqualTo(1);
+  seed("INSERT INTO org_warehouse(id,country_id,entity_id,code,name) VALUES(402,101,301,'HIDDEN-W','Other warehouse')");seed("DELETE FROM sys_user_data_scope WHERE user_id=201");seed("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,warehouse_id,granted_by) VALUES(101,201,'WAREHOUSE',402,201)");assertThatThrownBy(()->lgs.create(c(),"receipts",Map.of("deliveryId",delivery),key())).isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
+ }
+
+}

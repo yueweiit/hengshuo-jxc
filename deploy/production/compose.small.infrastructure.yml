@@ -1,0 +1,16 @@
+# Resource budget for the two new dedicated services only; not a capacity result.
+services:
+  postgres:
+    cpus: 0.75
+    mem_limit: 1g
+    memswap_limit: 1g
+    pids_limit: 256
+    # Preview has no committed PITR/RPO policy yet. Preserve full-segment WAL
+    # archiving, without forcing a 16 MiB segment every idle heartbeat minute.
+    command: [postgres, -c, wal_level=replica, -c, archive_mode=on, -c, "archive_command=/opt/jxc/archive-wal.sh %p %f", -c, archive_timeout=0, -c, max_wal_senders=5]
+  objects:
+    cpus: 0.5
+    mem_limit: 768m
+    memswap_limit: 768m
+    environment:
+      GOMEMLIMIT: 512MiB

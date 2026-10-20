@@ -1,0 +1,1359 @@
+{
+  "schemaVersion": 1,
+  "scope": "M4 period closing, immutable snapshots, financial reports, business profit, real page workbench and owned asynchronous exports.",
+  "schemas": {},
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/profit",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ProfitIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai/history",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ProfitIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai/analysis",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ProfitIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai/analysis/{id}",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ProfitIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/close-check",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ClosingIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/waive",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ClosingIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/close",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ClosingIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/periods/{id}/reopen-impact",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ClosingIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/reopen",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ClosingIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/reports/{type}",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/FinancialReportsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/reports/{type}/export",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/FinancialReportsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/report-templates",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/FinancialReportsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/report-templates",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/FinancialReportsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/report-templates/{id}",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/FinancialReportsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/report-templates/{id}/review",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/FinancialReportsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/workbench/summary",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/todos",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/notifications",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/notifications/{id}/read",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/notifications/read-all",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/jobs",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs/{id}",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs/{id}/download",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/jobs/{id}/retry",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "See module-owned service; close/reopen, report and export remain independent permissions",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "raw immutable snapshots; response and cached download masked by current field policy",
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/audit-logs",
+      "phase": "M4",
+      "status": "implemented-business-foundation",
+      "parameters": [],
+      "responses": {
+        "200": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Authorized current country/book response; controlled validation and state failures preserve transactional rollback.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "current session and country authorization gates; export job owner and original source authorization checked again",
+        "permissions": "Document timeline: original document read authority; general audit list: sys:audit:view plus each source current document scope.",
+        "scope": "current country and explicit authorized book/period; no inferred cross-country or warehouse totals",
+        "field": "Source-specific monetary group and current field policy; recursively remove credentials/encrypted values; partial warehouse sales receives metadata only.",
+        "idem": {
+          "required": false,
+          "binding": "country,user,UUID,method,path,book,canonical body"
+        },
+        "facts": "posted voucher facts; strict source fingerprint/generation; no automatic opening, templates or accounting entries"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/AuditQueryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/AuditQueryIT.java"
+        }
+      ],
+      "limitations": [
+        "Shared schema is bounded surface metadata, not a generated complete business SDK.",
+        "Focused HTTP, PostgreSQL and browser acceptance evidence is recorded separately. AI provider is not configured and analysis returns controlled unavailable."
+      ]
+    }
+  ]
+}

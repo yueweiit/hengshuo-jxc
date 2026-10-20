@@ -1,0 +1,14 @@
+title = "Hengshuo public-source scan"
+
+[extend]
+useDefault = true
+
+# This fixed value is an attachment object path in TemporaryDirectory recovery tests.
+# It is not an authentication, API or encryption key. Keep every default rule.
+[[allowlists]]
+description = "Exact synthetic recovery attachment path only"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)jxc-server/scripts/m5/tests/test_recovery\.py$''']
+regexTarget = "secret"
+regexes = ['''^country/1/attachments/fixture$''']

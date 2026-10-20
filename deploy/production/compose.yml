@@ -1,0 +1,70 @@
+name: hengshuo-production
+x-log: &log
+  driver: json-file
+  options: { max-size: "20m", max-file: "5" }
+services:
+  application:
+    image: ${JXC_APPLICATION_IMAGE:?Set reviewed application image@sha256 digest}
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      JXC_BIND_ADDRESS: 0.0.0.0
+      JXC_DB_URL: ${JXC_DB_URL:?Set runtime PostgreSQL URL}
+      JXC_DB_USER: ${JXC_DB_USER:?Set least-privileged runtime role}
+      JXC_STORAGE_ENDPOINT: ${JXC_STORAGE_ENDPOINT:?Set private object storage endpoint}
+      JXC_STORAGE_BUCKET: ${JXC_STORAGE_BUCKET:?Set private bucket}
+      JXC_WORKBENCH_WORKER_ASSIGNMENTS: ${JXC_WORKBENCH_WORKER_ASSIGNMENTS:?Set explicitly reviewed countryId:userId assignments}
+      JXC_EXPECT_DATABASE: ${JXC_EXPECT_DATABASE:?Set exact database name}
+    secrets: [runtime_password, bank_key, storage_access_key, storage_secret_key]
+    healthcheck:
+      test: [CMD, java, -Dloader.main=com.hs.jxc.ops.HealthcheckMain, -cp, /app/app.jar, org.springframework.boot.loader.launch.PropertiesLauncher]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    logging: *log
+    networks: [backend]
+  gateway:
+    user: "101:101"
+    image: ${JXC_GATEWAY_IMAGE:?Set reviewed gateway image@sha256 digest}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/var/cache/nginx:size=32m,mode=1777", "/var/run:size=1m,mode=1777", "/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports: ["${JXC_HTTP_BIND:?Set HTTP bind}:8080", "${JXC_HTTPS_BIND:?Set HTTPS bind}:8443"]
+    secrets: [tls_certificate, tls_key]
+    depends_on:
+      application: { condition: service_healthy }
+    logging: *log
+    networks: [backend]
+  migrate:
+    image: ${JXC_APPLICATION_IMAGE:?Set reviewed application image@sha256 digest}
+    profiles: [migration]
+    command: [migrate]
+    read_only: true
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      JXC_DB_URL: ${JXC_DB_URL:?Set PostgreSQL URL}
+      JXC_DB_USER: ${JXC_DB_USER:?Set runtime role to receive migration grants}
+      JXC_MIGRATION_USER: ${JXC_MIGRATION_USER:?Set separate migration owner}
+      JXC_EXPECT_DATABASE: ${JXC_EXPECT_DATABASE:?Set exact database name}
+    secrets: [migration_password]
+    logging: *log
+    networks: [backend]
+networks:
+  backend: {external: true, name: "${JXC_BACKEND_NETWORK:?Set dedicated application network}"}
+secrets:
+  runtime_password: { file: "${JXC_SECRET_DIR:?Set private secret directory}/runtime_password" }
+  migration_password: { file: "${JXC_SECRET_DIR:?Set private secret directory}/migration_password" }
+  bank_key: { file: "${JXC_SECRET_DIR:?Set private secret directory}/bank_key" }
+  storage_access_key: { file: "${JXC_SECRET_DIR:?Set private secret directory}/storage_access_key" }
+  storage_secret_key: { file: "${JXC_SECRET_DIR:?Set private secret directory}/storage_secret_key" }
+  tls_certificate: { file: "${JXC_SECRET_DIR:?Set private secret directory}/tls_certificate" }
+  tls_key: { file: "${JXC_SECRET_DIR:?Set private secret directory}/tls_key" }

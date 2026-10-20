@@ -1,0 +1,302 @@
+{
+  "schemaVersion": 1,
+  "adapterContract": {
+    "mock": "Uses the existing freshDb/callApi and all current handlers. Expected values are constants; no duplicated business algorithms.",
+    "backend": "Java HTTP tests may load the same request/expect.backend data after provisioning equivalent trusted users, grants, masters and periods. Logical demo references need fixture-adapter mapping; never import demo data into production.",
+    "status": "Backend expectations are targets until separately executed against real PostgreSQL; this JSON is not a pass report."
+  },
+  "scenarios": [
+    {
+      "id": "auth-login-envelope",
+      "provenance": [
+        "src/mock/handlers/auth.ts:authHandlers login",
+        "src/mock/utils.ts:handle/ok"
+      ],
+      "contract": "Valid demo credentials produce the unchanged envelope and an opaque session token.",
+      "backendPhase": "M1",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/auth/login",
+          "body": {
+            "username": "admin",
+            "password": "admin123"
+          },
+          "expect": {
+            "mock": {
+              "status": 200,
+              "code": "OK",
+              "types": {
+                "data.token": "string",
+                "traceId": "string"
+              }
+            },
+            "backend": {
+              "status": 200,
+              "code": "OK",
+              "types": {
+                "data.token": "string",
+                "traceId": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "auth-login-invalid",
+      "provenance": [
+        "src/mock/handlers/auth.ts:authHandlers login"
+      ],
+      "contract": "Invalid credentials return a business error inside the same envelope.",
+      "backendPhase": "M1",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/auth/login",
+          "body": {
+            "username": "admin",
+            "password": "deliberately-wrong-fixture-value"
+          },
+          "expect": {
+            "mock": {
+              "status": 400,
+              "code": "AUTH_BAD_CREDENTIALS",
+              "equals": {
+                "data": null
+              }
+            },
+            "backend": {
+              "status": 400,
+              "code": "AUTH_BAD_CREDENTIALS",
+              "equals": {
+                "data": null
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "field-bank-hidden",
+      "provenance": [
+        "tests/permissions.test.mjs:bank endpoints and fund account serialization obey BANK_INFO field access"
+      ],
+      "contract": "Store user can see its cash account but BANK_INFO fields are absent from the response.",
+      "backendPhase": "M1",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/md/fund-accounts",
+          "options": {
+            "userId": 2,
+            "countryId": 1
+          },
+          "expect": {
+            "mock": {
+              "status": 200,
+              "code": "OK",
+              "equals": {
+                "data.records.0.id": 901
+              },
+              "absent": [
+                "data.records.0.bankName",
+                "data.records.0.accountNoMasked"
+              ]
+            },
+            "backend": {
+              "status": 200,
+              "code": "OK",
+              "absent": [
+                "data.records.0.bankName",
+                "data.records.0.accountNoMasked"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "stale-edit-version",
+      "provenance": [
+        "src/mock/crud.ts:update checkVersion",
+        "src/mock/utils.ts:checkVersion"
+      ],
+      "contract": "A stale supplied version returns 409 and preserves the stored master record.",
+      "backendPhase": "M1",
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/md/customer-groups/501",
+          "body": {
+            "version": 999,
+            "name": "must-not-save"
+          },
+          "expect": {
+            "mock": {
+              "status": 409,
+              "code": "SYS_VERSION_CONFLICT"
+            },
+            "backend": {
+              "status": 409,
+              "code": "SYS_VERSION_CONFLICT"
+            }
+          }
+        }
+      ],
+      "after": [
+        {
+          "table": "customerGroups",
+          "where": {
+            "id": 501
+          },
+          "equals": {
+            "name": "批发客户",
+            "version": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "unauthorized-country",
+      "provenance": [
+        "tests/permissions.test.mjs:national administrators cannot read or reset an account from another country",
+        "src/mock/utils.ts:readCtx"
+      ],
+      "contract": "A user assigned only to country 2 cannot select country 1 by changing its header.",
+      "backendPhase": "M1",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/org/books",
+          "options": {
+            "userId": 8,
+            "countryId": 1
+          },
+          "expect": {
+            "mock": {
+              "status": 403,
+              "code": "SYS_FORBIDDEN"
+            },
+            "backend": {
+              "status": 403,
+              "code": "SYS_FORBIDDEN"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "closed-period-denies-cost-write",
+      "provenance": [
+        "tests/cost-inventory.test.mjs:cost writes reject closed period and adjusted snapshot is never re-estimated"
+      ],
+      "contract": "Closed-period rejection precedes cost creation and leaves no draft.",
+      "backendPhase": "M3",
+      "arrange": {
+        "replace": {
+          "finPeriods": [
+            {
+              "id": 97000,
+              "countryId": 1,
+              "bookId": 61,
+              "fiscalYear": 2026,
+              "periodNo": 10,
+              "startDate": "2026-10-01",
+              "endDate": "2026-10-31",
+              "status": "CLOSED"
+            }
+          ],
+          "costAdjustments": []
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/cst/adjustments",
+          "body": {
+            "reason": "fixture-period-denial",
+            "target": "INVENTORY",
+            "batchId": 20001,
+            "amount": 50,
+            "bizDate": "2026-10-12"
+          },
+          "expect": {
+            "mock": {
+              "status": 400,
+              "code": "FIN_PERIOD_CLOSED"
+            },
+            "backend": {
+              "status": 400,
+              "code": "FIN_PERIOD_CLOSED"
+            }
+          }
+        }
+      ],
+      "after": [
+        {
+          "table": "costAdjustments",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "same-idempotency-key-different-body",
+      "provenance": [
+        "docs/00-总体架构与通用约定.md:7.1",
+        "docs/superpowers/plans/2026-10-15-real-backend-foundation.md:5.1",
+        "src/mock/crud.ts:create"
+      ],
+      "contract": "The real M1 command must bind the same key to method, endpoint, trusted book and request hash.",
+      "backendPhase": "M1",
+      "documentedGap": "Current generic Mock CRUD ignores Idempotency-Key and creates both different requests. These 200 observations must never be counted as real-backend conflict acceptance.",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/org/entities",
+          "body": {
+            "code": "FIX-IDEM-A",
+            "name": "First operation intent"
+          },
+          "options": {
+            "headers": {
+              "Idempotency-Key": "fixture-idem-intent"
+            }
+          },
+          "expect": {
+            "mock": {
+              "status": 200,
+              "code": "OK"
+            },
+            "backend": {
+              "status": 200,
+              "code": "OK"
+            }
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/org/entities",
+          "body": {
+            "code": "FIX-IDEM-B",
+            "name": "Changed operation intent"
+          },
+          "options": {
+            "headers": {
+              "Idempotency-Key": "fixture-idem-intent"
+            }
+          },
+          "expect": {
+            "mock": {
+              "status": 200,
+              "code": "OK"
+            },
+            "backend": {
+              "status": 409
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+name: jxc-m01-isolated
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229
+    environment:
+      POSTGRES_DB: jxc_m01_isolated
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${JXC_TEST_POSTGRES_PASSWORD:?Set an explicit isolated test database password}
+    ports:
+      - "127.0.0.1:55438:5432"
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d jxc_m01_isolated"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+  minio:
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z@sha256:9535594ad4122b7a78c6632788a989b96d9199b483d3bd71a5ceae73a922cdfa
+    command: [server, /data, --console-address, ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${JXC_TEST_MINIO_ROOT_USER:?Set an explicit isolated test MinIO user}
+      MINIO_ROOT_PASSWORD: ${JXC_TEST_MINIO_ROOT_PASSWORD:?Set an explicit isolated test MinIO password}
+    ports:
+      - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"

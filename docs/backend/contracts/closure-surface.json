@@ -1,0 +1,4172 @@
+{
+  "schemaVersion": 1,
+  "scope": "User-approved M0-M5 first-release closure. Explicit reviewed additions; unrelated bounded Controller combinations remain registered-gated.",
+  "schemas": {},
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/recognition-rules/{type}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "ap:recognition:edit; execution subject must retain its current native bill-creation permission and scope.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Receipt recognition can create the existing source-capacity-limited draft only. Confirmation/posting are explicit later commands."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayableRecognitionController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayableRecognitionIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/ap/recognition-rules/{type}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "ap:recognition:edit; execution subject must retain its current native bill-creation permission and scope.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Receipt recognition can create the existing source-capacity-limited draft only. Confirmation/posting are explicit later commands."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayableRecognitionController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayableRecognitionIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/statements/{id}/export",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Native AP statement visibility plus export authorization/current fields.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing asynchronous owned export pipeline; saved statement and explicit book remain fixed."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayableStatementExportIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/statements/export",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "ar:statement:view and current customer/book scope with current fields.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing JobService/JobHandler query authorization; no synchronous response is misrepresented as a background export."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReceivablesIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/detail/export",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Dedicated fin:ledger:export, current book/period scope and field policies.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing JobService/JobHandler; same ledger filters and frozen generation; current owner session is reauthorized on retry and download."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/LedgerIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/general/export",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Dedicated fin:ledger:export, current book/period scope and field policies.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing JobService/JobHandler; same ledger filters and frozen generation; current owner session is reauthorized on retry and download."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/LedgerIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/balance/export",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Dedicated fin:ledger:export, current book/period scope and field policies.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing JobService/JobHandler; same ledger filters and frozen generation; current owner session is reauthorized on retry and download."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/LedgerIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/journal/export",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Dedicated fin:ledger:export, current book/period scope and field policies.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing JobService/JobHandler; same ledger filters and frozen generation; current owner session is reauthorized on retry and download."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/LedgerIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/trial/export",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Dedicated fin:ledger:export, current book/period scope and field policies.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing JobService/JobHandler; same ledger filters and frozen generation; current owner session is reauthorized on retry and download."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/LedgerIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/classify-rules",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/classify-rules",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/inv/classify-rules/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/classify-rules/{id}/recalculate",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/classify-results",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/classify-results/{id}/orders",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/replenishments",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/suggest",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/{id}/decide",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/{id}/link",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/{id}/close",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent inv:classify:config/view and inv:replenish:create/decide permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "SAL-owned approved demand quantities, scoped inventory facts, versioned rules and native replenishment links. GET never recomputes."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/dicts",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/dicts/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/dicts",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/dicts/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/dicts/{id}/enable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/dicts/{id}/disable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/categories/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/categories/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/products/{id}/enable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/products/{id}/disable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/categories/{id}/enable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/categories/{id}/disable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/exchange-rates/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "md:dict:edit or md:product:edit; global product/category changes require platform authority.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Existing native master tables, immutable dictionary codes, optimistic versions, no imported bank authorization."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/MasterMaintenanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/countries/{id}/params",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{id}/readiness",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{id}/reviews",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/countries/{id}/reviews/{reviewId}/confirm",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/countries/{id}/activate",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/countries/{id}/disable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-templates",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-templates/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-templates",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-templates/{id}/publish",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-clone-jobs/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/items",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/org",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/admin",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/preview",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/apply",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/template-upgrades",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/template-upgrades",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/template-upgrades/{id}/confirm",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Independent country lifecycle, template publish/clone/review/activation permissions; global platform authority is required for new countries.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Frozen allowlisted configuration snapshots; native FIN drafts and local SKU/expense review. No partners, users, banks, balances, periods or transactions are copied."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/CountryConfigurationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/doc-watchers",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/doc-watchers/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/doc-watchers",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/doc-watchers/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/doc-watchers/{id}/enable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/doc-watchers/{id}/disable",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/delegations",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/delegations",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/delegations/{id}/revoke",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/sys/delegations/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:watcher:edit; delegation binds the actual current delegator and explicit bounded lifetime.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Viewer/CC never expands document scope or field access. A delegate retains their own current country and document visibility."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/doc-number-rules",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:country-param:edit with country-wide configuration scope.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Explicit configured database counter; existing issued numbers remain unchanged. Missing rule fails closed."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/doc-number-rules/{type}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:country-param:edit with country-wide configuration scope.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Explicit configured database counter; existing issued numbers remain unchanged. Missing rule fails closed."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{countryId}/doc-number-rules",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:country-param:edit with country-wide configuration scope.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Explicit configured database counter; existing issued numbers remain unchanged. Missing rule fails closed."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/countries/{countryId}/doc-number-rules/{type}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:country-param:edit with country-wide configuration scope.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Explicit configured database counter; existing issued numbers remain unchanged. Missing rule fails closed."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/DocumentGovernanceIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/user-options",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:user:edit and existing authority ceiling; user options are filtered by the current country and manageable users.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "One atomic role/scope command with a single CAS version; original independent PUT semantics remain."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/AuthorizationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/users/{id}/grants",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:user:edit and existing authority ceiling; user options are filtered by the current country and manageable users.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "One atomic role/scope command with a single CAS version; original independent PUT semantics remain."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/AuthorizationIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "version",
+                "roleIds",
+                "dataScopes"
+              ],
+              "properties": {
+                "version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "roleIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "dataScopes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/import-types",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/import-templates/{type}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/imports",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/imports",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/imports/{id}",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/imports/{id}/errors",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/imports/{id}/confirm",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/imports/{id}/cancel",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "Separate sys:import:<type> and sys:import:confirm plus native owner command permissions.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Server source-byte/canonical hash, immutable linked attempts, duplicate source claims, all-row validation and one transaction; native opening provenance and no invented cash/payment/GL."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReleaseInventoryIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs/worker-status",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "sys:worker:view in the current country.",
+        "scope": "Current country; exact native book/entity/store/warehouse scope. Disabled countries retain authorized historical reads.",
+        "field": "Native current field policy remains authoritative; files, recipients and delegates cannot grant authority.",
+        "idem": {
+          "required": false,
+          "binding": "Native command UUID/body identity or explicit immutable state/source uniqueness; see service contract."
+        },
+        "facts": "Read-only persisted heartbeat, stale lease, failed effect and actionable backlog indicators."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/WorkbenchJobsIT.java"
+        }
+      ],
+      "limitations": [
+        "Controller inventory and module regression evidence do not by themselves prove every original page has passed browser acceptance.",
+        "No production release, real opening balances, external payment execution, tax interface or external AI provider is implied."
+      ]
+    }
+  ]
+}

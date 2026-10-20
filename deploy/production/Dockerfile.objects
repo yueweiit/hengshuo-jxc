@@ -1,0 +1,52 @@
+# Build context: a regular-file export of official SeaweedFS commit
+# 530be3e37337488ecc34d58441e0bc476e121c93, with only the reviewed go.mod/go.sum
+# security patch (Go minimum 1.26.9 and golang.org/x/net v0.60.0).
+# Build with --platform linux/amd64. This is a locally built candidate, and needs
+# an independent final-image scan plus the original SDK/recovery acceptance.
+FROM --platform=$BUILDPLATFORM golang:1.26.9-alpine3.24@sha256:3082400e369fa24d5fc60bca20edab3f6d604e0c5a690ec66b295eff4dd87ade AS objects-build
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOMAXPROCS=2 GOGC=20 GOMEMLIMIT=2GiB
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN grep -qx 'go 1.26.9' go.mod \
+    && grep -Eq '^[[:space:]]+golang.org/x/net v0\.60\.0$' go.mod
+RUN --mount=type=cache,id=hengshuo-seaweed-go1269-mod,target=/go/pkg/mod \
+    go mod download golang.org/x/net
+COPY weed/ ./weed/
+COPY telemetry/proto/ ./telemetry/proto/
+COPY LICENSE ./LICENSE
+RUN --mount=type=cache,id=hengshuo-seaweed-go1269-mod,target=/go/pkg/mod \
+    --mount=type=cache,id=hengshuo-seaweed-go1269-build,target=/root/.cache/go-build \
+    GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -mod=readonly -p 1 -trimpath \
+    -ldflags '-extldflags -static -X github.com/seaweedfs/seaweedfs/weed/util/version.COMMIT=530be3e37' \
+    -o /out/weed ./weed \
+    && go version -m /out/weed > /out/weed-build-info.txt
+
+FROM scratch AS objects-artifacts
+COPY --from=objects-build /out/ /
+COPY --from=objects-build /build/go.mod /build/go.sum /
+
+# Preserve the exact official runtime/entrypoint and its Apache-2.0 licensed
+# service implementation. Replace only the Go binary and reviewed vendor fixes.
+FROM --platform=linux/amd64 chrislusf/seaweedfs@sha256:aba492e2a4e4c90bff795745e8e660affa1f09e7650f5981bd7bccd1a06cd931 AS objects-runtime
+USER root
+RUN test "$(cat /etc/alpine-release)" = 3.24.2 \
+    && apk add --no-cache --upgrade libcrypto3=3.5.9-r0 libssl3=3.5.9-r0 zlib=1.3.2-r1
+LABEL org.opencontainers.image.source="https://github.com/seaweedfs/seaweedfs" \
+      org.opencontainers.image.revision="530be3e37337488ecc34d58441e0bc476e121c93" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      com.hengshuo.security-patch="go1.26.9-xnet0.60.0-alpine3.24-vendor-fixes" \
+      com.hengshuo.release-status="candidate-requires-independent-verification"
+USER 1000:1000
+
+FROM objects-runtime AS objects-secure
+COPY --from=objects-build --chmod=755 /out/weed /usr/bin/weed
+COPY --from=objects-build /build/LICENSE /usr/share/licenses/seaweedfs/LICENSE
+
+# Package a binary already built with the exact builder above and checked in an
+# external regular-file export. Bind its hash and build log in the release proof.
+# Supply --build-context verified-objects=/absolute/private/verified-artifacts.
+FROM objects-runtime AS objects-verified
+COPY --from=verified-objects --chmod=755 /weed /usr/bin/weed
+COPY --from=verified-objects /LICENSE /usr/share/licenses/seaweedfs/LICENSE

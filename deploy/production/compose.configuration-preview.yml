@@ -1,0 +1,20 @@
+# Use with the original compose.yml. No accounting worker or financial posting grant.
+services:
+  application:
+    cpus: 1.0
+    mem_limit: 2g
+    memswap_limit: 2g
+    pids_limit: 384
+    environment:
+      JXC_ACCOUNTING_WORKER_ENABLED: "false"
+      JXC_ACCOUNTING_WORKER_ASSIGNMENTS: ""
+  gateway:
+    cpus: 0.25
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 128
+  migrate:
+    cpus: 0.75
+    mem_limit: 768m
+    memswap_limit: 768m
+    pids_limit: 256

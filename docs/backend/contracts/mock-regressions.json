@@ -1,0 +1,1606 @@
+{
+  "schemaVersion": 1,
+  "scope": [
+    "jxc-web/tests/amounts.test.mjs",
+    "jxc-web/tests/cost-inventory.test.mjs",
+    "jxc-web/tests/finance.test.mjs",
+    "jxc-web/tests/permissions.test.mjs",
+    "jxc-web/tests/scenario.test.mjs"
+  ],
+  "note": "Frozen original test call-sites are independent contracts; for-of names are parameter expansions. This records Mock coverage, not PostgreSQL or Java acceptance.",
+  "independentContractCount": 101,
+  "expandedTestCount": 111,
+  "contracts": [
+    {
+      "id": "amounts-1",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 16
+      },
+      "nameTemplate": "'credit recheck converts the current order reservation without counting it twice'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "credit recheck converts the current order reservation without counting it twice",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-2",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 23
+      },
+      "nameTemplate": "`credit ${exception} exception cannot auto-approve when no approval rule matches`",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "credit overLimit exception cannot auto-approve when no approval rule matches",
+          "parameters": {
+            "exception": "overLimit"
+          }
+        },
+        {
+          "name": "credit overdue exception cannot auto-approve when no approval rule matches",
+          "parameters": {
+            "exception": "overdue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "amounts-3",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 42
+      },
+      "nameTemplate": "'editing an approved partly shipped order preserves line IDs and fulfillment counters'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "editing an approved partly shipped order preserves line IDs and fulfillment counters",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-4",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 70
+      },
+      "nameTemplate": "'purchase return cannot exceed the unshipped domestic source quantity'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "purchase return cannot exceed the unshipped domestic source quantity",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-5",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 77
+      },
+      "nameTemplate": "'completed domestic returns do not reduce the separate MX return quantity'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "completed domestic returns do not reduce the separate MX return quantity",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-6",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 87
+      },
+      "nameTemplate": "'one sales return request cannot repeat the same outbound line to exceed delivered quantity'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "one sales return request cannot repeat the same outbound line to exceed delivered quantity",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-7",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 96
+      },
+      "nameTemplate": "'executing domestic return updates the original receipt source while preserving received history'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "executing domestic return updates the original receipt source while preserving received history",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-8",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 105
+      },
+      "nameTemplate": "'AP bill creation reloads purchase price and rejects a stale duplicate source'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "AP bill creation reloads purchase price and rejects a stale duplicate source",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-9",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 113
+      },
+      "nameTemplate": "'cross currency AP settlement records real base currency exchange difference'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "cross currency AP settlement records real base currency exchange difference",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-10",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 124
+      },
+      "nameTemplate": "'AP settlement rejects a payment belonging to another supplier'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "AP settlement rejects a payment belonging to another supplier",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-11",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 131
+      },
+      "nameTemplate": "'reversing AR writeoff restores credit and automatic order allocation; statement still balances'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "reversing AR writeoff restores credit and automatic order allocation; statement still balances",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-12",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 147
+      },
+      "nameTemplate": "'manual AR writeoff cannot spend cash already allocated to a different order'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "manual AR writeoff cannot spend cash already allocated to a different order",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-13",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 155
+      },
+      "nameTemplate": "'refund payment requires actual date, reference and active proof'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "refund payment requires actual date, reference and active proof",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-14",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 164
+      },
+      "nameTemplate": "'a valid refund consumes refundable balance once and preserves recipient and payment evidence'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "a valid refund consumes refundable balance once and preserves recipient and payment evidence",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-15",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 179
+      },
+      "nameTemplate": "'AP confirmation freezes historical rate and reversal keeps supplier statement consistent'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "AP confirmation freezes historical rate and reversal keeps supplier statement consistent",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-16",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 197
+      },
+      "nameTemplate": "'AP prepayment and credit-note settlements can be reversed without losing history'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "AP prepayment and credit-note settlements can be reversed without losing history",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-17",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 210
+      },
+      "nameTemplate": "'warehouse-scoped sales detail returns only its own allocations and hides whole-order totals'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "warehouse-scoped sales detail returns only its own allocations and hides whole-order totals",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-18",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 220
+      },
+      "nameTemplate": "'store receipt lists exclude another store even in the same country'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "store receipt lists exclude another store even in the same country",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-19",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 228
+      },
+      "nameTemplate": "`AP prepayment ${action} response keeps COST-hidden amounts private`",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "AP prepayment create response keeps COST-hidden amounts private",
+          "parameters": {
+            "action": "create"
+          }
+        },
+        {
+          "name": "AP prepayment confirm response keeps COST-hidden amounts private",
+          "parameters": {
+            "action": "confirm"
+          }
+        },
+        {
+          "name": "AP prepayment duplicate response keeps COST-hidden amounts private",
+          "parameters": {
+            "action": "duplicate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "amounts-20",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 245
+      },
+      "nameTemplate": "'cached AP statements recheck every source against the current data scope'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "cached AP statements recheck every source against the current data scope",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-21",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 262
+      },
+      "nameTemplate": "'cached AP statements hide report summary and nested amounts when COST is hidden'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "cached AP statements hide report summary and nested amounts when COST is hidden",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-22",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 273
+      },
+      "nameTemplate": "`purchase return ${action} response hides COST fields recursively`",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "purchase return draft response hides COST fields recursively",
+          "parameters": {
+            "action": "draft"
+          }
+        },
+        {
+          "name": "purchase return submit response hides COST fields recursively",
+          "parameters": {
+            "action": "submit"
+          }
+        },
+        {
+          "name": "purchase return ship response hides COST fields recursively",
+          "parameters": {
+            "action": "ship"
+          }
+        },
+        {
+          "name": "purchase return duplicate response hides COST fields recursively",
+          "parameters": {
+            "action": "duplicate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "amounts-23",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 289
+      },
+      "nameTemplate": "`claim ${action} response hides COST amounts`",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "claim create response hides COST amounts",
+          "parameters": {
+            "action": "create"
+          }
+        },
+        {
+          "name": "claim resolve response hides COST amounts",
+          "parameters": {
+            "action": "resolve"
+          }
+        }
+      ]
+    },
+    {
+      "id": "amounts-24",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 302
+      },
+      "nameTemplate": "'submitted refund response obeys amount and bank field permissions'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "submitted refund response obeys amount and bank field permissions",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-1",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 30
+      },
+      "nameTemplate": "'profit uses every consumed batch rather than first batch times total quantity'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "profit uses every consumed batch rather than first batch times total quantity",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-2",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 35
+      },
+      "nameTemplate": "'captured outbound cost remains stable when an inbound cost later changes'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "captured outbound cost remains stable when an inbound cost later changes",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-3",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 44
+      },
+      "nameTemplate": "'returns outside selected business period do not reduce that period profit'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "returns outside selected business period do not reduce that period profit",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-4",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 51
+      },
+      "nameTemplate": "`inventory allocation rejects ${label} fee`",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "inventory allocation rejects draft fee",
+          "parameters": {
+            "label": "draft",
+            "status": "DRAFT",
+            "treatment": "CAPITALIZE"
+          }
+        },
+        {
+          "name": "inventory allocation rejects period expense fee",
+          "parameters": {
+            "label": "period expense",
+            "status": "CONFIRMED",
+            "treatment": "PERIOD_EXPENSE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-5",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 60
+      },
+      "nameTemplate": "'capitalized foreign fee is converted once and allocation conserves base amount'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "capitalized foreign fee is converted once and allocation conserves base amount",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-6",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 72
+      },
+      "nameTemplate": "'COGS adjustment changes current profit once without rewriting historical outbound snapshot'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "COGS adjustment changes current profit once without rewriting historical outbound snapshot",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-7",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 83
+      },
+      "nameTemplate": "'cost writes reject closed period and adjusted snapshot is never re-estimated'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "cost writes reject closed period and adjusted snapshot is never re-estimated",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-8",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 95
+      },
+      "nameTemplate": "'warehouse and store classification allocate only their own effective demand'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "warehouse and store classification allocate only their own effective demand",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-9",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 106
+      },
+      "nameTemplate": "'replenishment counts only linked purchase line arrival up to linked quantity'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "replenishment counts only linked purchase line arrival up to linked quantity",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-10",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 115
+      },
+      "nameTemplate": "'domestic purchase return is excluded from available export source quantity'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "domestic purchase return is excluded from available export source quantity",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-11",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 123
+      },
+      "nameTemplate": "'moving average remains pending if any inventory valuation component lacks cost'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "moving average remains pending if any inventory valuation component lacks cost",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-12",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 138
+      },
+      "nameTemplate": "'return inventory inherits original sale unit cost rather than zero'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "return inventory inherits original sale unit cost rather than zero",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-13",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 147
+      },
+      "nameTemplate": "'actual freight replaces allocated estimate by difference without changing sale snapshot'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "actual freight replaces allocated estimate by difference without changing sale snapshot",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-14",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 167
+      },
+      "nameTemplate": "'cost trace cannot read another warehouse and COST hidden blocks detailed cost endpoint'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "cost trace cannot read another warehouse and COST hidden blocks detailed cost endpoint",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-15",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 179
+      },
+      "nameTemplate": "'logistics fee confirmation preserves original currency while cost waits for rate'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "logistics fee confirmation preserves original currency while cost waits for rate",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-16",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 190
+      },
+      "nameTemplate": "'moving average restores all same-SKU outbound lines before valuing any line'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "moving average restores all same-SKU outbound lines before valuing any line",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-17",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 201
+      },
+      "nameTemplate": "'late capitalized fee follows returned inventory and only net sold quantity reaches COGS'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "late capitalized fee follows returned inventory and only net sold quantity reaches COGS",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-18",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 219
+      },
+      "nameTemplate": "'allocation preview rejects the whole shipment when any target cost is outside scope'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "allocation preview rejects the whole shipment when any target cost is outside scope",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-19",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 233
+      },
+      "nameTemplate": "'stocktake gains create a valued batch using the latest eligible warehouse cost'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "stocktake gains create a valued batch using the latest eligible warehouse cost",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-20",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 244
+      },
+      "nameTemplate": "'classification order drilldown does not reveal other warehouse allocated quantity'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "classification order drilldown does not reveal other warehouse allocated quantity",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "cost-inventory-21",
+      "source": {
+        "file": "jxc-web/tests/cost-inventory.test.mjs",
+        "line": 258
+      },
+      "nameTemplate": "`COST-hidden users cannot obtain amounts from ${path}`",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "COST-hidden users cannot obtain amounts from /cst/allocations",
+          "parameters": {
+            "path": "/cst/allocations"
+          }
+        },
+        {
+          "name": "COST-hidden users cannot obtain amounts from /cst/adjustments",
+          "parameters": {
+            "path": "/cst/adjustments"
+          }
+        },
+        {
+          "name": "COST-hidden users cannot obtain amounts from /cst/expenses",
+          "parameters": {
+            "path": "/cst/expenses"
+          }
+        }
+      ]
+    },
+    {
+      "id": "finance-1",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 27
+      },
+      "nameTemplate": "'checking a closed period preserves the lock and repeated close preserves one snapshot set'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "checking a closed period preserves the lock and repeated close preserves one snapshot set",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-2",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 40
+      },
+      "nameTemplate": "'close check blocks unconfirmed allocations and approved unposted stocktakes'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "close check blocks unconfirmed allocations and approved unposted stocktakes",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-3",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 50
+      },
+      "nameTemplate": "'voucher workflow refuses an already closed business period'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "voucher workflow refuses an already closed business period",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-4",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 60
+      },
+      "nameTemplate": "'reversal uses a selected open period and prevents duplicate pending reversals'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "reversal uses a selected open period and prevents duplicate pending reversals",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-5",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 73
+      },
+      "nameTemplate": "'balances carry forward per customer and aggregate correctly in the trial balance'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "balances carry forward per customer and aggregate correctly in the trial balance",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-6",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 87
+      },
+      "nameTemplate": "'manual vouchers require configured auxiliary dimensions and valid foreign currency conversion'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "manual vouchers require configured auxiliary dimensions and valid foreign currency conversion",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-7",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 99
+      },
+      "nameTemplate": "'events include confirmed business sources and cannot silently omit negative amounts'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "events include confirmed business sources and cannot silently omit negative amounts",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-8",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 112
+      },
+      "nameTemplate": "'failed automatic generation persists diagnostics while rolling back accounting writes'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "failed automatic generation persists diagnostics while rolling back accounting writes",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-9",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 123
+      },
+      "nameTemplate": "'missing source costs block automatic vouchers rather than posting revenue without costs'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "missing source costs block automatic vouchers rather than posting revenue without costs",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-10",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 131
+      },
+      "nameTemplate": "'balance sheet reads equity accounts and reports an actual imbalance'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "balance sheet reads equity accounts and reports an actual imbalance",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-11",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 141
+      },
+      "nameTemplate": "'reconciliation uses selected period and includes prepayments, credit notes, refunds and details'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "reconciliation uses selected period and includes prepayments, credit notes, refunds and details",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-12",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 150
+      },
+      "nameTemplate": "'reopen records snapshot and later-period dependencies and invalidates prior waivers'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "reopen records snapshot and later-period dependencies and invalidates prior waivers",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-13",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 164
+      },
+      "nameTemplate": "'finance lists honor book scope even when function permissions allow finance access'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "finance lists honor book scope even when function permissions allow finance access",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-14",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 177
+      },
+      "nameTemplate": "'draft vouchers can be corrected with full validation while audited ones remain locked'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "draft vouchers can be corrected with full validation while audited ones remain locked",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-15",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 189
+      },
+      "nameTemplate": "'closing checks the cash reconciliation and rejects waivers after closing'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "closing checks the cash reconciliation and rejects waivers after closing",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-16",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 199
+      },
+      "nameTemplate": "'procurement and capitalized fee events do not recognize the same cost twice'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "procurement and capitalized fee events do not recognize the same cost twice",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-17",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 208
+      },
+      "nameTemplate": "'cash journal filters the chosen period and retains fund auxiliary references'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "cash journal filters the chosen period and retains fund auxiliary references",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-18",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 219
+      },
+      "nameTemplate": "'report viewers can load permitted book periods without configuration rights'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "report viewers can load permitted book periods without configuration rights",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-19",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 227
+      },
+      "nameTemplate": "'actual logistics fee events recognize only the converted estimate difference'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "actual logistics fee events recognize only the converted estimate difference",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-20",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 239
+      },
+      "nameTemplate": "'return and opening cost snapshots do not become duplicate purchase inbound events'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "return and opening cost snapshots do not become duplicate purchase inbound events",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-21",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 250
+      },
+      "nameTemplate": "'settlement events use stored base amounts and include the original reversed event'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "settlement events use stored base amounts and include the original reversed event",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-22",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 263
+      },
+      "nameTemplate": "'stocktake events use actual inventory source keys and flag missing valuation'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "stocktake events use actual inventory source keys and flag missing valuation",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-23",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 274
+      },
+      "nameTemplate": "'cash reconciliation retains confirmed payment conversion when rate tables change'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "cash reconciliation retains confirmed payment conversion when rate tables change",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-24",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 282
+      },
+      "nameTemplate": "'partially valued sales returns cannot generate a complete inventory cost voucher'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "partially valued sales returns cannot generate a complete inventory cost voucher",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-25",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 289
+      },
+      "nameTemplate": "'closed inventory reconciliation retains its closing snapshot after later cost corrections'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "closed inventory reconciliation retains its closing snapshot after later cost corrections",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-26",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 303
+      },
+      "nameTemplate": "'later open-period cost changes do not revalue an earlier open inventory period'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "later open-period cost changes do not revalue an earlier open inventory period",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "finance-27",
+      "source": {
+        "file": "jxc-web/tests/finance.test.mjs",
+        "line": 315
+      },
+      "nameTemplate": "'confirmed actual fees recover after missing rates are supplied and subsequent retries are inert'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "confirmed actual fees recover after missing rates are supplied and subsequent retries are inert",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-1",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 25
+      },
+      "nameTemplate": "'expired and future data grants do not give warehouse access or implicit all access'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "expired and future data grants do not give warehouse access or implicit all access",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-2",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 34
+      },
+      "nameTemplate": "'ENTITY and BOOK grants resolve only their own organization hierarchy'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "ENTITY and BOOK grants resolve only their own organization hierarchy",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-3",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 46
+      },
+      "nameTemplate": "'users with no scope see no scoped records; a disabled role exposes no field groups'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "users with no scope see no scoped records; a disabled role exposes no field groups",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-4",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 53
+      },
+      "nameTemplate": "'an unowned split order with no store cannot fall back to a shared national record'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "an unowned split order with no store cannot fall back to a shared national record",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-5",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 60
+      },
+      "nameTemplate": "'national administrators cannot read or reset an account from another country'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "national administrators cannot read or reset an account from another country",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-6",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 71
+      },
+      "nameTemplate": "'national administrators cannot create or assign roles beyond their permission ceiling'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "national administrators cannot create or assign roles beyond their permission ceiling",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-7",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 79
+      },
+      "nameTemplate": "'generic enable/disable cannot bypass account-country or role privilege ceilings'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "generic enable/disable cannot bypass account-country or role privilege ceilings",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-8",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 86
+      },
+      "nameTemplate": "'read-only CRUD registrations never expose implicit generic mutation endpoints'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "read-only CRUD registrations never expose implicit generic mutation endpoints",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-9",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 94
+      },
+      "nameTemplate": "'an expiring administrator grant cannot be delegated as an indefinite grant'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "an expiring administrator grant cannot be delegated as an indefinite grant",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-10",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 99
+      },
+      "nameTemplate": "'scope management rejects escalation and accepts bounded ENTITY/BOOK grants with dates'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "scope management rejects escalation and accepts bounded ENTITY/BOOK grants with dates",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-11",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 113
+      },
+      "nameTemplate": "'attachments inherit source document scope and functional permission for list, URL, unlink and upload'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "attachments inherit source document scope and functional permission for list, URL, unlink and upload",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-12",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 126
+      },
+      "nameTemplate": "'filtering audit logs by a guessed document ID does not bypass source-document access'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "filtering audit logs by a guessed document ID does not bypass source-document access",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-13",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 133
+      },
+      "nameTemplate": "'bank endpoints and fund account serialization obey BANK_INFO field access'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "bank endpoints and fund account serialization obey BANK_INFO field access",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-14",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 146
+      },
+      "nameTemplate": "'bank fields cannot be written through generic master-data CRUD without WRITE access'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "bank fields cannot be written through generic master-data CRUD without WRITE access",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-15",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 152
+      },
+      "nameTemplate": "'organization lists enforce ENTITY/BOOK scope without breaking the second country'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "organization lists enforce ENTITY/BOOK scope without breaking the second country",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-16",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 161
+      },
+      "nameTemplate": "'AI requires profit permission and field visibility in addition to its own permission'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "AI requires profit permission and field visibility in addition to its own permission",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-17",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 169
+      },
+      "nameTemplate": "'AI history is private and revoked fields or data scope cannot read a stale output'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "AI history is private and revoked fields or data scope cannot read a stale output",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-18",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 182
+      },
+      "nameTemplate": "'warehouse order responses contain only assigned lines and exclude sensitive nested fields'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "warehouse order responses contain only assigned lines and exclude sensitive nested fields",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-19",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 201
+      },
+      "nameTemplate": "'AI reads only authorized warehouse profit and records a history that the owner can reopen'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "AI reads only authorized warehouse profit and records a history that the owner can reopen",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-20",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 221
+      },
+      "nameTemplate": "'transaction rollback retains only an explicitly approved failure marker'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "transaction rollback retains only an explicitly approved failure marker",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-21",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 234
+      },
+      "nameTemplate": "'purchase records and sources obey explicit entity scope for lists, IDs and actions'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "purchase records and sources obey explicit entity scope for lists, IDs and actions",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-22",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 249
+      },
+      "nameTemplate": "'transport lists, IDs, related quantities, fees and hold actions inherit authorized warehouse'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "transport lists, IDs, related quantities, fees and hold actions inherit authorized warehouse",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-23",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 266
+      },
+      "nameTemplate": "'cost and logistics source chains never treat unowned transactional rows as shared master data'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "cost and logistics source chains never treat unowned transactional rows as shared master data",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-24",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 280
+      },
+      "nameTemplate": "'duplicate shipment source lines are rejected on create and on dispatch of legacy drafts'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "duplicate shipment source lines are rejected on create and on dispatch of legacy drafts",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-25",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 295
+      },
+      "nameTemplate": "'duplicate hold and delivery lines cannot overconsume pending quantities, including legacy delivery drafts'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "duplicate hold and delivery lines cannot overconsume pending quantities, including legacy delivery drafts",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-26",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 307
+      },
+      "nameTemplate": "'duplicate domestic receipt and export lines cannot exceed one purchase source balance'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "duplicate domestic receipt and export lines cannot exceed one purchase source balance",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-27",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 320
+      },
+      "nameTemplate": "'inventory transfer detail and actions share the same warehouse scope as its list'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "inventory transfer detail and actions share the same warehouse scope as its list",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "permissions-28",
+      "source": {
+        "file": "jxc-web/tests/permissions.test.mjs",
+        "line": 328
+      },
+      "nameTemplate": "'legacy transfer allocation shortfall rejects receipt and rolls back all quantities'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "legacy transfer allocation shortfall rejects receipt and rolls back all quantities",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "scenario-1",
+      "source": {
+        "file": "jxc-web/tests/scenario.test.mjs",
+        "line": 6
+      },
+      "nameTemplate": "'existing demo scenario completes in both countries without swallowed business errors'",
+      "contractType": "direct-TS-function-or-scenario",
+      "expansions": [
+        {
+          "name": "existing demo scenario completes in both countries without swallowed business errors",
+          "parameters": null
+        }
+      ]
+    }
+  ]
+}

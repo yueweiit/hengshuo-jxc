@@ -1,0 +1,5032 @@
+{
+  "schemaVersion": 1,
+  "scope": "M2 reviewed quantity/AR/AP/return/refund main-flow surface; Controller inventory contains additional registered conditional actions.",
+  "schemas": {
+    "M2Line": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "productId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "qty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "baseQty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "unit": {
+          "type": "string"
+        },
+        "unitPrice": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "lineAmount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "allocs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "warehouseId": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "allocQty": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100000000000,
+                "multipleOf": 0.0001
+              }
+            },
+            "required": [
+              "warehouseId",
+              "allocQty"
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "M2Document": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "countryId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "bookId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "entityId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "warehouseId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "customerId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "supplierId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "docNo": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "approvalStatus": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "totalAmount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "multipleOf": 0.0001
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/M2Line"
+          }
+        }
+      },
+      "additionalProperties": true,
+      "description": "Existing business DTO with authoritative persisted identity and optional domain fields. Hidden fields are omitted by the current field policy; extension fields remain those of the existing interface."
+    },
+    "M2Command": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bizDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "arrivalDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "paidAt": {
+          "type": "string",
+          "format": "date"
+        },
+        "referenceNo": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "proof": {
+          "type": "object",
+          "required": [
+            "attachmentId",
+            "linkVersion",
+            "sha256"
+          ],
+          "properties": {
+            "attachmentId": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "linkVersion": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      },
+      "additionalProperties": true,
+      "description": "Action-specific state, amounts and source quantities are checked against locked database facts. Confirmation may omit the body. Only supplied version is compared; edits require version. Proof may be omitted when the service selects and validates the existing linked category."
+    },
+    "M2WriteoffResult": {
+      "type": "object",
+      "required": [
+        "records"
+      ],
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/M2Document"
+          }
+        }
+      }
+    }
+  },
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "pur:order:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "originalCurrencyAndServerUnitConversionSurviveAndDomesticDoesNotWriteInventory"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders/{id}/submit",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "pur:order:submit"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "originalCurrencyAndServerUnitConversionSurviveAndDomesticDoesNotWriteInventory"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "pur:receipt:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "originalCurrencyAndServerUnitConversionSurviveAndDomesticDoesNotWriteInventory"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "pur:receipt:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "originalCurrencyAndServerUnitConversionSurviveAndDomesticDoesNotWriteInventory"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "pur:export:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "originalCurrencyAndServerUnitConversionSurviveAndDomesticDoesNotWriteInventory"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "pur:export:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "originalCurrencyAndServerUnitConversionSurviveAndDomesticDoesNotWriteInventory"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:shipment:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/dispatch",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:shipment:dispatch"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/nodes",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:node:record"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:delivery:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/dispatch",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:delivery:dispatch"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:receipt:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:receipt:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:fee:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "lgs:fee:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SupplyLogisticsIT.java",
+          "test": "receiptConservesFourQuantitiesAndConcurrentSameKeyCreatesOneBatchAndOneCost"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:transfer:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/submit",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:transfer:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/ship",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:transfer:ship"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/receive",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:transfer:receive"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:stocktake:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes/{id}/start",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:stocktake:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes/{id}/submit",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:stocktake:submit"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes/{id}/post",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:stocktake:approve"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/freezes",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/M2Document"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:freeze:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/freezes/{id}/release",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "inv:freeze:release"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/InventoryDocumentsIT.java",
+          "test": "warehouseOperatorCanTransferWithEmptyActionsAndReplayReceiptIsSafe"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "sal:order:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SalesIT.java",
+          "test": "approvalReservesThenActualPartialOutboundCreatesOnlyActualReceivableAndCogs"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders/{id}/submit",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "sal:order:submit"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SalesIT.java",
+          "test": "approvalReservesThenActualPartialOutboundCreatesOnlyActualReceivableAndCogs"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/outbounds",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "sal:outbound:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SalesIT.java",
+          "test": "approvalReservesThenActualPartialOutboundCreatesOnlyActualReceivableAndCogs"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/outbounds/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "sal:outbound:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/SalesIT.java",
+          "test": "approvalReservesThenActualPartialOutboundCreatesOnlyActualReceivableAndCogs"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/receipts",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ar:receipt:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReceivablesIT.java",
+          "test": "concurrentWriteoffsNeverSpendReceiptTwiceAndReverseAppendsOriginalFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/receipts/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ar:receipt:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReceivablesIT.java",
+          "test": "concurrentWriteoffsNeverSpendReceiptTwiceAndReverseAppendsOriginalFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/writeoffs",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2WriteoffResult"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ar:writeoff:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "CREDIT",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReceivablesIT.java",
+          "test": "concurrentWriteoffsNeverSpendReceiptTwiceAndReverseAppendsOriginalFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/writeoffs/{id}/reverse",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ar:writeoff:reverse"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "CREDIT",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReceivablesIT.java",
+          "test": "concurrentWriteoffsNeverSpendReceiptTwiceAndReverseAppendsOriginalFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/statements",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ar:statement:view"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "CREDIT",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReceivablesIT.java",
+          "test": "concurrentWriteoffsNeverSpendReceiptTwiceAndReverseAppendsOriginalFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/bills/from-sources",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:bill:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/bills/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:bill:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/bills/{id}/void",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:bill:void"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/payments",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:payment:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/payments/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:payment:confirm"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/prepayments",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:prepayment:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/prepayments/{id}/confirm",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:prepayment:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/settlements",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:settlement:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/settlements/{id}/reverse",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "ap:settlement:reverse"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/PayablesIT.java",
+          "test": "frozenOriginalBaseValuesProduceRealFxAndReversalPreservesFacts"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:sales:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/receive",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        },
+        "description": "Existing DTO: lines[].receivedQty is cumulative received quantity; server freezes only the positive delta from prior receipts."
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:sales:receive"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/inspect",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        },
+        "description": "Existing DTO: lines[].goodQty and frozenQty are cumulative inspected totals; their sum equals cumulative receivedQty. Server posts only the new inspected delta."
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:sales:inspect"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/settle",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:sales:settle"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/settle/reverse",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:sales:settle"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/refunds",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:refund:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/refunds/{id}/pay",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:refund:pay"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "ORDER_TOTAL",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/purchase",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:purchase:create"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/purchase/{id}/ship",
+      "phase": "M2",
+      "status": "implemented-business-foundation",
+      "parameters": [
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/M2Command"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Authoritative business response, masked using current permissions.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiEnvelope"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/M2Document"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled validation/state/permission/idempotency/period error; failed transaction leaves no partial fact.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "authoritative bearer session and country gates",
+        "permissions": [
+          "rtn:purchase:ship"
+        ],
+        "scope": "source-level current data scope; foreign/invisible IDs return 404; source book is validated without granting full-book visibility",
+        "field": {
+          "amountGroup": "COST",
+          "rule": "current field policy applies to read/write/replay; cost/bank/customer-price groups remain distinct"
+        },
+        "idem": {
+          "required": true,
+          "binding": "country,user,UUID,method,path,book,canonical body",
+          "rollback": "placeholder and effects share one transaction"
+        },
+        "facts": "source balances, period guard, business state, inventory/AR/AP and cost-source facts, audit and outbox share the transaction"
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/ReturnsRefundsIT.java",
+          "test": "originalSalesPriceOffsetsOnlyOpenArAndCreatesRefundableRemainder"
+        }
+      ],
+      "limitations": [
+        "Main-flow contract and domain tests; this is not production deployment or browser acceptance.",
+        "Schema covers shared boundary fields; exact source-specific required inputs and DTO extension fields are enforced by the existing business interface and service.",
+        "CST pending source/rate completeness is explicit; M3 valuation adjustment and GL posting remain gated."
+      ]
+    }
+  ]
+}

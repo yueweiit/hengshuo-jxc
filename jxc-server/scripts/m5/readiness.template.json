@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "batchId": "",
+  "sourceSystem": "",
+  "mode": "FIRST_START",
+  "dataOrigin": "PRODUCTION_CONFIRMED",
+  "files": [{"path": "", "sha256": ""}],
+  "records": [],
+  "confirmations": {
+    "configurationReviewed": false,
+    "openingReviewed": false,
+    "demoExcluded": false,
+    "openingStatus": null,
+    "reviewedBy": "",
+    "configurationEvidence": "",
+    "openingEvidence": ""
+  }
+}

@@ -1,0 +1,4017 @@
+{
+  "schemaVersion": 1,
+  "limitation": "Bounded Java annotation inventory, not a Java AST or handler/policy inference. Literal/array paths and finite enumerated regex products are inventoried; registered combinations still need service-level action review. M1/M2/M3/M4 schemas and policies are reviewed separately.",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/cost-assignments/{costId}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/CostPayableBasisController.java",
+      "line": 10,
+      "symbol": "get"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/ap/cost-assignments/{costId}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/CostPayableBasisController.java",
+      "line": 11,
+      "symbol": "save"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/recognition-rules/{type}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayableRecognitionController.java",
+      "line": 6,
+      "symbol": "get"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/ap/recognition-rules/{type}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayableRecognitionController.java",
+      "line": 7,
+      "symbol": "save"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/bills",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|adjustments}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/payments",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|adjustments}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/prepayments",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|adjustments}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/settlements",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|adjustments}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/adjustments",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|adjustments}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/bills/{id}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|credit-notes|adjustments}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/payments/{id}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|credit-notes|adjustments}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/prepayments/{id}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|credit-notes|adjustments}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/settlements/{id}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|credit-notes|adjustments}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/credit-notes/{id}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|credit-notes|adjustments}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/adjustments/{id}",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/ap\"/{kind:bills|payments|prepayments|settlements|credit-notes|adjustments}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/credit-notes",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 14,
+      "symbol": "credits"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/bill-sources",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 15,
+      "symbol": "sources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/partners/{id}/timeline",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 16,
+      "symbol": "timeline"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/statements",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 17,
+      "symbol": "statements"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/bills",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 18,
+      "symbol": "bill",
+      "expandedFrom": "/api/v1/ap{\"/bills\",\"/bills/from-sources\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/bills/from-sources",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 18,
+      "symbol": "bill",
+      "expandedFrom": "/api/v1/ap{\"/bills\",\"/bills/from-sources\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/bills/{id}/confirm",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 19,
+      "symbol": "confirmBill"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/bills/{id}/void",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 20,
+      "symbol": "voidBill"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/payments",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 21,
+      "symbol": "funding",
+      "expandedFrom": "/api/v1/ap\"/{kind:payments|prepayments}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/prepayments",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 21,
+      "symbol": "funding",
+      "expandedFrom": "/api/v1/ap\"/{kind:payments|prepayments}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/payments/{id}/confirm",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 22,
+      "symbol": "confirmFunding",
+      "expandedFrom": "/api/v1/ap\"/{kind:payments|prepayments}/{id}/confirm\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/prepayments/{id}/confirm",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 22,
+      "symbol": "confirmFunding",
+      "expandedFrom": "/api/v1/ap\"/{kind:payments|prepayments}/{id}/confirm\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/settlements",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 23,
+      "symbol": "settle"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/settlements/{id}/reverse",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 24,
+      "symbol": "reverse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/adjustments",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 25,
+      "symbol": "adjust"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/adjustments/{id}/confirm",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 26,
+      "symbol": "confirmAdjustment"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/partners/{id}/balances",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 27,
+      "symbol": "balance"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/statements",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 28,
+      "symbol": "statement"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ap/statements/{id}/export",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 29,
+      "symbol": "exportStatement"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ap/payables",
+      "file": "jxc-server/jxc-module-ap/src/main/java/com/hs/jxc/ap/PayablesController.java",
+      "line": 30,
+      "symbol": "due"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/statements/export",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 6,
+      "symbol": "export"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/receipts",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 9,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ar\"/{kind:receipts|receivables|credit-notes|writeoffs|statements|credit-rules}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/receivables",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 9,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ar\"/{kind:receipts|receivables|credit-notes|writeoffs|statements|credit-rules}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/credit-notes",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 9,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ar\"/{kind:receipts|receivables|credit-notes|writeoffs|statements|credit-rules}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/writeoffs",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 9,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ar\"/{kind:receipts|receivables|credit-notes|writeoffs|statements|credit-rules}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/statements",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 9,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ar\"/{kind:receipts|receivables|credit-notes|writeoffs|statements|credit-rules}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/credit-rules",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 9,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/ar\"/{kind:receipts|receivables|credit-notes|writeoffs|statements|credit-rules}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/receipts",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 10,
+      "symbol": "receipt"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/receipts/{id}/confirm",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 11,
+      "symbol": "receiptAction",
+      "expandedFrom": "/api/v1/ar\"/receipts/{id}/{action:confirm|reject|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/receipts/{id}/reject",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 11,
+      "symbol": "receiptAction",
+      "expandedFrom": "/api/v1/ar\"/receipts/{id}/{action:confirm|reject|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/receipts/{id}/void",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 11,
+      "symbol": "receiptAction",
+      "expandedFrom": "/api/v1/ar\"/receipts/{id}/{action:confirm|reject|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/writeoffs",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 12,
+      "symbol": "writeoff"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/writeoffs/{id}/reverse",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 13,
+      "symbol": "reverse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/credit-rules",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 14,
+      "symbol": "createRule"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/ar/credit-rules/{id}",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 15,
+      "symbol": "editRule"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/credit-rules/{id}/preview-impact",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 16,
+      "symbol": "preview"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/customers/{id}/credit",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 17,
+      "symbol": "customer",
+      "expandedFrom": "/api/v1/ar\"/customers/{id}/{view:credit|balances|timeline}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/customers/{id}/balances",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 17,
+      "symbol": "customer",
+      "expandedFrom": "/api/v1/ar\"/customers/{id}/{view:credit|balances|timeline}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/customers/{id}/timeline",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 17,
+      "symbol": "customer",
+      "expandedFrom": "/api/v1/ar\"/customers/{id}/{view:credit|balances|timeline}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ar/statements",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 18,
+      "symbol": "statement"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/store-receipts",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 19,
+      "symbol": "store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/method",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostFactsController.java",
+      "line": 20,
+      "symbol": "method"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cst/method",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostFactsController.java",
+      "line": 21,
+      "symbol": "set"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/inbound-costs",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostFactsController.java",
+      "line": 22,
+      "symbol": "facts",
+      "expandedFrom": "/api/v1/cst{\"/inbound-costs\",\"/cogs\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/cogs",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostFactsController.java",
+      "line": 22,
+      "symbol": "facts",
+      "expandedFrom": "/api/v1/cst{\"/inbound-costs\",\"/cogs\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/inbound-costs/{id}/confirm",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 12,
+      "symbol": "confirm"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/inbound-costs/batch-confirm",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 13,
+      "symbol": "batch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/allocations",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 14,
+      "symbol": "allocation"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/allocations/{id}/confirm",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 15,
+      "symbol": "allocationAction",
+      "expandedFrom": "/api/v1/cst\"/allocations/{id}/{action:confirm|reverse}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/allocations/{id}/reverse",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 15,
+      "symbol": "allocationAction",
+      "expandedFrom": "/api/v1/cst\"/allocations/{id}/{action:confirm|reverse}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/adjustments",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 16,
+      "symbol": "adjustment"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/adjustments/{id}/confirm",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 17,
+      "symbol": "adjustmentConfirm"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cst/expenses",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 18,
+      "symbol": "expense"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/allocations",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 19,
+      "symbol": "lists",
+      "expandedFrom": "/api/v1/cst{\"/allocations\",\"/adjustments\",\"/expenses\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/adjustments",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 19,
+      "symbol": "lists",
+      "expandedFrom": "/api/v1/cst{\"/allocations\",\"/adjustments\",\"/expenses\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/expenses",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 19,
+      "symbol": "lists",
+      "expandedFrom": "/api/v1/cst{\"/allocations\",\"/adjustments\",\"/expenses\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/batches/{id}/cost-trace",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostValuationController.java",
+      "line": 20,
+      "symbol": "trace"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/profit",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java",
+      "line": 13,
+      "symbol": "profit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai/history",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java",
+      "line": 14,
+      "symbol": "history"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai/analysis",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java",
+      "line": 15,
+      "symbol": "analysis"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai/analysis/{id}",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/profit/ProfitController.java",
+      "line": 16,
+      "symbol": "missingHistory"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/mapping-templates",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 16,
+      "symbol": "mappings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/mapping-templates/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 17,
+      "symbol": "mapping"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/mapping-templates",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 18,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/mapping-templates/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 19,
+      "symbol": "update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/fin/mapping-templates/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 20,
+      "symbol": "delete"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/mapping-templates/{id}/review",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 21,
+      "symbol": "review"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/mapping-templates/{id}/simulate",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 22,
+      "symbol": "simulate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/events",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 23,
+      "symbol": "events"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/events/{id}/generate",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 24,
+      "symbol": "generate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/reconcile",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
+      "line": 25,
+      "symbol": "reconcile"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/close-check",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java",
+      "line": 15,
+      "symbol": "check"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/waive",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java",
+      "line": 16,
+      "symbol": "waive"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/close",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java",
+      "line": 17,
+      "symbol": "close"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/periods/{id}/reopen-impact",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java",
+      "line": 18,
+      "symbol": "impact"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods/{id}/reopen",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/closing/ClosingController.java",
+      "line": 19,
+      "symbol": "reopen"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/books",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/controller/FoundationFinanceController.java",
+      "line": 14,
+      "symbol": "orgBooks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/books",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/controller/FoundationFinanceController.java",
+      "line": 15,
+      "symbol": "books"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/books/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/controller/FoundationFinanceController.java",
+      "line": 16,
+      "symbol": "rename"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/books/{id}/activate",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/controller/FoundationFinanceController.java",
+      "line": 17,
+      "symbol": "activate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/periods",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/controller/FoundationFinanceController.java",
+      "line": 18,
+      "symbol": "periods"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/accounts",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 16,
+      "symbol": "configList",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/cashflow-items",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 16,
+      "symbol": "configList",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/voucher-words",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 16,
+      "symbol": "configList",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/category-account-maps",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 16,
+      "symbol": "configList",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/opening-balances",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 16,
+      "symbol": "configList",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/accounts/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 18,
+      "symbol": "configGet",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/cashflow-items/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 18,
+      "symbol": "configGet",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/voucher-words/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 18,
+      "symbol": "configGet",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/category-account-maps/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 18,
+      "symbol": "configGet",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/opening-balances/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 18,
+      "symbol": "configGet",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/accounts",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 20,
+      "symbol": "configCreate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/cashflow-items",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 20,
+      "symbol": "configCreate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/voucher-words",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 20,
+      "symbol": "configCreate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/category-account-maps",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 20,
+      "symbol": "configCreate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/opening-balances",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 20,
+      "symbol": "configCreate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/accounts/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 22,
+      "symbol": "configUpdate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/cashflow-items/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 22,
+      "symbol": "configUpdate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/voucher-words/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 22,
+      "symbol": "configUpdate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/category-account-maps/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 22,
+      "symbol": "configUpdate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/opening-balances/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 22,
+      "symbol": "configUpdate",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/fin/accounts/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 24,
+      "symbol": "configDelete",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/fin/cashflow-items/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 24,
+      "symbol": "configDelete",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/fin/voucher-words/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 24,
+      "symbol": "configDelete",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/fin/category-account-maps/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 24,
+      "symbol": "configDelete",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/fin/opening-balances/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 24,
+      "symbol": "configDelete",
+      "expandedFrom": "/api/v1/fin\"/{resource:accounts|cashflow-items|voucher-words|category-account-maps|opening-balances}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/opening-balances/confirm",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 26,
+      "symbol": "openingConfirm"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/vouchers",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 28,
+      "symbol": "vouchers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/vouchers/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 29,
+      "symbol": "voucher"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 30,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/vouchers/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 31,
+      "symbol": "update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/fin/vouchers/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 32,
+      "symbol": "delete"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers/{id}/submit",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 33,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/fin\"/vouchers/{id}/{action:submit|audit|unaudit|post|reverse}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers/{id}/audit",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 33,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/fin\"/vouchers/{id}/{action:submit|audit|unaudit|post|reverse}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers/{id}/unaudit",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 33,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/fin\"/vouchers/{id}/{action:submit|audit|unaudit|post|reverse}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers/{id}/post",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 33,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/fin\"/vouchers/{id}/{action:submit|audit|unaudit|post|reverse}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers/{id}/reverse",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 33,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/fin\"/vouchers/{id}/{action:submit|audit|unaudit|post|reverse}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers/batch-audit",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 34,
+      "symbol": "batch",
+      "expandedFrom": "/api/v1/fin\"/vouchers/batch-{action:audit|post}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/vouchers/batch-post",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 34,
+      "symbol": "batch",
+      "expandedFrom": "/api/v1/fin\"/vouchers/batch-{action:audit|post}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/ledgers/detail",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 35,
+      "symbol": "ledgers",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/ledgers/general",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 35,
+      "symbol": "ledgers",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/ledgers/balance",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 35,
+      "symbol": "ledgers",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/ledgers/journal",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 35,
+      "symbol": "ledgers",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/detail/export",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 36,
+      "symbol": "export",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal|trial}/export\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/general/export",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 36,
+      "symbol": "export",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal|trial}/export\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/balance/export",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 36,
+      "symbol": "export",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal|trial}/export\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/journal/export",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 36,
+      "symbol": "export",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal|trial}/export\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/ledgers/trial/export",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 36,
+      "symbol": "export",
+      "expandedFrom": "/api/v1/fin\"/ledgers/{type:detail|general|balance|journal|trial}/export\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/trial-balance",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/ledger/LedgerController.java",
+      "line": 37,
+      "symbol": "trial"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/reports/{type}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java",
+      "line": 20,
+      "symbol": "report"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/reports/{type}/export",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java",
+      "line": 21,
+      "symbol": "export"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/fin/report-templates",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java",
+      "line": 22,
+      "symbol": "templates"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/report-templates",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java",
+      "line": 23,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/fin/report-templates/{id}",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java",
+      "line": 24,
+      "symbol": "update"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/fin/report-templates/{id}/review",
+      "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/report/ReportController.java",
+      "line": 25,
+      "symbol": "review"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/classify-rules",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 12,
+      "symbol": "rules"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/classify-rules",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 13,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/inv/classify-rules/{id}",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 14,
+      "symbol": "save"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/classify-rules/{id}/recalculate",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 15,
+      "symbol": "recalc"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/classify-results",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 16,
+      "symbol": "results"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/classify-results/{id}/orders",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 17,
+      "symbol": "orders"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/replenishments",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 18,
+      "symbol": "replenishments"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 19,
+      "symbol": "request"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/suggest",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 20,
+      "symbol": "suggest"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/{id}/decide",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 21,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/inv\"/replenishments/{id}/{action:decide|link|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/{id}/link",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 21,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/inv\"/replenishments/{id}/{action:decide|link|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/replenishments/{id}/close",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryAnalysisController.java",
+      "line": 21,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/inv\"/replenishments/{id}/{action:decide|link|close}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/stocks",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/txns",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/reservations",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/freezes",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/transfers",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/stocktakes",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/limits",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/alerts",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 10,
+      "symbol": "query",
+      "expandedFrom": "/api/v1/inv{\"/stocks\",\"/txns\",\"/reservations\",\"/freezes\",\"/transfers\",\"/stocktakes\",\"/limits\",\"/alerts\"}"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/inv/limits",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 11,
+      "symbol": "limits"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/stocks/{warehouseId}/{productId}/batches",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 12,
+      "symbol": "batches"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/transfers/{id}",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 13,
+      "symbol": "transfer"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inv/stocktakes/{id}",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 14,
+      "symbol": "stocktake"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 15,
+      "symbol": "createTransfer"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/inv/transfers/{id}",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 16,
+      "symbol": "updateTransfer"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 17,
+      "symbol": "createStocktake"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/submit",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 18,
+      "symbol": "transferAction",
+      "expandedFrom": "/api/v1/inv\"/transfers/{id}/{action:submit|ship|receive|close|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/ship",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 18,
+      "symbol": "transferAction",
+      "expandedFrom": "/api/v1/inv\"/transfers/{id}/{action:submit|ship|receive|close|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/receive",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 18,
+      "symbol": "transferAction",
+      "expandedFrom": "/api/v1/inv\"/transfers/{id}/{action:submit|ship|receive|close|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/close",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 18,
+      "symbol": "transferAction",
+      "expandedFrom": "/api/v1/inv\"/transfers/{id}/{action:submit|ship|receive|close|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/transfers/{id}/void",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 18,
+      "symbol": "transferAction",
+      "expandedFrom": "/api/v1/inv\"/transfers/{id}/{action:submit|ship|receive|close|void}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes/{id}/start",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 19,
+      "symbol": "stocktakeAction",
+      "expandedFrom": "/api/v1/inv\"/stocktakes/{id}/{action:start|submit|post|cancel}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes/{id}/submit",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 19,
+      "symbol": "stocktakeAction",
+      "expandedFrom": "/api/v1/inv\"/stocktakes/{id}/{action:start|submit|post|cancel}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes/{id}/post",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 19,
+      "symbol": "stocktakeAction",
+      "expandedFrom": "/api/v1/inv\"/stocktakes/{id}/{action:start|submit|post|cancel}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/stocktakes/{id}/cancel",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 19,
+      "symbol": "stocktakeAction",
+      "expandedFrom": "/api/v1/inv\"/stocktakes/{id}/{action:start|submit|post|cancel}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/inv/stocktakes/{id}/lines",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 20,
+      "symbol": "count"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/freezes",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 21,
+      "symbol": "freeze"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inv/freezes/{id}/release",
+      "file": "jxc-server/jxc-module-inv/src/main/java/com/hs/jxc/inv/controller/InventoryController.java",
+      "line": 22,
+      "symbol": "unfreeze"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/shipments",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/holds",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/deliveries",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/receipts",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/fees",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/discrepancies",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/transships",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/shipments/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/holds/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/deliveries/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/receipts/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/fees/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/discrepancies/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/transships/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies|transships}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|transships}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|transships}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|transships}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|transships}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|transships}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/transships",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|transships}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/lgs/shipments/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/lgs/holds/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/lgs/deliveries/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/lgs/receipts/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/lgs/fees/{id}",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/submit",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/dispatch",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/confirm",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/release",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/void",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/resolve",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/nodes",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds/{id}/submit",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds/{id}/dispatch",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds/{id}/confirm",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds/{id}/release",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds/{id}/void",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds/{id}/resolve",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/holds/{id}/nodes",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/submit",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/dispatch",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/confirm",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/release",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/void",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/resolve",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/deliveries/{id}/nodes",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/submit",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/dispatch",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/confirm",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/release",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/void",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/resolve",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/receipts/{id}/nodes",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/submit",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/dispatch",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/confirm",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/release",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/void",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/resolve",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/fees/{id}/nodes",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/discrepancies/{id}/submit",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/discrepancies/{id}/dispatch",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/discrepancies/{id}/confirm",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/discrepancies/{id}/release",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/discrepancies/{id}/void",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/discrepancies/{id}/resolve",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/discrepancies/{id}/nodes",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/lgs\"/{kind:shipments|holds|deliveries|receipts|fees|discrepancies}/{id}/{action:submit|dispatch|confirm|release|void|resolve|nodes}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/shipments/{id}/quantities",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 11,
+      "symbol": "quantities"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/shipments/{id}/related",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 12,
+      "symbol": "related"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lgs/shipments/{id}/nodes/{eventId}/correct",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 13,
+      "symbol": "correct"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lgs/in-transit",
+      "file": "jxc-server/jxc-module-lgs/src/main/java/com/hs/jxc/lgs/LogisticsController.java",
+      "line": 14,
+      "symbol": "inTransit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/dicts",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 30,
+      "symbol": "dictionaries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/dicts/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 31,
+      "symbol": "dictionary"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/dicts",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 32,
+      "symbol": "createDictionary"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/dicts/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 33,
+      "symbol": "updateDictionary"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/dicts/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 35,
+      "symbol": "toggleDictionary",
+      "expandedFrom": "/api/v1/md\"/dicts/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/dicts/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 35,
+      "symbol": "toggleDictionary",
+      "expandedFrom": "/api/v1/md\"/dicts/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/categories/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 37,
+      "symbol": "category"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/categories/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 38,
+      "symbol": "editCategory"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/products/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 50,
+      "symbol": "toggleGlobal",
+      "expandedFrom": "/api/v1/md{\"/products/{id}/{action:enable|disable}\",\"/categories/{id}/{action:enable|disable}\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/products/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 50,
+      "symbol": "toggleGlobal",
+      "expandedFrom": "/api/v1/md{\"/products/{id}/{action:enable|disable}\",\"/categories/{id}/{action:enable|disable}\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/categories/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 50,
+      "symbol": "toggleGlobal",
+      "expandedFrom": "/api/v1/md{\"/products/{id}/{action:enable|disable}\",\"/categories/{id}/{action:enable|disable}\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/categories/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 50,
+      "symbol": "toggleGlobal",
+      "expandedFrom": "/api/v1/md{\"/products/{id}/{action:enable|disable}\",\"/categories/{id}/{action:enable|disable}\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/exchange-rates/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/MasterMaintenanceController.java",
+      "line": 51,
+      "symbol": "exchangeRate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/products",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 20,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md{\"/products\",\"/categories\",\"/country-skus\",\"/exchange-rates\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/categories",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 20,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md{\"/products\",\"/categories\",\"/country-skus\",\"/exchange-rates\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/country-skus",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 20,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md{\"/products\",\"/categories\",\"/country-skus\",\"/exchange-rates\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/exchange-rates",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 20,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md{\"/products\",\"/categories\",\"/country-skus\",\"/exchange-rates\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/products/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 21,
+      "symbol": "product"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/products",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 22,
+      "symbol": "productCreate"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/products/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 23,
+      "symbol": "productUpdate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/categories",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 33,
+      "symbol": "category"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/country-skus/{productId}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 34,
+      "symbol": "sku"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/exchange-rates/resolve",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 35,
+      "symbol": "resolve"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/exchange-rates/{id}/versions",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 36,
+      "symbol": "versions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/exchange-rates",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 37,
+      "symbol": "rateCreate"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/exchange-rates/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 38,
+      "symbol": "rateUpdate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/exchange-rates/{id}/confirm",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/controller/ProductFxController.java",
+      "line": 39,
+      "symbol": "confirm"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/customers",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 8,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md{\"/customers\",\"/customer-groups\",\"/customer-levels\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/customer-groups",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 8,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md{\"/customers\",\"/customer-groups\",\"/customer-levels\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/customer-levels",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 8,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md{\"/customers\",\"/customer-groups\",\"/customer-levels\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/customers/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 9,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/customer-groups/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 9,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/customer-levels/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 9,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customers",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 10,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/md{\"/customers\",\"/customer-groups\",\"/customer-levels\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customer-groups",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 10,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/md{\"/customers\",\"/customer-groups\",\"/customer-levels\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customer-levels",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 10,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/md{\"/customers\",\"/customer-groups\",\"/customer-levels\"}"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/customers/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 11,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/customer-groups/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 11,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/customer-levels/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 11,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customers/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 12,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customers/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 12,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customer-groups/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 12,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customer-groups/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 12,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customer-levels/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 12,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customer-levels/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 12,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md\"/{kind:customers|customer-groups|customer-levels}/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/customers/{customer}/banks",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 13,
+      "symbol": "banks"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/customers/{customer}/banks",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 14,
+      "symbol": "bankCreate"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/customers/{customer}/banks/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/CustomerMasterController.java",
+      "line": 15,
+      "symbol": "bankUpdate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/fund-accounts/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/FundAccountController.java",
+      "line": 7,
+      "symbol": "get"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/fund-accounts",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/FundAccountController.java",
+      "line": 8,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/fund-accounts/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/FundAccountController.java",
+      "line": 9,
+      "symbol": "update"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/fund-accounts/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/FundAccountController.java",
+      "line": 10,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md/fund-accounts\"/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/fund-accounts/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/FundAccountController.java",
+      "line": 10,
+      "symbol": "toggle",
+      "expandedFrom": "/api/v1/md/fund-accounts\"/{id}/{action:enable|disable}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/suppliers",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/logistics-providers",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/partners",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/expense-items",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/suppliers/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/logistics-providers/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/partners/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/expense-items/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/suppliers",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/logistics-providers",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/partners",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/expense-items",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/suppliers/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/logistics-providers/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/partners/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/md/expense-items/{id}",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/suppliers/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 10,
+      "symbol": "enable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/enable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/logistics-providers/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 10,
+      "symbol": "enable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/enable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/partners/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 10,
+      "symbol": "enable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/enable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/expense-items/{id}/enable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 10,
+      "symbol": "enable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/enable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/suppliers/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 11,
+      "symbol": "disable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/disable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/logistics-providers/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 11,
+      "symbol": "disable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/disable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/partners/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 11,
+      "symbol": "disable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/disable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/md/expense-items/{id}/disable",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 11,
+      "symbol": "disable",
+      "expandedFrom": "/api/v1/md\"/{kind:suppliers|logistics-providers|partners|expense-items}/{id}/disable\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/partners/{id}/banks",
+      "file": "jxc-server/jxc-module-md/src/main/java/com/hs/jxc/md/SupplierController.java",
+      "line": 12,
+      "symbol": "banks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/orders",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/domestic-receipts",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/export-nodes",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 6,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/orders/{id}",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/domestic-receipts/{id}",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/export-nodes/{id}",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 7,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 8,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/pur/orders/{id}",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/pur/domestic-receipts/{id}",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/pur/export-nodes/{id}",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 9,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders/{id}/submit",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders/{id}/confirm",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders/{id}/void",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders/{id}/cancel-lines",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/orders/{id}/close",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts/{id}/submit",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts/{id}/confirm",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts/{id}/void",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts/{id}/cancel-lines",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts/{id}/close",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes/{id}/submit",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes/{id}/confirm",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes/{id}/void",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes/{id}/cancel-lines",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/export-nodes/{id}/close",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 10,
+      "symbol": "action",
+      "expandedFrom": "/api/v1/pur\"/{kind:orders|domestic-receipts|export-nodes}/{id}/{action:submit|confirm|void|cancel-lines|close}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pur/domestic-receipts/lines/{id}/convert",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 11,
+      "symbol": "convert"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/orders/{id}/progress",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 12,
+      "symbol": "progress"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/export-nodes/sources",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 13,
+      "symbol": "exportSources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pur/shippable-sources",
+      "file": "jxc-server/jxc-module-pur/src/main/java/com/hs/jxc/pur/PurchaseController.java",
+      "line": 14,
+      "symbol": "sources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/sales",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/refunds",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/purchase",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/claims",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 12,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/sales/{id}",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/refunds/{id}",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/purchase/{id}",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/claims/{id}",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 13,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/rtn\"/{kind:sales|refunds|purchase|claims}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/sales/returnable",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 14,
+      "symbol": "returnable"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rtn/purchase/returnable",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 15,
+      "symbol": "purchaseSources"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 16,
+      "symbol": "sales"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/submit",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 17,
+      "symbol": "submit"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/receive",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 18,
+      "symbol": "receive"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/inspect",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 19,
+      "symbol": "inspect"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/settle",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 20,
+      "symbol": "settle"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/settle/reverse",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 21,
+      "symbol": "reverse"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/sales/{id}/cancel",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 22,
+      "symbol": "cancel"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/refunds",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 23,
+      "symbol": "refund"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/refunds/{id}/pay",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 24,
+      "symbol": "pay"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/refunds/{id}/cancel",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 25,
+      "symbol": "cancelRefund"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/purchase",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 26,
+      "symbol": "purchase"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/purchase/{id}/ship",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 27,
+      "symbol": "ship"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/claims",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 28,
+      "symbol": "claim"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rtn/claims/{id}/resolve",
+      "file": "jxc-server/jxc-module-rtn/src/main/java/com/hs/jxc/rtn/ReturnsController.java",
+      "line": 29,
+      "symbol": "resolve"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/orders",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 6,
+      "symbol": "orders"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/orders/{id}",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 7,
+      "symbol": "get"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 8,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sal/orders/{id}",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 9,
+      "symbol": "update"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sal/orders/{id}/allocations",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 10,
+      "symbol": "allocations"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders/{id}/submit",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 11,
+      "symbol": "submit"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders/{id}/withdraw",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 12,
+      "symbol": "withdraw"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders/{id}/cancel-lines",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 13,
+      "symbol": "cancel"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders/{id}/close",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 14,
+      "symbol": "close"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/orders/{id}/outbound-check",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 15,
+      "symbol": "check"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/orders/{id}/timeline",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 16,
+      "symbol": "timeline"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/prices",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 17,
+      "symbol": "prices"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/prices/resolve",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 18,
+      "symbol": "resolve"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/prices",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 19,
+      "symbol": "price"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sal/prices/{id}",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 20,
+      "symbol": "priceUpdate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/outbounds",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 21,
+      "symbol": "outbounds"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/outbounds",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 22,
+      "symbol": "outbound"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/outbounds/{id}/confirm",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 23,
+      "symbol": "confirm"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/outbounds/{id}/sign",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 24,
+      "symbol": "sign"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/store-daily",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 25,
+      "symbol": "daily"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sal/signs",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 26,
+      "symbol": "signs"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/sign-diffs/{id}/resolve",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 27,
+      "symbol": "diff"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/attachments",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentController.java",
+      "line": 17,
+      "symbol": "list"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/attachments",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentController.java",
+      "line": 20,
+      "symbol": "upload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/attachments/{id}/url",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentController.java",
+      "line": 24,
+      "symbol": "url"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/attachments/{id}/content",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentController.java",
+      "line": 27,
+      "symbol": "content"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/attachments/{id}/unlink",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/attachment/AttachmentController.java",
+      "line": 35,
+      "symbol": "unlink"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/currencies",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/MasterLookupController.java",
+      "line": 22,
+      "symbol": "currencies"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/md/fund-accounts",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/MasterLookupController.java",
+      "line": 29,
+      "symbol": "funds"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/entities",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 13,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/stores",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 13,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/warehouses",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 13,
+      "symbol": "list",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/entities/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 14,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/stores/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 14,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/warehouses/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 14,
+      "symbol": "get",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/entities",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 15,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/stores",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 15,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/warehouses",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 15,
+      "symbol": "create",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/org/entities/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 16,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/org/stores/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 16,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/org/warehouses/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 16,
+      "symbol": "update",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/entities/{id}/enable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 17,
+      "symbol": "enable",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}/enable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/stores/{id}/enable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 17,
+      "symbol": "enable",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}/enable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/warehouses/{id}/enable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 17,
+      "symbol": "enable",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}/enable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/entities/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 18,
+      "symbol": "disable",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}/disable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/stores/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 18,
+      "symbol": "disable",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}/disable\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/warehouses/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/org/OrgController.java",
+      "line": 18,
+      "symbol": "disable",
+      "expandedFrom": "/api/v1/org\"/{kind:entities|stores|warehouses}/{id}/disable\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/audit-logs",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/AuditQueryController.java",
+      "line": 14,
+      "symbol": "list"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/AuthController.java",
+      "line": 15,
+      "symbol": "login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/AuthController.java",
+      "line": 16,
+      "symbol": "me"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/AuthController.java",
+      "line": 17,
+      "symbol": "logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 13,
+      "symbol": "countries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 14,
+      "symbol": "country"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/countries/{id}/params",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 15,
+      "symbol": "params"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{id}/readiness",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 16,
+      "symbol": "readiness"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{id}/reviews",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 17,
+      "symbol": "reviews"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/countries/{id}/reviews/{reviewId}/confirm",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 18,
+      "symbol": "review"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/countries/{id}/activate",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 19,
+      "symbol": "activate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/countries/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 20,
+      "symbol": "disable"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-templates",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 21,
+      "symbol": "templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-templates/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 22,
+      "symbol": "template"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-templates",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 23,
+      "symbol": "createTemplate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-templates/{id}/publish",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 24,
+      "symbol": "publish"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 25,
+      "symbol": "cloneJob"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-clone-jobs/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 26,
+      "symbol": "cloneJob"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/items",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 27,
+      "symbol": "cloneItems"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/org",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 28,
+      "symbol": "cloneOrg"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/admin",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 29,
+      "symbol": "cloneAdmin"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/preview",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 30,
+      "symbol": "preview"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/country-clone-jobs/{id}/apply",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 31,
+      "symbol": "apply"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/template-upgrades",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 32,
+      "symbol": "upgrades"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/template-upgrades",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 33,
+      "symbol": "previewUpgrade"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/template-upgrades/{id}/confirm",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/CountryConfigurationController.java",
+      "line": 34,
+      "symbol": "confirmUpgrade"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/doc-watchers",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 11,
+      "symbol": "watchers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/doc-watchers/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 12,
+      "symbol": "watcher"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/doc-watchers",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 13,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/doc-watchers/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 14,
+      "symbol": "update"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/doc-watchers/{id}/enable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 15,
+      "symbol": "enable"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/doc-watchers/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 16,
+      "symbol": "disable"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/delegations",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 17,
+      "symbol": "delegations"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/delegations",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 18,
+      "symbol": "delegate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/delegations/{id}/revoke",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 19,
+      "symbol": "revoke"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/sys/delegations/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentGovernanceController.java",
+      "line": 20,
+      "symbol": "remove"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/doc-number-rules",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java",
+      "line": 10,
+      "symbol": "list"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/doc-number-rules/{type}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java",
+      "line": 11,
+      "symbol": "save"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/countries/{countryId}/doc-number-rules",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java",
+      "line": 12,
+      "symbol": "countryRules"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/countries/{countryId}/doc-number-rules/{type}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/DocumentNumberController.java",
+      "line": 13,
+      "symbol": "countryRule"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/user-options",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 16,
+      "symbol": "userOptions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/users",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 17,
+      "symbol": "users"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/users/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 18,
+      "symbol": "user"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/users",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 19,
+      "symbol": "createUser"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/users/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 20,
+      "symbol": "updateUser"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/users/{id}/enable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 21,
+      "symbol": "enableUser"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/users/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 22,
+      "symbol": "disableUser"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/users/{id}/reset-password",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 23,
+      "symbol": "resetPassword"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/users/{id}/grants",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 24,
+      "symbol": "grants"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/users/{id}/grants",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 26,
+      "symbol": "setGrants"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/users/{id}/roles",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 28,
+      "symbol": "userRoles"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/users/{id}/data-scopes",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 30,
+      "symbol": "userScopes"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/roles",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 31,
+      "symbol": "roles"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/roles/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 32,
+      "symbol": "role"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/roles",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 33,
+      "symbol": "createRole"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/roles/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 34,
+      "symbol": "updateRole"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/roles/{id}/enable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 35,
+      "symbol": "enableRole"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/roles/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 36,
+      "symbol": "disableRole"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/roles/{id}/permissions",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 38,
+      "symbol": "permissions"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sys/roles/{id}/field-policies",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 40,
+      "symbol": "fields"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/permissions/tree",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 41,
+      "symbol": "permissionTree"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/import-types",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 9,
+      "symbol": "types"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/import-templates/{type}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 10,
+      "symbol": "template"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/imports",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 11,
+      "symbol": "list"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/imports",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 12,
+      "symbol": "create"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/imports/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 13,
+      "symbol": "detail",
+      "expandedFrom": "/api/v1/sys{\"/imports/{id}\",\"/imports/{id}/errors\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/imports/{id}/errors",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 13,
+      "symbol": "detail",
+      "expandedFrom": "/api/v1/sys{\"/imports/{id}\",\"/imports/{id}/errors\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/imports/{id}/confirm",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 14,
+      "symbol": "confirm"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/imports/{id}/cancel",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/imports/ImportController.java",
+      "line": 15,
+      "symbol": "cancel"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/workbench/summary",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 13,
+      "symbol": "summary"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/todos",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 14,
+      "symbol": "todos"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/notifications",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 15,
+      "symbol": "notices"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/notifications/{id}/read",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 16,
+      "symbol": "read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/notifications/read-all",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 17,
+      "symbol": "readAll"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs/worker-status",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 18,
+      "symbol": "workerStatus"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 19,
+      "symbol": "jobs"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/jobs",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 20,
+      "symbol": "create"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 21,
+      "symbol": "job"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/jobs/{id}/download",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 22,
+      "symbol": "download"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sys/jobs/{id}/retry",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/jobs/WorkbenchController.java",
+      "line": 23,
+      "symbol": "retry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wf/rules",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 16,
+      "symbol": "rules"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wf/rules/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 17,
+      "symbol": "rule"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wf/rules/{id}/versions",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 18,
+      "symbol": "versions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/wf/rules",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 19,
+      "symbol": "create"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/wf/rules/{id}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 20,
+      "symbol": "update"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/wf/rules/{id}/enable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 21,
+      "symbol": "enable"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/wf/rules/{id}/disable",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 22,
+      "symbol": "disable"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wf/doc-types",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 23,
+      "symbol": "docTypes"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/wf/doc-types/{docType}",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 24,
+      "symbol": "configure"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wf/tasks/mine",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 25,
+      "symbol": "tasks"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/wf/tasks/{id}/approve",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 27,
+      "symbol": "approve"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/wf/tasks/{id}/reject",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 28,
+      "symbol": "reject"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wf/instances",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 29,
+      "symbol": "instances"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/wf/instances/{id}/withdraw",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/workflow/controller/WorkflowController.java",
+      "line": 30,
+      "symbol": "withdraw"
+    }
+  ]
+}

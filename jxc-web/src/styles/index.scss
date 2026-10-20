@@ -1,0 +1,89 @@
+:root {
+  --app-header-height: 56px;
+  --app-aside-width: 224px;
+  --app-bg: #f4f6f9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  background: var(--app-bg);
+  color: var(--el-text-color-primary);
+}
+
+.page {
+  padding: 16px;
+}
+
+.page-card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.search-form {
+  .el-form-item {
+    margin-bottom: 12px;
+  }
+}
+
+.muted {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 8px;
+  }
+
+  .page-card {
+    padding: 12px;
+  }
+
+  .search-form .el-form-item {
+    width: 100%;
+    margin-right: 0;
+  }
+}

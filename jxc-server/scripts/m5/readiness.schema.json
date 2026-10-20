@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:hengshuo:jxc:m5:readiness:1",
+  "title": "M5 offline readiness manifest (does not authorize or import)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "batchId", "sourceSystem", "mode", "dataOrigin", "files", "records", "confirmations"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "batchId": {"type": "string", "minLength": 1, "maxLength": 128},
+    "sourceSystem": {"type": "string", "minLength": 1, "maxLength": 128},
+    "mode": {"enum": ["FIRST_START", "HISTORY_REHEARSAL"]},
+    "dataOrigin": {"enum": ["PRODUCTION_CONFIRMED", "SYNTHETIC"]},
+    "files": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"$ref": "#/$defs/sha"}}
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["sourceSystem", "sourceId", "kind", "targetCountryId", "targetBookId", "targetId", "sourceFileSha256"],
+        "properties": {
+          "sourceSystem": {"type": "string", "minLength": 1},
+          "sourceId": {"type": "string", "minLength": 1},
+          "kind": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"},
+          "targetCountryId": {"$ref": "#/$defs/id"},
+          "targetBookId": {"$ref": "#/$defs/id"},
+          "targetId": {"$ref": "#/$defs/id"},
+          "sourceFileSha256": {"$ref": "#/$defs/sha"}
+        }
+      }
+    },
+    "confirmations": {
+      "type": "object", "additionalProperties": false,
+      "required": ["configurationReviewed", "openingReviewed", "demoExcluded", "openingStatus", "reviewedBy", "configurationEvidence", "openingEvidence"],
+      "properties": {
+        "configurationReviewed": {"const": true},
+        "openingReviewed": {"const": true},
+        "demoExcluded": {"const": true},
+        "openingStatus": {"enum": ["CONFIRMED", "NOT_APPLICABLE"]},
+        "reviewedBy": {"type": "string", "minLength": 1},
+        "configurationEvidence": {"type": "string", "minLength": 1},
+        "openingEvidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "historicalScope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["description", "reviewedBy"],
+      "properties": {
+        "description": {"type": "string", "minLength": 1},
+        "reviewedBy": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "FIRST_START"}}},
+      "then": {
+        "not": {"required": ["historicalScope"]},
+        "properties": {
+          "dataOrigin": {"const": "PRODUCTION_CONFIRMED"},
+          "records": {"items": {"properties": {"kind": {"enum": ["FOUNDATION", "OPENING"]}}}}
+        }
+      },
+      "else": {"required": ["historicalScope"]}
+    }
+  ],
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+  }
+}
