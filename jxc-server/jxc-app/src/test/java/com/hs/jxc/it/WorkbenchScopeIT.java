@@ -26,6 +26,10 @@ class WorkbenchScopeIT extends BasePgIT {
         assertThat(approvals).containsEntry("link","/approval/todo");
         var page=get("/sys/todos?type=APPROVAL&page=2&size=200");assertThat(((Number)page.get("total")).intValue()).isEqualTo(205);assertThat(rows(page.get("records"))).hasSize(5);
         assertThat(rows(page.get("records"))).allSatisfy(r->assertThat(r).containsEntry("link","/approval/todo"));
+        long lastTask=owner.queryForObject("select max(id) from wf_task where assignee_id=81102",Long.class);
+        var searched=get("/sys/todos?type=APPROVAL&keyword="+lastTask+"&order=desc&page=1&size=10");
+        assertThat(((Number)searched.get("total")).intValue()).isEqualTo(1);
+        assertThat(rows(searched.get("records"))).singleElement().satisfies(r->assertThat(((Number)r.get("id")).longValue()).isEqualTo(lastTask));
     }
     @Test void blockedWorkflowConfigurationTodoIsReadFromItsOwnerAndRechecksSourceScope()throws Exception {
         var editor=new RequestContext(81101,81001L,"workbench-config",WorkflowIT.HASH);
