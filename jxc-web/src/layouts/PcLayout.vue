@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import SideMenu from './components/SideMenu.vue'
 import HeaderBar from './components/HeaderBar.vue'
+import RouteTabs from './components/RouteTabs.vue'
 import { useCountryStore } from '@/stores/country'
 import { useTodoStore } from '@/stores/todo'
 
@@ -36,14 +37,16 @@ watch(() => route.fullPath, () => (drawerOpen.value = false))
       <SideMenu />
     </el-drawer>
 
-    <el-container direction="vertical">
+    <el-container direction="vertical" class="layout-content">
       <HeaderBar :is-mobile="isMobile" @toggle-menu="drawerOpen = !drawerOpen" />
-      <el-main class="layout-main">
-        <router-view v-slot="{ Component }">
-          <component :is="Component" v-if="!country.switching" :key="`${country.epoch}:${route.fullPath}`" />
-          <el-empty v-else description="正在读取目标国家的权限与配置…" />
-        </router-view>
-      </el-main>
+      <RouteTabs>
+        <el-main class="layout-main">
+          <router-view v-slot="{ Component }">
+            <component :is="Component" v-if="!country.switching" :key="`${country.epoch}:${route.fullPath}`" />
+            <el-empty v-else description="正在读取目标国家的权限与配置…" />
+          </router-view>
+        </el-main>
+      </RouteTabs>
     </el-container>
   </el-container>
 </template>
@@ -59,7 +62,13 @@ watch(() => route.fullPath, () => (drawerOpen.value = false))
   overflow: hidden;
 }
 
+.layout-content {
+  min-width: 0;
+  min-height: 0;
+}
+
 .layout-main {
+  height: 100%;
   padding: 0;
   overflow-y: auto;
 }
