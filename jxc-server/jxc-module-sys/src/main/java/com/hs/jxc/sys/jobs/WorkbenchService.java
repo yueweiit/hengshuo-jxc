@@ -24,7 +24,7 @@ public class WorkbenchService {
         }
         for(int page=1;;page++){
             var result=workflow.tasks(c,Map.of("size","200","page",String.valueOf(page)));
-            for(var r:(List<Map<String,Object>>)result.get("records"))out.add(Map.of("id",r.get("id"),"todoType","APPROVAL","typeLabel","待审批","title","待处理审批","link","/workflow/tasks","createdAt",Objects.toString(r.get("createdAt"),"")));
+            for(var r:(List<Map<String,Object>>)result.get("records"))out.add(Map.of("id",r.get("id"),"todoType","APPROVAL","typeLabel","待审批","title","待处理审批","link","/approval/todo","createdAt",Objects.toString(r.get("createdAt"),"")));
             if((long)page*200>=((Number)result.get("total")).longValue())break;
         }
         providers.orderedStream().forEach(p->out.addAll(p.items(a)));return out;

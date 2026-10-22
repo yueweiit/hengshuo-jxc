@@ -23,7 +23,9 @@ class WorkbenchScopeIT extends BasePgIT {
         tx.executeWithoutResult(status->{for(long id=82000;id<82205;id++)workflow.submit(editor,"ORG_ENTITY",id,Map.of(),true);});
         assertThat(owner.queryForObject("select count(*) from wf_task where assignee_id=81102 and status='PENDING'",Integer.class)).isEqualTo(205);
         var summary=get("/sys/workbench/summary");var approvals=rows(summary.get("items")).stream().filter(r->"APPROVAL".equals(r.get("type"))).findFirst().orElseThrow();assertThat(((Number)approvals.get("count")).intValue()).isEqualTo(205);
+        assertThat(approvals).containsEntry("link","/approval/todo");
         var page=get("/sys/todos?type=APPROVAL&page=2&size=200");assertThat(((Number)page.get("total")).intValue()).isEqualTo(205);assertThat(rows(page.get("records"))).hasSize(5);
+        assertThat(rows(page.get("records"))).allSatisfy(r->assertThat(r).containsEntry("link","/approval/todo"));
     }
     @Test void blockedWorkflowConfigurationTodoIsReadFromItsOwnerAndRechecksSourceScope()throws Exception {
         var editor=new RequestContext(81101,81001L,"workbench-config",WorkflowIT.HASH);
