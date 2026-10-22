@@ -103,20 +103,68 @@ async function removeTab(name: TabPaneName): Promise<void> {
   min-height: 0;
 }
 
-.route-tabs > :deep(.el-tabs__header) {
+.route-tabs.el-tabs--card > :deep(.el-tabs__header) {
   flex-shrink: 0;
+  height: auto;
   margin: 0;
-  padding: 8px 12px 0;
-  background: var(--el-bg-color);
-}
-
-.route-tabs > :deep(.el-tabs__header .el-tabs__item) {
-  height: 36px;
-  font-size: 13px;
-}
-
-.route-tabs > :deep(.el-tabs__header .el-tabs__item.is-active) {
+  padding: 8px 16px 0;
+  border-bottom: 0;
   background: var(--app-bg);
+
+  .el-tabs__nav-wrap {
+    margin-bottom: 0;
+  }
+
+  .el-tabs__nav {
+    gap: 6px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .el-tabs__nav-prev,
+  .el-tabs__nav-next {
+    line-height: 34px;
+  }
+
+  // 同时覆盖组件的首尾、激活和悬停内边距，避免关闭按钮出现时标签伸缩。
+  .el-tabs__item {
+    height: 34px;
+    margin-top: 0;
+    padding: 0 12px;
+    border: 1px solid var(--el-border-color-light);
+    border-radius: 6px;
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-regular);
+    font-size: 13px;
+    transition: background-color var(--el-transition-duration), border-color var(--el-transition-duration);
+  }
+
+  .el-tabs__item:not(.is-active):not(.is-disabled):hover {
+    background: var(--el-fill-color-dark);
+  }
+
+  .el-tabs__item.is-active {
+    border-color: var(--el-color-primary-light-7);
+    background: var(--el-bg-color);
+    color: var(--el-color-primary);
+  }
+
+  .el-tabs__item.is-disabled {
+    color: var(--el-disabled-text-color);
+  }
+
+  .el-tabs__item .is-icon-close {
+    flex-shrink: 0;
+    width: 14px;
+    margin-left: 8px;
+    right: 0;
+    color: var(--el-text-color-placeholder);
+  }
+
+  .el-tabs__item .is-icon-close:hover {
+    background: var(--el-fill-color-dark);
+    color: var(--el-text-color-primary);
+  }
 }
 
 .route-tabs > :deep(.el-tabs__content) {
@@ -129,8 +177,8 @@ async function removeTab(name: TabPaneName): Promise<void> {
 }
 
 @media (max-width: 768px) {
-  .route-tabs > :deep(.el-tabs__header) {
-    padding: 4px 8px 0;
+  .route-tabs.el-tabs--card > :deep(.el-tabs__header) {
+    padding: 6px 8px 0;
   }
 }
 </style>
