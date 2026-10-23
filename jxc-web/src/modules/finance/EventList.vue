@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { http, createCommandIntent } from '@/api/http'
+import { BizError, http, createCommandIntent } from '@/api/http'
 import { allRecords } from '@/api/pagination'
 import StatusTag from '@/components/StatusTag.vue'
 import { financeSourcePath as sourcePath } from '@/utils/finance-source'
@@ -11,10 +11,28 @@ const route = useRoute()
 const selectedEventId = ref(route.query.eventId ? Number(route.query.eventId) : undefined)
 const actionIntent = createCommandIntent()
 const rows = ref<Row[]>([]), books = ref<Row[]>([]), bookId = ref<number>(), status = ref('')
+const eventNames: Record<string, string> = {
+  RTN_REFUND_PAID: '退款支付',
+  RTN_SALES_INSPECTED: '销售退货验收',
+  RTN_SALES_SETTLED: '销售退货结算',
+}
+function diagnostic(row: Row, code: string, message = code) {
+  if (code === 'FIN_MAPPING_MISSING') {
+    const name = eventNames[row.eventType] || row.eventType
+    return `当前账套的“${name}”记账配置缺失或不完整。请在“凭证映射模板”中检查对应事件的规则、科目及资金账户关联，复核后重试。`
+  }
+  return message
+}
 async function load() { rows.value = (await allRecords<Row>('/fin/events', { bookId: bookId.value, status: status.value, eventId: selectedEventId.value })) }
 async function gen(row: Row) {
-  const res = await http.postIdem<Row>('/fin/events/' + row.id + '/generate', { bookId: bookId.value }, actionIntent)
-  ElMessage.success(res.status === 'NO_VOUCHER' ? '已保存复核后的无会计影响解释' : res.duplicate ? '这张事件已经有凭证' : '已生成待审凭证 ' + res.voucherNo)
+  try {
+    const res = await http.postIdem<Row>('/fin/events/' + row.id + '/generate', { bookId: bookId.value }, actionIntent, { silent: true })
+    ElMessage.success(res.status === 'NO_VOUCHER' ? '已保存复核后的无会计影响解释' : res.duplicate ? '这张事件已经有凭证' : '已生成待审凭证 ' + res.voucherNo)
+  } catch (error) {
+    if (!(error instanceof Error)) throw error
+    const code = error instanceof BizError ? error.code : ''
+    ElMessage.error(diagnostic(row, code, error.message))
+  }
   await load()
 }
 onMounted(async () => { books.value = await http.get<Row[]>('/fin/books'); bookId.value = route.query.bookId ? Number(route.query.bookId) : (books.value.filter(b => b.status === 'ACTIVE').length === 1 ? books.value.find(b => b.status === 'ACTIVE')!.id : undefined); await load() })
@@ -71,7 +89,9 @@ onMounted(async () => { books.value = await http.get<Row[]>('/fin/books'); bookI
           </template>
         </el-table-column>
         <el-table-column prop="voucherStatus" label="凭证状态" width="100" show-overflow-tooltip />
-        <el-table-column prop="failReason" label="失败诊断" min-width="160" show-overflow-tooltip />
+        <el-table-column label="失败诊断" min-width="240" show-overflow-tooltip>
+          <template #default="{ row }"><span :title="row.failReason">{{ row.failReason ? diagnostic(row, row.failReason) : '—' }}</span></template>
+        </el-table-column>
         <el-table-column label="无会计影响依据" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ row.status === 'NO_VOUCHER' ? (row.reason === 'SOURCE_CONFIRMATION_ZERO_POSTING' ? '来源已确认且本次记账金额为零，未重复生成凭证。' : row.reason) : '—' }}</template>
         </el-table-column>
