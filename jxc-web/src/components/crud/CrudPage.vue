@@ -11,6 +11,7 @@ import MoneyText from '@/components/MoneyText.vue'
 import QtyText from '@/components/QtyText.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
 import AuditTimeline from '@/components/AuditTimeline.vue'
+import type { AuditPresentation } from '@/components/AuditTimeline.vue'
 import FieldInput from './FieldInput.vue'
 import OptionText from './OptionText.vue'
 import type { ColumnDef, FieldDef } from './types'
@@ -27,6 +28,8 @@ const props = withDefaults(
     editPerm?: string | string[]
     /** 审计日志的 resourceType，不传则不显示操作日志 */
     auditType?: string
+    /** 可选业务日志展示；未传时保持通用字段差异 */
+    auditPresentation?: AuditPresentation
     canCreate?: boolean
     canEdit?: boolean
     canToggle?: boolean
@@ -309,7 +312,7 @@ defineExpose({ reload: load, openCreate, openEdit, selection, query, search })
     </el-dialog>
 
     <el-drawer v-if="auditType" v-model="auditVisible" :title="t('common.auditLog')" size="420px" destroy-on-close>
-      <AuditTimeline :resource-type="auditType" :resource-id="auditRowId" />
+      <AuditTimeline :resource-type="auditType" :resource-id="auditRowId" :presentation="auditPresentation" />
     </el-drawer>
   </div>
 </template>

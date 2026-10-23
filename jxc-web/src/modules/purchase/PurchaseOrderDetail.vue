@@ -16,6 +16,7 @@ import { useCountryStore } from '@/stores/country'
 import { formatDate, todayIn } from '@/utils/format'
 import { TRANSPORT_MODES, optionText } from '@/modules/shared/bizOptions'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
+import { purchaseOrderAudit } from './purchaseOrderAudit'
 import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
@@ -40,6 +41,7 @@ const loading = ref(false)
 const tab = ref('receipts')
 const form = ref<InstanceType<typeof PurchaseOrderForm>>()
 const approval = ref<InstanceType<typeof ApprovalPanel>>()
+const audit = ref<InstanceType<typeof AuditTimeline>>()
 
 const id = computed(() => Number(route.params.id))
 const o = computed(() => data.value?.order ?? {})
@@ -55,6 +57,7 @@ async function load() {
     loading.value = false
   }
   approval.value?.reload()
+  audit.value?.reload()
 }
 
 async function submit() {
@@ -248,7 +251,7 @@ onMounted(load)
           <ApprovalPanel ref="approval" doc-type="PURCHASE_ORDER" :doc-id="id" />
         </el-tab-pane>
         <el-tab-pane label="操作日志" name="audit" lazy>
-          <AuditTimeline resource-type="purchase-order" :resource-id="id" />
+          <AuditTimeline ref="audit" resource-type="purchase-order" :resource-id="id" :presentation="purchaseOrderAudit" />
         </el-tab-pane>
       </el-tabs>
     </div>
