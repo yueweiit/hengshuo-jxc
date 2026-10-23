@@ -16,7 +16,7 @@ function salesPage({ defaultBooks = [], warehouseBooks = async () => [] } = {}) 
     APPROVAL_STATUS: [], CUSTOMER_SOURCE: [], FULFILLMENT_STATUS: [], PAYMENT_TYPES: [], PAY_STATUS: [],
     allRecords: async path => path === '/org/warehouses' ? [{ id: 401 }, { id: 402 }] : path === '/md/customers' ? [{ id: 93 }] : [{ productId: 44, baseUnit: 'PCS' }],
     http: {
-      get: async (path, params) => { calls.push({ path, params }); assert.equal(path, '/org/books'); return params?.warehouseId ? warehouseBooks(params.warehouseId) : defaultBooks },
+      get: async (path, params) => { if (path === '/sal/prices/resolve') return { price: 20, priceSource: 'BASE' }; calls.push({ path, params }); assert.equal(path, '/org/books'); return params?.warehouseId ? warehouseBooks(params.warehouseId) : defaultBooks },
       postIdem: async (path, body) => { posts.push({ path, body }); return { id: 1001 } },
     },
   }, ['openCreate', 'books', 'form', 'save'])

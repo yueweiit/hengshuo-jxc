@@ -148,7 +148,9 @@ test('a cancelled editor stays closed without navigation when its authorized wri
 test('late create completion cannot close a new editor in the same country and session', async () => {
   const write = deferred(), p = setup({ post: () => write.promise })
   await p.openCreate(); p.form.customerId = 93
+  Object.assign(p.form.lines[0], { productId: 44, warehouseId: 12 }); await settle()
   const saving = p.save(false)
+  await settle()
   assert.equal(p.posts.length, 1)
   p.form.visible = false; await p.openEdit(77); p.form.remark = 'preserve new input'
   write.resolve({ id: 100 }); await saving
