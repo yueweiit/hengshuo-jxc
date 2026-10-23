@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { compile, computed, createRenderer, defineComponent, h, nextTick, onMounted, reactive, ref } from 'vue'
+import { compile, computed, createRenderer, defineComponent, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 
 const detailFile = new URL('../src/modules/sales/SalesOrderDetail.vue', import.meta.url)
@@ -26,7 +26,7 @@ async function mount(groups, permissions) {
     props: ['bizType', 'bizId', 'category', 'readonly'],
     setup(props) {
       mounted.push({ category: props.category, readonly: Boolean(props.readonly) })
-      loadVueScript(attachmentFile, { ref, onMounted, defineProps: () => props, defineEmits: () => () => {}, defineExpose() {}, http: { get: async (url, params) => { calls.push({ url, category: params.category }); return [] } } }, ['load'])
+      loadVueScript(attachmentFile, { ref, reactive, watch, onBeforeUnmount, onMounted, defineProps: () => props, defineEmits: () => () => {}, defineExpose() {}, http: { get: async (url, params) => { calls.push({ url, category: params.category }); return [] } } }, ['load'])
       return () => h('div')
     },
   })
