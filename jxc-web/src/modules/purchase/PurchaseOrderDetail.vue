@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Close, FullScreen } from '@element-plus/icons-vue'
 import { http, createCommandIntent } from '@/api/http'
 import { useUserStore } from '@/stores/user'
 import StatusTag from '@/components/StatusTag.vue'
@@ -16,6 +17,16 @@ import { useCountryStore } from '@/stores/country'
 import { formatDate, todayIn } from '@/utils/format'
 import { TRANSPORT_MODES, optionText } from '@/modules/shared/bizOptions'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
+import {
+  DEFAULT_PRODUCT_RATIO,
+  ratioAtPosition,
+  shouldUseNaturalFlow,
+  stepProductRatio,
+  toggleFocusedPane,
+  workspaceContentBounds,
+  type DetailPane,
+  type FocusedPane,
+} from './purchaseOrderDetailLayout'
 import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
@@ -41,6 +52,22 @@ const tab = ref('receipts')
 const form = ref<InstanceType<typeof PurchaseOrderForm>>()
 const approval = ref<InstanceType<typeof ApprovalPanel>>()
 const audit = ref<InstanceType<typeof PurchaseOrderAudit>>()
+const summaryCard = ref<HTMLElement>()
+const workspace = ref<HTMLElement>()
+const splitter = ref<HTMLElement>()
+const productRatio = ref(DEFAULT_PRODUCT_RATIO)
+const focusedPane = ref<FocusedPane>(null)
+const naturalFlow = ref(false)
+const workspaceHeight = ref(0)
+const summaryColumns = ref(3)
+const resizing = ref(false)
+const tableHeight = computed(() => naturalFlow.value ? undefined : '100%')
+const workspaceStyle = computed(() => ({
+  '--product-pane': `${productRatio.value}fr`,
+  '--records-pane': `${100 - productRatio.value}fr`,
+  '--workspace-height': `${workspaceHeight.value}px`,
+}))
+let summaryObserver: ResizeObserver | undefined
 
 const id = computed(() => Number(route.params.id))
 const o = computed(() => data.value?.order ?? {})
@@ -105,13 +132,86 @@ async function submitClose() {
   }
 }
 
+function restoreWorkspace() {
+  productRatio.value = DEFAULT_PRODUCT_RATIO
+  focusedPane.value = null
+  resizing.value = false
+}
+
+function updateWorkspaceLayout() {
+  const nextNaturalFlow = shouldUseNaturalFlow(window.innerWidth, window.innerHeight)
+  if (nextNaturalFlow && !naturalFlow.value) restoreWorkspace()
+  naturalFlow.value = nextNaturalFlow
+  summaryColumns.value = window.innerWidth > 1440 ? 4 : window.innerWidth <= 768 ? 2 : 3
+  if (nextNaturalFlow || !workspace.value) {
+    workspaceHeight.value = 0
+    return
+  }
+  const top = workspace.value.getBoundingClientRect().top
+  workspaceHeight.value = Math.max(360, Math.min(680, window.innerHeight - top - 32))
+}
+
+function beginResize(event: PointerEvent) {
+  if (naturalFlow.value || !splitter.value) return
+  event.preventDefault()
+  splitter.value.setPointerCapture(event.pointerId)
+  resizing.value = true
+}
+
+function resizeWorkspace(event: PointerEvent) {
+  if (!splitter.value?.hasPointerCapture(event.pointerId) || !workspace.value) return
+  const bounds = workspace.value.getBoundingClientRect()
+  const style = window.getComputedStyle(workspace.value)
+  const content = workspaceContentBounds(
+    bounds.top,
+    workspace.value.clientTop,
+    workspace.value.clientHeight,
+    Number.parseFloat(style.paddingTop) || 0,
+    Number.parseFloat(style.paddingBottom) || 0,
+  )
+  productRatio.value = ratioAtPosition(event.clientY, content.top, content.height, splitter.value.offsetHeight)
+}
+
+function stopResize() {
+  resizing.value = false
+}
+
+function adjustWorkspace(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    restoreWorkspace()
+    return
+  }
+  const nextRatio = stepProductRatio(productRatio.value, event.key)
+  if (nextRatio === null) return
+  event.preventDefault()
+  productRatio.value = nextRatio
+}
+
+function focusPane(target: DetailPane) {
+  if (naturalFlow.value) return
+  focusedPane.value = toggleFocusedPane(focusedPane.value, target)
+}
+
 watch(id, load)
-onMounted(load)
+onMounted(() => {
+  load()
+  updateWorkspaceLayout()
+  window.addEventListener('resize', updateWorkspaceLayout)
+  if (typeof ResizeObserver !== 'undefined' && summaryCard.value) {
+    summaryObserver = new ResizeObserver(updateWorkspaceLayout)
+    summaryObserver.observe(summaryCard.value)
+  }
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateWorkspaceLayout)
+  summaryObserver?.disconnect()
+})
 </script>
 
 <template>
   <div v-loading="loading" class="page purchase-order-detail">
-    <div class="page-card">
+    <div ref="summaryCard" class="page-card detail-summary">
       <div class="page-title">
         <h2>
           <el-button link aria-label="返回采购单列表" @click="router.push('/purchase/orders')"><el-icon><ArrowLeft /></el-icon></el-button>
@@ -126,7 +226,7 @@ onMounted(load)
           <el-button v-if="o.status === 'DRAFT' && user.hasPerm('pur:order:cancel')" type="danger" plain @click="voidOrder">作废</el-button>
         </div>
       </div>
-      <el-descriptions :column="3" border size="small">
+      <el-descriptions :column="summaryColumns" border size="small">
         <el-descriptions-item label="供应商">{{ o.supplierName }}</el-descriptions-item>
         <el-descriptions-item label="经营主体">{{ o.entityName }}</el-descriptions-item>
         <el-descriptions-item label="币种">{{ o.currency }}</el-descriptions-item>
@@ -139,15 +239,27 @@ onMounted(load)
         <el-descriptions-item label="付款条件">{{ o.paymentTerms || '-' }}</el-descriptions-item>
         <el-descriptions-item label="预付比例">{{ o.prepayRatio ?? 0 }}%</el-descriptions-item>
         <el-descriptions-item label="创建人">{{ o.createdByName }} · <DateTimeText :value="o.createdAt" /></el-descriptions-item>
-        <el-descriptions-item label="备注" :span="3">{{ o.remark || '-' }}</el-descriptions-item>
-        <el-descriptions-item v-if="o.closeReason" label="关闭原因" :span="3">{{ o.closeReason }}</el-descriptions-item>
+        <el-descriptions-item label="备注" :span="summaryColumns">{{ o.remark || '-' }}</el-descriptions-item>
+        <el-descriptions-item v-if="o.closeReason" label="关闭原因" :span="summaryColumns">{{ o.closeReason }}</el-descriptions-item>
       </el-descriptions>
     </div>
 
-    <div class="page-card">
-      <h3>行进度（基本单位）</h3>
-      <div class="table-scroll">
-        <el-table :data="lines" class="purchase-order-table" border stripe size="small" row-key="id">
+    <div
+      ref="workspace"
+      class="page-card detail-workspace"
+      :class="{ 'is-natural': naturalFlow, 'focus-products': focusedPane === 'products', 'focus-records': focusedPane === 'records', 'is-resizing': resizing }"
+      :style="workspaceStyle"
+    >
+      <section id="products-pane" class="products-pane" aria-label="商品明细">
+        <div class="pane-heading">
+          <div class="pane-title"><h3>商品明细</h3><span class="muted">{{ lines.length }} 行</span></div>
+          <el-button link class="pane-focus" :aria-pressed="focusedPane === 'products'" :aria-label="focusedPane === 'products' ? '还原商品明细和关联记录' : '放大商品明细'" @click="focusPane('products')">
+            <el-icon><Close v-if="focusedPane === 'products'" /><FullScreen v-else /></el-icon>
+            {{ focusedPane === 'products' ? '还原布局' : '放大' }}
+          </el-button>
+        </div>
+        <div class="product-table-region">
+          <el-table :data="lines" :height="tableHeight" class="purchase-order-table" border stripe size="small" row-key="id">
           <el-table-column prop="lineNo" label="#" width="44" />
           <el-table-column label="商品" min-width="190">
             <template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.qty} ${row.unit}（×${row.factor}）`" /></template>
@@ -172,15 +284,48 @@ onMounted(load)
           <el-table-column label="交货日期" width="105">
             <template #default="{ row }">{{ formatDate(row.deliveryDate) }}</template>
           </el-table-column>
-        </el-table>
-      </div>
-      <p class="muted progress-note">未交 = 订购 − 已取消 − 国内合格 − 待检。破损不抵减未交，可以继续向供应商要求补货；待检转合格或破损后进度自动更新。</p>
-    </div>
+          </el-table>
+        </div>
+        <p class="muted progress-note">未交 = 订购 − 已取消 − 国内合格 − 待检。破损不抵减未交，可以继续向供应商要求补货；待检转合格或破损后进度自动更新。</p>
+      </section>
 
-    <div class="page-card">
-      <el-tabs v-model="tab">
+      <div
+        ref="splitter"
+        class="detail-splitter"
+        role="separator"
+        aria-label="调整商品明细与关联记录的区域比例"
+        aria-controls="products-pane records-pane"
+        aria-orientation="horizontal"
+        tabindex="0"
+        :aria-valuenow="productRatio"
+        :aria-valuemin="35"
+        :aria-valuemax="72"
+        :aria-valuetext="`商品明细 ${productRatio}%，关联记录 ${100 - productRatio}%`"
+        @pointerdown="beginResize"
+        @pointermove="resizeWorkspace"
+        @pointerup="stopResize"
+        @pointercancel="stopResize"
+        @lostpointercapture="stopResize"
+        @dblclick="restoreWorkspace"
+        @keydown="adjustWorkspace"
+      >
+        <span aria-hidden="true" />
+      </div>
+
+      <section id="records-pane" class="records-pane" aria-label="关联记录">
+        <div class="pane-heading records-heading">
+          <div class="pane-title"><h3>关联记录</h3></div>
+          <div class="pane-actions">
+            <el-button v-if="tab === 'receipts'" link type="primary" @click="router.push({ path: '/purchase/domestic-receipts', query: { orderId: id } })">去国内收货</el-button>
+            <el-button link class="pane-focus" :aria-pressed="focusedPane === 'records'" :aria-label="focusedPane === 'records' ? '还原商品明细和关联记录' : '放大关联记录'" @click="focusPane('records')">
+              <el-icon><Close v-if="focusedPane === 'records'" /><FullScreen v-else /></el-icon>
+              {{ focusedPane === 'records' ? '还原布局' : '放大' }}
+            </el-button>
+          </div>
+        </div>
+        <el-tabs v-model="tab" class="records-tabs">
         <el-tab-pane :label="`国内收货（${data?.receipts.length ?? 0}）`" name="receipts">
-          <el-table :data="data?.receipts ?? []" class="purchase-order-table" border stripe size="small">
+          <el-table :data="data?.receipts ?? []" :height="tableHeight" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="docNo" label="收货单" width="170" />
             <el-table-column label="日期" width="105"><template #default="{ row }">{{ formatDate(row.receiptDate) }}</template></el-table-column>
             <el-table-column prop="location" label="地点" min-width="140" />
@@ -191,10 +336,9 @@ onMounted(load)
             </el-table-column>
             <el-table-column label="状态" width="90"><template #default="{ row }"><StatusTag :status="row.status" /></template></el-table-column>
           </el-table>
-          <el-button link type="primary" class="mt" @click="router.push({ path: '/purchase/domestic-receipts', query: { orderId: id } })">去国内收货</el-button>
         </el-tab-pane>
         <el-tab-pane :label="`出口节点（${data?.exports.length ?? 0}）`" name="exports">
-          <el-table :data="data?.exports ?? []" class="purchase-order-table" border stripe size="small">
+          <el-table :data="data?.exports ?? []" :height="tableHeight" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="docNo" label="出口单" width="170" />
             <el-table-column prop="declarationNo" label="报关单号" width="170" />
             <el-table-column prop="exportPort" label="口岸" width="110" />
@@ -206,7 +350,7 @@ onMounted(load)
           </el-table>
         </el-tab-pane>
         <el-tab-pane :label="`运输批次（${data?.shipments.length ?? 0}）`" name="shipments">
-          <el-table :data="data?.shipments ?? []" class="purchase-order-table" border stripe size="small">
+          <el-table :data="data?.shipments ?? []" :height="tableHeight" class="purchase-order-table" border stripe size="small">
             <el-table-column label="批次" width="170">
               <template #default="{ row }"><el-link type="primary" @click="router.push(`/logistics/shipments/${row.id}`)">{{ row.docNo }}</el-link></template>
             </el-table-column>
@@ -222,7 +366,7 @@ onMounted(load)
           </el-table>
         </el-tab-pane>
         <el-tab-pane :label="`目的地实收（${data?.mxReceipts.length ?? 0}）`" name="mx">
-          <el-table :data="data?.mxReceipts ?? []" class="purchase-order-table" border stripe size="small">
+          <el-table :data="data?.mxReceipts ?? []" :height="tableHeight" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="receiptNo" label="实收单" width="170" />
             <el-table-column label="日期" width="105"><template #default="{ row }">{{ formatDate(row.bizDate) }}</template></el-table-column>
             <el-table-column prop="warehouseName" label="仓库" width="140" />
@@ -234,7 +378,7 @@ onMounted(load)
           </el-table>
         </el-tab-pane>
         <el-tab-pane :label="`取消记录（${data?.cancels.length ?? 0}）`" name="cancels">
-          <el-table :data="data?.cancels ?? []" class="purchase-order-table" border stripe size="small">
+          <el-table :data="data?.cancels ?? []" :height="tableHeight" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="productCode" label="商品" width="100" />
             <el-table-column prop="cancelQty" label="取消数量" width="90" align="right" />
             <el-table-column prop="reason" label="原因" min-width="200" />
@@ -252,7 +396,8 @@ onMounted(load)
         <el-tab-pane label="操作日志" name="audit" lazy>
           <PurchaseOrderAudit ref="audit" :resource-id="id" :order="o" />
         </el-tab-pane>
-      </el-tabs>
+        </el-tabs>
+      </section>
     </div>
 
     <el-dialog v-model="cancel.visible" title="部分取消" width="640px" class="purchase-order-dialog" append-to-body>
@@ -292,9 +437,15 @@ onMounted(load)
   min-width: 0;
 }
 
+.detail-summary {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
 .page-title {
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 8px;
 }
 
 h2 {
@@ -313,13 +464,193 @@ h2 {
 }
 
 h3 {
-  margin: 0 0 8px;
-  font-size: 15px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.detail-workspace {
+  --product-pane: 58fr;
+  --records-pane: 42fr;
+  display: grid;
+  grid-template-rows: minmax(160px, var(--product-pane)) 10px minmax(120px, var(--records-pane));
+  height: var(--workspace-height);
+  min-height: 360px;
+  overflow: hidden;
+  padding: 12px 14px;
+}
+
+.products-pane,
+.records-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pane-heading,
+.pane-title,
+.pane-actions {
+  display: flex;
+  align-items: center;
+}
+
+.pane-heading {
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding-bottom: 4px;
+}
+
+.pane-title,
+.pane-actions {
+  gap: 8px;
+}
+
+.pane-focus {
+  flex: none;
+}
+
+.product-table-region {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.product-table-region :deep(.el-table) {
+  height: 100%;
 }
 
 .progress-note {
-  margin: 8px 0 0;
-  line-height: 20px;
+  flex: none;
+  margin: 4px 0 0;
+  line-height: 18px;
+  font-size: 12px;
+}
+
+.detail-splitter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 -14px;
+  cursor: row-resize;
+  touch-action: none;
+  outline-offset: -2px;
+}
+
+.detail-splitter span {
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: #b8c5d6;
+  transition: width 120ms ease, background-color 120ms ease;
+}
+
+.detail-splitter:hover span,
+.detail-splitter:focus-visible span {
+  width: 52px;
+  background: var(--el-color-primary);
+}
+
+.detail-splitter:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+}
+
+.detail-workspace.is-resizing,
+.detail-workspace.is-resizing * {
+  user-select: none;
+}
+
+.records-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.records-tabs :deep(.el-tabs__header) {
+  flex: none;
+  margin-bottom: 6px;
+}
+
+.records-tabs :deep(.el-tabs__nav-wrap) {
+  overflow-x: auto;
+}
+
+.records-tabs :deep(.el-tabs__content) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.records-tabs :deep(.el-tab-pane) {
+  height: 100%;
+  overflow: auto;
+}
+
+.detail-workspace.focus-products,
+.detail-workspace.focus-records {
+  display: block;
+}
+
+.detail-workspace.focus-products .records-pane,
+.detail-workspace.focus-records .products-pane,
+.detail-workspace.focus-products .detail-splitter,
+.detail-workspace.focus-records .detail-splitter {
+  display: none;
+}
+
+.detail-workspace.focus-products .products-pane,
+.detail-workspace.focus-records .records-pane {
+  height: 100%;
+}
+
+.detail-workspace.is-natural {
+  display: block;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding: 12px;
+}
+
+.detail-workspace.is-natural .products-pane,
+.detail-workspace.is-natural .records-pane {
+  display: block;
+  height: auto;
+  overflow: visible;
+}
+
+.detail-workspace.is-natural .detail-splitter,
+.detail-workspace.is-natural .pane-focus {
+  display: none;
+}
+
+.detail-workspace.is-natural .product-table-region {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.detail-workspace.is-natural .product-table-region :deep(.el-table) {
+  height: auto;
+}
+
+.detail-workspace.is-natural .records-pane {
+  margin-top: 16px;
+}
+
+.detail-workspace.is-natural .records-tabs {
+  display: block;
+  min-height: 0;
+}
+
+.detail-workspace.is-natural .records-tabs :deep(.el-tabs__content) {
+  overflow: visible;
+}
+
+.detail-workspace.is-natural .records-tabs :deep(.el-tab-pane) {
+  height: auto;
+  overflow: visible;
 }
 
 .mt {
@@ -332,5 +663,23 @@ h3 {
 
 :global(.purchase-order-dialog) {
   max-width: 96vw;
+}
+
+@media (max-width: 600px) {
+  .detail-summary {
+    padding: 10px;
+  }
+
+  .detail-workspace.is-natural {
+    padding: 10px;
+  }
+
+  .pane-heading {
+    gap: 6px;
+  }
+
+  .records-heading .pane-actions {
+    gap: 4px;
+  }
 }
 </style>
