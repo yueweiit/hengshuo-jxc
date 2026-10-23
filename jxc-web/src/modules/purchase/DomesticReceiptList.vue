@@ -7,6 +7,7 @@ import { allRecords } from '@/api/pagination'
 import { useUserStore } from '@/stores/user'
 import { useCountryStore } from '@/stores/country'
 import CrudPage from '@/components/crud/CrudPage.vue'
+import { domesticReceiptAudit } from './domesticReceiptAudit'
 import StatusTag from '@/components/StatusTag.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
@@ -173,6 +174,7 @@ async function submitConvert() {
     :can-create="false"
     :can-toggle="false"
     audit-type="domestic-receipt"
+    :audit-presentation="domesticReceiptAudit"
     :actions-width="220"
   >
     <template #toolbar>

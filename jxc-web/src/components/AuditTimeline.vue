@@ -65,6 +65,7 @@ defineExpose({ reload })
 
 <template>
   <div class="audit-timeline" :aria-busy="loading">
+    <slot name="layout" :logs="logs" :loading="loading" :load-error="loadError" :total="total" :reload="reload">
     <div class="audit-toolbar">
       <span v-if="!loading && !loadError" class="muted">
         {{ logs.length < total ? '已显示最近' : '已显示' }} {{ logs.length }} 条，共 {{ total }} 条
@@ -97,6 +98,7 @@ defineExpose({ reload })
     </slot>
     </div>
     <p v-if="!loading && !loadError && logs.length < total" class="muted">当前仅展示最近 {{ logs.length }} 条操作日志，尚有更早记录。</p>
+    </slot>
   </div>
 </template>
 

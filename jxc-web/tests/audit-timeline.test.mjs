@@ -90,6 +90,21 @@ test('an invalid API page is an explicit protocol error rather than a successful
   assert.match(page.loadError.value, /返回格式不正确/)
 })
 
+test('a custom drawer slot receives the existing query state without a second history request', async t => {
+  const page = setup(t, async () => ({ records: [log], total: 150 }))
+  await settle()
+  const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*?)<\/template>\s*<style/)[1]
+  const component = { setup: () => ({ ...page, ...page.props }), render: Vue.compile(template) }
+  const app = Vue.createSSRApp({ render: () => Vue.h(component, null, {
+    layout: state => Vue.h('section', { 'data-custom-audit': true }, `${state.logs[0].id}/${state.total}/${state.loading}/${state.loadError}`),
+  }) })
+  for (const name of ['ElButton', 'ElTimeline', 'ElTimelineItem', 'DateTimeText']) app.component(name, { render: () => null })
+  const html = await renderToString(app)
+  assert.match(html, /data-custom-audit/)
+  assert.match(html, /1\/150\/false\//)
+  assert.equal(page.calls.length, 1)
+})
+
 test('actual shared template retains default differences, error/retry and truncation visibly', async t => {
   let failed = false
   const page = setup(t, async () => { if (failed) throw new Error('读取超时'); return { records: [log], total: 150 } })

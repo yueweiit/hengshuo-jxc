@@ -29,13 +29,13 @@ export function formatQty(value: number | string | null | undefined, unit?: stri
 }
 
 /** 时间戳按国家或仓店时区展示，并附带时区缩写（docs/00 第 4 节） */
-export function formatDateTime(value: string | null | undefined, tz: string) {
+export function formatDateTime(value: string | null | undefined, tz: string, precision: 'minute' | 'second' = 'minute') {
   if (!value) return '-'
   const d = dayjs(value).tz(tz)
   const abbr = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
     .formatToParts(d.toDate())
     .find((p) => p.type === 'timeZoneName')?.value
-  return `${d.format('YYYY-MM-DD HH:mm')} ${abbr ?? ''}`.trim()
+  return `${d.format(precision === 'second' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD HH:mm')} ${abbr ?? ''}`.trim()
 }
 
 export function formatDate(value: string | null | undefined) {
