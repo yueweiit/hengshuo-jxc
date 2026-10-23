@@ -163,6 +163,17 @@ test('数量分桶和关联记录默认展开且可由原生 details 收起', ()
   assert.ok(/<summary class="shipment-section-heading shipment-collapse-summary">/.test(shipmentDetailSource), '区域标题应提供原生折叠入口')
 })
 
+test('商品筛选与数量分桶标题同行并在左侧', () => {
+  const quantitySummary = shipmentDetailSource.match(/<details open class="shipment-section shipment-quantities"[\s\S]*?<summary class="shipment-section-heading shipment-collapse-summary">([\s\S]*?)<\/summary>/)?.[1]
+  assert.ok(quantitySummary, '数量分桶应提供标题行')
+
+  const searchPosition = quantitySummary.indexOf('shipment-quantity-controls')
+  const titlePosition = quantitySummary.indexOf('shipment-quantity-title')
+  assert.ok(searchPosition >= 0, '商品筛选应位于数量分桶标题行')
+  assert.ok(titlePosition > searchPosition, '商品筛选应在数量分桶标题左侧')
+  assert.match(quantitySummary, /shipment-quantity-controls[^>]*@click\.stop/, '点击筛选控件不应折叠数量分桶')
+})
+
 test('节点关联数量复用统一数量格式组件', () => {
   assert.match(shipmentDetailSource, /import QtyText from '@\/components\/QtyText\.vue'/)
   assert.match(shipmentDetailSource, /<QtyText :value="quantity\.value"\s*\/>/)

@@ -313,13 +313,13 @@ onMounted(load)
 
     <details open class="shipment-section shipment-quantities" aria-labelledby="shipment-quantity-title">
       <summary class="shipment-section-heading shipment-collapse-summary">
+        <div class="shipment-quantity-controls" @click.stop>
+          <el-input v-model="lineQuery" clearable size="small" placeholder="商品编码 / 名称 / 来源" aria-label="筛选商品" class="shipment-line-search"><template #prefix><el-icon><Search /></el-icon></template></el-input>
+        </div>
         <div class="shipment-heading-text"><h3 id="shipment-quantity-title">数量分桶</h3><span class="muted">{{ filteredLines.length }} / {{ lines.length }} 条明细</span><el-tag v-if="rank >= RANK.IN_TRANSIT" :type="identityOk ? 'success' : 'danger'" effect="plain" size="small">{{ identityOk ? '数量恒等校验通过' : '数量不平，请检查' }}</el-tag></div>
         <el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon>
       </summary>
       <div class="shipment-quantity-body">
-        <div class="shipment-quantity-controls">
-          <el-input v-model="lineQuery" clearable size="small" placeholder="商品编码 / 名称 / 来源" aria-label="筛选商品" class="shipment-line-search"><template #prefix><el-icon><Search /></el-icon></template></el-input>
-        </div>
         <div class="table-scroll">
           <el-table :data="pagedLines" class="shipment-quantity-table" max-height="400" border stripe size="small" row-key="id" show-summary :summary-method="summary" :empty-text="lineQuery.trim() ? '没有匹配的商品' : '暂无商品明细'">
             <el-table-column label="商品 / 采购来源" min-width="250"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.poNo} · ${row.sourceNo}`" /></template></el-table-column>

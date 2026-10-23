@@ -44,8 +44,10 @@
   .shipment-overview:has(.shipment-remark) { padding-bottom: 0; }
   .shipment-quantities { margin-top: 10px; }
   .shipment-quantity-body { padding-bottom: 8px; }
-  .shipment-quantity-controls { display: flex; justify-content: flex-end; padding: 7px 0; }
-  .shipment-line-search { flex: 0 1 220px; min-width: 160px; }
+  .shipment-quantities > .shipment-collapse-summary { justify-content: flex-start; }
+  .shipment-quantities > .shipment-collapse-summary .shipment-collapse-icon { margin-left: auto; }
+  .shipment-quantity-controls { flex: 0 1 220px; min-width: 160px; }
+  .shipment-line-search { width: 100%; }
   .el-table { font-size: 13px; }
   .el-table th.el-table__cell { padding: 6px 0; background: var(--el-fill-color-light); color: var(--el-text-color-regular); font-size: 12px; }
   .el-table .cell { padding-right: 8px; padding-left: 8px; line-height: 1.5; }
@@ -135,7 +137,7 @@
     .shipment-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .shipment-fact--date { grid-column: span 2; }
     .shipment-section-heading { flex-wrap: wrap; }
-    .shipment-line-search { flex-basis: 180px; }
+    .shipment-quantity-controls { flex-basis: 180px; }
     .shipment-lower { gap: 8px; margin-top: 8px; }
     .shipment-node-list { display: block; max-height: 280px; }
     .shipment-quantity-footer .el-pagination { --el-pagination-button-width-small: 24px; --el-pagination-button-height-small: 24px; }
