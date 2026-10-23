@@ -3,22 +3,31 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as Vue from 'vue'
-import { compile as compileTemplate } from '@vue/compiler-dom'
+import { compile as compileTemplate, parse as parseTemplate } from '@vue/compiler-dom'
 import { computed, createRenderer, defineComponent, h, reactive, ref } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 const helperCode = ts.transpileModule(readFileSync(new URL('../src/utils/finance-source.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
 const { financeSourcePath } = await import('data:text/javascript;base64,' + Buffer.from(helperCode).toString('base64'))
 const approvalFile = new URL('../src/modules/approval/ApprovalTaskList.vue', import.meta.url)
+function approvalSection(className) {
+ const template=readFileSync(approvalFile,'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+ function find(node) {
+  if(node.type===1&&node.props.some(p=>p.type===6&&p.name==='class'&&p.value?.content.split(' ').includes(className)))return node.loc.source
+  for(const child of node.children??[]){const found=find(child);if(found)return found}
+ }
+ const section=find(parseTemplate(template,{expressionPlugins:['typescript']}));assert.ok(section,`missing page section ${className}`);return section
+}
 function clickSource(type) {
  const source = readFileSync(approvalFile, 'utf8'), calls = []
  const bindings = ['detail', 'DOC_LINKS', ...(source.includes('function documentLink(') ? ['documentLink'] : [])]
- const page = loadVueScript(approvalFile, { reactive, ref, onMounted() {}, defineProps: () => ({ mode: 'todo' }), useTodoStore: () => ({}), useUserStore:()=>({fieldAccess:()=> 'READ',hasPerm:()=>true}),financeSourcePath }, bindings)
+ const page = loadVueScript(approvalFile, { reactive, ref, onMounted() {}, onBeforeUnmount() {}, defineProps: () => ({ mode: 'todo' }), useTodoStore: () => ({}), useUserStore:()=>({fieldAccess:()=> 'READ',hasPerm:()=>true}),financeSourcePath }, bindings)
  page.detail.value = { docType: type, docId: 44 }
- const template = source.match(/<div v-if="(?:DOC_LINKS|documentLink)[\s\S]*?(?=<h4>审批记录)/)[0]
+ const template = approvalSection('source-link')
  const renderer = createRenderer({ createElement: tag => ({ tag, children: [] }), createText: text => ({ text }), createComment: text => ({ comment: text }), setText: (n,t) => { n.text=t }, setElementText: (n,t) => { n.text=t }, insert: (n,p) => { p.children.push(n) }, remove() {}, patchProp: (n,k,_previous,value) => { n[k]=value }, parentNode: () => null, nextSibling: () => null })
  const app = renderer.createApp({ setup: () => page, render: new Function('Vue', ts.transpileModule(compileTemplate(`<div>${template}</div>`, { mode:'function', prefixIdentifiers:true, expressionPlugins:['typescript'] }).code, { compilerOptions:{ target:ts.ScriptTarget.ES2022 } }).outputText)(Vue) })
  app.config.globalProperties.$router = { push: route => calls.push(route) }
  app.component('ElButton', defineComponent({ setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
+ app.component('ElIcon', defineComponent({setup:(_,ctx)=>()=>h('span',ctx.slots.default?.())}));app.component('TopRight',defineComponent({render:()=>h('span')}))
  app.component('ElAlert', defineComponent({ props: ['title'], setup: p => () => h('p', p.title) }))
  const root = { children: [] }; app.mount(root)
  function walk(n) { return [n, ...(n.children ?? []).flatMap(walk)] }
@@ -73,8 +82,8 @@ test('refund proof attachment never mounts without BANK_INFO read permission',()
 })
 function taskAttachment(type,{fieldAccess=()=> 'READ',hasPerm=()=>true}={}){
  const source=readFileSync(approvalFile,'utf8'),bindingNames=['detail',...(source.includes('const ATTACHMENT_CATEGORY')?['ATTACHMENT_CATEGORY']:['attachment','canReadAttachment','canWriteAttachment'])]
- const page=loadVueScript(approvalFile,{reactive,ref,onMounted(){},defineProps:()=>({mode:'todo'}),useTodoStore:()=>({}),useUserStore:()=>({fieldAccess,hasPerm}),financeSourcePath},bindingNames);page.detail.value={docType:type,docId:44}
- const template=source.slice(source.indexOf('<h4>单据附件</h4>'),source.indexOf('<div v-if="mode === \'todo\'" class="drawer-actions">')),calls=[]
+ const page=loadVueScript(approvalFile,{reactive,ref,onMounted(){},onBeforeUnmount(){},defineProps:()=>({mode:'todo'}),useTodoStore:()=>({}),useUserStore:()=>({fieldAccess,hasPerm}),financeSourcePath},bindingNames);page.detail.value={docType:type,docId:44}
+ const template=approvalSection('attachment-section'),calls=[]
  const renderer=createRenderer({createElement:tag=>({tag,children:[]}),createText:text=>({text}),createComment:text=>({comment:text}),setText(){},setElementText:(n,t)=>n.text=t,insert:(n,p)=>p.children.push(n),remove(){},patchProp(){},parentNode:()=>null,nextSibling:()=>null})
  const app=renderer.createApp({setup:()=>({...page,mode:'todo'}),render:new Function('Vue',ts.transpileModule(compileTemplate(`<div>${template}</div>`,{mode:'function',prefixIdentifiers:true,expressionPlugins:['typescript']}).code,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText)(Vue)})
  app.component('DocAttachment',defineComponent({props:['bizType','bizId','category','readonly'],setup:p=>{calls.push({...p});return()=>h('span','attachment')}}));const root={children:[]};app.mount(root)

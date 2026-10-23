@@ -15,6 +15,8 @@ function renderMoney(sample) {
     insert: (node, parent) => { parent.children.push(node) }, remove() {}, patchProp() {}, parentNode: () => null, nextSibling: () => null,
   })
   const app = renderer.createApp({ setup: () => ({ detail: sample }), render: compile(`<div>${cells}</div>`) })
+  const amountTemplate = readFileSync(new URL('../src/modules/approval/ApprovalAmount.vue', import.meta.url), 'utf8').match(/<template>([\s\S]*?)<\/template>/)[1]
+  app.component('ApprovalAmount', defineComponent({ props: ['value', 'currency'], render: compile(amountTemplate) }))
   app.component('ElTableColumn', defineComponent({ setup: (_, context) => () => h('div', context.slots.default?.({ row: sample })) }))
   app.component('ElDescriptionsItem', defineComponent({ setup: (_, context) => () => h('div', context.slots.default?.()) }))
   app.component('MoneyText', defineComponent({ props: ['value', 'currency'], setup(props) { calls.push({ value: props.value, currency: props.currency }); return () => h('span', String(props.value)) } }))
