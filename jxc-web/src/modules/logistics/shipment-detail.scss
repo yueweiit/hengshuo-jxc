@@ -44,8 +44,10 @@
   .shipment-overview:has(.shipment-remark) { padding-bottom: 0; }
   .shipment-quantities { margin-top: 10px; }
   .shipment-quantity-body { padding-bottom: 8px; }
-  .shipment-quantities > .shipment-collapse-summary { justify-content: flex-start; }
-  .shipment-quantities > .shipment-collapse-summary .shipment-collapse-icon { margin-left: auto; }
+  .shipment-quantity-heading { justify-content: flex-start; }
+  .shipment-quantity-toggle { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; margin-left: auto; padding: 0; border: 0; background: transparent; cursor: pointer; }
+  .shipment-quantity-toggle:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 2px; }
+  .shipment-quantity-toggle[aria-expanded="true"] .shipment-collapse-icon { transform: rotate(90deg); }
   .shipment-quantity-controls { flex: 0 1 220px; min-width: 160px; }
   .shipment-line-search { width: 100%; }
   .el-table { font-size: 13px; }

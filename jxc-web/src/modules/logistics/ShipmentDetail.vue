@@ -42,6 +42,7 @@ const loading = ref(false)
 const loadError = ref('')
 const tab = ref('deliveries')
 const lineQuery = ref('')
+const quantityExpanded = ref(true)
 const linePage = ref(1)
 const linePageSize = ref(10)
 const expandedNodeIds = ref<number[]>([])
@@ -311,15 +312,15 @@ onMounted(load)
       <p v-if="sh.remark" class="shipment-remark"><span>备注</span>{{ sh.remark }}</p>
     </section>
 
-    <details open class="shipment-section shipment-quantities" aria-labelledby="shipment-quantity-title">
-      <summary class="shipment-section-heading shipment-collapse-summary">
-        <div class="shipment-quantity-controls" @click.stop>
+    <section class="shipment-section shipment-quantities" aria-labelledby="shipment-quantity-title">
+      <div class="shipment-section-heading shipment-quantity-heading">
+        <div class="shipment-quantity-controls">
           <el-input v-model="lineQuery" clearable size="small" placeholder="商品编码 / 名称 / 来源" aria-label="筛选商品" class="shipment-line-search"><template #prefix><el-icon><Search /></el-icon></template></el-input>
         </div>
         <div class="shipment-heading-text"><h3 id="shipment-quantity-title">数量分桶</h3><span class="muted">{{ filteredLines.length }} / {{ lines.length }} 条明细</span><el-tag v-if="rank >= RANK.IN_TRANSIT" :type="identityOk ? 'success' : 'danger'" effect="plain" size="small">{{ identityOk ? '数量恒等校验通过' : '数量不平，请检查' }}</el-tag></div>
-        <el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon>
-      </summary>
-      <div class="shipment-quantity-body">
+        <button type="button" class="shipment-quantity-toggle" :aria-expanded="quantityExpanded" aria-controls="shipment-quantity-body" :aria-label="quantityExpanded ? '收起数量分桶' : '展开数量分桶'" :title="quantityExpanded ? '收起数量分桶' : '展开数量分桶'" @click="quantityExpanded = !quantityExpanded"><el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon></button>
+      </div>
+      <div v-show="quantityExpanded" id="shipment-quantity-body" class="shipment-quantity-body">
         <div class="table-scroll">
           <el-table :data="pagedLines" class="shipment-quantity-table" max-height="400" border stripe size="small" row-key="id" show-summary :summary-method="summary" :empty-text="lineQuery.trim() ? '没有匹配的商品' : '暂无商品明细'">
             <el-table-column label="商品 / 采购来源" min-width="250"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.poNo} · ${row.sourceNo}`" /></template></el-table-column>
@@ -339,7 +340,7 @@ onMounted(load)
           <el-pagination v-model:current-page="linePage" v-model:page-size="linePageSize" size="small" :page-sizes="[10, 20, 50]" :pager-count="5" layout="total, sizes, prev, pager, next" :total="filteredLines.length" />
         </div>
       </div>
-    </details>
+    </section>
 
     <div class="shipment-lower">
       <section class="shipment-section shipment-nodes" aria-labelledby="shipment-nodes-title">

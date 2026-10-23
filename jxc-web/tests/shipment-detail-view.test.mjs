@@ -10,7 +10,7 @@ const shipmentDetailSetup = shipmentDetailSource.match(/<script[^>]*>([\s\S]*?)<
 function detailPage(get = async () => ({})) {
   const route = reactive({ params: { id: 483 } })
   const exports = ['sh', 'related', 'load', 'loading', 'loadError', 'lineQuery', 'linePage', 'linePageSize', 'filteredLines', 'pagedLines', 'summary', 'tab', 'expandedNodeIds', 'allNodesExpanded', 'toggleAllNodes', 'setNodeExpanded']
-  for (const name of ['nodeQuantityInfo', 'nodeQuantityValues', 'auditVisible', 'auditContext', 'openAudit']) {
+  for (const name of ['nodeQuantityInfo', 'nodeQuantityValues', 'auditVisible', 'auditContext', 'openAudit', 'quantityExpanded']) {
     if (new RegExp(`\\b(?:function|const|let|var)\\s+${name}\\b`).test(shipmentDetailSetup)) exports.push(name)
   }
   const page = loadVueScript(new URL('../src/modules/logistics/ShipmentDetail.vue', import.meta.url), {
@@ -157,21 +157,24 @@ test('存在多个无法区分的派送单时不把任意数量挂到节点上',
   assert.deepEqual(page.nodeQuantityInfo(node), { state: 'ambiguous', label: '未能唯一关联数量明细', records: [] })
 })
 
-test('数量分桶和关联记录默认展开且可由原生 details 收起', () => {
-  assert.ok(/<details\s+open\s+class="shipment-section shipment-quantities"/.test(shipmentDetailSource), '数量分桶应使用默认展开的 details')
+test('数量分桶和关联记录默认展开且可收起', () => {
+  assert.equal(detailPage().quantityExpanded.value, true, '数量分桶应默认展开')
+  assert.match(shipmentDetailSource, /:aria-expanded="quantityExpanded"/, '折叠按钮应暴露展开状态')
+  assert.match(shipmentDetailSource, /@click="quantityExpanded = !quantityExpanded"/, '按钮应切换展开状态')
+  assert.match(shipmentDetailSource, /v-show="quantityExpanded" id="shipment-quantity-body"/, '展开状态应控制数量表显示')
   assert.ok(/<details\s+open\s+class="shipment-section shipment-records"/.test(shipmentDetailSource), '关联记录应使用默认展开的 details')
   assert.ok(/<summary class="shipment-section-heading shipment-collapse-summary">/.test(shipmentDetailSource), '区域标题应提供原生折叠入口')
 })
 
 test('商品筛选与数量分桶标题同行并在左侧', () => {
-  const quantitySummary = shipmentDetailSource.match(/<details open class="shipment-section shipment-quantities"[\s\S]*?<summary class="shipment-section-heading shipment-collapse-summary">([\s\S]*?)<\/summary>/)?.[1]
+  const quantitySummary = shipmentDetailSource.match(/<section class="shipment-section shipment-quantities"[\s\S]*?<div class="shipment-section-heading shipment-quantity-heading">([\s\S]*?)<\/button>/)?.[1]
   assert.ok(quantitySummary, '数量分桶应提供标题行')
 
   const searchPosition = quantitySummary.indexOf('shipment-quantity-controls')
   const titlePosition = quantitySummary.indexOf('shipment-quantity-title')
   assert.ok(searchPosition >= 0, '商品筛选应位于数量分桶标题行')
   assert.ok(titlePosition > searchPosition, '商品筛选应在数量分桶标题左侧')
-  assert.match(quantitySummary, /shipment-quantity-controls[^>]*@click\.stop/, '点击筛选控件不应折叠数量分桶')
+  assert.ok(quantitySummary.indexOf('<button') > titlePosition, '筛选框和标题应位于独立折叠按钮之外')
 })
 
 test('节点关联数量复用统一数量格式组件', () => {
