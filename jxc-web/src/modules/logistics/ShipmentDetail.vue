@@ -71,11 +71,11 @@ const pendingTotal = computed(() => sh.value.totals?.pendingDeliveryQty ?? 0)
 function summary({ columns }: { columns: { property: string }[] }) {
   return columns.map((c, i) => (i === 0 ? '合计' : c.property === 'boxes' && filteredLines.value.some(line => line.boxes == null) ? '未维护' : c.property ? String(filteredLines.value.reduce((s, l) => s + (Number(l[c.property]) || 0), 0)) : ''))
 }
-const NODE_QUANTITY_SOURCES: Record<string, { recordsKey: string; timeField: string; label: string; status?: string }> = {
-  DISPATCHED: { recordsKey: 'deliveries', timeField: 'dispatchedAt', label: '派送单', status: 'DISPATCHED' },
+const NODE_QUANTITY_SOURCES: Record<string, { recordsKey: string; timeField: string; label: string; statuses?: string[] }> = {
+  DISPATCHED: { recordsKey: 'deliveries', timeField: 'dispatchedAt', label: '派送单', statuses: ['DISPATCHED', 'RECEIVED'] },
   HOLD: { recordsKey: 'holds', timeField: 'createdAt', label: '暂缓单' },
-  TRANSSHIPPED: { recordsKey: 'transships', timeField: 'transshipAt', label: '换柜单', status: 'CONFIRMED' },
-  RECEIVED: { recordsKey: 'receipts', timeField: 'confirmedAt', label: '实收单', status: 'CONFIRMED' },
+  TRANSSHIPPED: { recordsKey: 'transships', timeField: 'transshipAt', label: '换柜单', statuses: ['CONFIRMED'] },
+  RECEIVED: { recordsKey: 'receipts', timeField: 'confirmedAt', label: '实收单', statuses: ['CONFIRMED'] },
 }
 const NODE_QUANTITY_FIELDS: Record<string, { label: string; key: string }[]> = {
   DISPATCHED: [{ label: '派送', key: 'dispatchQty' }],
@@ -99,7 +99,7 @@ function nodeQuantityInfo(event: Row) {
   }
 
   const records = ((related.value[source.recordsKey] ?? []) as Row[]).filter((record) =>
-    (!source.status || record.status === source.status) && Array.isArray(record.lines) && record.lines.length > 0)
+    (!source.statuses || source.statuses.includes(record.status)) && Array.isArray(record.lines) && record.lines.length > 0)
   const sameTypeNodes = ((sh.value.nodes ?? []) as Row[]).filter((item) => item.nodeType === event.nodeType)
   const matchingRecords = records.filter((record) => sameInstant(event.actualAt, record[source.timeField]))
   const matchingNodes = sameTypeNodes.filter((item) => sameInstant(item.actualAt, event.actualAt))

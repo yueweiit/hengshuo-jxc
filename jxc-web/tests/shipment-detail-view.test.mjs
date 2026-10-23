@@ -97,6 +97,17 @@ test('派送节点只展示唯一关联派送单的商品数量', () => {
   assert.deepEqual(page.nodeQuantityValues('DISPATCHED', delivery.lines[0]), [{ label: '派送', value: 8 }])
 })
 
+test('派送单实收后仍保留其派送节点数量', () => {
+  const page = detailPage()
+  const node = { id: 1, nodeType: 'DISPATCHED', actualAt: '2026-10-22T10:00:00.000Z' }
+  const delivery = { id: 2, docNo: 'DEL-2', status: 'RECEIVED', dispatchedAt: node.actualAt, lines: [{ id: 3, dispatchQty: 8 }] }
+  page.sh.value = { nodes: [node] }
+  page.related.value = { deliveries: [delivery] }
+
+  assert.deepEqual(page.nodeQuantityInfo(node), { state: 'linked', label: '派送单', records: [delivery] })
+  assert.deepEqual(page.nodeQuantityValues('DISPATCHED', delivery.lines[0]), [{ label: '派送', value: 8 }])
+})
+
 test('暂缓、换柜和实收节点分别读取对应单据的实际明细字段', () => {
   const page = detailPage()
   assert.equal(typeof page.nodeQuantityInfo, 'function')
