@@ -164,6 +164,7 @@ async function submitConvert() {
 <template>
   <CrudPage
     ref="page"
+    class="domestic-receipts-page"
     title="国内收货"
     resource="/pur/domestic-receipts"
     :columns="columns"
@@ -209,13 +210,13 @@ async function submitConvert() {
       </el-row>
     </el-form>
     <div class="table-scroll">
-      <el-table v-loading="edit.loadingOrder" :data="edit.lines" border size="small" empty-text="请选择采购单">
+      <el-table v-loading="edit.loadingOrder" :data="edit.lines" class="receipt-table" border stripe size="small" empty-text="请选择采购单">
         <el-table-column prop="lineNo" label="#" width="44" />
         <el-table-column label="商品" min-width="180"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template></el-table-column>
         <el-table-column prop="undeliveredQty" label="未交" width="70" align="right" />
-        <el-table-column label="合格" width="110"><template #default="{ row }"><el-input-number v-model="row.qualifiedQty" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
-        <el-table-column label="待检" width="110"><template #default="{ row }"><el-input-number v-model="row.pendingInspectQty" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
-        <el-table-column label="破损" width="110"><template #default="{ row }"><el-input-number v-model="row.damagedQty" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
+        <el-table-column label="合格" width="110"><template #default="{ row }"><el-input-number v-model="row.qualifiedQty" size="small" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
+        <el-table-column label="待检" width="110"><template #default="{ row }"><el-input-number v-model="row.pendingInspectQty" size="small" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
+        <el-table-column label="破损" width="110"><template #default="{ row }"><el-input-number v-model="row.damagedQty" size="small" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
         <el-table-column width="90">
           <template #default="{ row }"><el-tag v-if="overLine(row)" type="danger" size="small">超出未交</el-tag></template>
         </el-table-column>
@@ -241,7 +242,7 @@ async function submitConvert() {
         <el-descriptions-item label="登记人">{{ detail.createdByName }}</el-descriptions-item>
       </el-descriptions>
       <h4>明细</h4>
-      <el-table :data="detail.lines" border size="small">
+      <el-table :data="detail.lines" class="receipt-table" border stripe size="small">
         <el-table-column label="商品" min-width="160"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template></el-table-column>
         <el-table-column prop="qualifiedQty" label="合格" width="60" align="right" />
         <el-table-column prop="pendingInspectQty" label="待检" width="60" align="right" />
@@ -291,6 +292,42 @@ async function submitConvert() {
 </template>
 
 <style scoped>
+.domestic-receipts-page :deep(.el-table),
+.receipt-table {
+  --el-table-header-bg-color: var(--el-fill-color);
+  --el-table-header-text-color: var(--el-text-color-regular);
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+  font-size: 13px;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__cell) {
+  padding: 4px 0;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.cell) {
+  padding: 0 8px;
+  line-height: 22px;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body .el-link),
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body .el-button.is-link),
+.receipt-table :deep(.el-input__inner) {
+  font-size: 13px;
+}
+
+.domestic-receipts-page :deep(.el-table__body .el-button + .el-button) {
+  margin-left: 8px;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body tr.el-table__row--striped > td.el-table__cell) {
+  background-color: var(--el-fill-color-light);
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body tr:hover > td.el-table__cell),
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body tr.hover-row > td.el-table__cell) {
+  background-color: var(--el-table-row-hover-bg-color);
+}
+
 .mb {
   margin-bottom: 12px;
 }
