@@ -4,10 +4,8 @@ import { readFileSync } from 'node:fs'
 import * as Vue from 'vue'
 import { renderToString } from '@vue/server-renderer'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
-import { loadTsModule } from './contracts/load-ts-module.mjs'
 
 const file = new URL('../src/components/AuditTimeline.vue', import.meta.url)
-const { purchaseOrderAudit } = loadTsModule(new URL('../src/modules/purchase/purchaseOrderAudit.ts', import.meta.url))
 const log = { id: 1, action: 'UPDATE', userName: '张三', occurredAt: '2026-10-23T02:30:00Z', beforeValue: { remark: '旧备注', status: 'CONFIRMED' }, afterValue: { remark: '新备注', status: 'DRAFT' } }
 function setup(t, get, props = {}) {
   const unmount = [], calls = [], scope = Vue.effectScope()
@@ -17,7 +15,7 @@ function setup(t, get, props = {}) {
     onMounted() {}, onBeforeUnmount: fn => unmount.push(fn),
     defineProps: () => parameters, defineExpose() {},
     http: { get: async (...args) => { calls.push(args); return get(...args) } },
-  }, ['logs', 'loading', 'loadError', 'total', 'reload', 'entries', 'diff', 'show']))
+  }, ['logs', 'loading', 'loadError', 'total', 'reload', 'diff', 'show']))
   t.after(() => { unmount.forEach(fn => fn()); scope.stop() })
   return { ...page, calls, props: parameters, unmount }
 }
@@ -68,21 +66,20 @@ test('a late old error cannot replace a successful new document and unmount inva
   assert.equal(page.logs.value[0].id, 1)
 })
 
-test('manual refresh reflects newly recorded actions and the optional presentation is used', async t => {
+test('manual refresh reflects newly recorded actions for slotted and default consumers', async t => {
   let records = [log]
-  const page = setup(t, async () => ({ records, total: records.length }), { presentation: purchaseOrderAudit })
+  const page = setup(t, async () => ({ records, total: records.length }))
   await settle()
-  assert.equal(page.entries.value[0].view.title, '修改采购单')
+  assert.equal(page.logs.value[0].action, 'UPDATE')
   records = [{ ...log, id: 2, action: 'close' }, log]
   await page.reload()
-  assert.equal(page.entries.value[0].view.title, '关闭采购单')
+  assert.equal(page.logs.value[0].action, 'close')
   assert.equal(page.logs.value.length, 2)
 })
 
 test('default consumers retain their existing action and diff behavior without purchase mappings', async t => {
   const page = setup(t, async () => ({ records: [log], total: 1 }), { resourceType: 'sales-order' })
   await settle()
-  assert.equal(page.entries.value[0].view, undefined)
   assert.deepEqual(page.diff(log).map(d => d.key), ['remark', 'status'])
   assert.equal(page.show({ key: 1 }), '{"key":1}')
 })
@@ -93,9 +90,9 @@ test('an invalid API page is an explicit protocol error rather than a successful
   assert.match(page.loadError.value, /返回格式不正确/)
 })
 
-test('actual Vue template renders Chinese differences, error/retry and truncation visibly', async t => {
+test('actual shared template retains default differences, error/retry and truncation visibly', async t => {
   let failed = false
-  const page = setup(t, async () => { if (failed) throw new Error('读取超时'); return { records: [log], total: 150 } }, { presentation: purchaseOrderAudit })
+  const page = setup(t, async () => { if (failed) throw new Error('读取超时'); return { records: [log], total: 150 } })
   await settle()
   const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*?)<\/template>\s*<style/)[1]
   // Vue.compile already returns the render function bound to the real runtime.
@@ -109,8 +106,8 @@ test('actual Vue template renders Chinese differences, error/retry and truncatio
     return instance
   }
   const html = await renderToString(app())
-  assert.match(html, /修改采购单/)
-  assert.match(html, /修改前/)
+  assert.match(html, /UPDATE/)
+  assert.match(html, /旧备注/)
   assert.match(html, /新备注/)
   assert.match(html, /张三/)
   assert.match(html, /共 150 条/)

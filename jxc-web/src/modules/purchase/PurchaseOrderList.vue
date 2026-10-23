@@ -9,7 +9,7 @@ import type { ColumnDef, CrudPageExpose, FieldDef } from '@/components/crud/type
 import { PO_STATUS, PRODUCT_SOURCE, SUPPLIER_SOURCE } from '@/modules/shared/bizOptions'
 import { confirmAction } from '@/utils/action'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
-import { purchaseOrderAudit } from './purchaseOrderAudit'
+import PurchaseOrderAudit from './PurchaseOrderAudit.vue'
 import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
@@ -86,9 +86,10 @@ function onSaved(o: { id: number }) {
     :can-create="false"
     :can-toggle="false"
     audit-type="purchase-order"
-    :audit-presentation="purchaseOrderAudit"
+    audit-width="min(1320px, 96vw)"
     :actions-width="220"
   >
+    <template #audit="{ resourceId }"><PurchaseOrderAudit :resource-id="resourceId" /></template>
     <template #toolbar>
       <el-button v-if="user.hasPerm('pur:order:create')" type="primary" @click="form?.open()">
         <el-icon><Plus /></el-icon>新建采购单

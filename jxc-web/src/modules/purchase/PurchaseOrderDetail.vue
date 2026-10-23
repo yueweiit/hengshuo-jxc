@@ -9,14 +9,13 @@ import MoneyText from '@/components/MoneyText.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
 import ApprovalPanel from '@/components/ApprovalPanel.vue'
 import DocAttachment from '@/components/DocAttachment.vue'
-import AuditTimeline from '@/components/AuditTimeline.vue'
+import PurchaseOrderAudit from './PurchaseOrderAudit.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
 import { confirmAction } from '@/utils/action'
 import { useCountryStore } from '@/stores/country'
 import { formatDate, todayIn } from '@/utils/format'
 import { TRANSPORT_MODES, optionText } from '@/modules/shared/bizOptions'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
-import { purchaseOrderAudit } from './purchaseOrderAudit'
 import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
@@ -41,7 +40,7 @@ const loading = ref(false)
 const tab = ref('receipts')
 const form = ref<InstanceType<typeof PurchaseOrderForm>>()
 const approval = ref<InstanceType<typeof ApprovalPanel>>()
-const audit = ref<InstanceType<typeof AuditTimeline>>()
+const audit = ref<InstanceType<typeof PurchaseOrderAudit>>()
 
 const id = computed(() => Number(route.params.id))
 const o = computed(() => data.value?.order ?? {})
@@ -251,7 +250,7 @@ onMounted(load)
           <ApprovalPanel ref="approval" doc-type="PURCHASE_ORDER" :doc-id="id" />
         </el-tab-pane>
         <el-tab-pane label="操作日志" name="audit" lazy>
-          <AuditTimeline ref="audit" resource-type="purchase-order" :resource-id="id" :presentation="purchaseOrderAudit" />
+          <PurchaseOrderAudit ref="audit" :resource-id="id" :order="o" />
         </el-tab-pane>
       </el-tabs>
     </div>

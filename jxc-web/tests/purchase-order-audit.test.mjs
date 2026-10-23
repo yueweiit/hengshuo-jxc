@@ -7,7 +7,13 @@ const line = (patch = {}) => ({ id: 10, lineNo: 1, productId: 501, unit: 'PCS', 
 const log = (beforeValue, afterValue, action = 'UPDATE') => ({ id: 1, action, userName: '操作人', resourceType: 'purchase-order', resourceId: 1, beforeValue, afterValue, occurredAt: '2026-10-23T02:30:00Z' })
 const view = (before, after, action) => purchaseOrderAudit(log(before, after, action))
 
-for (const [action, title] of Object.entries({ CREATE: '创建采购单', UPDATE: '修改采购单', submit: '提交审批', 'cancel-lines': '部分取消', close: '关闭采购单', void: '作废采购单', WORKFLOW_APPROVED: '审批通过', WORKFLOW_REJECTED: '审批驳回', 新增: '创建采购单', 提交: '提交审批' })) {
+test('a four-place decimal string near the numeric boundary does not lose its recorded fraction', () => {
+  const entry = view(null, { currency: 'CNY', lines: [line({ unitPrice: '9999999999999.0001', amount: '9999999999999.0001' })] }, 'CREATE')
+  assert.equal(entry.snapshot.lines[0].cells.unitPrice.text, '9,999,999,999,999.0001')
+  assert.equal(entry.snapshot.lines[0].cells.amount.text, '9,999,999,999,999.0001')
+})
+
+for (const [action, title] of Object.entries({ CREATE: '创建采购单', UPDATE: '修改采购单', submit: '提交采购单', 'cancel-lines': '部分取消', close: '关闭采购单', void: '作废采购单', WORKFLOW_APPROVED: '审批通过', WORKFLOW_REJECTED: '审批驳回', 新增: '创建采购单', 提交: '提交采购单' })) {
   test(`purchase audit translates recorded action ${action}`, () => assert.equal(view(null, {}, action).title, title))
 }
 
@@ -18,7 +24,7 @@ test('creation summarizes the recorded order and readable line instead of empty-
   assert.ok(entry.summary.some(s => s.includes('供应商 #801')))
   assert.ok(entry.summary.includes('商品明细：1 行'))
   assert.equal(entry.status, 'DRAFT')
-  assert.ok(entry.changes.some(c => c.to.text.includes('100 PCS') && c.to.text.includes('12.3456 CNY')))
+  assert.equal(entry.snapshot.lines[0].cells.qty.text, '100'); assert.equal(entry.snapshot.lines[0].cells.unitPrice.text, '12.3456')
   assert.ok(entry.notes.some(s => s.includes('历史名称未记录')))
   assert.ok(!JSON.stringify(entry.changes).includes('"productId"'))
 })
@@ -52,17 +58,16 @@ test('regenerated duplicate identities remain unmatched instead of fabricating l
   const before = [line(), line({ id: 11, lineNo: 2, qty: 50 })]
   const after = [line({ id: 91 }), line({ id: 92, lineNo: 2, qty: 60 })]
   const entry = view({ lines: before }, { lines: after })
-  assert.equal(entry.changes.filter(c => c.label.includes('移除')).length, 2)
-  assert.equal(entry.changes.filter(c => c.label.includes('新增')).length, 2)
+  assert.equal(entry.removed.lines.length, 2)
+  assert.equal(entry.added.lines.length, 2)
   assert.ok(entry.notes.includes('历史明细无法唯一对应，已分别列出移除和新增。'))
 })
 
 test('changed conversion identity and missing identity fields are not paired by position', () => {
   for (const after of [line({ id: 90, factor: 10 }), line({ id: 90, baseUnit: undefined })]) {
     const entry = view({ lines: [line()] }, { lines: [after] })
-    assert.equal(entry.changes.length, 2)
-    assert.ok(entry.changes.some(c => c.label.includes('移除')))
-    assert.ok(entry.changes.some(c => c.label.includes('新增')))
+    assert.equal(entry.removed.lines.length, 1)
+    assert.equal(entry.added.lines.length, 1)
   }
 })
 
@@ -93,7 +98,7 @@ test('only recorded names are used and formatter does not modify snapshots', () 
   const snapshot = structuredClone(after)
   const entry = view(null, after, 'CREATE')
   assert.ok(entry.summary.includes('供应商：历史供应商'))
-  assert.ok(entry.changes.some(c => c.label.includes('历史商品')))
+  assert.equal(entry.snapshot.lines[0].name, '历史商品')
   assert.deepEqual(after, snapshot)
 })
 
@@ -126,4 +131,80 @@ test('malformed line data remains inspectable as structured content instead of b
   assert.ok(entry.notes.some(s => s.includes('商品明细格式无法识别')))
   assert.ok(entry.other.some(c => c.to.text === '无法解析的历史内容'))
   assert.ok(!entry.changes.some(c => c.label.includes('移除')))
+})
+
+test('creation has separate document fields and eight product columns with precise prices', () => {
+  const entry = view(null, { docNo: 'PO-428', currency: 'CNY', orderDate: '2026-10-22', lines: [line({ taxRate: 0.13, deliveryDate: null })] }, 'CREATE')
+  assert.ok(entry.snapshot.fields.some(f => f.label === '下单日期' && f.value.text === '2026-10-22'))
+  assert.deepEqual(entry.snapshot.columns.map(c => c.key), ['lineNo', 'product', 'qty', 'unit', 'unitPrice', 'amount', 'taxRate', 'deliveryDate'])
+  assert.equal(entry.snapshot.lines[0].cells.unitPrice.text, '12.3456')
+  assert.equal(entry.snapshot.lines[0].cells.amount.text, '1,234.56')
+  assert.equal(entry.snapshot.lines[0].cells.taxRate.text, '13%')
+  assert.equal(entry.snapshot.lines[0].cells.deliveryDate.text, '未填写')
+  assert.deepEqual(entry.changes, [])
+})
+
+test('current names are reference-only, identity-bound, and never overwrite recorded names', () => {
+  const sample = log(null, { supplierId: 801, currency: 'CNY', lines: [line(), line({ id: 11, productId: 502, productName: '历史名称' })] }, 'CREATE')
+  const entry = purchaseOrderAudit(sample, { supplierId: 801, supplierName: '当前供应商', lines: [{ productId: 501, productName: '当前商品', productCode: 'NOW-501' }, { productId: 502, productName: '新名称' }] })
+  assert.equal(entry.snapshot.lines[0].name, '商品 #501')
+  assert.equal(entry.snapshot.lines[0].currentName, '当前商品')
+  assert.equal(entry.snapshot.lines[1].name, '历史名称')
+  assert.equal(entry.snapshot.lines[1].currentName, undefined)
+  assert.ok(entry.snapshot.fields.some(f => f.reference === '当前名称：当前供应商'))
+  const mismatch = purchaseOrderAudit(sample, { supplierId: 999, supplierName: '其他供应商', lines: [] })
+  assert.ok(!mismatch.snapshot.fields.some(f => f.reference))
+  assert.ok(!JSON.stringify(mismatch).includes('当前商品'))
+})
+
+test('snapshots omit hidden amount columns and totals without inventing zeroes', () => {
+  const row = line(); delete row.unitPrice; delete row.amount
+  const entry = view(null, { lines: [row] }, 'CREATE')
+  assert.ok(!entry.snapshot.columns.some(c => ['unitPrice', 'amount'].includes(c.key)))
+  assert.deepEqual(entry.snapshot.totals, [])
+  const zero = view(null, { currency: 'CNY', totalAmount: 0, lines: [line({ unitPrice: 0, amount: 0 })] }, 'CREATE')
+  assert.equal(zero.snapshot.lines[0].cells.unitPrice.text, '0.0000')
+  assert.equal(zero.snapshot.lines[0].cells.amount.text, '0.00')
+  assert.ok(zero.snapshot.totals.some(f => f.value.text.includes('0.00')))
+})
+
+test('unit conversion and zero delivery values remain in secondary rows', () => {
+  const entry = view(null, { lines: [line({ baseQty: 100, cancelledQty: 0, qualifiedQty: 0 })] }, 'CREATE')
+  assert.ok(entry.snapshot.secondaryColumns.some(c => c.key === 'cancelledQty'))
+  assert.equal(entry.snapshot.lines[0].cells.cancelledQty.text, '0')
+  assert.equal(entry.snapshot.lines[0].cells.factor.text, '1')
+  assert.ok(!entry.snapshot.columns.some(c => c.key === 'qualifiedQty'))
+})
+
+test('regenerated unchanged product lines retain a full snapshot without fabricated differences', () => {
+  const entry = view({ lines: [line()] }, { lines: [line({ id: 99 })] })
+  assert.equal(entry.linesUnchanged, 1)
+  assert.deepEqual(entry.changes, [])
+  assert.equal(entry.snapshot.lines.length, 1)
+  assert.equal(entry.added, undefined)
+  assert.equal(entry.removed, undefined)
+})
+
+test('new and removed lines use structured product tables instead of field strings', () => {
+  const entry = view({ currency: 'CNY', lines: [line()] }, { currency: 'CNY', lines: [line({ id: 90, productId: 502 })] })
+  assert.equal(entry.added.lines[0].productId, '502')
+  assert.equal(entry.removed.lines[0].productId, '501')
+  assert.ok(!entry.changes.some(c => c.to.text.includes('；')))
+})
+
+test('snapshot absence, empty lines and malformed lines are distinct states', () => {
+  assert.equal(view(null, null, 'CREATE').snapshot, undefined)
+  assert.equal(view(null, {}, 'CREATE').snapshot.lines, undefined)
+  assert.deepEqual(view(null, { lines: [] }, 'CREATE').snapshot.lines, [])
+  const malformed = view(null, { lines: '错误内容' }, 'CREATE')
+  assert.equal(malformed.snapshot.lines, undefined)
+  assert.ok(malformed.notes.some(n => n.includes('无法识别')))
+})
+
+test('invalid recorded tax rates stay explicit while zero and missing values remain distinct', () => {
+  const tax = value => view(null, { lines: [line({ taxRate: value })] }, 'CREATE').snapshot.lines[0].cells.taxRate.text
+  assert.equal(tax('invalid'), '无法识别的数值：invalid')
+  assert.equal(tax(0), '0%')
+  assert.equal(tax(null), '未填写')
+  assert.equal(tax(undefined), '未记录')
 })
