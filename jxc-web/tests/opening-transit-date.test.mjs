@@ -25,7 +25,7 @@ test('known opening source date remains a date with unknown time and never passe
 
 for (const [file, pattern, variable] of [
   ['logistics/ShipmentList.vue', /<div>\{\{ formatDate\(row\.plannedEtd\)[\s\S]*?<\/div>/, 'row'],
-  ['logistics/ShipmentDetail.vue', /<el-descriptions-item label="计划发运 \/ 实际">[\s\S]*?<\/el-descriptions-item>/, 'sh'],
+  ['logistics/ShipmentDetail.vue', /<div class="shipment-fact shipment-fact--date" data-field="departure">[\s\S]*?<\/div>/, 'sh'],
   ['purchase/PurchaseOrderDetail.vue', /<template #default="\{ row \}"><DateTimeText :value="row\.actualEtd"[\s\S]*?<\/template>/, 'row'],
 ]) {
   test(`${file} renders native opening date-only evidence without inventing an actual departure`, async () => {
