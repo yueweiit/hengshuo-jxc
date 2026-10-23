@@ -266,7 +266,7 @@ onBeforeUnmount(() => { disposed = true; requestId++ })
 .notification-feedback { display: grid; gap: 8px; }
 .notification-feedback:not(:empty) { padding: 12px 0; }
 .notification-scroll { max-height: max(340px, calc(100dvh - 378px)); overflow: auto; scrollbar-width: thin; }
-.notification-table-heading, .notification-row { display: grid; grid-template-columns: 116px minmax(0, 1fr) 204px 76px 64px; }
+.notification-table-heading, .notification-row { display: grid; grid-template-columns: 128px minmax(0, 1fr) 204px 76px 64px; }
 .notification-table-heading { position: sticky; top: 0; z-index: 1; min-height: 40px; background: #f7f9fc; color: #7b879b; font-size: 12px; box-shadow: 0 1px var(--el-border-color-lighter); }
 .notification-table-heading > div { display: flex; align-items: center; padding: 0 12px; }
 .notification-table-heading > div:first-child { padding-left: 16px; }
@@ -309,7 +309,7 @@ button:disabled { cursor: not-allowed; }
 @media (min-width: 769px) and (max-width: 1100px) {
   .notifications-heading { align-items: flex-start; flex-wrap: wrap; }
   .notifications-actions { margin-left: auto; }
-  .notification-table-heading, .notification-row { grid-template-columns: 105px minmax(0, 1fr) 65px; }
+  .notification-table-heading, .notification-row { grid-template-columns: 128px minmax(0, 1fr) 65px; }
   .notification-table-heading .time-heading, .notification-table-heading .status-heading { display: none; }
   .notification-row { grid-template-areas: 'type content action' 'type time status'; row-gap: 8px; }
   .notice-type { grid-area: type; }
