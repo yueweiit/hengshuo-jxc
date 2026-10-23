@@ -111,7 +111,7 @@ async function upload(opt: UploadRequestOptions) {
     })
     if (!current(epoch)) return
     entry.status = 'success'
-    entry.percentage = 100
+    uploads.value = uploads.value.filter(active => active !== entry)
     ElMessage.success('已上传')
     if (!await load() && current(epoch) && loadError.value) loadError.value = `文件已上传，无需重复上传。${loadError.value}`
   } catch (error) {
@@ -243,11 +243,11 @@ defineExpose({ reload: load })
         <div class="upload-heading">
           <span class="file-name">{{ file.fileName }}</span>
           <span :class="['upload-status', { 'is-error': file.status === 'error' }]">
-            {{ file.status === 'success' ? '上传完成' : file.status === 'error' ? file.error : file.status === 'saving' ? '已发送，正在保存…' : file.percentage === undefined ? `正在上传 · 已发送 ${fileSize(file.loaded)}` : `正在上传 ${file.percentage}%` }}
+            {{ file.status === 'error' ? file.error : file.status === 'saving' ? '已发送，正在保存…' : file.percentage === undefined ? `正在上传 · 已发送 ${fileSize(file.loaded)}` : `正在上传 ${file.percentage}%` }}
           </span>
         </div>
         <progress v-if="file.status === 'uploading' && file.percentage === undefined" class="upload-indeterminate" :aria-label="`${file.fileName} 正在上传，总大小未知`" />
-        <el-progress v-else :percentage="file.percentage ?? 0" :status="file.status === 'success' ? 'success' : file.status === 'error' ? 'exception' : undefined" :show-text="false" :stroke-width="6" />
+        <el-progress v-else :percentage="file.percentage ?? 0" :status="file.status === 'error' ? 'exception' : undefined" :show-text="false" :stroke-width="6" />
       </li>
     </ul>
     <div v-if="loadError" class="attachment-error" role="alert">

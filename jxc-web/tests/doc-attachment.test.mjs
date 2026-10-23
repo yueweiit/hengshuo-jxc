@@ -76,7 +76,7 @@ test('upload progress follows transport events and waits for server confirmation
   assert.equal(page.successes.length, 0)
   pending.resolve(attachment)
   await result
-  assert.equal(page.state.uploads.value[0].status, 'success')
+  assert.deepEqual(page.state.uploads.value, [])
   assert.equal(page.successes.length, 1)
 })
 
@@ -103,13 +103,14 @@ test('failed upload retains the original reason and never reports completion', a
   assert.equal(page.successes.length, 0)
 })
 
-test('successful upload with failed list refresh remains successful and warns against duplicate upload', async t => {
+test('successful upload with failed list refresh removes progress and warns against duplicate upload', async t => {
   let fail = false
-  const page = await mount({ http: { get: async () => { if (fail) throw new Error('列表超时'); return [attachment] } } })
+  const page = await mount({ renderTemplate: true, http: { get: async () => { if (fail) throw new Error('列表超时'); return [attachment] } } })
   t.after(page.unmount)
   fail = true
   await page.state.upload({ file })
-  assert.equal(page.state.uploads.value[0].status, 'success')
+  assert.equal(nodes(page.root).filter(node => node.tag === 'progress').length, 0)
+  assert.equal(page.successes.length, 1)
   assert.match(page.state.loadError.value, /已上传/)
   assert.match(page.state.loadError.value, /列表超时/)
   assert.deepEqual(page.state.items.value.map(a => a.id), [3])
@@ -300,19 +301,24 @@ test('a list response started before unlink cannot bring back the deleted associ
   assert.deepEqual(page.state.items.value, [])
 })
 
-test('late transport progress cannot change a completed upload back to saving', async t => {
+test('late transport progress cannot restore a completed upload progress bar', async t => {
   let config
   const page = await mount({ http: { post: async (url, body, options) => { config = options; return attachment } } })
   t.after(page.unmount)
   await page.state.upload({ file })
   config.onUploadProgress({ loaded: 100, total: 100 })
-  assert.equal(page.state.uploads.value[0].status, 'success')
+  assert.deepEqual(page.state.uploads.value, [])
 })
 
-test('rendered upload progress is indeterminate until the transport supplies a total', async t => {
+test('rendered upload progress follows transport then disappears on server success before list refresh finishes', async t => {
   const pending = deferred()
+  const refresh = deferred()
   let config
-  const page = await mount({ renderTemplate: true, http: { post: (url, body, options) => { config = options; return pending.promise } } })
+  let lists = 0
+  const page = await mount({ renderTemplate: true, http: {
+    post: (url, body, options) => { config = options; return pending.promise },
+    get: () => ++lists === 1 ? Promise.resolve([]) : refresh.promise,
+  } })
   t.after(page.unmount)
   const uploading = page.state.upload({ file })
   await nextTick()
@@ -320,8 +326,47 @@ test('rendered upload progress is indeterminate until the transport supplies a t
   config.onUploadProgress({ loaded: 40, total: 100 })
   await nextTick()
   assert.equal(nodes(page.root).find(node => node.tag === 'progress').props.value, 40)
+  config.onUploadProgress({ loaded: 100, total: 100 })
+  await nextTick()
+  assert.equal(nodes(page.root).find(node => node.tag === 'progress').props.value, 100)
+  assert.match(textContent(page.root), /正在保存/)
   pending.resolve(attachment)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(page.state.loading.value, true)
+  assert.equal(nodes(page.root).filter(node => node.tag === 'progress').length, 0)
+  assert.equal(page.successes.length, 1)
+  refresh.resolve([attachment])
   await uploading
+  await nextTick()
+  assert.match(textContent(page.root), /发票.png/)
+  assert.equal(nodes(page.root).filter(node => node.tag === 'progress').length, 0)
+})
+
+test('completing one file preserves other uploads and their failure reasons', async t => {
+  const first = deferred(), second = deferred()
+  const secondFile = new File(['receipt'], '收据.pdf', { type: 'application/pdf' })
+  secondFile.uid = 11
+  const page = await mount({ renderTemplate: true, http: {
+    post: (url, body) => body.get('file').name === file.name ? first.promise : second.promise,
+  } })
+  t.after(page.unmount)
+  const uploadingFirst = page.state.upload({ file })
+  const uploadingSecond = page.state.upload({ file: secondFile })
+  const secondFailure = assert.rejects(uploadingSecond, /网络中断/)
+  await nextTick()
+  assert.equal(nodes(page.root).filter(node => node.tag === 'progress').length, 2)
+  first.resolve(attachment)
+  await uploadingFirst
+  await nextTick()
+  assert.equal(nodes(page.root).filter(node => node.tag === 'progress').length, 1)
+  assert.deepEqual(page.state.uploads.value.map(entry => entry.fileName), ['收据.pdf'])
+  assert.equal(page.state.uploads.value[0].status, 'uploading')
+  second.reject(new Error('网络中断'))
+  await secondFailure
+  await nextTick()
+  assert.match(textContent(page.root), /网络中断/)
+  assert.equal(page.state.uploads.value[0].status, 'error')
+  assert.equal(nodes(page.root).filter(node => node.tag === 'progress').length, 1)
 })
 
 test('rendered actions expose preview/download/delete and readonly removes writing actions', async t => {
