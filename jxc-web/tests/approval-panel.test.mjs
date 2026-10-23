@@ -71,6 +71,9 @@ test('pending and skipped nodes keep explicit untimed labels without fabricating
   assert.equal(items[1].emptyTime, '尚未处理')
   assert.equal(items[2].emptyTime, '无需处理')
   assert.equal(items[1].type, 'warning')
+  p.instances.value = [sample]
+  const nodes = render(p).nodes.filter(n => n.tag === 'li')
+  assert.deepEqual(nodes.map(n => n.hollow), [false, true, false])
 })
 
 test('a processed node and terminal instance with missing times remain explicitly unknown', () => {
@@ -101,6 +104,7 @@ test('the actual timeline template uses DateTimeText, all events and literal mul
   assert.equal(actual.nodes.filter(n => n.tag === 'ol').length, 1)
   assert.equal(actual.nodes.filter(n => n.tag === 'li').length, 3)
   assert.equal(actual.nodes.some(n => n.tag === 'steps' || n.tag === 'img'), false)
+  assert.equal(actual.nodes.filter(n => n.tag === 'li').every(n => n.hollow === false), true)
   assert.ok(actual.text.includes(sample.tasks[0].comment))
   assert.deepEqual(actual.dates, [sample.submittedAt, sample.tasks[0].actedAt, sample.finishedAt])
 })

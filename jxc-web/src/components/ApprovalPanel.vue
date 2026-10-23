@@ -127,7 +127,7 @@ defineExpose({ reload: load })
         title="没有匹配的审批规则或可用审批人，已生成配置待办，不会自动通过"
       />
       <el-timeline v-if="props.presentation === 'timeline'" class="approval-timeline" aria-label="审批事件时间轴">
-        <el-timeline-item v-for="item in timelineItems(ins)" :key="item.key" :type="item.type" hollow>
+        <el-timeline-item v-for="item in timelineItems(ins)" :key="item.key" :type="item.type" :hollow="item.status === 'PENDING'">
           <div class="timeline-time"><DateTimeText v-if="item.title" :value="item.title" /><span v-else>{{ item.emptyTime }}</span></div>
           <div class="timeline-event">
             <div class="event-title"><strong>{{ item.content }}</strong><StatusTag v-if="item.status" :status="item.status" :domain="item.domain" /></div>

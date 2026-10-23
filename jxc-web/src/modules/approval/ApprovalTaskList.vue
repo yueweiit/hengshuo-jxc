@@ -324,29 +324,34 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <el-drawer v-model="drawerVisible" :title="detail?.docNo" size="min(660px, 100vw)" destroy-on-close class="approval-drawer" :before-close="guardDialogClose" :close-on-press-escape="!action.saving" :show-close="!action.saving">
-      <template #header><div><div class="drawer-kicker">审批详情</div><h3 class="drawer-title mono">{{ detail?.docNo }}</h3></div></template>
+    <el-drawer v-model="drawerVisible" title="审批详情" size="min(660px, 100vw)" destroy-on-close class="approval-drawer" :before-close="guardDialogClose" :close-on-press-escape="!action.saving" :show-close="!action.saving">
+      <template #header><div><div class="drawer-kicker">审批详情</div><h3 class="drawer-title">单据记录</h3></div></template>
       <template v-if="detail">
-        <section class="detail-section">
-          <div class="detail-section-title"><h4>单据信息</h4><StatusTag :status="detail.instanceStatus" domain="approvalDoc" /></div>
-          <p class="detail-summary">{{ detail.docTitle }}</p>
-          <el-descriptions :column="compact ? 1 : 2" size="small" class="detail-facts">
-            <el-descriptions-item label="单据类型">{{ docTypeLabel(detail.docType) }}</el-descriptions-item>
-            <el-descriptions-item label="金额"><ApprovalAmount :value="detail.amount" :currency="detail.currency" /></el-descriptions-item>
-            <el-descriptions-item label="提交人">{{ detail.submittedByName }}</el-descriptions-item>
-            <el-descriptions-item label="提交时间"><DateTimeText :value="detail.submittedAt" /></el-descriptions-item>
-            <el-descriptions-item label="审批规则">{{ detail.ruleName }} <span class="muted">v{{ detail.ruleVersionNo }}</span></el-descriptions-item>
-            <el-descriptions-item label="我的节点">{{ detail.nodeName }}</el-descriptions-item>
-          </el-descriptions>
+        <section class="document-sheet" aria-label="单据抬头和业务字段">
+          <header class="document-head">
+            <div class="document-eyebrow">
+              <span>{{ docTypeLabel(detail.docType) }}</span>
+              <StatusTag :status="detail.instanceStatus" domain="approvalDoc" />
+            </div>
+            <h3 class="document-name">{{ detail.docTitle }}</h3>
+            <div class="document-number mono">{{ detail.docNo }}</div>
+          </header>
+          <div class="document-fields">
+            <div class="document-field"><span class="document-label">提交人</span><span class="document-value">{{ detail.submittedByName }}</span></div>
+            <div class="document-field"><span class="document-label">提交时间</span><span class="document-value"><DateTimeText :value="detail.submittedAt" /></span></div>
+            <div class="document-field"><span class="document-label">审批规则</span><span class="document-value">{{ detail.ruleName }} · v{{ detail.ruleVersionNo }}</span></div>
+            <div class="document-field"><span class="document-label">我的节点</span><span class="document-value">{{ detail.nodeName }}</span></div>
+            <div class="document-field"><span class="document-label">单据金额</span><span class="document-value amount-value"><ApprovalAmount :value="detail.amount" :currency="detail.currency" /></span></div>
+          </div>
         </section>
         <section v-if="mode === 'done'" class="detail-section my-decision">
-          <div class="detail-section-title"><h4>我的处理</h4><StatusTag :status="detail.status" /></div>
-          <div class="decision-meta"><span>{{ detail.nodeName }}</span><DateTimeText v-if="detail.actedAt" :value="detail.actedAt" /><span v-else>处理时间未记录</span></div>
+          <h4>我的处理</h4>
+          <div class="decision-meta"><StatusTag :status="detail.status" /><span>{{ detail.nodeName }}</span><DateTimeText v-if="detail.actedAt" :value="detail.actedAt" /><span v-else>处理时间未记录</span></div>
           <p class="decision-comment" :class="{ muted: !detail.comment }">{{ detail.comment || '未填写意见' }}</p>
         </section>
         <section class="detail-section approval-history">
           <h4>审批记录</h4>
-          <ApprovalPanel :key="`${detail.docType}:${detail.docId}`" :doc-type="detail.docType" :doc-id="detail.docId" presentation="timeline" />
+          <ApprovalPanel :key="`${detail.docType}:${detail.docId}`" :doc-type="detail.docType" :doc-id="detail.docId" :presentation="mode === 'done' ? 'timeline' : 'steps'" />
         </section>
         <section class="detail-section attachment-section">
           <h4>单据附件</h4>
@@ -439,16 +444,21 @@ onBeforeUnmount(() => {
 :global(.approval-drawer .el-drawer__header) { padding: 22px 24px 20px; margin-bottom: 0; border-bottom: 1px solid var(--el-border-color-light); }
 :global(.approval-drawer .el-drawer__body) { padding: 0 24px 24px; }
 :global(.approval-drawer .el-drawer__footer) { padding: 16px 24px; border-top: 1px solid var(--el-border-color-light); }
+.document-sheet { margin-top: 18px; overflow: hidden; border: 1px solid var(--el-border-color); border-radius: 4px; background: var(--el-bg-color); }
+.document-head { padding: 18px 20px 16px; border-bottom: 1px solid var(--el-border-color-light); }
+.document-eyebrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--el-text-color-secondary); font-size: 12px; }
+.document-name { margin: 10px 0 5px; color: var(--el-text-color-primary); font-size: 17px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.document-number { color: var(--el-color-primary); font-size: 12px; overflow-wrap: anywhere; }
+.document-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 22px; padding: 4px 20px 2px; }
+.document-field { min-width: 0; padding: 12px 0; border-bottom: 1px solid var(--el-border-color-lighter); }
+.document-field:nth-child(odd):nth-last-child(-n + 2), .document-field:last-child { border-bottom: 0; }
+.document-label { display: block; margin-bottom: 5px; color: var(--el-text-color-secondary); font-size: 12px; }
+.document-value { display: block; min-width: 0; color: var(--el-text-color-primary); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.document-value.amount-value { font-variant-numeric: tabular-nums; font-weight: 600; }
 .detail-section { padding-top: 24px; }
 .detail-section + .detail-section { margin-top: 24px; border-top: 1px solid var(--el-border-color-light); }
 .detail-section h4 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
-.detail-section-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 16px; }
-.detail-section-title h4 { margin: 0; }
-.detail-summary { margin: 0 0 16px; line-height: 1.7; overflow-wrap: anywhere; }
-.detail-facts :deep(.el-descriptions__cell) { padding-bottom: 12px; overflow-wrap: anywhere; }
-.detail-facts :deep(.el-descriptions__table) { table-layout: fixed; }
-.detail-facts :deep(.el-descriptions__label) { display: inline-block; width: 80px; color: var(--el-text-color-secondary); font-weight: 400; }
-.decision-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--el-text-color-secondary); }
+.decision-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--el-text-color-secondary); }
 .decision-comment { margin: 12px 0 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .hint { margin: 6px 0 0; }
 .hint .el-icon { margin-right: 6px; }
@@ -493,7 +503,11 @@ onBeforeUnmount(() => {
   :global(.approval-drawer .el-drawer__footer) { padding: 12px 16px; }
   .drawer-footer-note { display: none; }
   .drawer-footer { justify-content: flex-end; }
-  .detail-section-title { flex-wrap: wrap; }
+  .document-head { padding: 16px; }
+  .document-fields { grid-template-columns: 1fr; gap: 0; padding: 2px 16px; }
+  .document-field:nth-child(n) { border-bottom: 1px solid var(--el-border-color-lighter); }
+  .document-field:last-child { border-bottom: 0; }
+  .document-name { font-size: 16px; }
   .drawer-title { font-size: 16px; }
   :global(.approval-action-dialog) { max-width: calc(100vw - 24px); }
 }
