@@ -5,12 +5,11 @@ import { loadVueScript } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/workbench/JobList.vue', import.meta.url)
 const job = (id, extra = {}) => ({ id, jobType: 'FIN_REPORT_EXPORT', status: 'SUCCESS', bookId: 1, createdAt: '2026-10-23T06:00:00Z', expiresAt: '2099-10-30T06:00:00Z', lastError: null, ...extra })
-const workerResult = { enabled: true, delayMs: 30000, recoveryLimit: 20, alerts: [], runs: [] }
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 function setup(options = {}) {
   const calls = [], hooks = { mounted: [], unmounted: [] }
   const country = { epoch: 1, current: { id: 1 }, timezone: 'America/Mexico_City' }
-  const user = { hasPerm: value => Array.isArray(value) ? options.allowed !== false : options.worker === true }
+  const user = { hasPerm: value => Array.isArray(value) ? options.allowed !== false : options.diagnosticAccess === true }
   const intent = { reset: () => calls.push(['reset-intent']) }
   const page = loadVueScript(file, {
     computed, ref, onMounted: fn => hooks.mounted.push(fn), onBeforeUnmount: fn => hooks.unmounted.push(fn),
@@ -19,14 +18,15 @@ function setup(options = {}) {
     createCommandIntent: () => intent,
     allRecords: async (url, query, assertCurrent) => { calls.push(['records', url]); const result = await (options.records?.() ?? []); assertCurrent?.(); return result },
     http: {
-      get: async url => { calls.push(['get', url]); return await (options.get?.(url) ?? workerResult) },
+      get: async url => { calls.push(['get', url]); if (!options.get) throw new Error(`Unexpected GET: ${url}`); return await options.get(url) },
       postIdem: async (...args) => { calls.push(['retry', ...args]); return await options.post?.(...args) },
     },
     ElMessage: { success: message => calls.push(['success', message]) },
+    window: { matchMedia: () => ({ matches:false, addEventListener(){}, removeEventListener(){} }) },
     document: { createElement: () => ({ click: () => calls.push(['download-click']) }) },
     URL: { createObjectURL: blob => { calls.push(['blob',blob]); return 'blob:test' }, revokeObjectURL: value => calls.push(['revoke',value]) },
     Blob, setTimeout: fn => { fn(); return 1 },
-  }, ['rows','page','size','keyword','typeFilter','activeStatus','filteredRows','pageRows','statusTabs','loading','listError','listForbidden','worker','workerError','workerLoading','actionError','retryingId','downloadingId','selectedRow','load','loadJobs','loadWorker','search','resetFilters','changePage','changeSize','canDownload','canRetry','retry','download','openDetail','jobLabel','jobState','processingHint'])
+  }, ['rows','page','size','keyword','typeFilter','activeStatus','filteredRows','pageRows','statusTabs','loading','listError','listForbidden','actionError','retryingId','downloadingId','selectedRow','loadJobs','search','resetFilters','changePage','changeSize','canDownload','canRetry','retry','download','openDetail','jobLabel','jobState','processingHint'])
   return { ...page, calls, hooks, country, user, intent }
 }
 
@@ -82,22 +82,22 @@ test('list failures and forbidden responses remain distinct from successful empt
   const p=setup(); await p.loadJobs(); assert.equal(p.listError.value,''); assert.deepEqual(p.rows.value,[])
 })
 
-test('worker reads are permission gated and worker failures do not erase available jobs', async () => {
-  const denied=setup(); await denied.load(); assert.equal(denied.calls.some(call=>call[0]==='get'),false)
-  const p=setup({worker:true,records:()=>[job(1)],get:()=>{throw new Error('后台状态不可用')}})
-  await p.load(); assert.equal(p.pageRows.value.length,1); assert.equal(p.workerError.value,'后台状态不可用'); assert.equal(p.listError.value,'')
+test('mount and refresh read only export jobs even when the user can view global diagnostics', async () => {
+  let records=[job(1,{status:'FAILED',lastError:'EXPORT_FAILED'})]
+  const p=setup({diagnosticAccess:true,records:()=>records})
+  await p.hooks.mounted[0]()
+  records=[job(2)]
+  await p.loadJobs()
+  assert.deepEqual(p.calls,[['records','/sys/jobs'],['records','/sys/jobs']])
+  assert.deepEqual(p.pageRows.value.map(row=>row.id),[2])
+  assert.equal(p.listError.value,'')
 })
 
 test('missing page permission or country prevents protected reads', async () => {
   for (const mode of ['permission','country']) {
-    const p=setup({allowed:mode!=='permission',worker:true}); if(mode==='country')p.country.current=null
-    await p.load(); assert.deepEqual(p.calls,[])
+    const p=setup({allowed:mode!=='permission'}); if(mode==='country')p.country.current=null
+    await p.loadJobs(); assert.deepEqual(p.calls,[])
   }
-})
-
-test('malformed worker responses produce a recoverable diagnostic error rather than an empty healthy panel', async () => {
-  const p=setup({worker:true,get:()=>({enabled:true})}); await p.loadWorker()
-  assert.match(p.workerError.value,/响应不完整/); assert.equal(p.worker.value,null)
 })
 
 test('late list responses cannot replace the latest authorized collection or loading state', async () => {
@@ -107,11 +107,11 @@ test('late list responses cannot replace the latest authorized collection or loa
   second.resolve([job(2)]); await latest; assert.equal(p.rows.value[0].id,2); assert.equal(p.loading.value,false)
 })
 
-test('country changes and unmount discard pending list and worker responses', async () => {
+test('country changes and unmount discard pending export list responses', async () => {
   for (const stop of [p=>p.country.epoch++,p=>p.hooks.unmounted.forEach(fn=>fn())]) {
-    const result=deferred(),runtime=deferred(); const p=setup({worker:true,records:()=>result.promise,get:()=>runtime.promise})
-    const pending=p.load(); stop(p); result.resolve([job(1)]); runtime.resolve(workerResult); await pending
-    assert.deepEqual(p.rows.value,[]); assert.equal(p.worker.value,null)
+    const result=deferred(); const p=setup({records:()=>result.promise})
+    const pending=p.loadJobs(); stop(p); result.resolve([job(1)]); await pending
+    assert.deepEqual(p.rows.value,[])
   }
 })
 

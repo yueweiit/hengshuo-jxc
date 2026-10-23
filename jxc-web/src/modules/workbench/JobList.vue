@@ -17,14 +17,10 @@ interface JobRow {
   expiresAt?: string | null
   lastError?: string | null
 }
-interface WorkerRun { kind: string; status: string; lastStartedAt?: string; lastCompletedAt?: string; lastError?: string }
-interface WorkerAlert { code: string; severity: string; kind?: string; consumer?: string; lastError?: string; message?: string }
-interface WorkerStatus { enabled: boolean; delayMs: number; recoveryLimit: number; runs: WorkerRun[]; alerts: WorkerAlert[] }
 interface DownloadResult { filename: string; content: string; contentType?: string }
 
 const country = useCountryStore(), user = useUserStore()
 const canView = computed(() => user.hasPerm(['sys:export:view', 'fin:report:export']))
-const canViewWorker = computed(() => user.hasPerm('sys:worker:view'))
 const typeLabels: Record<string, string> = { FIN_REPORT_EXPORT: '财务报表', FIN_LEDGER_EXPORT: '财务账簿', AR_STATEMENT_EXPORT: '应收对账单', AP_STATEMENT_EXPORT: '应付对账单' }
 const jobStates: Record<string, { label: string; type: 'success' | 'primary' | 'warning' }> = {
   SUCCESS: { label: '已完成', type: 'success' }, COMPLETED: { label: '已完成', type: 'success' }, SUCCEEDED: { label: '已完成', type: 'success' },
@@ -33,13 +29,11 @@ const jobStates: Record<string, { label: string; type: 'success' | 'primary' | '
 const rows = ref<JobRow[]>([]), page = ref(1), size = ref(20)
 const keyword = ref(''), appliedKeyword = ref(''), typeFilter = ref(''), activeStatus = ref('all')
 const loading = ref(false), listError = ref(''), listForbidden = ref(false)
-const worker = ref<WorkerStatus | null>(null), workerLoading = ref(false), workerError = ref('')
-const workerExpanded = ref<string[]>([]), lastRefreshedAt = ref<string | null>(null)
+const lastRefreshedAt = ref<string | null>(null)
 const actionError = ref(''), retryingId = ref<number | null>(null), downloadingId = ref<number | null>(null)
 const selectedRow = ref<JobRow | null>(null), detailOpen = ref(false), compact = ref(false)
 const retryIntent = createCommandIntent()
 const actionBusy = computed(() => retryingId.value !== null || downloadingId.value !== null)
-const refreshing = computed(() => loading.value || workerLoading.value)
 const successStates = ['SUCCESS', 'COMPLETED', 'SUCCEEDED']
 function matchesStatus(row: JobRow, status: string) {
   return status === 'all' || (status === 'active' ? ['QUEUED', 'RUNNING'].includes(row.status) : status === 'SUCCESS' ? successStates.includes(row.status) : row.status === status)
@@ -52,7 +46,6 @@ const filteredRows = computed(() => rows.value.filter(row => matchesStatus(row, 
   && `${row.id} ${jobLabel(row.jobType)} ${row.jobType}`.toLowerCase().includes(appliedKeyword.value)))
 const pageRows = computed(() => filteredRows.value.slice((page.value - 1) * size.value, page.value * size.value))
 const typeOptions = computed(() => [...new Set([...Object.keys(typeLabels), ...rows.value.map(row => row.jobType)])])
-const workerNeedsAttention = computed(() => !!worker.value?.alerts.length)
 function jobLabel(type: string) { return typeLabels[type] ?? type }
 function jobState(status: string) { return jobStates[status] ?? statusDef(status) }
 function canDownload(row: JobRow) { return successStates.includes(row.status) }
@@ -75,7 +68,7 @@ function openDetail(row: JobRow) { selectedRow.value = row; actionError.value = 
 function errorMessage(error: unknown, fallback: string) { return error instanceof Error && error.message ? error.message : fallback }
 function isForbidden(error: unknown) { return typeof error === 'object' && error !== null && 'code' in error && error.code === 'SYS_FORBIDDEN' }
 
-let disposed = false, listRequest = 0, workerRequest = 0
+let disposed = false, listRequest = 0
 function current(epoch: number) { return !disposed && country.epoch === epoch }
 async function loadJobs() {
   if (!country.current || !canView.value) return
@@ -97,22 +90,6 @@ async function loadJobs() {
     listError.value = errorMessage(error, '任务加载失败，请重试'); listForbidden.value = isForbidden(error)
   } finally { if (current(epoch) && request === listRequest) loading.value = false }
 }
-async function loadWorker() {
-  if (!country.current || !canView.value || !canViewWorker.value) return
-  const request = ++workerRequest, epoch = country.epoch
-  workerLoading.value = true; workerError.value = ''
-  try {
-    const result = await http.get<WorkerStatus>('/sys/jobs/worker-status', undefined, { silent: true })
-    if (!current(epoch) || request !== workerRequest) return
-    if (!result || !Array.isArray(result.runs) || !Array.isArray(result.alerts) || typeof result.enabled !== 'boolean'
-      || !Number.isFinite(result.delayMs) || !Number.isFinite(result.recoveryLimit)) throw new Error('后台运行状态响应不完整，请重新加载')
-    worker.value = result
-  } catch (error) {
-    if (!current(epoch) || request !== workerRequest) return
-    worker.value = null; workerError.value = errorMessage(error, '后台运行状态加载失败，请重试')
-  } finally { if (current(epoch) && request === workerRequest) workerLoading.value = false }
-}
-async function load() { await Promise.all([loadJobs(), loadWorker()]) }
 async function retry(row: JobRow) {
   if (!canRetry(row) || actionBusy.value || loading.value || !canView.value || !country.current) return
   const epoch = country.epoch
@@ -121,7 +98,7 @@ async function retry(row: JobRow) {
     await http.postIdem(`/sys/jobs/${row.id}/retry`, {}, retryIntent, { silent: true })
     if (!current(epoch)) return
     retryIntent.reset(); ElMessage.success('重试请求已提交，任务状态以刷新结果为准')
-    await load()
+    await loadJobs()
   } catch (error) { if (current(epoch)) actionError.value = `重试失败：${errorMessage(error, '请稍后重试')}` }
   finally { if (current(epoch)) retryingId.value = null }
 }
@@ -146,7 +123,7 @@ let media: MediaQueryList | undefined
 function updateCompact(event: MediaQueryList | MediaQueryListEvent) { compact.value = event.matches }
 onMounted(() => {
   media = window.matchMedia('(max-width: 768px)'); updateCompact(media); media.addEventListener('change', updateCompact)
-  load()
+  loadJobs()
 })
 onBeforeUnmount(() => { disposed = true; media?.removeEventListener('change', updateCompact) })
 </script>
@@ -160,7 +137,7 @@ onBeforeUnmount(() => { disposed = true; media?.removeEventListener('change', up
       <section class="page-card jobs-card" aria-labelledby="jobs-title">
         <div class="page-title">
           <div><h2 id="jobs-title">导出任务</h2><p class="subtitle">查看导出进度，下载已生成的文件。</p></div>
-          <el-button type="primary" :loading="refreshing" :disabled="actionBusy" @click="load"><el-icon v-if="!refreshing"><Refresh /></el-icon><span>刷新任务</span></el-button>
+          <el-button type="primary" :loading="loading" :disabled="actionBusy" @click="loadJobs"><el-icon v-if="!loading"><Refresh /></el-icon><span>刷新任务</span></el-button>
         </div>
         <div class="context-note"><el-icon><InfoFilled /></el-icon><span>请从已选择账套、期间的业务页面发起导出。这里只显示当前国家下你有权限查看的本人任务，下载时将重新核验权限。</span></div>
         <div class="status-tabs" role="group" aria-label="按任务状态筛选">
@@ -182,15 +159,6 @@ onBeforeUnmount(() => { disposed = true; media?.removeEventListener('change', up
           <template #empty><el-empty v-if="!loading" :description="rows.length ? '没有匹配的任务' : '暂无导出任务'" :image-size="60"><p class="empty-help">{{ rows.length ? '试试其他关键词、任务类型或状态。' : '请先在已选择账套、期间的业务页面发起导出。' }}</p><el-button v-if="rows.length" @click="resetFilters">清空筛选</el-button></el-empty></template>
         </el-table>
         <div class="pagination"><span class="result-total">共 <strong>{{ loading || listError ? '—' : filteredRows.length }}</strong> 条任务</span><el-pagination background :small="compact" :current-page="page" :page-size="size" :page-sizes="[20, 50, 100]" :total="filteredRows.length" :pager-count="5" layout="sizes, prev, pager, next" :disabled="loading || !!listError || !filteredRows.length" @current-change="changePage" @size-change="changeSize" /></div>
-      </section>
-      <section v-if="canViewWorker" class="worker-panel" aria-label="后台任务运行状态">
-        <div class="worker-heading"><div><el-icon><Monitor /></el-icon><span>后台任务运行状态</span><el-tag v-if="worker" :type="workerNeedsAttention ? 'danger' : worker.enabled ? 'success' : 'info'" size="small">{{ workerNeedsAttention ? '需关注' : worker.enabled ? '已启用' : '未启用' }}</el-tag></div><span v-if="worker" class="worker-meta">恢复间隔 {{ worker.delayMs / 1000 }} 秒 · 每批 {{ worker.recoveryLimit }} 条</span></div>
-        <el-alert v-if="workerError" :title="workerError" type="error" :closable="false" show-icon><el-button link type="primary" :loading="workerLoading" @click="loadWorker">重新加载后台状态</el-button></el-alert>
-        <div v-else-if="workerLoading && !worker" v-loading="true" class="worker-loading" aria-label="正在加载后台运行状态" />
-        <template v-else-if="worker">
-          <el-alert v-for="(alert, index) in worker.alerts" :key="index" :type="alert.severity === 'ERROR' ? 'error' : 'warning'" :title="alert.code" :description="[alert.kind, alert.consumer, alert.lastError, alert.message].filter(Boolean).join(' · ')" :closable="false" show-icon class="worker-alert" />
-          <el-collapse v-model="workerExpanded"><el-collapse-item title="查看后台运行记录" name="runtime"><div class="worker-table"><el-table :data="worker.runs" size="small" border><el-table-column prop="kind" label="任务" min-width="150" /><el-table-column label="状态" width="100"><template #default="{ row }"><el-tag :type="jobState(row.status).type" size="small">{{ jobState(row.status).label }}</el-tag></template></el-table-column><el-table-column label="最近开始" min-width="200"><template #default="{ row }"><DateTimeText :value="row.lastStartedAt" /></template></el-table-column><el-table-column label="最近完成" min-width="200"><template #default="{ row }"><DateTimeText :value="row.lastCompletedAt" /></template></el-table-column><el-table-column prop="lastError" label="诊断代码" min-width="180" /></el-table></div></el-collapse-item></el-collapse>
-        </template>
       </section>
       <div class="page-foot"><span>时间按当前国家时区显示：{{ country.timezone }}</span><span>最近刷新：<DateTimeText :value="lastRefreshedAt" /></span></div>
     </template>
@@ -240,18 +208,6 @@ onBeforeUnmount(() => { disposed = true; media?.removeEventListener('change', up
 .empty-help { font-size: 12px; color: var(--el-text-color-secondary); margin: 0 0 12px; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; flex-wrap: wrap; }
 .result-total { font-size: 12px; color: var(--el-text-color-regular); }
-.worker-panel { margin-top: 16px; background: #fff; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; padding: 0 16px; }
-.worker-heading, .worker-heading > div { display: flex; align-items: center; gap: 8px; }
-.worker-heading { justify-content: space-between; flex-wrap: wrap; padding: 14px 0; font-size: 13px; }
-.worker-heading .el-icon { color: var(--el-text-color-secondary); }
-.worker-meta { color: var(--el-text-color-secondary); font-size: 12px; }
-.worker-alert { margin: 0 0 12px; }
-.worker-panel :deep(.el-collapse) { border-top: 1px solid var(--el-border-color-lighter); border-bottom: 0; }
-.worker-panel :deep(.el-collapse-item__header) { font-size: 12px; color: var(--el-text-color-secondary); border: 0; height: 36px; }
-.worker-panel :deep(.el-collapse-item__wrap) { border: 0; }
-.worker-panel :deep(.el-collapse-item__content) { padding-bottom: 12px; }
-.worker-table { overflow-x: auto; }
-.worker-loading { min-height: 70px; }
 .page-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.7; }
 .detail-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 .detail-heading h3 { margin: 0; font-size: 15px; }
@@ -284,8 +240,6 @@ onBeforeUnmount(() => { disposed = true; media?.removeEventListener('change', up
   .result-total { width: 100%; }
   .pagination :deep(.el-pagination) { width: 100%; flex-wrap: wrap; justify-content: flex-end; gap: 8px 0; }
   .pagination :deep(.el-pagination__sizes) { width: 100%; margin: 0; display: flex; justify-content: flex-end; }
-  .worker-panel { padding: 0 12px; margin-top: 12px; }
-  .worker-meta { display: none; }
   .page-foot { font-size: 11px; }
 }
 </style>
