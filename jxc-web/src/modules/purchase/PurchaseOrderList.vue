@@ -9,6 +9,7 @@ import type { ColumnDef, CrudPageExpose, FieldDef } from '@/components/crud/type
 import { PO_STATUS, PRODUCT_SOURCE, SUPPLIER_SOURCE } from '@/modules/shared/bizOptions'
 import { confirmAction } from '@/utils/action'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
+import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
 
@@ -76,6 +77,7 @@ function onSaved(o: { id: number }) {
 <template>
   <CrudPage
     ref="page"
+    class="purchase-order-list"
     title="采购单"
     resource="/pur/orders"
     :columns="columns"
@@ -91,7 +93,7 @@ function onSaved(o: { id: number }) {
       </el-button>
     </template>
     <template #header>
-      <p class="muted">采购单按供应商币种（通常 CNY）下单；国内收货不进入任何库存，运营库存只在目的地实收后增加。</p>
+      <p class="muted purchase-list-note">采购单按供应商币种（通常 CNY）下单；国内收货不进入任何库存，运营库存只在目的地实收后增加。</p>
     </template>
     <template #col-docNo="{ row }">
       <el-link type="primary" @click="router.push(`/purchase/orders/${row.id}`)">{{ row.docNo }}</el-link>
@@ -114,3 +116,41 @@ function onSaved(o: { id: number }) {
   </CrudPage>
   <PurchaseOrderForm ref="form" @saved="onSaved" />
 </template>
+
+<style scoped>
+.purchase-order-list {
+  min-width: 0;
+}
+
+.purchase-order-list :deep(.page-title) {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.purchase-order-list :deep(.page-title > .toolbar) {
+  margin-bottom: 0;
+}
+
+.purchase-list-note {
+  margin: 0 0 12px;
+  line-height: 20px;
+}
+
+.purchase-order-list :deep(.search-form) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+
+.purchase-order-list :deep(.search-form .el-form-item) {
+  margin-right: 0;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .purchase-order-list :deep(.search-form .el-form-item__content > div) {
+    width: 100% !important;
+  }
+}
+</style>

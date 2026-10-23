@@ -16,6 +16,7 @@ import { useCountryStore } from '@/stores/country'
 import { formatDate, todayIn } from '@/utils/format'
 import { TRANSPORT_MODES, optionText } from '@/modules/shared/bizOptions'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
+import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
 
@@ -107,11 +108,11 @@ onMounted(load)
 </script>
 
 <template>
-  <div v-loading="loading" class="page">
+  <div v-loading="loading" class="page purchase-order-detail">
     <div class="page-card">
       <div class="page-title">
         <h2>
-          <el-button link @click="router.push('/purchase/orders')"><el-icon><ArrowLeft /></el-icon></el-button>
+          <el-button link aria-label="返回采购单列表" @click="router.push('/purchase/orders')"><el-icon><ArrowLeft /></el-icon></el-button>
           采购单 <span class="mono">{{ o.docNo }}</span>
           <StatusTag :status="o.status" />
         </h2>
@@ -144,7 +145,7 @@ onMounted(load)
     <div class="page-card">
       <h3>行进度（基本单位）</h3>
       <div class="table-scroll">
-        <el-table :data="lines" border size="small" row-key="id">
+        <el-table :data="lines" class="purchase-order-table" border stripe size="small" row-key="id">
           <el-table-column prop="lineNo" label="#" width="44" />
           <el-table-column label="商品" min-width="190">
             <template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.qty} ${row.unit}（×${row.factor}）`" /></template>
@@ -171,13 +172,13 @@ onMounted(load)
           </el-table-column>
         </el-table>
       </div>
-      <p class="muted">未交 = 订购 − 已取消 − 国内合格 − 待检。破损不抵减未交，可以继续向供应商要求补货；待检转合格或破损后进度自动更新。</p>
+      <p class="muted progress-note">未交 = 订购 − 已取消 − 国内合格 − 待检。破损不抵减未交，可以继续向供应商要求补货；待检转合格或破损后进度自动更新。</p>
     </div>
 
     <div class="page-card">
       <el-tabs v-model="tab">
         <el-tab-pane :label="`国内收货（${data?.receipts.length ?? 0}）`" name="receipts">
-          <el-table :data="data?.receipts ?? []" border size="small">
+          <el-table :data="data?.receipts ?? []" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="docNo" label="收货单" width="170" />
             <el-table-column label="日期" width="105"><template #default="{ row }">{{ formatDate(row.receiptDate) }}</template></el-table-column>
             <el-table-column prop="location" label="地点" min-width="140" />
@@ -191,7 +192,7 @@ onMounted(load)
           <el-button link type="primary" class="mt" @click="router.push({ path: '/purchase/domestic-receipts', query: { orderId: id } })">去国内收货</el-button>
         </el-tab-pane>
         <el-tab-pane :label="`出口节点（${data?.exports.length ?? 0}）`" name="exports">
-          <el-table :data="data?.exports ?? []" border size="small">
+          <el-table :data="data?.exports ?? []" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="docNo" label="出口单" width="170" />
             <el-table-column prop="declarationNo" label="报关单号" width="170" />
             <el-table-column prop="exportPort" label="口岸" width="110" />
@@ -203,7 +204,7 @@ onMounted(load)
           </el-table>
         </el-tab-pane>
         <el-tab-pane :label="`运输批次（${data?.shipments.length ?? 0}）`" name="shipments">
-          <el-table :data="data?.shipments ?? []" border size="small">
+          <el-table :data="data?.shipments ?? []" class="purchase-order-table" border stripe size="small">
             <el-table-column label="批次" width="170">
               <template #default="{ row }"><el-link type="primary" @click="router.push(`/logistics/shipments/${row.id}`)">{{ row.docNo }}</el-link></template>
             </el-table-column>
@@ -219,7 +220,7 @@ onMounted(load)
           </el-table>
         </el-tab-pane>
         <el-tab-pane :label="`目的地实收（${data?.mxReceipts.length ?? 0}）`" name="mx">
-          <el-table :data="data?.mxReceipts ?? []" border size="small">
+          <el-table :data="data?.mxReceipts ?? []" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="receiptNo" label="实收单" width="170" />
             <el-table-column label="日期" width="105"><template #default="{ row }">{{ formatDate(row.bizDate) }}</template></el-table-column>
             <el-table-column prop="warehouseName" label="仓库" width="140" />
@@ -231,7 +232,7 @@ onMounted(load)
           </el-table>
         </el-tab-pane>
         <el-tab-pane :label="`取消记录（${data?.cancels.length ?? 0}）`" name="cancels">
-          <el-table :data="data?.cancels ?? []" border size="small">
+          <el-table :data="data?.cancels ?? []" class="purchase-order-table" border stripe size="small">
             <el-table-column prop="productCode" label="商品" width="100" />
             <el-table-column prop="cancelQty" label="取消数量" width="90" align="right" />
             <el-table-column prop="reason" label="原因" min-width="200" />
@@ -252,8 +253,8 @@ onMounted(load)
       </el-tabs>
     </div>
 
-    <el-dialog v-model="cancel.visible" title="部分取消" width="640px" append-to-body>
-      <el-table :data="lines" border size="small">
+    <el-dialog v-model="cancel.visible" title="部分取消" width="640px" class="purchase-order-dialog" append-to-body>
+      <el-table :data="lines" class="purchase-order-table" border stripe size="small">
         <el-table-column label="商品" min-width="180">
           <template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template>
         </el-table-column>
@@ -271,7 +272,7 @@ onMounted(load)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="close.visible" title="关闭采购单" width="480px" append-to-body>
+    <el-dialog v-model="close.visible" title="关闭采购单" width="480px" class="purchase-order-dialog" append-to-body>
       <p class="muted">关闭后不再接收国内收货，剩余未交数量自动记为取消；已收货物的后续出口、发运不受影响。</p>
       <el-input v-model="close.reason" type="textarea" :rows="3" placeholder="关闭原因（必填）" />
       <template #footer>
@@ -285,15 +286,38 @@ onMounted(load)
 </template>
 
 <style scoped>
-h2 {
-  display: flex;
-  align-items: center;
+.purchase-order-detail {
+  min-width: 0;
+}
+
+.page-title {
+  flex-wrap: wrap;
   gap: 8px;
 }
 
+h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.page-title > .toolbar {
+  margin-bottom: 0;
+}
+
+.toolbar > .el-button {
+  margin-left: 0;
+}
+
 h3 {
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   font-size: 15px;
+}
+
+.progress-note {
+  margin: 8px 0 0;
+  line-height: 20px;
 }
 
 .mt {
@@ -302,5 +326,9 @@ h3 {
 
 .warn {
   color: var(--el-color-warning);
+}
+
+:global(.purchase-order-dialog) {
+  max-width: 96vw;
 }
 </style>
