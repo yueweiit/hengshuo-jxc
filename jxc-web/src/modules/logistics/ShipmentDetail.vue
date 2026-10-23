@@ -7,9 +7,10 @@ import { useUserStore } from '@/stores/user'
 import { useCountryStore } from '@/stores/country'
 import StatusTag from '@/components/StatusTag.vue'
 import MoneyText from '@/components/MoneyText.vue'
+import QtyText from '@/components/QtyText.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
 import DocAttachment from '@/components/DocAttachment.vue'
-import AuditTimeline from '@/components/AuditTimeline.vue'
+import AuditDrawer from '@/components/AuditDrawer.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
 import FieldInput from '@/components/crud/FieldInput.vue'
 import { confirmAction } from '@/utils/action'
@@ -49,6 +50,15 @@ const feeForm = ref<InstanceType<typeof FeeForm>>()
 
 const id = computed(() => Number(route.params.id))
 const lines = computed<Row[]>(() => sh.value.lines ?? [])
+const auditVisible = ref(false)
+const auditContext = computed(() => ({
+  title: '运输批次',
+  identifier: String(sh.value.docNo ?? `#${id.value}`),
+  status: sh.value.status,
+}))
+function openAudit() {
+  auditVisible.value = true
+}
 const filteredLines = computed(() => {
   const query = lineQuery.value.trim().toLowerCase()
   return query ? lines.value.filter(line => [line.productCode, line.productName, line.poNo, line.sourceNo]
@@ -61,7 +71,57 @@ const pendingTotal = computed(() => sh.value.totals?.pendingDeliveryQty ?? 0)
 function summary({ columns }: { columns: { property: string }[] }) {
   return columns.map((c, i) => (i === 0 ? '合计' : c.property === 'boxes' && filteredLines.value.some(line => line.boxes == null) ? '未维护' : c.property ? String(filteredLines.value.reduce((s, l) => s + (Number(l[c.property]) || 0), 0)) : ''))
 }
-const nodes = computed<Row[]>(() => [...(sh.value.nodes ?? [])].reverse())
+const NODE_QUANTITY_SOURCES: Record<string, { recordsKey: string; timeField: string; label: string; status?: string }> = {
+  DISPATCHED: { recordsKey: 'deliveries', timeField: 'dispatchedAt', label: '派送单', status: 'DISPATCHED' },
+  HOLD: { recordsKey: 'holds', timeField: 'createdAt', label: '暂缓单' },
+  TRANSSHIPPED: { recordsKey: 'transships', timeField: 'transshipAt', label: '换柜单', status: 'CONFIRMED' },
+  RECEIVED: { recordsKey: 'receipts', timeField: 'confirmedAt', label: '实收单', status: 'CONFIRMED' },
+}
+const NODE_QUANTITY_FIELDS: Record<string, { label: string; key: string }[]> = {
+  DISPATCHED: [{ label: '派送', key: 'dispatchQty' }],
+  HOLD: [{ label: '暂缓', key: 'holdQty' }],
+  TRANSSHIPPED: [{ label: '转移', key: 'movedQty' }, { label: '差异', key: 'diffQty' }],
+  RECEIVED: [
+    { label: '派送', key: 'dispatchQty' }, { label: '合格', key: 'goodQty' }, { label: '破损', key: 'damagedQty' },
+    { label: '待检', key: 'pendingInspectQty' }, { label: '短缺', key: 'shortQty' },
+  ],
+}
+function sameInstant(left: unknown, right: unknown) {
+  if (typeof left !== 'string' || typeof right !== 'string') return false
+  const leftTime = Date.parse(left)
+  return Number.isFinite(leftTime) && leftTime === Date.parse(right)
+}
+function nodeQuantityInfo(event: Row) {
+  const source = NODE_QUANTITY_SOURCES[event.nodeType]
+  if (!source) {
+    const label = event.nodeType === 'RESUMED' ? '恢复数量仅有累计记录，无法对应到本次节点' : '节点本身未记录数量'
+    return { state: 'unrecorded', label, records: [] as Row[] }
+  }
+
+  const records = ((related.value[source.recordsKey] ?? []) as Row[]).filter((record) =>
+    (!source.status || record.status === source.status) && Array.isArray(record.lines) && record.lines.length > 0)
+  const sameTypeNodes = ((sh.value.nodes ?? []) as Row[]).filter((item) => item.nodeType === event.nodeType)
+  const matchingRecords = records.filter((record) => sameInstant(event.actualAt, record[source.timeField]))
+  const matchingNodes = sameTypeNodes.filter((item) => sameInstant(item.actualAt, event.actualAt))
+
+  if (matchingRecords.length === 1 && matchingNodes.length === 1) {
+    return { state: 'linked', label: source.label, records: matchingRecords }
+  }
+  if (records.length === 1 && sameTypeNodes.length === 1) {
+    return { state: 'linked', label: source.label, records }
+  }
+  if (!records.length) return { state: 'unrecorded', label: `未找到关联${source.label}数量明细`, records: [] as Row[] }
+  return { state: 'ambiguous', label: '未能唯一关联数量明细', records: [] as Row[] }
+}
+function nodeQuantityValues(nodeType: string, line: Row) {
+  return (NODE_QUANTITY_FIELDS[nodeType] ?? [])
+    .filter((field) => line[field.key] !== undefined && line[field.key] !== null)
+    .map((field) => ({ label: field.label, value: line[field.key] }))
+}
+const nodes = computed<Row[]>(() => [...(sh.value.nodes ?? [])].reverse().map((event) => ({
+  ...event,
+  quantityInfo: nodeQuantityInfo(event),
+})))
 const allNodesExpanded = computed(() => nodes.value.length > 0 && nodes.value.every(node => expandedNodeIds.value.includes(node.id)))
 function toggleAllNodes() {
   expandedNodeIds.value = allNodesExpanded.value ? [] : nodes.value.map(node => node.id)
@@ -185,6 +245,7 @@ watch(id, () => {
   lineQuery.value = ''
   linePage.value = 1
   tab.value = 'deliveries'
+  auditVisible.value = false
   expandedNodeIds.value = []
   sh.value = {}
   related.value = {}
@@ -250,30 +311,35 @@ onMounted(load)
       <p v-if="sh.remark" class="shipment-remark"><span>备注</span>{{ sh.remark }}</p>
     </section>
 
-    <section class="shipment-section shipment-quantities" aria-labelledby="shipment-quantity-title">
-      <div class="shipment-section-heading">
+    <details open class="shipment-section shipment-quantities" aria-labelledby="shipment-quantity-title">
+      <summary class="shipment-section-heading shipment-collapse-summary">
         <div class="shipment-heading-text"><h3 id="shipment-quantity-title">数量分桶</h3><span class="muted">{{ filteredLines.length }} / {{ lines.length }} 条明细</span><el-tag v-if="rank >= RANK.IN_TRANSIT" :type="identityOk ? 'success' : 'danger'" effect="plain" size="small">{{ identityOk ? '数量恒等校验通过' : '数量不平，请检查' }}</el-tag></div>
-        <el-input v-model="lineQuery" clearable size="small" placeholder="商品编码 / 名称 / 来源" aria-label="筛选商品" class="shipment-line-search"><template #prefix><el-icon><Search /></el-icon></template></el-input>
+        <el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon>
+      </summary>
+      <div class="shipment-quantity-body">
+        <div class="shipment-quantity-controls">
+          <el-input v-model="lineQuery" clearable size="small" placeholder="商品编码 / 名称 / 来源" aria-label="筛选商品" class="shipment-line-search"><template #prefix><el-icon><Search /></el-icon></template></el-input>
+        </div>
+        <div class="table-scroll">
+          <el-table :data="pagedLines" class="shipment-quantity-table" max-height="400" border stripe size="small" row-key="id" show-summary :summary-method="summary" :empty-text="lineQuery.trim() ? '没有匹配的商品' : '暂无商品明细'">
+            <el-table-column label="商品 / 采购来源" min-width="250"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.poNo} · ${row.sourceNo}`" /></template></el-table-column>
+            <el-table-column prop="boxes" label="箱数" width="66" align="right" show-overflow-tooltip><template #default="{ row }">{{ row.boxes ?? '未维护' }}</template></el-table-column>
+            <el-table-column prop="baseQty" label="计划" width="68" align="right" show-overflow-tooltip />
+            <el-table-column prop="shippedQty" label="已发运" width="74" align="right" show-overflow-tooltip />
+            <el-table-column v-for="b in BUCKETS" :key="b.prop" :prop="b.prop" :label="b.label" width="80" align="right" show-overflow-tooltip>
+              <template #default="{ row }"><span :class="{ zero: !row[b.prop], warn: b.prop === 'discrepancyQty' && row[b.prop] > 0 }">{{ row[b.prop] }}</span></template>
+            </el-table-column>
+            <el-table-column label="恒等" width="52" align="center">
+              <template #default="{ row }"><el-icon v-if="row.identityOk" color="var(--el-color-success)" role="img" aria-label="数量恒等校验通过"><CircleCheck /></el-icon><el-icon v-else color="var(--el-color-danger)" role="img" aria-label="数量不平"><Warning /></el-icon></template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <div class="shipment-quantity-footer">
+          <details class="shipment-rules"><summary>数量核对规则</summary><p>已发运 = 国际在途 + 当地待派送 + 暂缓 + 派送在途 + 已实收合格 + 已实收冻结 + 差异。到港把国际在途转为当地待派送；放行（或换柜）后才能派送；实收后进入目的仓库存。合计按当前筛选结果的全部明细计算。</p></details>
+          <el-pagination v-model:current-page="linePage" v-model:page-size="linePageSize" size="small" :page-sizes="[10, 20, 50]" :pager-count="5" layout="total, sizes, prev, pager, next" :total="filteredLines.length" />
+        </div>
       </div>
-      <div class="table-scroll">
-        <el-table :data="pagedLines" class="shipment-quantity-table" max-height="400" border stripe size="small" row-key="id" show-summary :summary-method="summary" :empty-text="lineQuery.trim() ? '没有匹配的商品' : '暂无商品明细'">
-          <el-table-column label="商品 / 采购来源" min-width="250"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.poNo} · ${row.sourceNo}`" /></template></el-table-column>
-          <el-table-column prop="boxes" label="箱数" width="66" align="right" show-overflow-tooltip><template #default="{ row }">{{ row.boxes ?? '未维护' }}</template></el-table-column>
-          <el-table-column prop="baseQty" label="计划" width="68" align="right" show-overflow-tooltip />
-          <el-table-column prop="shippedQty" label="已发运" width="74" align="right" show-overflow-tooltip />
-          <el-table-column v-for="b in BUCKETS" :key="b.prop" :prop="b.prop" :label="b.label" width="80" align="right" show-overflow-tooltip>
-            <template #default="{ row }"><span :class="{ zero: !row[b.prop], warn: b.prop === 'discrepancyQty' && row[b.prop] > 0 }">{{ row[b.prop] }}</span></template>
-          </el-table-column>
-          <el-table-column label="恒等" width="52" align="center">
-            <template #default="{ row }"><el-icon v-if="row.identityOk" color="var(--el-color-success)" role="img" aria-label="数量恒等校验通过"><CircleCheck /></el-icon><el-icon v-else color="var(--el-color-danger)" role="img" aria-label="数量不平"><Warning /></el-icon></template>
-          </el-table-column>
-        </el-table>
-      </div>
-      <div class="shipment-quantity-footer">
-        <details class="shipment-rules"><summary>数量核对规则</summary><p>已发运 = 国际在途 + 当地待派送 + 暂缓 + 派送在途 + 已实收合格 + 已实收冻结 + 差异。到港把国际在途转为当地待派送；放行（或换柜）后才能派送；实收后进入目的仓库存。合计按当前筛选结果的全部明细计算。</p></details>
-        <el-pagination v-model:current-page="linePage" v-model:page-size="linePageSize" size="small" :page-sizes="[10, 20, 50]" :pager-count="5" layout="total, sizes, prev, pager, next" :total="filteredLines.length" />
-      </div>
-    </section>
+    </details>
 
     <div class="shipment-lower">
       <section class="shipment-section shipment-nodes" aria-labelledby="shipment-nodes-title">
@@ -287,6 +353,17 @@ onMounted(load)
                 <div v-if="n.plannedAt" class="muted">计划 <DateTimeText :value="n.plannedAt" /></div>
                 <div v-if="n.refNo" class="mono">{{ n.refNo }}</div>
                 <div v-if="n.remark">{{ n.remark }}</div>
+                <div v-if="n.quantityInfo.state === 'linked'" class="shipment-node-quantity">
+                  <div class="shipment-node-quantity-source">关联数量 · {{ n.quantityInfo.label }}</div>
+                  <div v-for="record in n.quantityInfo.records" :key="record.id" class="shipment-node-quantity-record">
+                    <div class="shipment-node-quantity-doc">{{ record.docNo || `单据 #${record.id}` }}</div>
+                    <div v-for="line in record.lines" :key="line.id" class="shipment-node-quantity-line">
+                      <ProductCell :code="line.productCode" :name="line.productName" />
+                      <div class="shipment-node-quantity-values"><span v-for="quantity in nodeQuantityValues(n.nodeType, line)" :key="quantity.label">{{ quantity.label }} <QtyText :value="quantity.value" /></span></div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="shipment-node-quantity-empty">{{ n.quantityInfo.label }}</div>
                 <el-button v-if="canNode && !n.corrected && ['DEPARTED', 'ARRIVED_PORT', 'CUSTOMS_DECLARED', 'CUSTOMS_RELEASED', 'EXCEPTION'].includes(n.nodeType)" link type="primary" size="small" class="ml" @click="openCorrect(n)">更正</el-button>
             </div>
           </details>
@@ -294,8 +371,12 @@ onMounted(load)
         <div class="shipment-node-footer"><span>共 {{ nodes.length }} 条节点</span><el-button v-if="canNode" link type="primary" size="small" @click="openNode">记录节点</el-button></div>
       </section>
 
-    <section class="shipment-section shipment-records" aria-labelledby="shipment-records-title">
-      <div class="shipment-section-heading"><h3 id="shipment-records-title">关联记录</h3></div>
+    <details open class="shipment-section shipment-records" aria-labelledby="shipment-records-title">
+      <summary class="shipment-section-heading shipment-collapse-summary">
+        <h3 id="shipment-records-title">关联记录</h3>
+        <el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon>
+      </summary>
+      <div class="shipment-record-body">
       <el-tabs v-model="tab">
         <el-tab-pane :label="`派送（${related.deliveries?.length ?? 0}）`" name="deliveries">
           <el-table :data="related.deliveries ?? []" border size="small">
@@ -384,10 +465,12 @@ onMounted(load)
           <DocAttachment biz-type="SHIPMENT" :biz-id="id" category="LOGISTICS_DOC" />
         </el-tab-pane>
         <el-tab-pane label="操作日志" name="audit" lazy>
-          <AuditTimeline resource-type="shipment" :resource-id="id" />
+          <el-button type="primary" plain size="small" @click="openAudit"><el-icon><Clock /></el-icon>查看操作日志</el-button>
         </el-tab-pane>
       </el-tabs>
-    </section>
+      </div>
+      <AuditDrawer v-if="auditVisible" v-model="auditVisible" resource-type="shipment" :resource-id="id" :context="auditContext" />
+    </details>
     </div>
     </template>
 
