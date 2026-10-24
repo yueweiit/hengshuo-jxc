@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { compile, computed, reactive, ref } from 'vue'
+import { compile, computed, createSSRApp, defineComponent, h, reactive, ref } from 'vue'
+import { renderToString } from 'vue/server-renderer'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 const file = new URL('../src/modules/sales/SalesOrderDetail.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
@@ -76,14 +77,19 @@ test('a context change while the confirmation is open cannot close another curre
   await assert.rejects(page.saveCancellation(), /切换/); assert.equal(page.calls.length, 0)
 })
 
-test('the original allocation tag distinguishes original cancelled and effective base quantities after mixed cancellation', () => {
-  const span = source.match(/<span v-for="a in row\.allocs"[\s\S]*?<\/span>/)?.[0]
-  assert.ok(span, 'original allocation presentation must remain present')
-  const row = { allocs: [{ id: 31, warehouseName: 'W1', allocQty: 12, cancelledQty: 4 }, { id: 32, warehouseName: 'W2', allocQty: 8, cancelledQty: 8 }] }
-  const before = JSON.stringify(row)
-  const text = node => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : typeof node?.children === 'string' ? node.children : Array.isArray(node?.children) ? node.children.map(text).join(' ') : ''
-  const rendered = text(compile(`<div>${span}</div>`)({ row, formatQty: value => value == null ? '-' : new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 4 }).format(Number(value)) }, []))
-  assert.match(rendered, /W1\s*·?\s*原\s*12\s*\/\s*取消\s*4\s*\/\s*有效\s*8/)
-  assert.match(rendered, /W2\s*·?\s*原\s*8\s*\/\s*取消\s*8\s*\/\s*有效\s*0/)
-  assert.equal(JSON.stringify(row), before)
+test('展开分仓分列展示原量、取消量与有效量，保留完全取消后的零值', async () => {
+  const fragment = source.match(/<div class="allocation-detail">[\s\S]*?<\/div>/)?.[0]
+  assert.ok(fragment, '分仓应能展开查看')
+  const line = { allocs: [{ id: 31, warehouseName: 'W1', allocQty: 12, cancelledQty: 4, outboundQty: 2, openQty: 6 }, { id: 32, warehouseName: 'W2', allocQty: 8, cancelledQty: 8, outboundQty: 0, openQty: 0 }, { id: 33, warehouseName: '历史缺失仓', allocQty: 5, cancelledQty: null }] }
+  const before = JSON.stringify(line)
+  const app = createSSRApp({ setup: () => ({ line }), render: compile(fragment) })
+  // 仅替换表格框架；执行真实页面的每个单元格插槽与数量绑定。
+  app.component('ElTable', defineComponent({ props: ['data'], setup: (props, { slots }) => () => h('table', props.data.map(row => h('tr', slots.default().map(column => h('td', [column.props.label, '：', column.children?.default ? column.children.default({ row }) : row[column.props.prop]]))))) }))
+  app.component('ElTableColumn', defineComponent({ setup: () => () => null }))
+  app.component('QtyText', defineComponent({ props: ['value'], setup: props => () => h('span', props.value == null ? '-' : String(props.value)) }))
+  const html = (await renderToString(app)).replace(/<!--[\s\S]*?-->/g, '')
+  assert.match(html, /W1[\s\S]*?原分仓量：<span>12<\/span>[\s\S]*?已取消：<span>4<\/span>[\s\S]*?有效分仓量：<span>8<\/span>/)
+  assert.match(html, /W2[\s\S]*?有效分仓量：<span>0<\/span>/)
+  assert.match(html, /历史缺失仓[\s\S]*?有效分仓量：<span>-<\/span>/)
+  assert.equal(JSON.stringify(line), before)
 })

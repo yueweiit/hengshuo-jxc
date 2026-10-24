@@ -95,7 +95,7 @@ test('a created outbound draft is reused when its confirmation response fails', 
   const dependencies = { computed: vue.computed, ref: vue.ref, reactive: vue.reactive, onMounted() {}, watch() {}, useRoute: () => ({ params: { id: 1 } }), useRouter: () => ({}), useUserStore: () => ({}), useCountryStore: () => ({ timezone: 'Asia/Shanghai' }), todayIn: () => '2026-10-16', ElMessage: { success() {} }, http, ...helpers, getToken: () => 'test-user', getCountryId: () => 1 }
   const scope = loadVueScript(file, dependencies, ['order', 'ob', 'openOutbound', 'confirmOut'])
   scope.order.value = order
-  scope.openOutbound()
+  await scope.openOutbound()
   await assert.rejects(scope.confirmOut(), /confirmation response lost/)
   await scope.confirmOut()
   assert.equal(creates, 1, 'one user intent must not create a second outbound draft merely to retry confirm')
