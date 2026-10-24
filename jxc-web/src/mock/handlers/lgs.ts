@@ -913,29 +913,65 @@ const inTransit = http.get(`${API}/lgs/in-transit`, handle((ctx) => {
   const countryId = requireCountry(ctx)
   const db = getDb()
   const sp = ctx.url.searchParams
+  const visible = db.shipments.filter((s) => s.countryId === countryId && canDocumentDataAccess(ctx, 'SHIPMENT', s))
+  const warehouseMatches = (id: number) => !sp.get('warehouseId') || String(id) === sp.get('warehouseId')
+  const productMatches = (id: number) => !sp.get('productId') || String(id) === sp.get('productId')
+  const view = sp.get('view') ?? 'summary'
+  if (!['summary', 'delays'].includes(view)) bad('看板视图不合法')
+  const page = Number(sp.get('page') ?? 1), size = Number(sp.get('size') ?? 20)
+  if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(size) || size < 1 || size > 100) bad('分页参数不合法')
+  const paged = (records: Row[]) => {
+    const current = Math.min(page, Math.max(1, Math.ceil(records.length / size)))
+    return { records: records.slice((current - 1) * size, current * size), total: records.length, page: current, size }
+  }
+  if (view === 'delays') {
+    const records = visible.filter(s => warehouseMatches(s.destWarehouseId) && s.lines.some((l: Row) => productMatches(l.productId)))
+      .map(s => ({ ...shipmentOut(s), plannedAt: delayInfo(s).delayStage === '发运' ? s.plannedEtd : s.plannedEta }))
+      .filter(s => s.delayed)
+    return { ...paged(records), rule: { status: 'ACTIVE', toleranceHours: DELAY_TOLERANCE_HOURS, message: '' } }
+  }
   const groups = new Map<string, Row>()
-  for (const sh of db.shipments.filter((s) => s.countryId === countryId && canDocumentDataAccess(ctx, 'SHIPMENT', s) && RANK[s.status] >= RANK.IN_TRANSIT && s.status !== 'COMPLETED')) {
-    if (sp.get('warehouseId') && String(sh.destWarehouseId) !== sp.get('warehouseId')) continue
+  const fields = [...BUCKETS.slice(0, 4), 'openDiscrepancyQty', 'totalQty']
+  const empty = (unit: string): Row => ({ unit, ...Object.fromEntries(fields.map(key => [key, 0])) })
+  const add = (target: Row, quantities: Row) => { for (const key of fields) target[key] = round(target[key] + quantities[key]) }
+  function addFact(sh: Row, line: Row, warehouseId: number, quantities: Row) {
+    if (!warehouseMatches(warehouseId) || !productMatches(line.productId)) return
+    quantities.totalQty = sum(BUCKETS.slice(0, 4), key => quantities[key])
+    if (quantities.totalQty + quantities.openDiscrepancyQty === 0) return
+    const sku = product(line.productId)
+    if (!sku?.baseUnit) bad('商品基础单位缺失')
+    const key = `${warehouseId}:${line.productId}`
+    if (!groups.has(key)) groups.set(key, { ...empty(sku!.baseUnit), id: key, warehouseId, warehouseName: nameOf(db.warehouses, warehouseId),
+      productId: line.productId, productCode: sku!.productCode, productName: sku!.name, shipments: [] as Row[] })
+    const group = groups.get(key)!
+    add(group, quantities)
+    let shipment = group.shipments.find((s: Row) => s.id === sh.id)
+    if (!shipment) {
+      shipment = { ...empty(sku!.baseUnit), id: sh.id, docNo: sh.docNo, status: sh.status, plannedEta: sh.plannedEta, actualEta: sh.actualEta }
+      group.shipments.push(shipment)
+    }
+    add(shipment, quantities)
+  }
+  for (const sh of visible.filter(s => s.actualEtd || (s.openingRef && s.openingSourceDate))) {
     for (const l of sh.lines) {
-      if (sp.get('productId') && String(l.productId) !== sp.get('productId')) continue
-      const key = `${sh.destWarehouseId}:${l.productId}`
-      if (!groups.has(key)) {
-        groups.set(key, withProduct({ id: key, warehouseId: sh.destWarehouseId, warehouseName: nameOf(db.warehouses, sh.destWarehouseId), productId: l.productId, intlQty: 0, pendingDeliveryQty: 0, onHoldQty: 0, deliveringQty: 0, openDiscrepancyQty: 0, shipments: [] as Row[] }))
-      }
-      const g = groups.get(key)!
       const openDisc = sum(db.discrepancies.filter((d) => d.shipmentLineId === l.id && d.status !== 'RESOLVED'), (d) => d.qty)
-      g.intlQty += l.intlQty
-      g.pendingDeliveryQty += l.pendingDeliveryQty
-      g.onHoldQty += l.onHoldQty
-      g.deliveringQty += l.deliveringQty
-      g.openDiscrepancyQty += openDisc
-      g.shipments.push({ id: sh.id, docNo: sh.docNo, status: sh.status, intlQty: l.intlQty, pendingDeliveryQty: l.pendingDeliveryQty, onHoldQty: l.onHoldQty, deliveringQty: l.deliveringQty, openDiscrepancyQty: openDisc, plannedEta: sh.plannedEta, actualEta: sh.actualEta })
+      addFact(sh, l, sh.destWarehouseId, { intlQty: l.intlQty, pendingDeliveryQty: l.pendingDeliveryQty, onHoldQty: l.onHoldQty, deliveringQty: 0, openDiscrepancyQty: openDisc })
+    }
+    for (const delivery of db.deliveries.filter(d => d.countryId === countryId && d.shipmentId === sh.id && d.status === 'DISPATCHED' && canDocumentDataAccess(ctx, 'DELIVERY', d))) {
+      for (const line of delivery.lines) {
+        const source = sh.lines.find((l: Row) => l.id === line.shipmentLineId)
+        if (!source) bad('派送来源明细缺失')
+        addFact(sh, source!, delivery.destWarehouseId, { intlQty: 0, pendingDeliveryQty: 0, onHoldQty: 0, deliveringQty: line.dispatchQty, openDiscrepancyQty: 0 })
+      }
     }
   }
-  const records = [...groups.values()]
-    .map((g): Row => ({ ...g, totalQty: g.intlQty + g.pendingDeliveryQty + g.onHoldQty + g.deliveringQty }))
-    .filter((g) => g.totalQty + g.openDiscrepancyQty > 0)
-  return { records, total: records.length, page: 1, size: records.length }
+  const records = [...groups.values()].sort((a, b) => `${a.warehouseName}:${a.productCode}:${a.id}`.localeCompare(`${b.warehouseName}:${b.productCode}:${b.id}`))
+  const summary = new Map<string, Row>()
+  for (const record of records) {
+    if (!summary.has(record.unit)) summary.set(record.unit, empty(record.unit))
+    add(summary.get(record.unit)!, record)
+  }
+  return { ...paged(records), summary: [...summary.values()] }
 }))
 
 // ---------- 定时检查：延误、暂缓复查 ----------
