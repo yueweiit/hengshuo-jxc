@@ -15,7 +15,7 @@ function sourceDetail(sources) {
   function find(node) { if (node.tag === 'el-table-column' && node.props.some(p => p.name === 'type' && p.value?.content === 'expand')) return node; return (node.children ?? []).map(find).find(Boolean) }
   const expansion = find(parse(template))
   assert.ok(expansion, 'the original profit row must expose its owner-provided sources')
-  const page = loadVueScript(file, { computed: Vue.computed, ref: Vue.ref, onMounted() {}, useCountryStore: () => ({}), financeSourcePath }, ['data', 'bookId'])
+  const page = loadVueScript(file, { computed: Vue.computed, ref: Vue.ref, onMounted() {}, onBeforeUnmount() {}, useCountryStore: () => ({}), financeSourcePath, formatDate: value => value || '-' }, ['data', 'bookId', 'moneyFields', 'sourceLabel', 'formatDate'])
   page.bookId.value = 6; page.data.value = { baseCurrency: 'MXN', rows: [{ sources }] }
   const calls = [], money = []
   const renderer = Vue.createRenderer({ createElement: tag => ({ tag, children: [] }), createText: text => ({ text }), createComment: () => ({}), setText: (n,t) => { n.text=t }, setElementText: (n,t) => { n.text=t }, insert: (n,p) => p.children.push(n), remove() {}, patchProp: (n,k,_old,v) => { n[k]=v }, parentNode: () => null, nextSibling: () => null })
@@ -25,8 +25,11 @@ function sourceDetail(sources) {
   app.component('ElTable', { props: ['data'], setup: (p, ctx) => { Vue.provide('sourceRows', p.data); return () => Vue.h('table', ctx.slots.default?.()) } })
   app.component('ElTableColumn', { props: ['prop', 'label'], setup: (p, ctx) => { const rows = Vue.inject('sourceRows'); return () => Vue.h('section', [p.label, ...rows.map(row => ctx.slots.default?.({ row }) ?? String(row[p.prop] ?? '—'))]) } })
   app.component('ElButton', { setup: (_, ctx) => () => Vue.h('button', ctx.attrs, ctx.slots.default?.()) })
+  app.component('ElAlert', { props: ['title'], setup: p => () => Vue.h('alert', p.title) })
+  app.component('ElTag', { setup: (_, ctx) => () => Vue.h('tag', ctx.slots.default?.()) })
   app.component('MoneyText', { props: ['value', 'currency'], setup: p => { money.push({ ...p }); return () => Vue.h('span', p.value == null ? '—' : String(p.value)) } })
   app.component('StatusTag', { props: ['status'], setup: p => () => Vue.h('span', p.status) })
+  app.config.warnHandler = warning => { throw new Error(warning) }
   const root = { children: [] }; app.mount(root)
   const walk = n => [n, ...(n.children ?? []).flatMap(walk)]
   const nodes = walk(root); nodes.filter(n => n.tag === 'button').forEach(n => n.onClick?.())
