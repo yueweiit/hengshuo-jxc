@@ -35,7 +35,7 @@ function failureMessage(error: unknown) { return error instanceof Error ? error.
 async function loadBooks() {
   booksBusy.value = true; booksError.value = ''
   try {
-    const result = await http.get<Row[]>('/fin/books')
+    const result = await http.get<Row[]>('/fin/books', {}, { silent: true })
     if (!Array.isArray(result)) throw new Error('账套返回内容不完整，请重新加载')
     books.value = result
   }
@@ -48,7 +48,7 @@ async function load() {
   if (!bookId.value || !periodId.value) return
   busy.value = true
   try {
-    const result = await http.get<Row>('/fin/reports/' + tab.value, { bookId: bookId.value, periodId: periodId.value })
+    const result = await http.get<Row>('/fin/reports/' + tab.value, { bookId: bookId.value, periodId: periodId.value }, { silent: true })
     if (!result || !Array.isArray(result.lines)) throw new Error('报表返回内容不完整，请重新加载')
     if (sequence === requestSequence) data.value = result
   } catch (error) {

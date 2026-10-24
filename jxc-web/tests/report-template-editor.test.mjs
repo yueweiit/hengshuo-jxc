@@ -242,3 +242,15 @@ test('failed export retains its error and reuses the command intent when retried
   assert.equal(intents.length, 2)
   assert.equal(intents[0], intents[1])
 })
+
+test('page-owned report failures suppress duplicate global interceptor messages', async () => {
+  let options
+  const scope = page({ http: { get: async (_path, _query, config) => {
+    options = config
+    throw new Error('报表读取失败')
+  } } })
+  scope.bookId.value = 601; scope.periodId.value = 701
+  await scope.load()
+  assert.equal(scope.reportError.value, '报表读取失败')
+  assert.equal(options?.silent, true)
+})
