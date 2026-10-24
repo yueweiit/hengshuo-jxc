@@ -157,7 +157,7 @@ onBeforeUnmount(() => { disposed = true; feesRequest++; historyRequest++ })
       <el-alert v-if="feesError" class="state-message" type="warning" :closable="false" show-icon :title="feesError"><template #default><el-button link type="primary" :disabled="feesLoading || busy" @click="loadFees">重试读取费用</el-button></template></el-alert>
       <el-form class="allocation-form" label-position="top" :disabled="busy" @submit.prevent>
         <el-form-item label="物流费用" class="fee-field">
-          <el-select v-model="feeSelection" filterable allow-create clearable :filter-method="filterFees" :loading="feesLoading" placeholder="输入单号、项目、物流商、运输批次或费用 ID" @change="chooseFee">
+          <el-select v-model="feeSelection" filterable allow-create default-first-option clearable :filter-method="filterFees" :loading="feesLoading" placeholder="输入单号、项目、物流商、运输批次或费用 ID" @change="chooseFee">
             <el-option v-if="form.feeId && !selectedFee" :value="form.feeId" :label="`费用 ID #${form.feeId}（待预览校验）`" />
             <el-option v-for="fee in filteredFees" :key="fee.id" :value="fee.id" :label="feeLabel(fee)" class="allocation-fee-option">
               <div class="fee-option-main"><strong>{{ fee.docNo ?? `#${fee.id}` }}</strong><span>{{ fee.amount ?? '金额未提供' }} {{ fee.currency }}</span></div>
