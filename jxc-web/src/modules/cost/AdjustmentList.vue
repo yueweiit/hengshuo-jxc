@@ -127,7 +127,11 @@ onMounted(load)
           <el-form-item label="调整对象" required><el-select v-model="form.target"><el-option label="库存成本" value="INVENTORY" /><el-option label="已售成本" value="COGS" /></el-select></el-form-item>
           <el-form-item label="业务日期" required><el-date-picker v-model="form.bizDate" type="date" value-format="YYYY-MM-DD" placeholder="选择开放期间内的日期" /></el-form-item>
           <el-form-item class="batch-field" label="成本批次" required>
-            <div class="batch-choice"><span v-if="selectedBatch" class="mono">{{ selectedBatch.batchNo }} <span class="muted">#{{ selectedBatch.batchId }}</span></span><span v-else class="muted">从已有成本批次中选择，无需填写内部编号</span><el-button type="primary" plain :disabled="busy || !canWrite" @click="picker?.open()">{{ selectedBatch ? '重新选择批次' : '选择批次' }}</el-button></div>
+            <div class="batch-choice">
+              <el-button type="primary" plain :disabled="busy || !canWrite" @click="picker?.open()">{{ selectedBatch ? '重新选择批次' : '选择批次' }}</el-button>
+              <span v-if="selectedBatch" class="mono">{{ selectedBatch.batchNo }} <span class="muted">#{{ selectedBatch.batchId }}</span></span>
+              <span v-else class="muted">从已有成本批次中选择，无需填写内部编号</span>
+            </div>
           </el-form-item>
         </div>
         <div v-if="selectedBatch" class="batch-summary">
@@ -181,7 +185,7 @@ onMounted(load)
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
 .form-grid :deep(.el-select), .form-grid :deep(.el-date-editor), .form-grid :deep(.el-input-number) { width: 100%; }
 .batch-field { grid-column: 1 / -1; }
-.batch-choice { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; width: 100%; gap: 12px; }
+.batch-choice { display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; width: 100%; gap: 12px; }
 .batch-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; margin-bottom: 12px; padding: 16px; background: var(--el-fill-color-light); border-radius: 4px; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .summary-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--el-text-color-secondary); }
 .scope-note, .field-help { font-size: 13px; color: var(--el-text-color-regular); line-height: 1.6; }
