@@ -38,7 +38,7 @@ test('native cost rows expose credible source identifiers and allow server-valid
 test('original allocation setup preserves business references and falls back to real fee and batch IDs from the native DTO',async()=>{
  const native={id:2813,feeId:2736,baseAmount:250,status:'CONFIRMED',lines:[{batchId:2521,qty:30,amount:156.25},{batchId:2582,batchNo:'SEA-SECOND',qty:18,amount:93.75}]}
  const p=loadVueScript(new URL('../src/modules/cost/AllocationList.vue',import.meta.url),{
-  ref:vue.ref,reactive:vue.reactive,onMounted(){},useUserStore:()=>({hasPerm:()=>true}),createCommandIntent:()=>({reset(){}}),ElMessage:{success(){},warning(){},info(){}},
+  ref:vue.ref,reactive:vue.reactive,computed:vue.computed,watch:vue.watch,onMounted(){},onBeforeUnmount(){},getCountryId:()=>3,getToken:()=> 'session-A',useUserStore:()=>({hasPerm:()=>true}),createCommandIntent:()=>({reset(){}}),ElMessage:{success(){},warning(){},info(){}},
   allRecords:async()=>[native,{...native,id:2833,feeNo:'MX-LGS-FEE-000002'}],http:{postIdem:async()=>native},
  },['load','rows','run','preview','form'])
  await p.load();assert.equal(p.rows.value[0].feeNo,'#2736');assert.equal(p.rows.value[1].feeNo,'MX-LGS-FEE-000002')
