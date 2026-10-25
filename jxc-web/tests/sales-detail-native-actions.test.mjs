@@ -1,18 +1,20 @@
+import { loadTsModule } from './contracts/load-ts-module.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { compile, computed, createSSRApp, defineComponent, h, reactive, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
+const salesOrderActions = loadTsModule(new URL('../src/modules/sales/salesOrderActions.ts', import.meta.url))
 const file = new URL('../src/modules/sales/SalesOrderDetail.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
-const fixture = () => ({ id: 71, version: 5, totalQty: 20, approvalStatus: 'APPROVED', fulfillmentStatus: 'PARTIAL_OUTBOUND', lines: [{ id: 11, productId: 501, unit: 'PCS', factor: 1, qty: 20, baseQty: 20, cancelledQty: 4, outboundQty: 8, openQty: 8, price: 21, priceVersionNo: 2, allocs: [{ id: 31, warehouseId: 401, allocQty: 20, cancelledQty: 4, outboundQty: 8, openQty: 8 }] }] })
+const fixture = () => ({ id: 71, version: 5, totalQty: 20, openQty: 8, approvalStatus: 'APPROVED', fulfillmentStatus: 'PARTIAL_OUTBOUND', lines: [{ id: 11, productId: 501, unit: 'PCS', factor: 1, qty: 20, baseQty: 20, cancelledQty: 4, outboundQty: 8, openQty: 8, price: 21, priceVersionNo: 2, allocs: [{ id: 31, warehouseId: 401, allocQty: 20, cancelledQty: 4, outboundQty: 8, openQty: 8 }] }] })
 function detail(beforeConfirm) {
   const calls = [], warnings = [], country = { epoch: 1, timezone: 'America/Mexico_City' }, route = { params: { id: '71' } }
-  const possible = ['openCancel', 'saveCancellation', 'openAllocations', 'saveAllocations', 'allocationForm', 'cancelForm']
+  const possible = ['openCancel', 'saveCancellation', 'openAllocations', 'saveAllocations', 'allocationForm', 'cancelForm', 'submit', 'openOutbound', 'ob', 'canSubmit', 'canOutbound']
   const present = possible.filter(name => new RegExp(`(?:function|const|let)\\s+${name}\\b`).test(source))
   const page = loadVueScript(file, {
-    computed, reactive, ref, watch() {}, onMounted() {}, createCommandIntent: () => ({ intent: 'stable' }),
+    ...salesOrderActions, computed, reactive, ref, watch() {}, onMounted() {}, createCommandIntent: () => ({ intent: 'stable' }),
     useRoute: () => route, useRouter: () => ({}), useCountryStore: () => country,
     useUserStore: () => ({ hasPerm: () => true, fieldAccess: () => 'WRITE' }),
     getCountryId: () => 101, getToken: () => 'fixture', todayIn: () => '2026-10-16',
@@ -92,4 +94,24 @@ test('展开分仓分列展示原量、取消量与有效量，保留完全取�
   assert.match(html, /W2[\s\S]*?有效分仓量：<span>0<\/span>/)
   assert.match(html, /历史缺失仓[\s\S]*?有效分仓量：<span>-<\/span>/)
   assert.equal(JSON.stringify(line), before)
+})
+
+for (const state of [
+  { approvalStatus: 'DRAFT', fulfillmentStatus: 'CANCELLED', openQty: 0 },
+  { approvalStatus: 'DRAFT', fulfillmentStatus: 'CLOSED', openQty: 0 },
+  { approvalStatus: 'DRAFT', fulfillmentStatus: 'PENDING_PREPARE', openQty: 0 },
+  { approvalStatus: 'APPROVED', fulfillmentStatus: 'CLOSED', openQty: 8 },
+  { approvalStatus: 'APPROVED', fulfillmentStatus: 'OUTBOUNDED', openQty: 0 },
+]) test(`停止供货或无未交数量的详情不能提交或打开出库分仓：${JSON.stringify(state)}`, async () => {
+  const page = detail(); Object.assign(page.order.value, state)
+  await page.submit(); await page.openOutbound(); await page.openAllocations()
+  assert.equal(page.calls.length, 0)
+  assert.equal(page.ob.visible, false); assert.equal(page.allocationForm.visible, false)
+  assert.ok(page.warnings.length)
+})
+test('提交确认期间订单关闭则取消发送', async () => {
+  const page = detail(() => { page.order.value.fulfillmentStatus = 'CLOSED' })
+  page.order.value.approvalStatus = 'DRAFT'
+  await assert.rejects(page.submit(), /关闭|供货|提交/)
+  assert.equal(page.calls.length, 0)
 })

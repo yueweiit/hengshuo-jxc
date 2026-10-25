@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { canEditSalesOrder, canSubmitSalesOrder } from './salesOrderActions'
 import { reactive, ref, watch, toRaw } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -189,7 +190,7 @@ async function openEdit(id: number) {
   ])
   if (request !== createRequest || context !== scope()) return
   entry.error = ''; entry.checking = false
-  if (Number(order.id) !== id || order.totalQty == null || order.approvalStatus === 'PENDING' || order.fulfillmentStatus === 'CLOSED') return ElMessage.warning('当前订单不能修改；审批中请先撤回，部分可见订单需由完整授权人员处理')
+  if (Number(order.id) !== id || order.totalQty == null || !canEditSalesOrder(order)) return ElMessage.warning('当前订单不能修改；审批中请先撤回，部分可见订单需由完整授权人员处理')
   const lines = order.lines.map((line: Row) => ({ ...clone(line), warehouseId: line.allocs?.length === 1 ? line.allocs[0].warehouseId : undefined, manual: false }))
   Object.assign(form, { editingId: id, version: order.version, bizDate: todayIn(country.timezone), bookId: order.bookId, orderDate: order.orderDate, customerId: order.customerId, paymentType: order.paymentType, remark: order.remark ?? '', lines })
   original.value = { ...clone(order), lines: clone({ lines }).lines }
@@ -291,7 +292,12 @@ watch(() => route.query.edit, value => {
 watch(scope, () => { ++createRequest; ++bookRequest; form.visible = false; form.saving = false; form.bookId = undefined; books.value = []; booksLoading.value = false }, { flush: 'sync' })
 
 async function submit(row: Row) {
-  await confirmAction(`提交 ${row.docNo}？`, () => http.postIdem(`/sal/orders/${row.id}/submit`, undefined, supplyCommandIntent), { success: '已提交' })
+  if (row.totalQty == null || !canSubmitSalesOrder(row) || !user.hasPerm('sal:order:submit')) return ElMessage.warning('订单已停止供货或没有可提交的未交数量')
+  const context = scope(), orderId = row.id
+  await confirmAction(`提交 ${row.docNo}？`, () => {
+    if (context !== scope() || !canSubmitSalesOrder(row)) throw new Error('订单已切换、关闭或不再允许提交')
+    return http.postIdem(`/sal/orders/${orderId}/submit`, undefined, supplyCommandIntent)
+  }, { success: '已提交' })
   page.value?.reload()
 }
 </script>
@@ -309,8 +315,8 @@ async function submit(row: Row) {
     <template #col-totalAmount="{ row }"><MoneyText :value="row.totalAmount" :currency="row.currency" /></template>
     <template #row-actions="{ row }">
       <el-button link type="primary" @click="router.push(`/sales/orders/${row.id}`)">查看</el-button>
-      <el-button v-if="row.approvalStatus !== 'PENDING' && row.fulfillmentStatus !== 'CLOSED' && user.hasPerm('sal:order:edit')" link type="primary" @click="openEdit(row.id)">修改</el-button>
-      <el-button v-if="['DRAFT', 'REJECTED', 'WITHDRAWN'].includes(row.approvalStatus) && user.hasPerm('sal:order:submit')" link type="success" @click="submit(row)">提交</el-button>
+      <el-button v-if="row.totalQty != null && canEditSalesOrder(row) && user.hasPerm('sal:order:edit')" link type="primary" @click="openEdit(row.id)">修改</el-button>
+      <el-button v-if="row.totalQty != null && canSubmitSalesOrder(row) && user.hasPerm('sal:order:submit')" link type="success" @click="submit(row)">提交</el-button>
     </template>
   </CrudPage>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { canEditSalesOrder, canSubmitSalesOrder, canOutboundSalesOrder } from './salesOrderActions'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -48,7 +49,9 @@ const originalAllocations = new Map<number, string>()
 let outboundAttempt: { fingerprint: string; draft: Row; bizDate: string } | null = null
 const id = computed(() => Number(route.params.id))
 const fullOrder = computed(() => Number(order.value?.id) === id.value && order.value?.totalQty != null)
-const mutableOrder = computed(() => fullOrder.value && order.value?.approvalStatus !== 'PENDING' && order.value?.fulfillmentStatus !== 'CLOSED')
+const mutableOrder = computed(() => fullOrder.value && canEditSalesOrder(order.value))
+const canSubmit = computed(() => fullOrder.value && canSubmitSalesOrder(order.value) && user.hasPerm('sal:order:submit'))
+const canOutbound = computed(() => Number(order.value?.id) === id.value && canOutboundSalesOrder(order.value) && user.hasPerm('sal:outbound:create'))
 const detailScope = () => JSON.stringify([id.value, getCountryId(), getToken(), country.epoch])
 const allocationKey = (allocs: Row[]) => JSON.stringify(allocs.map(row => [row.id ?? null, Number(row.warehouseId), Number(row.allocQty)]).sort((a, b) => Number(a[1]) - Number(b[1])))
 const warehouses = computed(() => {
@@ -56,7 +59,7 @@ const warehouses = computed(() => {
   for (const l of order.value?.lines ?? []) for (const a of l.allocs ?? []) map.set(a.warehouseId, a.warehouseName)
   return [...map].map(([value, label]) => ({ value, label }))
 })
-const canConfirmOut = computed(() => Number(order.value?.id) === id.value && !loading.value && !checkLoading.value && !checkError.value && checkedWarehouseId.value !== undefined && checkedWarehouseId.value === ob.warehouseId && checks.value.every(check => check.ok))
+const canConfirmOut = computed(() => canOutbound.value && !loading.value && !checkLoading.value && !checkError.value && checkedWarehouseId.value !== undefined && checkedWarehouseId.value === ob.warehouseId && checks.value.every(check => check.ok))
 const canCancel = computed(() => mutableOrder.value && Number(order.value?.openQty) > 0 && user.hasPerm(['sal:order:cancel', 'sal:order:create']))
 const canClose = computed(() => mutableOrder.value && Number(order.value?.openQty) > 0 && user.hasPerm(['sal:order:close', 'sal:order:create']))
 
@@ -145,7 +148,12 @@ async function runCheck() {
 }
 
 async function submit() {
-  await confirmAction('提交这张订单？', () => http.postIdem(`/sal/orders/${id.value}/submit`, undefined, supplyCommandIntent), { success: '已提交' })
+  if (!canSubmit.value) return ElMessage.warning('订单已停止供货或没有可提交的未交数量')
+  const orderId = id.value, scope = detailScope()
+  await confirmAction('提交这张订单？', () => {
+    if (scope !== detailScope() || !canSubmit.value) throw new Error('订单已切换、关闭或不再允许提交')
+    return http.postIdem(`/sal/orders/${orderId}/submit`, undefined, supplyCommandIntent)
+  }, { success: '已提交' })
   load()
 }
 async function withdraw() {
@@ -160,7 +168,7 @@ function openCancel(close: boolean) {
 }
 
 async function saveCancellation() {
-  if (cancellationScope !== detailScope()) return ElMessage.warning('国家、登录状态或订单已切换，请重新打开操作')
+  if (!mutableOrder.value || cancellationScope !== detailScope()) return ElMessage.warning('国家、登录状态或订单已切换，请重新打开操作')
   if (!cancelForm.reason.trim() || !cancelForm.bizDate) return ElMessage.warning('请填写操作日期和原因')
   const selected = cancelForm.lines.filter(line => Number(line.qty) > 0)
   if (!cancelForm.close && (!selected.length || selected.some(line => !Number.isFinite(Number(line.qty)) || Number(line.qty) > Number(line.openQty)))) return ElMessage.warning('请选择取消数量，且不能超过原订单未出库数量')
@@ -169,7 +177,7 @@ async function saveCancellation() {
   cancelForm.saving = true
   try {
     const completed = await confirmAction(close ? '关闭这张订单的全部未交数量？已出库事实保留。' : '取消所选未交数量？原服务将释放对应库存与授信占用。', () => {
-      if (scope !== detailScope()) throw new BizError('CONTEXT_CHANGED', '国家、登录状态或订单已切换，请重新打开操作')
+      if (!mutableOrder.value || scope !== detailScope()) throw new BizError('CONTEXT_CHANGED', '国家、登录状态或订单已切换，请重新打开操作')
       return http.postIdem(`/sal/orders/${commandId}/${close ? 'close' : 'cancel-lines'}`, body, intent)
     }, { success: close ? '已关闭未交数量' : '已取消所选未交数量' })
     if (completed && scope === detailScope()) { cancelForm.visible = false; await load() }
@@ -192,7 +200,7 @@ async function openAllocations() {
 }
 
 async function saveAllocations() {
-  if (allocationScope !== detailScope()) return ElMessage.warning('国家、登录状态或订单已切换，请重新打开分仓')
+  if (!mutableOrder.value || allocationScope !== detailScope()) return ElMessage.warning('国家、登录状态或订单已切换，请重新打开分仓')
   if (!allocationForm.bizDate) return ElMessage.warning('请填写分仓操作日期')
   const changed = allocationForm.lines.filter(line => allocationKey(line.allocs) !== originalAllocations.get(Number(line.id)))
   if (!changed.length) return ElMessage.warning('分仓没有变化')
@@ -208,6 +216,7 @@ async function saveAllocations() {
 }
 
 async function openOutbound() {
+  if (!canOutbound.value) return ElMessage.warning('订单已停止供货或没有可出库的未交数量')
   outboundAttempt = null
   const qty: Record<number, number> = {}
   for (const l of order.value?.lines ?? []) for (const a of l.allocs ?? []) if (a.openQty > 0) qty[a.id] = a.openQty
@@ -261,8 +270,8 @@ onMounted(load)
             <p class="customer-name">{{ order.customerName || '-' }}</p>
           </div>
           <div class="toolbar detail-actions" aria-label="订单操作">
-            <el-button v-if="['DRAFT', 'REJECTED', 'WITHDRAWN'].includes(order.approvalStatus) && user.hasPerm('sal:order:submit')" type="primary" @click="submit">提交审批</el-button>
-            <el-button v-if="order.approvalStatus === 'APPROVED' && user.hasPerm('sal:outbound:create')" type="primary" @click="openOutbound">出库</el-button>
+            <el-button v-if="canSubmit" type="primary" @click="submit">提交审批</el-button>
+            <el-button v-if="canOutbound" type="primary" @click="openOutbound">出库</el-button>
             <el-button v-if="mutableOrder && user.hasPerm('sal:order:edit')" @click="router.push({ path: '/sales/orders', query: { edit: String(id) } })">编辑订单</el-button>
             <el-button v-if="mutableOrder && user.hasPerm('sal:order:edit')" :loading="allocationForm.loading" @click="openAllocations">编辑分仓</el-button>
             <el-button v-if="order.approvalStatus === 'PENDING' && user.hasPerm('sal:order:submit')" @click="withdraw">撤回审批</el-button>

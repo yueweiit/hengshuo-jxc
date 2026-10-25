@@ -1,8 +1,10 @@
+import { loadTsModule } from './contracts/load-ts-module.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
 import './support.mjs'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
+const salesOrderActions = loadTsModule(new URL('../src/modules/sales/salesOrderActions.ts', import.meta.url))
 
 const helperUrl = new URL('../src/api/command-intent.ts', import.meta.url)
 async function helper() {
@@ -81,7 +83,7 @@ test('a created outbound draft is reused when its confirmation response fails', 
   const helpers = await helper()
   const file = new URL('../src/modules/sales/SalesOrderDetail.vue', import.meta.url)
   let creates = 0, confirmations = 0
-  const order = { id: 1, lines: [{ allocs: [{ id: 10, warehouseId: 401, warehouseName: 'Warehouse', openQty: 2 }] }] }
+  const order = { id: 1, openQty: 2, approvalStatus: 'APPROVED', fulfillmentStatus: 'PENDING_OUTBOUND', lines: [{ allocs: [{ id: 10, warehouseId: 401, warehouseName: 'Warehouse', openQty: 2 }] }] }
   const http = {
     get: async url => url.endsWith('/timeline') ? [] : url.endsWith('/outbound-check') ? { checks: [] } : order,
     post: async () => ({ id: 500 + ++creates }),
@@ -92,7 +94,7 @@ test('a created outbound draft is reused when its confirmation response fails', 
       return { id: 501 }
     },
   }
-  const dependencies = { computed: vue.computed, ref: vue.ref, reactive: vue.reactive, onMounted() {}, watch() {}, useRoute: () => ({ params: { id: 1 } }), useRouter: () => ({}), useUserStore: () => ({}), useCountryStore: () => ({ timezone: 'Asia/Shanghai' }), todayIn: () => '2026-10-16', ElMessage: { success() {} }, http, ...helpers, getToken: () => 'test-user', getCountryId: () => 1 }
+  const dependencies = { ...salesOrderActions, computed: vue.computed, ref: vue.ref, reactive: vue.reactive, onMounted() {}, watch() {}, useRoute: () => ({ params: { id: 1 } }), useRouter: () => ({}), useUserStore: () => ({ hasPerm: () => true }), useCountryStore: () => ({ timezone: 'Asia/Shanghai' }), todayIn: () => '2026-10-16', ElMessage: { success() {} }, http, ...helpers, getToken: () => 'test-user', getCountryId: () => 1 }
   const scope = loadVueScript(file, dependencies, ['order', 'ob', 'openOutbound', 'confirmOut'])
   scope.order.value = order
   await scope.openOutbound()

@@ -1,7 +1,9 @@
+import { loadTsModule } from './contracts/load-ts-module.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { reactive, ref, watch, toRaw, nextTick } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
+const salesOrderActions = loadTsModule(new URL('../src/modules/sales/salesOrderActions.ts', import.meta.url))
 
 const book = id => ({ id, code: `B${id}`, name: `Book ${id}`, baseCurrency: 'MXN', entityId: 301, status: 'ACTIVE' })
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
@@ -10,7 +12,7 @@ const settled = async () => { await nextTick(); await new Promise(resolve => set
 function salesPage({ defaultBooks = [], warehouseBooks = async () => [] } = {}) {
   const calls = [], posts = [], warnings = [], country = reactive({ currentId: 101, epoch: 1, timezone: 'UTC' }), user = reactive({ token: 'test-session', hasPerm: () => true })
   const page = loadVueScript(new URL('../src/modules/sales/SalesOrderList.vue', import.meta.url), {
-    reactive, ref, watch, toRaw, useRoute: () => ({ query: {} }), useRouter: () => ({ push() {} }), useUserStore: () => user, useCountryStore: () => country,
+    ...salesOrderActions, reactive, ref, watch, toRaw, useRoute: () => ({ query: {} }), useRouter: () => ({ push() {} }), useUserStore: () => user, useCountryStore: () => country,
     createCommandIntent: () => ({ reset() {} }), todayIn: () => '2026-10-16',
     ElMessage: { warning: value => warnings.push(value), success() {} },
     APPROVAL_STATUS: [], CUSTOMER_SOURCE: [], FULFILLMENT_STATUS: [], PAYMENT_TYPES: [], PAY_STATUS: [],

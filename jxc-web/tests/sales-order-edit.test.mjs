@@ -1,17 +1,20 @@
+import { loadTsModule } from './contracts/load-ts-module.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { reactive, ref, watch, toRaw, nextTick } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
+const salesOrderActions = loadTsModule(new URL('../src/modules/sales/salesOrderActions.ts', import.meta.url))
 
 const deferred = () => { let resolve; const promise = new Promise(yes => { resolve = yes }); return { promise, resolve } }
 const settle = async () => { await nextTick(); await new Promise(resolve => setImmediate(resolve)) }
-const original = () => ({ id: 77, version: 9, bookId: 6, orderDate: '2026-10-01', customerId: 93, paymentType: 'CREDIT', remark: 'before', totalQty: 20, approvalStatus: 'APPROVED', fulfillmentStatus: 'PENDING_OUTBOUND', deliveryDate: '2026-11-01', shipAddress: { city: 'MX' }, lines: [{ id: 78, productId: 44, qty: 2, unit: 'BOX', factor: 10, price: 19.73, stdPrice: 20, manualPriceFlag: true, priceSource: 'MANUAL', priceRefId: 88, priceVersionNo: 1, discountAmount: 1, taxRate: 16, outboundQty: 0, cancelledQty: 0, allocs: [{ id: 79, warehouseId: 12, allocQty: 12 }, { id: 80, warehouseId: 151, allocQty: 8 }] }] })
+const original = () => ({ id: 77, version: 9, bookId: 6, orderDate: '2026-10-01', customerId: 93, paymentType: 'CREDIT', remark: 'before', totalQty: 20, openQty: 20, approvalStatus: 'APPROVED', fulfillmentStatus: 'PENDING_OUTBOUND', deliveryDate: '2026-11-01', shipAddress: { city: 'MX' }, lines: [{ id: 78, productId: 44, qty: 2, unit: 'BOX', factor: 10, price: 19.73, stdPrice: 20, manualPriceFlag: true, priceSource: 'MANUAL', priceRefId: 88, priceVersionNo: 1, discountAmount: 1, taxRate: 16, outboundQty: 0, cancelledQty: 0, allocs: [{ id: 79, warehouseId: 12, allocQty: 12 }, { id: 80, warehouseId: 151, allocQty: 8 }] }] })
 function setup({ order = original(), getOrder = async () => order, price = async () => ({ price: 99, priceSource: 'BASE' }), put = async () => ({ id: 77 }), post = async () => ({ id: 100 }) } = {}) {
   const country = reactive({ currentId: 3, epoch: 1, timezone: 'America/Mexico_City' }), user = reactive({ token: 'owner', hasPerm: () => true })
   const puts = [], posts = [], prices = [], warnings = [], pushes = []
   const api = loadVueScript(new URL('../src/modules/sales/SalesOrderList.vue', import.meta.url), {
-    reactive, ref, watch, toRaw, useRoute: () => reactive({ query: {} }), useRouter: () => ({ push: value => pushes.push(value) }),
+    ...salesOrderActions, reactive, ref, watch, toRaw, useRoute: () => reactive({ query: {} }), useRouter: () => ({ push: value => pushes.push(value) }),
     useCountryStore: () => country, useUserStore: () => user, todayIn: () => '2026-10-16', createCommandIntent: () => ({ reset() {} }),
+    confirmAction: async (_, action) => { await action(); return true },
     ElMessage: { warning: message => warnings.push(message), success() {} }, APPROVAL_STATUS: [], CUSTOMER_SOURCE: [], FULFILLMENT_STATUS: [], PAYMENT_TYPES: [], PAY_STATUS: [],
     allRecords: async path => path === '/md/customers' ? [{ id: 93 }, { id: 94 }] : path === '/md/country-skus' ? [{ productId: 44, baseUnit: 'PCS' }] : [{ id: 12 }, { id: 151 }],
     http: {
@@ -19,7 +22,7 @@ function setup({ order = original(), getOrder = async () => order, price = async
       put: async (path, body) => { puts.push({ path, body: structuredClone(body) }); return put(path, body) },
       postIdem: async (...args) => { posts.push(args); return post(...args) },
     },
-  }, ['form', 'books', 'openCreate', 'openEdit', 'save', 'resolve'])
+  }, ['form', 'books', 'openCreate', 'openEdit', 'save', 'resolve', 'submit'])
   return { ...api, country, user, puts, posts, prices, warnings, pushes }
 }
 
@@ -76,7 +79,7 @@ for (const operation of ['create', 'edit']) test(`manual ${operation} preserves 
   assert.deepEqual(p.warnings, [])
 })
 
-for (const invalid of [{ totalQty: null }, { approvalStatus: 'PENDING' }, { fulfillmentStatus: 'CLOSED' }]) test(`original unavailable/immutable order cannot open editor: ${JSON.stringify(invalid)}`, async () => {
+for (const invalid of [{ totalQty: null }, { approvalStatus: 'PENDING' }, { fulfillmentStatus: 'CLOSED' }, { fulfillmentStatus: 'CANCELLED' }, { openQty: 0 }, { openQty: null }]) test(`original unavailable/immutable order cannot open editor: ${JSON.stringify(invalid)}`, async () => {
   const p = setup({ order: { ...original(), ...invalid } }); await p.openEdit(77)
   assert.equal(p.form.visible, false); assert.deepEqual(p.puts, []); assert.ok(p.warnings.length)
 })
@@ -156,4 +159,9 @@ test('late create completion cannot close a new editor in the same country and s
   write.resolve({ id: 100 }); await saving
   assert.equal(p.form.visible, true); assert.equal(p.form.editingId, 77)
   assert.equal(p.form.remark, 'preserve new input'); assert.deepEqual(p.pushes, [])
+})
+
+for (const state of [{ fulfillmentStatus: 'CLOSED' }, { fulfillmentStatus: 'CANCELLED' }, { openQty: 0 }, { openQty: null }, { totalQty: null }]) test(`列表提交拒绝停止供货和未知或零未交数量：${JSON.stringify(state)}`, async () => {
+  const p = setup(); await p.submit({ ...original(), approvalStatus: 'DRAFT', ...state })
+  assert.deepEqual(p.posts, []); assert.ok(p.warnings.length)
 })

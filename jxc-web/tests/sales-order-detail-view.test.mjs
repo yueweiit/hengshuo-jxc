@@ -1,12 +1,14 @@
+import { loadTsModule } from './contracts/load-ts-module.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
+const salesOrderActions = loadTsModule(new URL('../src/modules/sales/salesOrderActions.ts', import.meta.url))
 
 const file = new URL('../src/modules/sales/SalesOrderDetail.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
-const fixture = (id = 71) => ({ id, docNo: `SO-${id}`, totalQty: 20, totalAmount: 200, currency: 'MXN', approvalStatus: 'APPROVED', fulfillmentStatus: 'PARTIAL_OUTBOUND', lines: [{ id: 11, productCode: 'SKU-11', productName: '商品', qty: 20, unit: 'PCS', baseQty: 20, cancelledQty: 4, outboundQty: 8, openQty: 8, allocs: [{ id: 31, warehouseId: 401, warehouseName: 'A仓', allocQty: 12, cancelledQty: 4, outboundQty: 4, openQty: 4 }, { id: 32, warehouseId: 402, warehouseName: 'B仓', allocQty: 8, cancelledQty: 0, outboundQty: 4, openQty: 4 }] }] })
+const fixture = (id = 71) => ({ id, docNo: `SO-${id}`, totalQty: 20, openQty: 8, totalAmount: 200, currency: 'MXN', approvalStatus: 'APPROVED', fulfillmentStatus: 'PARTIAL_OUTBOUND', lines: [{ id: 11, productCode: 'SKU-11', productName: '商品', qty: 20, unit: 'PCS', baseQty: 20, cancelledQty: 4, outboundQty: 8, openQty: 8, allocs: [{ id: 31, warehouseId: 401, warehouseName: 'A仓', allocQty: 12, cancelledQty: 4, outboundQty: 4, openQty: 4 }, { id: 32, warehouseId: 402, warehouseName: 'B仓', allocQty: 8, cancelledQty: 0, outboundQty: 4, openQty: 4 }] }] })
 const passed = { checks: [{ item: '仓库权限', ok: true, message: '有该仓数据范围' }] }
 function deferred() {
   let resolve, reject
@@ -18,7 +20,7 @@ function detail(read) {
   const calls = [], writes = [], warnings = [], stops = []
   const names = ['order', 'loading', 'load', 'loadError', 'timeline', 'timelineError', 'timelineLoading', 'loadTimeline', 'ob', 'checks', 'runCheck', 'checkError', 'checkLoading', 'checkedWarehouseId', 'canConfirmOut', 'confirmOut', 'fullOrder', 'warehouses']
   const page = loadVueScript(file, {
-    computed, reactive, ref, watch: (...args) => { const stop = watch(...args); stops.push(stop); return stop }, onMounted() {},
+    ...salesOrderActions, computed, reactive, ref, watch: (...args) => { const stop = watch(...args); stops.push(stop); return stop }, onMounted() {},
     useRoute: () => route, useRouter: () => ({}), useCountryStore: () => country,
     useUserStore: () => ({ hasPerm: () => true, fieldAccess: () => 'WRITE' }),
     createCommandIntent: () => ({}), getCountryId: () => 2, getToken: () => 'owner', todayIn: () => '2026-10-24',
