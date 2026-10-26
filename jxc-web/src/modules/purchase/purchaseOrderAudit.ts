@@ -1,6 +1,7 @@
 import type { AuditLog } from '@/components/AuditTimeline.vue'
 import { formatQty } from '@/utils/format'
 import { statusDef } from '@/utils/status'
+import { defaultAuditPresentation, type AuditDrawerEntry, type AuditSnapshot } from '@/components/auditPresentation'
 
 type Snapshot = Record<string, unknown>
 export interface AuditCell { text: string; status?: string }
@@ -139,14 +140,6 @@ function numericCell(value: unknown, key: string, line: Snapshot, parent: Snapsh
   return { text: `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${digits ? `.${digits}` : ''}` }
 }
 
-/** Purchase events often occur in the same minute; keep seconds without changing shared date formatting. */
-export function formatAuditTime(value: string, timeZone: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) return '日志时间无法识别'
-  const text = new Intl.DateTimeFormat('sv-SE', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(date)
-  const zone = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'shortOffset' }).formatToParts(date).find(p => p.type === 'timeZoneName')!.value
-  return `${text} ${zone}`
-}
 function snapshot(source: Snapshot, current: Snapshot): OrderAuditSnapshot {
   const fields: AuditField[] = [], totals: AuditField[] = []
   for (const key of Object.keys(LABELS)) {
@@ -251,4 +244,35 @@ export function purchaseOrderAudit(log: AuditLog, current: Snapshot = {}): Purch
   if (added && removed) entry.notes.push('历史明细无法唯一对应，已分别列出移除和新增。')
   if ([...oldLines, ...newLines].some(line => !recorded(line.productName) && !recorded(line.productCode))) entry.notes.push('部分商品历史名称未记录，使用商品标识定位。')
   return entry
+}
+
+/** Adapt the existing purchase comparison; never recalculate history from current reference data. */
+function drawerSnapshot(source: OrderAuditSnapshot, productsOnly = false): AuditSnapshot {
+  const columns = source.lines?.length ? [...source.columns, ...source.secondaryColumns] : []
+  return {
+    fields: productsOnly ? [] : [...source.fields, ...source.totals], columns,
+    rows: source.lines ? source.lines.map(line => ({
+      key: String(line.key),
+      cells: columns.map(column => column.key === 'product' ? {
+        text: `${[line.currentCode || line.code, line.currentName || line.name].filter(Boolean).join(' · ')}${line.currentName || line.currentCode ? '（当前资料）' : ''}${line.productId ? `（历史标识 #${line.productId}）` : ''}`,
+      } : line.cells[column.key]!),
+    })) : [],
+    emptyMessage: source.lines === undefined ? '此快照未提供可识别的商品明细' : source.lines.length === 0 ? '此快照明确记录为无商品明细' : undefined,
+  }
+}
+
+export function purchaseOrderDrawerPresentation(log: AuditLog, current?: Snapshot): AuditDrawerEntry {
+  if (['ATTACHMENT_UPLOAD', 'ATTACHMENT_DELETE'].includes(log.action)) return defaultAuditPresentation(log)
+  const view = purchaseOrderAudit(log, current)
+  return {
+    title: view.title, isCreate: view.isCreate, summary: view.summary, status: view.status,
+    changes: view.changes, otherChanges: view.other, originalAction: view.originalAction,
+    kind: view.isCreate ? 'create' : 'change',
+    notes: [...view.notes, ...(view.linesUnchanged !== undefined ? [`商品明细保持一致：${view.linesUnchanged} 行商品的已记录业务字段均未变化。`] : [])],
+    snapshot: view.snapshot ? drawerSnapshot(view.snapshot) : undefined,
+    extraSnapshots: [
+      ...(view.added ? [{ key: 'added', label: `列入商品 ${view.added.lines!.length} 行`, snapshot: drawerSnapshot(view.added, true) }] : []),
+      ...(view.removed ? [{ key: 'removed', label: `移除商品 ${view.removed.lines!.length} 行`, snapshot: drawerSnapshot(view.removed, true) }] : []),
+    ],
+  }
 }

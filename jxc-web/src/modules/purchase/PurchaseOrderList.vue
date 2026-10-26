@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { http, createCommandIntent } from '@/api/http'
 import { useUserStore } from '@/stores/user'
@@ -10,6 +10,7 @@ import { PO_STATUS, PRODUCT_SOURCE, SUPPLIER_SOURCE } from '@/modules/shared/biz
 import { confirmAction } from '@/utils/action'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
 import PurchaseOrderAudit from './PurchaseOrderAudit.vue'
+import { auditDocumentContext } from '@/components/auditPresentation'
 import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
@@ -35,6 +36,10 @@ const router = useRouter()
 const user = useUserStore()
 const page = ref<CrudPageExpose>()
 const form = ref<InstanceType<typeof PurchaseOrderForm>>()
+const auditVisible = ref(false)
+const auditOrder = ref<Order>()
+const auditContext = computed(() => auditOrder.value ? auditDocumentContext({ ...auditOrder.value }, '采购单') : { title: '采购单', identifier: '尚未选择记录' })
+function openAudit(row: Order) { auditOrder.value = row; auditVisible.value = true }
 
 const columns: ColumnDef[] = [
   { prop: 'docNo', label: '采购单号', width: 185, fixed: 'left' },
@@ -85,11 +90,8 @@ function onSaved(o: { id: number }) {
     :search-fields="searchFields"
     :can-create="false"
     :can-toggle="false"
-    audit-type="purchase-order"
-    audit-width="min(1320px, 96vw)"
     :actions-width="220"
   >
-    <template #audit="{ resourceId }"><PurchaseOrderAudit :resource-id="resourceId" /></template>
     <template #toolbar>
       <el-button v-if="user.hasPerm('pur:order:create')" type="primary" @click="form?.open()">
         <el-icon><Plus /></el-icon>新建采购单
@@ -115,9 +117,11 @@ function onSaved(o: { id: number }) {
       </template>
       <el-button v-if="row.status === 'DRAFT' && user.hasPerm('pur:order:submit')" link type="success" @click="submit(row)">提交</el-button>
       <el-button v-if="row.status === 'DRAFT' && user.hasPerm('pur:order:cancel')" link type="danger" @click="voidOrder(row)">作废</el-button>
+      <el-button link @click="openAudit(row)">操作日志</el-button>
     </template>
   </CrudPage>
   <PurchaseOrderForm ref="form" @saved="onSaved" />
+  <PurchaseOrderAudit v-if="auditOrder && auditVisible" :key="auditOrder.id" v-model="auditVisible" :resource-id="auditOrder.id" :context="auditContext" />
 </template>
 
 <style scoped>

@@ -79,7 +79,7 @@ function records(t, props = {}) {
     ref: Vue.ref, computed: Vue.computed, watch: Vue.watch,
     defineProps: () => parameters, defineExpose() {}, defineEmits: () => () => {},
     groupAuditLogs: model().groupAuditLogs, rawAuditRecord: model().rawAuditRecord,
-  }, ['groups', 'opened', 'allExpanded', 'toggleAll', 'setOpen', 'isOpen', 'snapshotPanels', 'onToggle', 'rawAuditRecord']))
+  }, ['groups', 'opened', 'allExpanded', 'toggleAll', 'setOpen', 'isOpen', 'snapshotPanels', 'changeGroups', 'onToggle', 'rawAuditRecord']))
   t.after(() => scope.stop())
   const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*?)<\/template>\s*<style/)[1]
   const component = { setup: () => ({ ...page, ...parameters }), render: Vue.compile(template) }
@@ -154,4 +154,32 @@ test('receipt cards and actual product columns render from the same real event t
   assert.match(html, /<th[^>]*>商品<\/th>/)
   assert.match(html, /<th[^>]*>合格<\/th>/)
   assert.match(html, /商品 #21/)
+})
+
+test('the actual shared drawer refresh and retry each reload once and notify the business reference reader', async () => {
+  const file = new URL('../src/components/AuditDrawer.vue', import.meta.url)
+  const props = { modelValue: true, resourceType: 'purchase-order', resourceId: 428, context: { title: '采购单', identifier: 'PO-428' }, presentation: undefined }
+  const events = [], clicks = []
+  const page = loadVueScript(file, {
+    ref: Vue.ref, defineProps: () => props, defineExpose() {},
+    defineEmits: () => name => events.push(name), useCountryStore: () => ({ timezone: 'Asia/Shanghai' }),
+  }, ['timeline', 'reload', 'emit', 'country'])
+  let queries = 0, retry
+  page.timeline.value = { reload() { queries++ } }
+  const source = readFileSync(file, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+  const component = { setup: () => ({ ...props, ...page }), render: Vue.compile(source) }
+  const app = Vue.createSSRApp({ render: () => Vue.h(component, null, { notice: () => Vue.h('p', { role: 'alert' }, '参考资料读取失败') }) })
+  app.component('ElDrawer', { setup: (_, { slots }) => () => Vue.h('aside', slots.default?.()) })
+  app.component('AuditTimeline', { setup: (_, { slots }) => () => Vue.h('div', slots.layout({ logs: [], loading: false, loadError: '', total: 0 })) })
+  app.component('AuditDrawerRecords', { setup: (_, { attrs }) => { retry = attrs.onReload; return () => null } })
+  app.component('ElButton', { setup: (_, { attrs, slots }) => { clicks.push(attrs.onClick); return () => Vue.h('button', slots.default?.()) } })
+  app.component('ElIcon', { setup: (_, { slots }) => () => Vue.h('i', slots.default?.()) })
+  app.component('StatusTag', { render: () => null })
+  for (const name of ['Clock', 'Refresh', 'Close']) app.component(name, { render: () => null })
+  const warnings = []; app.config.warnHandler = message => warnings.push(message)
+  const html = await renderToString(app)
+  assert.match(html, /PO-428/); assert.match(html, /role="alert">参考资料读取失败/)
+  clicks[0](); retry()
+  assert.equal(queries, 2); assert.deepEqual(events, ['reload', 'reload'])
+  assert.deepEqual(warnings, [])
 })

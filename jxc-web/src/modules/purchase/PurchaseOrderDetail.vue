@@ -52,6 +52,7 @@ const tab = ref('receipts')
 const form = ref<InstanceType<typeof PurchaseOrderForm>>()
 const approval = ref<InstanceType<typeof ApprovalPanel>>()
 const audit = ref<InstanceType<typeof PurchaseOrderAudit>>()
+const auditVisible = ref(false)
 const summaryCard = ref<HTMLElement>()
 const workspace = ref<HTMLElement>()
 const splitter = ref<HTMLElement>()
@@ -193,7 +194,7 @@ function focusPane(target: DetailPane) {
   focusedPane.value = toggleFocusedPane(focusedPane.value, target)
 }
 
-watch(id, load)
+watch(id, () => { auditVisible.value = false; load() })
 onMounted(() => {
   load()
   updateWorkspaceLayout()
@@ -219,6 +220,7 @@ onBeforeUnmount(() => {
           <StatusTag :status="o.status" />
         </h2>
         <div class="toolbar">
+          <el-button :disabled="loading || !o.id" @click="auditVisible = true">操作日志</el-button>
           <el-button v-if="editable && user.hasPerm(['pur:order:edit', 'pur:order:create'])" @click="form?.open(id)">编辑</el-button>
           <el-button v-if="o.status === 'DRAFT' && user.hasPerm('pur:order:submit')" type="primary" @click="submit">提交</el-button>
           <el-button v-if="['CONFIRMED', 'PARTIAL_DELIVERED'].includes(o.status) && user.hasPerm('pur:order:cancel')" @click="openCancel">部分取消</el-button>
@@ -393,9 +395,6 @@ onBeforeUnmount(() => {
         <el-tab-pane label="审批" name="approval">
           <ApprovalPanel ref="approval" doc-type="PURCHASE_ORDER" :doc-id="id" />
         </el-tab-pane>
-        <el-tab-pane label="操作日志" name="audit" lazy>
-          <PurchaseOrderAudit ref="audit" :resource-id="id" :order="o" />
-        </el-tab-pane>
         </el-tabs>
       </section>
     </div>
@@ -429,6 +428,7 @@ onBeforeUnmount(() => {
     </el-dialog>
 
     <PurchaseOrderForm ref="form" @saved="load" />
+    <PurchaseOrderAudit v-if="auditVisible" :key="id" ref="audit" v-model="auditVisible" :resource-id="id" :order="o" />
   </div>
 </template>
 

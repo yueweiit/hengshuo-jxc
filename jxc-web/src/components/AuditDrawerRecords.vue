@@ -13,11 +13,18 @@ function snapshotPanels(view: AuditDrawerEntry) {
   return [
     ...(view.previousSnapshot ? [{ key: 'before', label: '操作前单据与商品明细', snapshot: view.previousSnapshot }] : []),
     ...(view.snapshot ? [{ key: 'details', label: view.isCreate ? '单据与商品明细' : '操作后单据与商品明细', snapshot: view.snapshot }] : []),
+    ...(view.extraSnapshots ?? []),
+  ]
+}
+function changeGroups(view: AuditDrawerEntry) {
+  return [
+    ...(view.changes.length ? [{ key: 'changes', label: '单据与商品明细', collapsed: view.isCreate, changes: view.changes }] : []),
+    ...(view.otherChanges?.length ? [{ key: 'other', label: '其他字段变化', collapsed: true, changes: view.otherChanges }] : []),
   ]
 }
 const expansionKeys = computed(() => groups.value.flatMap(group => group.entries.flatMap(({ log, view }) => [
   expansionKey(log.id, 'raw'), ...snapshotPanels(view).map(panel => expansionKey(log.id, panel.key)),
-  ...(view.isCreate && view.changes.length ? [expansionKey(log.id, 'changes')] : []),
+  ...changeGroups(view).filter(group => group.collapsed).map(group => expansionKey(log.id, group.key)),
 ])))
 const allExpanded = computed(() => expansionKeys.value.length > 0 && expansionKeys.value.every(key => opened.value.has(key)))
 function isOpen(id: number, part: string) { return opened.value.has(expansionKey(id, part)) }
@@ -66,9 +73,9 @@ watch(() => props.logs, logs => {
                 <div class="audit-file-info"><div>{{ entry.view.attachment.fileName }}</div><div class="audit-file-meta"><span v-if="entry.view.attachment.category">{{ entry.view.attachment.category }}</span><span v-if="entry.view.attachment.id">附件编号 {{ entry.view.attachment.id }}</span></div></div>
                 <span v-if="entry.view.attachment.version !== undefined" class="audit-file-version">版本 {{ entry.view.attachment.version }}</span>
               </div>
-              <component :is="entry.view.isCreate ? 'details' : 'div'" v-if="entry.view.changes.length" class="audit-business-changes" :open="entry.view.isCreate ? isOpen(entry.log.id, 'changes') : undefined" @toggle="onToggle(entry.log.id, 'changes', $event)">
-                <summary v-if="entry.view.isCreate" class="audit-detail-toggle"><el-icon><ArrowRight /></el-icon>单据与商品明细</summary>
-                <div v-for="(change, index) in entry.view.changes" :key="index" class="audit-change-row">
+              <component :is="group.collapsed ? 'details' : 'div'" v-for="group in changeGroups(entry.view)" :key="group.key" class="audit-business-changes" :open="group.collapsed ? isOpen(entry.log.id, group.key) : undefined" @toggle="onToggle(entry.log.id, group.key, $event)">
+                <summary v-if="group.collapsed" class="audit-detail-toggle"><el-icon><ArrowRight /></el-icon>{{ group.label }}</summary>
+                <div v-for="(change, index) in group.changes" :key="index" class="audit-change-row">
                   <span class="audit-change-label">{{ change.label }}</span><div class="audit-change-values">
                     <template v-if="!entry.view.isCreate"><StatusTag v-if="change.from.status" :status="change.from.status" /><span v-else>{{ change.from.text }}</span><span class="audit-change-arrow" aria-label="变更为">→</span></template>
                     <StatusTag v-if="change.to.status" :status="change.to.status" /><span v-else>{{ change.to.text }}</span>
@@ -78,12 +85,13 @@ watch(() => props.logs, logs => {
               <details v-for="panel in snapshotPanels(entry.view)" :key="panel.key" class="audit-snapshot-detail" :open="isOpen(entry.log.id, panel.key)" @toggle="onToggle(entry.log.id, panel.key, $event)">
                 <summary class="audit-detail-toggle"><el-icon><ArrowRight /></el-icon>{{ panel.label }}</summary>
                 <div class="audit-snapshot">
-                  <dl v-if="panel.snapshot.fields.length" class="audit-snapshot-fields"><div v-for="field in panel.snapshot.fields" :key="field.label"><dt>{{ field.label }}</dt><dd><StatusTag v-if="field.value.status" :status="field.value.status" /><span v-else>{{ field.value.text }}</span></dd></div></dl>
+                  <dl v-if="panel.snapshot.fields.length" class="audit-snapshot-fields"><div v-for="field in panel.snapshot.fields" :key="field.label"><dt>{{ field.label }}</dt><dd><StatusTag v-if="field.value.status" :status="field.value.status" /><span v-else>{{ field.value.text }}</span><small v-if="field.reference" class="audit-field-reference">{{ field.reference }}</small></dd></div></dl>
                   <div v-if="panel.snapshot.columns.length" class="audit-line-scroll"><table class="audit-line-table"><caption>商品明细 · {{ panel.snapshot.rows.length }} 行</caption><thead><tr><th v-for="column in panel.snapshot.columns" :key="column.key" scope="col" :class="{ numeric: column.numeric }">{{ column.label }}</th></tr></thead><tbody><tr v-for="row in panel.snapshot.rows" :key="row.key"><td v-for="(cell, index) in row.cells" :key="index" :class="{ numeric: panel.snapshot.columns[index]?.numeric }">{{ cell.text }}</td></tr></tbody></table></div>
+                  <p v-if="panel.snapshot.emptyMessage" class="audit-snapshot-empty">{{ panel.snapshot.emptyMessage }}</p>
                 </div>
               </details>
               <p v-for="note in entry.view.notes" :key="note" class="audit-note">{{ note }}</p>
-              <p v-if="!entry.view.isCreate && !entry.view.changes.length && !entry.view.snapshot && !entry.view.attachment && !entry.view.notes.length" class="audit-note">未记录可识别的业务字段变化，可查看原始记录。</p>
+              <p v-if="!entry.view.isCreate && !entry.view.changes.length && !entry.view.otherChanges?.length && !entry.view.snapshot && !entry.view.attachment && !entry.view.notes.length" class="audit-note">未记录可识别的业务字段变化，可查看原始记录。</p>
               <details class="audit-raw" :open="isOpen(entry.log.id, 'raw')" @toggle="onToggle(entry.log.id, 'raw', $event)"><summary class="audit-detail-toggle"><el-icon><ArrowRight /></el-icon>查看原始记录</summary><pre>{{ rawAuditRecord(entry.log) }}</pre></details>
             </li>
           </ol>
@@ -128,6 +136,8 @@ watch(() => props.logs, logs => {
 .audit-line-scroll { overflow-x: auto; }.audit-line-table { width: 100%; border-collapse: collapse; font-size: 12px; }.audit-line-table caption { text-align: left; padding: 9px 12px; border-top: 1px solid var(--audit-line); color: var(--audit-body); }
 .audit-line-table th { padding: 7px 10px; background: var(--audit-soft); color: var(--audit-muted); font-weight: 400; font-size: 11px; white-space: nowrap; }.audit-line-table td { padding: 9px 10px; border-top: 1px solid var(--audit-line); overflow-wrap: anywhere; min-width: 50px; }.audit-line-table th,.audit-line-table td { text-align: left; }.audit-line-table .numeric { text-align: right; font-variant-numeric: tabular-nums; }.audit-line-table th:first-child,.audit-line-table td:first-child { padding-left: 12px; min-width: 100px; }
 .audit-note { margin: 7px 0 0; color: var(--audit-muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.audit-field-reference { display: block; margin-top: 3px; color: var(--audit-muted); font-size: 11px; }
+.audit-snapshot-empty { padding: 12px; margin: 0; color: var(--audit-muted); font-size: 12px; }
 .audit-raw { margin-top: 7px; }.audit-raw > summary { color: var(--audit-muted); font-size: 11px; }.audit-raw pre { padding: 11px 12px; margin: 5px 0 0; background: var(--audit-soft); border-radius: 5px; color: var(--audit-body); font: 11px/1.7 var(--audit-data-font); white-space: pre-wrap; overflow-wrap: anywhere; }
 .audit-records-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 12px 26px; border-top: 1px solid var(--audit-line); color: var(--audit-muted); font-size: 11px; }
 .audit-empty { color: var(--audit-muted); }.audit-read-error { color: var(--el-color-danger); overflow-wrap: anywhere; }

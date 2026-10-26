@@ -3,9 +3,10 @@ import { statusDef } from '@/utils/status'
 import { formatDateTime } from '@/utils/format'
 
 export interface AuditSnapshot {
-  fields: { label: string; value: AuditCell }[]
+  fields: { label: string; value: AuditCell; reference?: string }[]
   columns: { key: string; label: string; numeric?: boolean }[]
   rows: { key: string; cells: AuditCell[] }[]
+  emptyMessage?: string
 }
 export interface AuditCell { text: string; status?: string }
 export interface AuditChange { label: string; from: AuditCell; to: AuditCell }
@@ -16,12 +17,14 @@ export interface AuditDrawerEntry {
   summary: string[]
   status?: string
   changes: AuditChange[]
+  otherChanges?: AuditChange[]
   notes: string[]
   originalAction?: string
   kind?: 'attachment' | 'confirm' | 'create' | 'change'
   attachment?: { fileName: string; category?: string; id?: string; version?: string }
   snapshot?: AuditSnapshot
   previousSnapshot?: AuditSnapshot
+  extraSnapshots?: { key: string; label: string; snapshot: AuditSnapshot }[]
 }
 export interface AuditDocumentContext { title: string; identifier: string; status?: string }
 

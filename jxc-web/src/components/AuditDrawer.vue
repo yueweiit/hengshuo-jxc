@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useCountryStore } from '@/stores/country'
 import AuditTimeline from './AuditTimeline.vue'
 import AuditDrawerRecords from './AuditDrawerRecords.vue'
@@ -6,19 +7,23 @@ import StatusTag from './StatusTag.vue'
 import type { AuditDocumentContext, AuditPresentation } from './auditPresentation'
 
 defineProps<{ modelValue: boolean; resourceType: string; resourceId: number | string; context: AuditDocumentContext; presentation?: AuditPresentation }>()
-const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; reload: [] }>()
 const country = useCountryStore()
+const timeline = ref<InstanceType<typeof AuditTimeline>>()
+function reload() { timeline.value?.reload(); emit('reload') }
+defineExpose({ reload })
 </script>
 
 <template>
   <el-drawer :model-value="modelValue" title="操作日志" aria-label="操作日志" :with-header="false" size="min(640px, 100vw)" destroy-on-close append-to-body class="operation-audit-drawer" modal-class="operation-audit-overlay" @update:model-value="emit('update:modelValue', $event)">
-    <AuditTimeline :resource-type="resourceType" :resource-id="resourceId" class="audit-drawer-layout">
+    <AuditTimeline ref="timeline" :resource-type="resourceType" :resource-id="resourceId" class="audit-drawer-layout">
       <template #layout="state">
         <header class="audit-drawer-header">
-          <div class="audit-drawer-heading"><h2><el-icon><Clock /></el-icon>操作日志</h2><div class="audit-header-actions"><el-button link type="primary" :disabled="state.loading" @click="state.reload"><el-icon><Refresh /></el-icon>刷新</el-button><el-button text class="audit-close" aria-label="关闭操作日志" @click="emit('update:modelValue', false)"><el-icon><Close /></el-icon></el-button></div></div>
+          <div class="audit-drawer-heading"><h2><el-icon><Clock /></el-icon>操作日志</h2><div class="audit-header-actions"><el-button link type="primary" :disabled="state.loading" @click="reload"><el-icon><Refresh /></el-icon>刷新</el-button><el-button text class="audit-close" aria-label="关闭操作日志" @click="emit('update:modelValue', false)"><el-icon><Close /></el-icon></el-button></div></div>
           <div class="audit-document-context"><div class="audit-document-identity"><div class="audit-document-label">{{ context.title }}</div><div class="audit-document-number">{{ context.identifier }}</div></div><StatusTag v-if="context.status" :status="context.status" /></div>
         </header>
-        <AuditDrawerRecords :logs="state.logs" :loading="state.loading" :load-error="state.loadError" :total="state.total" :timezone="country.timezone" :presentation="presentation" @reload="state.reload" />
+        <slot name="notice" />
+        <AuditDrawerRecords :logs="state.logs" :loading="state.loading" :load-error="state.loadError" :total="state.total" :timezone="country.timezone" :presentation="presentation" @reload="reload" />
       </template>
     </AuditTimeline>
   </el-drawer>
