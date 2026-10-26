@@ -38,6 +38,37 @@ class LedgerIT extends BasePgIT {
         seed("insert into fin_book(id,country_id,entity_id,code,name,base_currency,status) values(601,101,301,'B','Synthetic','MXN','ACTIVE')");
         seed("insert into fin_period(id,country_id,book_id,fiscal_year,period_no,start_date,end_date,status) values(701,101,601,2026,10,'2026-10-01','2026-10-31','OPEN'),(702,101,601,2026,11,'2026-11-01','2026-11-30','OPEN')");
     }
+    @Test void voucherAuditTodoLinksOpenTheirOwnBookWithoutChangingVoucherState() throws Exception {
+        long debit=account("1001","ASSET","DEBIT"),credit=account("3001","EQUITY","CREDIT");
+        var first=create(debit,credit,10,"2026-10-15");first=action(201,id(first),"submit",first);
+        seed("insert into fin_book(id,country_id,entity_id,code,name,base_currency,status) values(602,101,301,'B2','Second synthetic book','MXN','ACTIVE')");
+        seed("insert into fin_period(id,country_id,book_id,fiscal_year,period_no,start_date,end_date,status) values(703,101,602,2026,10,'2026-10-01','2026-10-31','OPEN')");
+        long secondDebit=id(data(ok(201,"POST","/fin/accounts?bookId=602",Map.of("code","1001","name","Second cash","category","ASSET","direction","DEBIT"))));
+        long secondCredit=id(data(ok(201,"POST","/fin/accounts?bookId=602",Map.of("code","3001","name","Second equity","category","EQUITY","direction","CREDIT"))));
+        var second=data(ok(201,"POST","/fin/vouchers?bookId=602",Map.of("voucherDate","2026-10-15","lines",lines(secondDebit,secondCredit,20))));
+        second=data(ok(201,"POST","/fin/vouchers/"+id(second)+"/submit?bookId=602",Map.of("version",second.get("version"))));
+        long secondId=id(second);
+        var expectedBooks=Map.of(id(first),601L,secondId,602L);
+        var before=owner.queryForList("select * from fin_voucher order by id");
+        var todos=data(ok(202,"GET","/sys/todos?type=VOUCHER_AUDIT",null));
+        @SuppressWarnings("unchecked") var records=(List<Map<String,Object>>)todos.get("records");
+        assertThat(records).hasSize(2);
+        for(var row:records){
+            var link=URI.create(row.get("link").toString());
+            assertThat(link.getPath()).isEqualTo("/finance/vouchers");
+            assertThat(link.getRawQuery()).isEqualTo("bookId="+expectedBooks.get(id(row))+"&voucherId="+id(row));
+            var detail=data(ok(202,"GET","/fin/vouchers/"+id(row)+"?"+link.getRawQuery(),null));
+            assertThat(id(detail)).isEqualTo(id(row));
+            assertThat(((Number)detail.get("bookId")).longValue()).isEqualTo(expectedBooks.get(id(row)));
+        }
+        assertThat(owner.queryForList("select * from fin_voucher order by id")).isEqualTo(before);
+        seed("delete from sys_user_data_scope where user_id=202");
+        seed("insert into sys_user_data_scope(country_id,user_id,scope_type,book_id,granted_by) values(101,202,'BOOK',602,201)");
+        var scoped=data(ok(202,"GET","/sys/todos?type=VOUCHER_AUDIT",null));
+        assertThat((List<?>)scoped.get("records")).singleElement().satisfies(row->assertThat(((Map<?,?>)row).get("link")).isEqualTo("/finance/vouchers?bookId=602&voucherId="+secondId));
+        seed("update sys_role set permissions='[\"fin:ledger:view\"]' where id=203");
+        assertThat((List<?>)data(ok(202,"GET","/sys/todos?type=VOUCHER_AUDIT",null)).get("records")).isEmpty();
+    }
     @Test void voucherCreationRequiresTheConfiguredCountryNumberRule() throws Exception {long d=account("1001","ASSET","DEBIT"),c=account("3001","EQUITY","CREDIT");seed("DELETE FROM sys_doc_number_rule WHERE country_id=101 AND doc_type='FIN_VOUCHER'");assertThat(call(201,"POST","/fin/vouchers",Map.of("voucherDate","2026-10-15","lines",lines(d,c,10))).body()).contains("SYS_CONFIG_MISSING");assertThat(owner.queryForObject("SELECT count(*) FROM fin_voucher",Integer.class)).isZero();}
     @Test void manualLifecycleIsSeparatedAndLatePostingCarriesForwardAndReversalKeepsOriginal() throws Exception {
         long debit=account("1001","ASSET","DEBIT"),credit=account("3001","EQUITY","CREDIT");
