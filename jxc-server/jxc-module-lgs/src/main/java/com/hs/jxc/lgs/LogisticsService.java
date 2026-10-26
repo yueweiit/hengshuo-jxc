@@ -13,6 +13,14 @@ public class LogisticsService implements LogisticsApi {
  private void period(Access a,Map<String,Object>r){if(r.get("openingRef")!=null&&r.get("cutoffDate")!=null&&r.containsKey("carrierId"))periods.assertImportedOpeningCutoff(a.requireCountry(),id(r,"bookId"),date(a,r,"cutoffDate"),"SHIPMENT",id(r,"id"));else periods.assertOpen(a.requireCountry(),id(r,"bookId"),date(a,r,"bizDate"));}private void cas(Access a,String k,long id,Map<String,Object>b){if(j.update("UPDATE "+table(k)+" SET version=version+1 WHERE country_id=? AND id=? AND version=?",a.requireCountry(),id,Inputs.version(b))!=1)throw Inputs.conflict();}
  private Map<String,Object> wh(Access a,long wid){var r=row(a,"org_warehouse",wid,false);r.put("warehouseId",wid);a.requireRow(r);if(!"ENABLED".equals(r.get("status")))throw Inputs.bad("仓库未启用");return r;}
  private String permission(String k,String action){return switch(k){case "shipments"->action.equals("nodes")?"lgs:node:record":"lgs:shipment:"+(action.equals("submit")?"edit":action.equals("void")?"edit":action);case "holds"->"lgs:hold:"+(action.equals("release")?"release":"create");case "deliveries"->"lgs:delivery:"+(action.equals("dispatch")?"dispatch":"create");case "receipts"->"lgs:receipt:confirm";case "fees"->"lgs:fee:"+(action.equals("confirm")?"confirm":"create");case "transships"->"lgs:transship:create";default->"lgs:discrepancy:handle";};}
+ /** Caller already authorized its cost fact; only its exact confirmed receipt may supply labels. */
+ @Override public Map<String,Object> receiptCostReference(Access a,long book,long receiptLineId){
+  Inputs.id(book);Inputs.id(receiptLineId);
+  if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Receipt cost reference requires caller transaction");
+  var rows=j.queryForList("SELECT r.id receipt_id,r.doc_no receipt_no,r.country_id,r.book_id,r.entity_id,r.warehouse_id FROM lgs_receipt_line l JOIN lgs_receipt r ON r.country_id=l.country_id AND r.id=l.receipt_id WHERE l.country_id=? AND r.book_id=? AND l.id=? AND r.status='CONFIRMED'",a.requireCountry(),book,receiptLineId);
+  if(rows.isEmpty())throw ApiException.notFound();var source=DbRows.camel(rows.getFirst());a.requireRow(source);
+  return Map.of("receiptId",source.get("receiptId"),"receiptNo",source.get("receiptNo"));
+ }
  /** Purchase-authorized progress, restricted again by the logistics owner and exact source lines. */
  @Override public PurchaseProgress purchaseProgress(Access a,long book,long orderId,Set<Long> visibleOrderLineIds){
   if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Purchase progress requires caller transaction");

@@ -132,6 +132,6 @@ public class PurchaseService implements SupplyApi {
   if(rows.isEmpty())throw ApiException.notFound();return DbRows.camel(rows.getFirst());
  }
  @Override public Map<String,Object> financialOrderReference(Access a,long book,long orderId){
-  books.resolve(a,book,null);var rows=j.queryForList("SELECT book_id,supplier_id FROM pur_order WHERE country_id=? AND book_id=? AND id=?",a.requireCountry(),book,orderId);if(rows.isEmpty())throw ApiException.notFound();return DbRows.camel(rows.getFirst());
+  books.resolve(a,book,null);var rows=j.queryForList("SELECT book_id,supplier_id,doc_no FROM pur_order WHERE country_id=? AND book_id=? AND id=?",a.requireCountry(),book,orderId);if(rows.isEmpty())throw ApiException.notFound();return DbRows.camel(rows.getFirst());
  }
 }

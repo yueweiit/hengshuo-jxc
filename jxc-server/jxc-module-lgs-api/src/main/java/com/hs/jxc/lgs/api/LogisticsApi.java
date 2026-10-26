@@ -5,6 +5,8 @@ public interface LogisticsApi {
  record PurchaseProgress(List<Map<String,Object>> shipments,List<Map<String,Object>> receipts){}
  /** Read only: the purchase owner supplies its authorized order and visible source line IDs. */
  PurchaseProgress purchaseProgress(Access access,long bookId,long orderId,Set<Long> visibleOrderLineIds);
+ /** Minimal confirmed receipt identity for a caller-authorized cost line. Rechecks actual country/book/warehouse scope; no price or logistics operation grant. */
+ Map<String,Object> receiptCostReference(Access access,long bookId,long receiptLineId);
  record SourcePlanning(BigDecimal plannedQty,BigDecimal remainingQty){}
  /** Original draft/pending-dispatch reservation, after source and editable-shipment authorization. No writes. */
  void requireEditablePlanningExclusion(Access access,long shipmentId);
