@@ -16,7 +16,8 @@ import QtyText from '@/components/QtyText.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
 import ApprovalPanel from '@/components/ApprovalPanel.vue'
 import DocAttachment from '@/components/DocAttachment.vue'
-import AuditTimeline from '@/components/AuditTimeline.vue'
+import AuditDrawer from '@/components/AuditDrawer.vue'
+import { salesOrderAudit } from './salesOrderAudit'
 import ProductCell from '@/components/biz/ProductCell.vue'
 import { confirmAction } from '@/utils/action'
 
@@ -31,6 +32,14 @@ const user = useUserStore(), country = useCountryStore()
 const order = ref<Row | null>(null)
 const checks = ref<Row[]>([])
 const timeline = ref<Row[]>([])
+const auditVisible = ref(false)
+const auditContext = computed(() => ({ title: '销售订单', identifier: order.value?.docNo || `记录 #${id.value}` }))
+// 缺时刻、时区或格式错误的事件放到末尾，不按本机时区推测。
+function timelineTime(value: unknown) {
+  return typeof value === 'string' && value.includes('T') && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? Date.parse(value) : NaN
+}
+const orderedTimeline = computed(() => timeline.value.map((item, index) => ({ item, index, time: timelineTime(item.at) }))
+  .sort((a, b) => (Number.isFinite(a.time) ? a.time : Infinity) - (Number.isFinite(b.time) ? b.time : Infinity) || a.index - b.index).map(({ item }) => item))
 const loading = ref(false)
 const loadError = ref('')
 const timelineError = ref('')
@@ -86,6 +95,7 @@ async function load() {
   const request = ++loadRequest, scope = detailScope(), orderId = id.value
   ++timelineRequest
   order.value = null
+  auditVisible.value = false
   timeline.value = []
   timelineError.value = ''
   timelineLoading.value = false
@@ -117,7 +127,7 @@ async function loadTimeline() {
   try {
     const result = await http.get<Row[]>(`/sal/orders/${orderId}/timeline`, undefined, { silent: true })
     if (request !== timelineRequest || scope !== detailScope()) return
-    if (!Array.isArray(result)) throw new Error('时间线返回格式不正确，请重新加载')
+    if (!Array.isArray(result) || !result.every(item => item && typeof item === 'object' && !Array.isArray(item) && typeof item.type === 'string' && typeof item.text === 'string')) throw new Error('时间线返回格式不正确，请重新加载')
     timeline.value = result
   } catch (error) {
     if (request === timelineRequest && scope === detailScope()) timelineError.value = errorMessage(error)
@@ -276,6 +286,7 @@ onMounted(load)
             <el-button v-if="mutableOrder && user.hasPerm('sal:order:edit')" :loading="allocationForm.loading" @click="openAllocations">编辑分仓</el-button>
             <el-button v-if="order.approvalStatus === 'PENDING' && user.hasPerm('sal:order:submit')" @click="withdraw">撤回审批</el-button>
             <el-button v-if="order.customerId" @click="router.push(`/ar/customers/${order.customerId}`)">客户往来</el-button>
+            <el-button @click="auditVisible = true"><el-icon><Clock /></el-icon>操作日志</el-button>
             <el-dropdown v-if="canCancel || canClose" trigger="click">
               <el-button>更多操作 <span aria-hidden="true">⌄</span></el-button>
               <template #dropdown><el-dropdown-menu>
@@ -365,19 +376,20 @@ onMounted(load)
       </el-tab-pane>
       <el-tab-pane label="审批" name="approval"><ApprovalPanel v-if="order" doc-type="SALES_ORDER" :doc-id="id" /></el-tab-pane>
       <el-tab-pane label="时间线" name="time">
+        <div class="timeline-heading"><div><h4>建单与出库记录</h4><span class="muted">从早到晚<span v-if="!timelineLoading && !timelineError"> · {{ timeline.length }} 条记录</span></span></div><el-button link type="primary" :disabled="timelineLoading" @click="loadTimeline"><el-icon><Refresh /></el-icon>刷新时间线</el-button></div>
         <div v-if="timelineError" class="error-panel" role="alert"><el-alert :title="timelineError" type="error" :closable="false" show-icon /><el-button :loading="timelineLoading" @click="loadTimeline">重新加载时间线</el-button></div>
         <p v-else-if="timelineLoading" class="muted" role="status">正在读取时间线…</p>
-        <el-timeline v-else-if="timeline.length" class="order-timeline">
-          <el-timeline-item v-for="(item, index) in timeline" :key="`${item.at}:${item.type}:${index}`">
-            <DateTimeText :value="item.at" />
-            <p><strong>{{ item.type }}</strong> {{ item.text }}</p>
+        <el-timeline v-else-if="orderedTimeline.length" class="order-timeline" aria-label="销售订单建单与出库时间线">
+          <el-timeline-item v-for="(item, index) in orderedTimeline" :key="`${item.at}:${item.type}:${index}`" :type="item.type === '建单' ? 'primary' : undefined">
+            <div class="timeline-time"><DateTimeText v-if="Number.isFinite(timelineTime(item.at))" :value="item.at" /><span v-else>{{ item.at ? '时间格式或时区无法识别' : '时间未记录' }}</span></div>
+            <div class="timeline-event"><strong>{{ item.type }}</strong><p class="mono">{{ item.text }}</p><span v-if="item.at && !Number.isFinite(timelineTime(item.at))" class="muted">原始时间：{{ item.at }}</span></div>
           </el-timeline-item>
         </el-timeline>
         <el-empty v-else description="暂无时间线记录" :image-size="48" />
       </el-tab-pane>
-      <el-tab-pane label="日志" name="audit"><AuditTimeline resource-type="sales-order" :resource-id="id" /></el-tab-pane>
         </el-tabs>
       </section>
+      <AuditDrawer v-if="auditVisible && order" :key="id" v-model="auditVisible" resource-type="sales-order" :resource-id="id" :context="auditContext" :presentation="salesOrderAudit" />
     </template>
 
     <el-dialog v-model="cancelForm.visible" :title="cancelForm.close ? '关闭全部未交数量' : '取消指定未交数量'" width="min(700px, 96vw)">
@@ -469,10 +481,25 @@ onMounted(load)
 .check-toolbar label { color: var(--el-text-color-regular); font-size: 14px; }
 .check-toolbar .el-select { width: 240px; max-width: 100%; }
 .error-panel { display: flex; align-items: flex-start; flex-direction: column; gap: 12px; }
-.order-timeline { padding-left: 4px; margin: 12px 0 0; }
-.order-timeline :deep(.el-timeline-item__content) { overflow-wrap: anywhere; }
-.order-timeline p { margin: 6px 0 0; line-height: 1.6; }
-.order-timeline :deep(.mono) { color: var(--el-text-color-secondary); font-size: 13px; }
+.timeline-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 24px; }
+.timeline-heading h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+.timeline-heading :deep(.el-icon) { margin-right: 4px; }
+.order-timeline { padding: 0; margin: 0; }
+.order-timeline :deep(.el-timeline-item) { padding-bottom: 24px; }
+.order-timeline :deep(.el-timeline-item__wrapper) { display: grid; grid-template-columns: 132px minmax(0, 1fr); column-gap: 42px; padding-left: 0; top: 0; }
+.order-timeline :deep(.el-timeline-item__content) { display: contents; }
+.order-timeline :deep(.el-timeline-item__node) { left: 148px; top: 5px; width: 10px; height: 10px; }
+.order-timeline :deep(.el-timeline-item__tail) { left: 152px; top: 5px; border-left-width: 1px; }
+.order-timeline :deep(.el-timeline-item:last-child) { padding-bottom: 0; }
+.timeline-time { text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.7; color: var(--el-text-color-secondary); overflow-wrap: anywhere; }
+.timeline-event { min-width: 0; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.timeline-event p { margin: 4px 0 0; color: var(--el-text-color-regular); }
+@media (max-width: 520px) {
+  .order-timeline :deep(.el-timeline-item__wrapper) { display: block; margin-left: 24px; }
+  .order-timeline :deep(.el-timeline-item__node) { left: 0; }
+  .order-timeline :deep(.el-timeline-item__tail) { left: 4px; }
+  .timeline-time { margin-bottom: 5px; text-align: left; }
+}
 .mt { margin-top: 12px; }
 @media (max-width: 1024px) {
   .summary-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }

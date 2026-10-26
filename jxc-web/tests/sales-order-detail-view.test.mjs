@@ -18,7 +18,7 @@ function deferred() {
 function detail(read) {
   const route = reactive({ params: { id: '71' } }), country = { epoch: 1, timezone: 'America/Mexico_City' }
   const calls = [], writes = [], warnings = [], stops = []
-  const names = ['order', 'loading', 'load', 'loadError', 'timeline', 'timelineError', 'timelineLoading', 'loadTimeline', 'ob', 'checks', 'runCheck', 'checkError', 'checkLoading', 'checkedWarehouseId', 'canConfirmOut', 'confirmOut', 'fullOrder', 'warehouses']
+  const names = ['order', 'loading', 'load', 'loadError', 'timeline', 'orderedTimeline', 'auditVisible', 'auditContext', 'timelineError', 'timelineLoading', 'loadTimeline', 'ob', 'checks', 'runCheck', 'checkError', 'checkLoading', 'checkedWarehouseId', 'canConfirmOut', 'confirmOut', 'fullOrder', 'warehouses']
   const page = loadVueScript(file, {
     ...salesOrderActions, computed, reactive, ref, watch: (...args) => { const stop = watch(...args); stops.push(stop); return stop }, onMounted() {},
     useRoute: () => route, useRouter: () => ({}), useCountryStore: () => country,
@@ -65,11 +65,36 @@ test('较慢的旧订单响应不能覆盖新订单或加载状态', async t => 
   const old = deferred()
   const p = detail(url => url.endsWith('/timeline') ? [] : url.endsWith('/71') ? old.promise : fixture(72))
   t.after(p.dispose)
+  if (p.auditVisible) p.auditVisible.value = true
   const pending = p.load(); p.route.params.id = '72'; await p.load()
   old.resolve(fixture()); await pending
   assert.equal(p.order.value.id, 72)
   assert.equal(p.loading.value, false)
   assert.equal(p.loadError?.value, '')
+  assert.equal(p.auditVisible?.value, false)
+  assert.equal(p.auditContext?.value.identifier, 'SO-72')
+})
+
+test('时间线按真实时间排序，同刻及未知时间稳定，原始数据不变', async t => {
+  const p = detail(); t.after(p.dispose)
+  const events = [{ at: 'broken', type: '出库', text: '时间异常' }, { at: '2026-10-26T10:00:30Z', type: '出库', text: 'B' }, { at: '2026-10-26T10:00:10Z', type: '建单', text: 'A' }, { at: '2026-10-26T10:00:30Z', type: '出库', text: 'C' }, { type: '出库', text: '未记录时间' }, { at: '2026-10-26T09:00:00', type: '出库', text: '时区未知' }, { at: '2026-10-26', type: '出库', text: '仅日期' }]
+  p.timeline.value = events
+  assert.deepEqual(p.orderedTimeline?.value.map(item => item.text), ['A', 'B', 'C', '时间异常', '未记录时间', '时区未知', '仅日期'])
+  assert.deepEqual(p.timeline.value, events)
+})
+
+test('日志抬头使用当前订单编号，不将三类状态折成一个状态', async t => {
+  const p = detail(); t.after(p.dispose); await p.load()
+  assert.deepEqual(p.auditContext?.value, { title: '销售订单', identifier: 'SO-71' })
+  assert.equal(p.auditVisible?.value, false)
+})
+
+test('时间线事件格式异常显示读取错误，不伪装成无记录', async t => {
+  const p = detail(url => url.endsWith('/timeline') ? [null] : fixture()); t.after(p.dispose)
+  await p.load()
+  assert.equal(p.order.value.id, 71)
+  assert.match(p.timelineError.value, /格式/)
+  assert.deepEqual(p.timeline.value, [])
 })
 
 test('旧订单请求失败不会污染新订单的错误提示', async t => {
