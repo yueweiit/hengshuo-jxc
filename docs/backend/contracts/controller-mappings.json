@@ -425,6 +425,13 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/cst/adjustment-batches",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/AdjustmentBatchController.java",
+      "line": 16,
+      "symbol": "list"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/cst/method",
       "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/CostFactsController.java",
       "line": 20,

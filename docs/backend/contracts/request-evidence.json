@@ -152,7 +152,7 @@
     },
     {
       "file": "jxc-web/src/components/ApprovalPanel.vue",
-      "line": 36,
+      "line": 77,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -167,7 +167,7 @@
     },
     {
       "file": "jxc-web/src/components/AuditTimeline.vue",
-      "line": 37,
+      "line": 45,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -182,7 +182,7 @@
     },
     {
       "file": "jxc-web/src/components/crud/CrudPage.vue",
-      "line": 64,
+      "line": 70,
       "kind": "crud-factory-candidate",
       "method": "GET",
       "pathPattern": null,
@@ -193,7 +193,7 @@
     },
     {
       "file": "jxc-web/src/components/crud/CrudPage.vue",
-      "line": 64,
+      "line": 70,
       "kind": "crud-factory-candidate",
       "method": "GET",
       "pathPattern": null,
@@ -204,7 +204,7 @@
     },
     {
       "file": "jxc-web/src/components/crud/CrudPage.vue",
-      "line": 64,
+      "line": 70,
       "kind": "crud-factory-candidate",
       "method": "POST",
       "pathPattern": null,
@@ -215,7 +215,7 @@
     },
     {
       "file": "jxc-web/src/components/crud/CrudPage.vue",
-      "line": 64,
+      "line": 70,
       "kind": "crud-factory-candidate",
       "method": "PUT",
       "pathPattern": null,
@@ -226,7 +226,7 @@
     },
     {
       "file": "jxc-web/src/components/crud/CrudPage.vue",
-      "line": 64,
+      "line": 70,
       "kind": "crud-factory-candidate",
       "method": "DELETE",
       "pathPattern": null,
@@ -237,7 +237,7 @@
     },
     {
       "file": "jxc-web/src/components/crud/CrudPage.vue",
-      "line": 64,
+      "line": 70,
       "kind": "crud-factory-candidate",
       "method": "POST",
       "pathPattern": null,
@@ -248,7 +248,7 @@
     },
     {
       "file": "jxc-web/src/components/crud/CrudPage.vue",
-      "line": 64,
+      "line": 70,
       "kind": "crud-factory-candidate",
       "method": "POST",
       "pathPattern": null,
@@ -259,7 +259,7 @@
     },
     {
       "file": "jxc-web/src/components/DocAttachment.vue",
-      "line": 36,
+      "line": 72,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -274,7 +274,7 @@
     },
     {
       "file": "jxc-web/src/components/DocAttachment.vue",
-      "line": 53,
+      "line": 102,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
@@ -289,7 +289,7 @@
     },
     {
       "file": "jxc-web/src/components/DocAttachment.vue",
-      "line": 60,
+      "line": 136,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
@@ -304,7 +304,7 @@
     },
     {
       "file": "jxc-web/src/components/DocAttachment.vue",
-      "line": 65,
+      "line": 154,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -319,7 +319,7 @@
     },
     {
       "file": "jxc-web/src/components/DocAttachment.vue",
-      "line": 67,
+      "line": 156,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "attachmentBlob",
@@ -332,37 +332,7 @@
     },
     {
       "file": "jxc-web/src/modules/analysis/AiView.vue",
-      "line": 8,
-      "kind": "http-call",
-      "method": "POST",
-      "wrapperMethod": "post",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/ai/analysis",
-      "expression": "'/ai/analysis'",
-      "match": "registered",
-      "registrations": [
-        452
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/analysis/ProfitView.vue",
-      "line": 20,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/cst/profit",
-      "expression": "'/cst/profit'",
-      "match": "registered",
-      "registrations": [
-        338
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/analysis/ProfitView.vue",
-      "line": 23,
+      "line": 57,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -371,13 +341,58 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/analysis/AiView.vue",
+      "line": 88,
+      "kind": "http-call",
+      "method": "POST",
+      "wrapperMethod": "post",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/ai/analysis",
+      "expression": "'/ai/analysis'",
+      "match": "registered",
+      "registrations": [
+        453
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/analysis/ProfitView.vue",
+      "line": 65,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/fin/books",
+      "expression": "'/fin/books'",
+      "match": "registered",
+      "registrations": [
+        421
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/analysis/ProfitView.vue",
+      "line": 85,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/cst/profit",
+      "expression": "'/cst/profit'",
+      "match": "registered",
+      "registrations": [
+        339
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/ap/ApBillList.vue",
-      "line": 25,
+      "line": 65,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -390,7 +405,7 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApBillList.vue",
-      "line": 26,
+      "line": 66,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -405,7 +420,7 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApBillList.vue",
-      "line": 52,
+      "line": 104,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -414,13 +429,13 @@
       "expression": "'/ap/bill-sources'",
       "match": "registered",
       "registrations": [
-        383
+        384
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/ap/ApBillList.vue",
-      "line": 60,
+      "line": 141,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -429,13 +444,13 @@
       "expression": "'/ap/bills/from-sources'",
       "match": "registered",
       "registrations": [
-        384
+        385
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/ap/ApBillList.vue",
-      "line": 68,
+      "line": 157,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -444,7 +459,7 @@
       "expression": "`/ap/bills/${row.id}/confirm`",
       "match": "registered",
       "registrations": [
-        385
+        386
       ],
       "reviewRequired": true
     },
@@ -519,7 +534,7 @@
       "expression": "'/ap/payments'",
       "match": "registered",
       "registrations": [
-        388
+        389
       ],
       "reviewRequired": true
     },
@@ -534,7 +549,7 @@
       "expression": "`/ap/payments/${confirmation.row!.id}/confirm`",
       "match": "registered",
       "registrations": [
-        389
+        390
       ],
       "reviewRequired": true
     },
@@ -609,7 +624,7 @@
       "expression": "'/ap/prepayments'",
       "match": "registered",
       "registrations": [
-        391
+        392
       ],
       "reviewRequired": true
     },
@@ -624,7 +639,7 @@
       "expression": "`/ap/prepayments/${confirmation.row!.id}/confirm`",
       "match": "registered",
       "registrations": [
-        392
+        393
       ],
       "reviewRequired": true
     },
@@ -669,7 +684,7 @@
       "expression": "'/ap/payables'",
       "match": "registered",
       "registrations": [
-        400
+        401
       ],
       "reviewRequired": true
     },
@@ -684,7 +699,7 @@
       "expression": "'/ap/payments'",
       "match": "registered",
       "registrations": [
-        387
+        388
       ],
       "reviewRequired": true
     },
@@ -699,7 +714,7 @@
       "expression": "'/ap/prepayments'",
       "match": "registered",
       "registrations": [
-        390
+        391
       ],
       "reviewRequired": true
     },
@@ -714,7 +729,7 @@
       "expression": "'/ap/credit-notes'",
       "match": "registered",
       "registrations": [
-        401
+        402
       ],
       "reviewRequired": true
     },
@@ -729,7 +744,7 @@
       "expression": "'/ap/settlements'",
       "match": "registered",
       "registrations": [
-        394
+        395
       ],
       "reviewRequired": true
     },
@@ -744,7 +759,7 @@
       "expression": "`/ap/settlements/${row.id}/reverse`",
       "match": "registered",
       "registrations": [
-        395
+        396
       ],
       "reviewRequired": true
     },
@@ -759,7 +774,7 @@
       "expression": "`/ap/partners/${id.value}/balances`",
       "match": "registered",
       "registrations": [
-        396
+        397
       ],
       "reviewRequired": true
     },
@@ -774,7 +789,7 @@
       "expression": "`/ap/partners/${id.value}/timeline`",
       "match": "registered",
       "registrations": [
-        397
+        398
       ],
       "reviewRequired": true
     },
@@ -789,7 +804,7 @@
       "expression": "'/ap/statements'",
       "match": "registered",
       "registrations": [
-        398
+        399
       ],
       "reviewRequired": true
     },
@@ -838,7 +853,7 @@
     },
     {
       "file": "jxc-web/src/modules/approval/ApprovalTaskList.vue",
-      "line": 82,
+      "line": 99,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -853,13 +868,13 @@
     },
     {
       "file": "jxc-web/src/modules/approval/ApprovalTaskList.vue",
-      "line": 118,
+      "line": 181,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
       "idempotencyHeaderByWrapper": false,
       "pathPattern": "/api/v1/wf/tasks/{param1}/{param2}",
-      "expression": "`/wf/tasks/${action.task!.id}/${action.type}`",
+      "expression": "`/wf/tasks/${action.task.id}/${action.type}`",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
@@ -905,7 +920,7 @@
       "expression": "`/ar/credit-rules/${form.id}`",
       "match": "registered",
       "registrations": [
-        368
+        369
       ],
       "reviewRequired": true
     },
@@ -920,7 +935,7 @@
       "expression": "'/ar/credit-rules'",
       "match": "registered",
       "registrations": [
-        367
+        368
       ],
       "reviewRequired": true
     },
@@ -935,38 +950,21 @@
       "expression": "`/ar/credit-rules/${row.id}/preview-impact`",
       "match": "registered",
       "registrations": [
-        369
+        370
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/ar/CustomerLedger.vue",
-      "line": 15,
+      "line": 90,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/ar/customers/{param1}/balances",
-      "expression": "`/ar/customers/${id.value}/balances`",
-      "match": "registered",
-      "registrations": [
-        371
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/ar/CustomerLedger.vue",
-      "line": 16,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/ar/customers/{param1}/timeline",
-      "expression": "`/ar/customers/${id.value}/timeline`",
-      "match": "registered",
-      "registrations": [
-        372
-      ],
+      "pathPattern": "/api/v1/ar/customers/{param1}/{param2}",
+      "expression": "`/ar/customers/${customerId}/${view}`",
+      "match": "unknown-dynamic",
+      "registrations": [],
       "reviewRequired": true
     },
     {
@@ -1010,7 +1008,7 @@
       "expression": "'/sal/orders'",
       "match": "registered",
       "registrations": [
-        345
+        346
       ],
       "reviewRequired": true
     },
@@ -1040,7 +1038,7 @@
       "expression": "'/ar/receipts'",
       "match": "registered",
       "registrations": [
-        362
+        363
       ],
       "reviewRequired": true
     },
@@ -1055,7 +1053,7 @@
       "expression": "`/ar/receipts/${row.id}/confirm`",
       "match": "registered",
       "registrations": [
-        363
+        364
       ],
       "reviewRequired": true
     },
@@ -1070,7 +1068,7 @@
       "expression": "`/ar/receipts/${row.id}/reject`",
       "match": "registered",
       "registrations": [
-        364
+        365
       ],
       "reviewRequired": true
     },
@@ -1115,7 +1113,7 @@
       "expression": "'/ar/statements'",
       "match": "registered",
       "registrations": [
-        378
+        379
       ],
       "reviewRequired": true
     },
@@ -1173,7 +1171,7 @@
       "expression": "'/ar/receivables'",
       "match": "registered",
       "registrations": [
-        373
+        374
       ],
       "reviewRequired": true
     },
@@ -1188,7 +1186,7 @@
       "expression": "'/ar/receivables'",
       "match": "registered",
       "registrations": [
-        373
+        374
       ],
       "reviewRequired": true
     },
@@ -1216,7 +1214,7 @@
       "expression": "'/ar/writeoffs'",
       "match": "registered",
       "registrations": [
-        375
+        376
       ],
       "reviewRequired": true
     },
@@ -1231,19 +1229,19 @@
       "expression": "`/ar/writeoffs/${row.id}/reverse`",
       "match": "registered",
       "registrations": [
-        376
+        377
       ],
       "reviewRequired": true
     },
     {
-      "file": "jxc-web/src/modules/cost/AdjustmentList.vue",
-      "line": 31,
+      "file": "jxc-web/src/modules/cost/AdjustmentBatchPicker.vue",
+      "line": 37,
       "kind": "http-call",
       "method": "GET",
-      "wrapperMethod": "allRecords",
+      "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/cst/adjustments",
-      "expression": "'/cst/adjustments'",
+      "pathPattern": "/api/v1/cst/adjustment-batches",
+      "expression": "'/cst/adjustment-batches'",
       "match": "registered",
       "registrations": [
         333
@@ -1252,7 +1250,37 @@
     },
     {
       "file": "jxc-web/src/modules/cost/AdjustmentList.vue",
-      "line": 35,
+      "line": 45,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/cst/adjustments",
+      "expression": "'/cst/adjustments'",
+      "match": "registered",
+      "registrations": [
+        334
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/cost/AdjustmentList.vue",
+      "line": 46,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/cst/adjustments",
+      "expression": "'/cst/adjustments'",
+      "match": "registered",
+      "registrations": [
+        334
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/cost/AdjustmentList.vue",
+      "line": 49,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1267,7 +1295,7 @@
     },
     {
       "file": "jxc-web/src/modules/cost/AdjustmentList.vue",
-      "line": 49,
+      "line": 82,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1276,13 +1304,13 @@
       "expression": "'/cst/adjustments'",
       "match": "registered",
       "registrations": [
-        334
+        335
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/cost/AdjustmentList.vue",
-      "line": 51,
+      "line": 87,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1295,7 +1323,7 @@
     },
     {
       "file": "jxc-web/src/modules/cost/AdjustmentList.vue",
-      "line": 61,
+      "line": 102,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1308,7 +1336,7 @@
     },
     {
       "file": "jxc-web/src/modules/cost/AllocationList.vue",
-      "line": 27,
+      "line": 79,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1323,7 +1351,22 @@
     },
     {
       "file": "jxc-web/src/modules/cost/AllocationList.vue",
-      "line": 36,
+      "line": 94,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/lgs/fees",
+      "expression": "'/lgs/fees'",
+      "match": "registered",
+      "registrations": [
+        255
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/cost/AllocationList.vue",
+      "line": 114,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1338,20 +1381,20 @@
     },
     {
       "file": "jxc-web/src/modules/cost/AllocationList.vue",
-      "line": 41,
+      "line": 120,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": null,
-      "expression": "'/cst/allocations/' + preview.value.id + '/confirm'",
+      "expression": "'/cst/allocations/' + preview.value!.id + '/confirm'",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/cost/AllocationList.vue",
-      "line": 54,
+      "line": 139,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1364,7 +1407,7 @@
     },
     {
       "file": "jxc-web/src/modules/cost/CostTraceDrawer.vue",
-      "line": 35,
+      "line": 53,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1379,22 +1422,22 @@
     },
     {
       "file": "jxc-web/src/modules/cost/ExpenseList.vue",
-      "line": 20,
+      "line": 48,
       "kind": "http-call",
       "method": "GET",
-      "wrapperMethod": "allRecords",
+      "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
       "pathPattern": "/api/v1/cst/expenses",
       "expression": "'/cst/expenses'",
       "match": "registered",
       "registrations": [
-        336
+        337
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/cost/ExpenseList.vue",
-      "line": 21,
+      "line": 62,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1409,22 +1452,7 @@
     },
     {
       "file": "jxc-web/src/modules/cost/ExpenseList.vue",
-      "line": 33,
-      "kind": "http-call",
-      "method": "POST",
-      "wrapperMethod": "postIdem",
-      "idempotencyHeaderByWrapper": true,
-      "pathPattern": "/api/v1/cst/expenses",
-      "expression": "'/cst/expenses'",
-      "match": "registered",
-      "registrations": [
-        337
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/cost/ExpenseList.vue",
-      "line": 41,
+      "line": 88,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1439,7 +1467,7 @@
     },
     {
       "file": "jxc-web/src/modules/cost/ExpenseList.vue",
-      "line": 41,
+      "line": 88,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1449,6 +1477,21 @@
       "match": "registered",
       "registrations": [
         127
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/cost/ExpenseList.vue",
+      "line": 129,
+      "kind": "http-call",
+      "method": "POST",
+      "wrapperMethod": "postIdem",
+      "idempotencyHeaderByWrapper": true,
+      "pathPattern": "/api/v1/cst/expenses",
+      "expression": "'/cst/expenses'",
+      "match": "registered",
+      "registrations": [
+        338
       ],
       "reviewRequired": true
     },
@@ -1463,7 +1506,7 @@
       "expression": "'/cst/method'",
       "match": "registered",
       "registrations": [
-        339
+        340
       ],
       "reviewRequired": true
     },
@@ -1557,20 +1600,35 @@
     },
     {
       "file": "jxc-web/src/modules/finance/AccountList.vue",
-      "line": 17,
+      "line": 57,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/fin/books",
+      "expression": "'/fin/books'",
+      "match": "registered",
+      "registrations": [
+        421
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/finance/AccountList.vue",
+      "line": 78,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
       "idempotencyHeaderByWrapper": false,
       "pathPattern": null,
-      "expression": "'/fin/' + resource.value",
+      "expression": "'/fin/' + type",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/AccountList.vue",
-      "line": 18,
+      "line": 79,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1579,13 +1637,13 @@
       "expression": "'/fin/accounts'",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/AccountList.vue",
-      "line": 23,
+      "line": 80,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1600,7 +1658,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/AccountList.vue",
-      "line": 27,
+      "line": 127,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1612,8 +1670,8 @@
       "reviewRequired": true
     },
     {
-      "file": "jxc-web/src/modules/finance/AccountList.vue",
-      "line": 29,
+      "file": "jxc-web/src/modules/finance/BookList.vue",
+      "line": 50,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1622,28 +1680,13 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/BookList.vue",
-      "line": 11,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/fin/books",
-      "expression": "'/fin/books'",
-      "match": "registered",
-      "registrations": [
-        420
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/finance/BookList.vue",
-      "line": 37,
+      "line": 114,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1656,7 +1699,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/BookList.vue",
-      "line": 45,
+      "line": 130,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1669,7 +1712,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/ClosingView.vue",
-      "line": 31,
+      "line": 80,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1678,78 +1721,86 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ClosingView.vue",
-      "line": 37,
+      "line": 128,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
-      "pathPattern": null,
-      "expression": "'/fin/periods/' + periodId.value + '/close-check'",
-      "match": "unknown-dynamic",
-      "registrations": [],
+      "pathPattern": "/api/v1/fin/periods/{param1}/close-check",
+      "expression": "`/fin/periods/${target.periodId}/close-check`",
+      "match": "registered",
+      "registrations": [
+        448
+      ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ClosingView.vue",
-      "line": 48,
+      "line": 142,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
-      "pathPattern": null,
-      "expression": "'/fin/periods/' + periodId.value + '/waive'",
-      "match": "unknown-dynamic",
-      "registrations": [],
+      "pathPattern": "/api/v1/fin/periods/{param1}/waive",
+      "expression": "`/fin/periods/${target.periodId}/waive`",
+      "match": "registered",
+      "registrations": [
+        449
+      ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ClosingView.vue",
-      "line": 57,
+      "line": 154,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
-      "pathPattern": null,
-      "expression": "'/fin/periods/' + periodId.value + '/close'",
-      "match": "unknown-dynamic",
-      "registrations": [],
+      "pathPattern": "/api/v1/fin/periods/{param1}/close",
+      "expression": "`/fin/periods/${target.periodId}/close`",
+      "match": "registered",
+      "registrations": [
+        450
+      ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ClosingView.vue",
-      "line": 66,
+      "line": 170,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": null,
-      "expression": "'/fin/periods/' + periodId.value + '/reopen-impact'",
+      "pathPattern": "/api/v1/fin/periods/{param1}/reopen-impact",
+      "expression": "`/fin/periods/${target.periodId}/reopen-impact`",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ClosingView.vue",
-      "line": 76,
+      "line": 186,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
-      "pathPattern": null,
-      "expression": "'/fin/periods/' + periodId.value + '/reopen'",
-      "match": "unknown-dynamic",
-      "registrations": [],
+      "pathPattern": "/api/v1/fin/periods/{param1}/reopen",
+      "expression": "`/fin/periods/${target.periodId}/reopen`",
+      "match": "registered",
+      "registrations": [
+        451
+      ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/EventList.vue",
-      "line": 14,
+      "line": 26,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1758,13 +1809,13 @@
       "expression": "'/fin/events'",
       "match": "registered",
       "registrations": [
-        430
+        431
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/EventList.vue",
-      "line": 16,
+      "line": 29,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1777,7 +1828,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/EventList.vue",
-      "line": 20,
+      "line": 38,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1786,13 +1837,13 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/LedgerView.vue",
-      "line": 26,
+      "line": 85,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1801,58 +1852,26 @@
       "expression": "'/fin/ledgers/detail'",
       "match": "registered",
       "registrations": [
-        441
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/finance/LedgerView.vue",
-      "line": 34,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/fin/ledgers/general",
-      "expression": "'/fin/ledgers/general'",
-      "match": "registered",
-      "registrations": [
         442
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/LedgerView.vue",
-      "line": 34,
+      "line": 106,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/fin/ledgers/balance",
-      "expression": "'/fin/ledgers/balance'",
-      "match": "registered",
-      "registrations": [
-        443
-      ],
+      "pathPattern": null,
+      "expression": "'/fin/ledgers/' + type",
+      "match": "unknown-dynamic",
+      "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/LedgerView.vue",
-      "line": 34,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/fin/ledgers/journal",
-      "expression": "'/fin/ledgers/journal'",
-      "match": "registered",
-      "registrations": [
-        444
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/finance/LedgerView.vue",
-      "line": 48,
+      "line": 150,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1861,26 +1880,13 @@
       "expression": "'/fin/accounts'",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/LedgerView.vue",
-      "line": 53,
-      "kind": "http-call",
-      "method": "POST",
-      "wrapperMethod": "postIdem",
-      "idempotencyHeaderByWrapper": true,
-      "pathPattern": null,
-      "expression": "'/fin/ledgers/' + tab.value + '/export'",
-      "match": "unknown-dynamic",
-      "registrations": [],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/finance/LedgerView.vue",
-      "line": 55,
+      "line": 164,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -1889,13 +1895,26 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
+      "file": "jxc-web/src/modules/finance/LedgerView.vue",
+      "line": 204,
+      "kind": "http-call",
+      "method": "POST",
+      "wrapperMethod": "postIdem",
+      "idempotencyHeaderByWrapper": true,
+      "pathPattern": null,
+      "expression": "'/fin/ledgers/' + selectedTab + '/export'",
+      "match": "unknown-dynamic",
+      "registrations": [],
+      "reviewRequired": true
+    },
+    {
       "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 20,
+      "line": 51,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1904,13 +1923,13 @@
       "expression": "'/fin/mapping-templates'",
       "match": "registered",
       "registrations": [
-        427
+        428
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 21,
+      "line": 52,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1919,13 +1938,13 @@
       "expression": "'/fin/events'",
       "match": "registered",
       "registrations": [
-        430
+        431
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 22,
+      "line": 53,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -1938,7 +1957,22 @@
     },
     {
       "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 37,
+      "line": 67,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/fin/books",
+      "expression": "'/fin/books'",
+      "match": "registered",
+      "registrations": [
+        421
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/finance/MappingList.vue",
+      "line": 104,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1951,7 +1985,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 40,
+      "line": 126,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -1964,7 +1998,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 43,
+      "line": 131,
       "kind": "http-call",
       "method": "DELETE",
       "wrapperMethod": "delete",
@@ -1977,35 +2011,20 @@
     },
     {
       "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 48,
+      "line": 142,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
       "idempotencyHeaderByWrapper": false,
       "pathPattern": null,
-      "expression": "'/fin/mapping-templates/' + simulationTemplate.value.id + '/simulate?eventId=' + eventId.value",
+      "expression": "'/fin/mapping-templates/' + templateId + '/simulate?eventId=' + selectedEvent",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
-      "file": "jxc-web/src/modules/finance/MappingList.vue",
-      "line": 50,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/fin/books",
-      "expression": "'/fin/books'",
-      "match": "registered",
-      "registrations": [
-        420
-      ],
-      "reviewRequired": true
-    },
-    {
       "file": "jxc-web/src/modules/finance/OpeningList.vue",
-      "line": 23,
+      "line": 73,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2014,13 +2033,13 @@
       "expression": "'/fin/opening-balances'",
       "match": "registered",
       "registrations": [
-        424
+        425
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/OpeningList.vue",
-      "line": 23,
+      "line": 74,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2029,26 +2048,26 @@
       "expression": "'/fin/accounts'",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/OpeningList.vue",
-      "line": 25,
+      "line": 119,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": null,
-      "expression": "'/fin/opening-balances?bookId=' + bookId.value",
+      "expression": "'/fin/opening-balances?bookId=' + id",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/OpeningList.vue",
-      "line": 27,
+      "line": 143,
       "kind": "http-call",
       "method": "DELETE",
       "wrapperMethod": "delete",
@@ -2061,20 +2080,20 @@
     },
     {
       "file": "jxc-web/src/modules/finance/OpeningList.vue",
-      "line": 28,
+      "line": 158,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": null,
-      "expression": "'/fin/opening-balances/confirm?bookId=' + bookId.value",
+      "expression": "'/fin/opening-balances/confirm?bookId=' + id",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/OpeningList.vue",
-      "line": 29,
+      "line": 170,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2083,13 +2102,13 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/OpeningList.vue",
-      "line": 29,
+      "line": 170,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2104,7 +2123,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/ReconcileView.vue",
-      "line": 14,
+      "line": 72,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2113,13 +2132,13 @@
       "expression": "'/fin/reconcile'",
       "match": "registered",
       "registrations": [
-        446
+        447
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ReconcileView.vue",
-      "line": 16,
+      "line": 97,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2128,13 +2147,28 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ReportView.vue",
-      "line": 26,
+      "line": 38,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/fin/books",
+      "expression": "'/fin/books'",
+      "match": "registered",
+      "registrations": [
+        421
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/finance/ReportView.vue",
+      "line": 51,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2147,7 +2181,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/ReportView.vue",
-      "line": 34,
+      "line": 70,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2160,7 +2194,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/ReportView.vue",
-      "line": 44,
+      "line": 71,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2169,13 +2203,13 @@
       "expression": "'/fin/accounts'",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/ReportView.vue",
-      "line": 51,
+      "line": 99,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -2188,7 +2222,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/ReportView.vue",
-      "line": 59,
+      "line": 109,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -2201,7 +2235,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/ReportView.vue",
-      "line": 66,
+      "line": 118,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -2213,8 +2247,8 @@
       "reviewRequired": true
     },
     {
-      "file": "jxc-web/src/modules/finance/ReportView.vue",
-      "line": 69,
+      "file": "jxc-web/src/modules/finance/TrialView.vue",
+      "line": 79,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2223,13 +2257,13 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/TrialView.vue",
-      "line": 9,
+      "line": 104,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2238,13 +2272,28 @@
       "expression": "'/fin/trial-balance'",
       "match": "registered",
       "registrations": [
-        445
+        446
       ],
       "reviewRequired": true
     },
     {
-      "file": "jxc-web/src/modules/finance/TrialView.vue",
-      "line": 12,
+      "file": "jxc-web/src/modules/finance/VoucherList.vue",
+      "line": 73,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/fin/vouchers",
+      "expression": "'/fin/vouchers'",
+      "match": "registered",
+      "registrations": [
+        433
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/finance/VoucherList.vue",
+      "line": 89,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2253,28 +2302,13 @@
       "expression": "'/fin/books'",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 46,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "allRecords",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/fin/vouchers",
-      "expression": "'/fin/vouchers'",
-      "match": "registered",
-      "registrations": [
-        432
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 47,
+      "line": 104,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2287,7 +2321,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 49,
+      "line": 117,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -2300,7 +2334,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 51,
+      "line": 118,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2309,13 +2343,28 @@
       "expression": "'/fin/accounts'",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 52,
+      "line": 118,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/md/currencies",
+      "expression": "'/md/currencies'",
+      "match": "registered",
+      "registrations": [
+        127
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/finance/VoucherList.vue",
+      "line": 119,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2328,7 +2377,7 @@
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 52,
+      "line": 119,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2341,20 +2390,20 @@
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 67,
+      "line": 143,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": null,
-      "expression": "scoped('/fin/vouchers')",
+      "expression": "path",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 73,
+      "line": 178,
       "kind": "http-call",
       "method": "DELETE",
       "wrapperMethod": "delete",
@@ -2367,58 +2416,28 @@
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 79,
+      "line": 193,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": null,
-      "expression": "scoped('/fin/vouchers/' + current.value.id + path)",
+      "expression": "'/fin/vouchers/' + row.id + path + '?bookId=' + ctx.book",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 83,
+      "line": 202,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": null,
-      "expression": "scoped('/fin/vouchers/batch-' + action)",
+      "expression": "'/fin/vouchers/batch-' + action + '?bookId=' + ctx.book",
       "match": "unknown-dynamic",
       "registrations": [],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 84,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/fin/books",
-      "expression": "'/fin/books'",
-      "match": "registered",
-      "registrations": [
-        420
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/finance/VoucherList.vue",
-      "line": 84,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "allRecords",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/md/currencies",
-      "expression": "'/md/currencies'",
-      "match": "registered",
-      "registrations": [
-        127
-      ],
       "reviewRequired": true
     },
     {
@@ -3039,7 +3058,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/InTransitBoard.vue",
-      "line": 33,
+      "line": 62,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3054,16 +3073,16 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/InTransitBoard.vue",
-      "line": 34,
+      "line": 89,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/lgs/shipments",
-      "expression": "'/lgs/shipments'",
+      "pathPattern": "/api/v1/lgs/in-transit",
+      "expression": "'/lgs/in-transit'",
       "match": "registered",
       "registrations": [
-        200
+        261
       ],
       "reviewRequired": true
     },
@@ -3114,7 +3133,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/LgsReceiptForm.vue",
-      "line": 48,
+      "line": 76,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3129,7 +3148,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/LgsReceiptForm.vue",
-      "line": 81,
+      "line": 127,
       "kind": "http-call",
       "method": "PUT",
       "wrapperMethod": "put",
@@ -3144,7 +3163,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/LgsReceiptForm.vue",
-      "line": 108,
+      "line": 159,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3189,7 +3208,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 57,
+      "line": 142,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3204,7 +3223,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 57,
+      "line": 142,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3219,7 +3238,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 78,
+      "line": 166,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3234,7 +3253,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 82,
+      "line": 170,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3249,7 +3268,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 91,
+      "line": 179,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3264,7 +3283,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 99,
+      "line": 187,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3279,7 +3298,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 107,
+      "line": 195,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3294,7 +3313,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 118,
+      "line": 206,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3309,7 +3328,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 130,
+      "line": 218,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3324,7 +3343,7 @@
     },
     {
       "file": "jxc-web/src/modules/logistics/ShipmentDetail.vue",
-      "line": 142,
+      "line": 230,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3453,7 +3472,7 @@
       "expression": "'/fin/accounts'",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
@@ -3483,7 +3502,7 @@
       "expression": "'/fin/accounts'",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
@@ -3504,7 +3523,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 56,
+      "line": 57,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -3519,7 +3538,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 68,
+      "line": 69,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3534,7 +3553,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 114,
+      "line": 115,
       "kind": "http-call",
       "method": "PUT",
       "wrapperMethod": "put",
@@ -3549,7 +3568,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 115,
+      "line": 116,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3564,7 +3583,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 117,
+      "line": 118,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3579,7 +3598,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 128,
+      "line": 129,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3594,7 +3613,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 133,
+      "line": 134,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3609,7 +3628,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 141,
+      "line": 142,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3624,7 +3643,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/DomesticReceiptList.vue",
-      "line": 154,
+      "line": 155,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3728,8 +3747,23 @@
       "reviewRequired": true
     },
     {
+      "file": "jxc-web/src/modules/purchase/PurchaseOrderAudit.vue",
+      "line": 23,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/pur/orders/{param1}/progress",
+      "expression": "`/pur/orders/${props.resourceId}/progress`",
+      "match": "registered",
+      "registrations": [
+        171
+      ],
+      "reviewRequired": true
+    },
+    {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderDetail.vue",
-      "line": 52,
+      "line": 82,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3744,7 +3778,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderDetail.vue",
-      "line": 60,
+      "line": 91,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3759,7 +3793,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderDetail.vue",
-      "line": 65,
+      "line": 96,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3774,7 +3808,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderDetail.vue",
-      "line": 78,
+      "line": 109,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3789,7 +3823,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderDetail.vue",
-      "line": 96,
+      "line": 127,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3804,7 +3838,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
-      "line": 61,
+      "line": 72,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -3819,7 +3853,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
-      "line": 62,
+      "line": 73,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -3834,7 +3868,22 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
-      "line": 71,
+      "line": 74,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/md/categories",
+      "expression": "'/md/categories'",
+      "match": "registered",
+      "registrations": [
+        88
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
+      "line": 89,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3849,7 +3898,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
-      "line": 73,
+      "line": 93,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -3864,7 +3913,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
-      "line": 124,
+      "line": 201,
       "kind": "http-call",
       "method": "PUT",
       "wrapperMethod": "put",
@@ -3879,7 +3928,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
-      "line": 128,
+      "line": 206,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3894,7 +3943,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderForm.vue",
-      "line": 130,
+      "line": 208,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3909,7 +3958,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderList.vue",
-      "line": 60,
+      "line": 67,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3924,7 +3973,7 @@
     },
     {
       "file": "jxc-web/src/modules/purchase/PurchaseOrderList.vue",
-      "line": 66,
+      "line": 73,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -3978,7 +4027,7 @@
       "expression": "'/rtn/claims'",
       "match": "registered",
       "registrations": [
-        418
+        419
       ],
       "reviewRequired": true
     },
@@ -3993,7 +4042,7 @@
       "expression": "`/rtn/claims/${row.id}/resolve`",
       "match": "registered",
       "registrations": [
-        419
+        420
       ],
       "reviewRequired": true
     },
@@ -4008,7 +4057,7 @@
       "expression": "'/rtn/purchase/returnable'",
       "match": "registered",
       "registrations": [
-        413
+        414
       ],
       "reviewRequired": true
     },
@@ -4053,7 +4102,7 @@
       "expression": "'/rtn/purchase'",
       "match": "registered",
       "registrations": [
-        415
+        416
       ],
       "reviewRequired": true
     },
@@ -4068,7 +4117,7 @@
       "expression": "`/rtn/purchase/${row.id}/ship`",
       "match": "registered",
       "registrations": [
-        416
+        417
       ],
       "reviewRequired": true
     },
@@ -4128,7 +4177,7 @@
       "expression": "'/rtn/refunds'",
       "match": "registered",
       "registrations": [
-        411
+        412
       ],
       "reviewRequired": true
     },
@@ -4156,7 +4205,7 @@
       "expression": "`/rtn/refunds/${pay.row!.id}/pay`",
       "match": "registered",
       "registrations": [
-        412
+        413
       ],
       "reviewRequired": true
     },
@@ -4171,7 +4220,7 @@
       "expression": "'/sal/outbounds'",
       "match": "registered",
       "registrations": [
-        354
+        355
       ],
       "reviewRequired": true
     },
@@ -4201,7 +4250,7 @@
       "expression": "'/rtn/sales/returnable'",
       "match": "registered",
       "registrations": [
-        402
+        403
       ],
       "reviewRequired": true
     },
@@ -4216,7 +4265,7 @@
       "expression": "'/rtn/sales'",
       "match": "registered",
       "registrations": [
-        405
+        406
       ],
       "reviewRequired": true
     },
@@ -4231,7 +4280,7 @@
       "expression": "`/rtn/sales/${row.id}`",
       "match": "registered",
       "registrations": [
-        404
+        405
       ],
       "reviewRequired": true
     },
@@ -4259,7 +4308,7 @@
       "expression": "`/sal/outbounds/${row.id}/confirm`",
       "match": "registered",
       "registrations": [
-        356
+        357
       ],
       "reviewRequired": true
     },
@@ -4274,7 +4323,7 @@
       "expression": "`/sal/outbounds/${sign.row!.id}/sign`",
       "match": "registered",
       "registrations": [
-        357
+        358
       ],
       "reviewRequired": true
     },
@@ -4334,7 +4383,7 @@
       "expression": "`/sal/prices/${form.id}`",
       "match": "registered",
       "registrations": [
-        344
+        345
       ],
       "reviewRequired": true
     },
@@ -4349,34 +4398,49 @@
       "expression": "'/sal/prices'",
       "match": "registered",
       "registrations": [
-        343
+        344
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 55,
+      "line": 108,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
       "pathPattern": "/api/v1/sal/orders/{param1}",
-      "expression": "`/sal/orders/${id.value}`",
+      "expression": "`/sal/orders/${orderId}`",
       "match": "registered",
       "registrations": [
-        346
+        347
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 56,
+      "line": 128,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
       "pathPattern": "/api/v1/sal/orders/{param1}/timeline",
-      "expression": "`/sal/orders/${id.value}/timeline`",
+      "expression": "`/sal/orders/${orderId}/timeline`",
+      "match": "registered",
+      "registrations": [
+        354
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
+      "line": 147,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/sal/orders/{param1}/outbound-check",
+      "expression": "`/sal/orders/${orderId}/outbound-check`",
       "match": "registered",
       "registrations": [
         353
@@ -4385,43 +4449,13 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 66,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/sal/orders/{param1}/outbound-check",
-      "expression": "`/sal/orders/${id.value}/outbound-check`",
-      "match": "registered",
-      "registrations": [
-        352
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 71,
+      "line": 165,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": "/api/v1/sal/orders/{param1}/submit",
-      "expression": "`/sal/orders/${id.value}/submit`",
-      "match": "registered",
-      "registrations": [
-        349
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 75,
-      "kind": "http-call",
-      "method": "POST",
-      "wrapperMethod": "postIdem",
-      "idempotencyHeaderByWrapper": true,
-      "pathPattern": "/api/v1/sal/orders/{param1}/withdraw",
-      "expression": "`/sal/orders/${id.value}/withdraw`",
+      "expression": "`/sal/orders/${orderId}/submit`",
       "match": "registered",
       "registrations": [
         350
@@ -4430,7 +4464,22 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 96,
+      "line": 170,
+      "kind": "http-call",
+      "method": "POST",
+      "wrapperMethod": "postIdem",
+      "idempotencyHeaderByWrapper": true,
+      "pathPattern": "/api/v1/sal/orders/{param1}/withdraw",
+      "expression": "`/sal/orders/${id.value}/withdraw`",
+      "match": "registered",
+      "registrations": [
+        351
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
+      "line": 191,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -4443,7 +4492,7 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 111,
+      "line": 206,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -4458,7 +4507,7 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 128,
+      "line": 223,
       "kind": "http-call",
       "method": "PUT",
       "wrapperMethod": "put",
@@ -4471,7 +4520,7 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 149,
+      "line": 247,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -4480,13 +4529,13 @@
       "expression": "'/sal/outbounds'",
       "match": "registered",
       "registrations": [
-        355
+        356
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderDetail.vue",
-      "line": 152,
+      "line": 250,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -4495,13 +4544,13 @@
       "expression": "`/sal/outbounds/${outboundAttempt.draft.id}/confirm`",
       "match": "registered",
       "registrations": [
-        356
+        357
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 69,
+      "line": 71,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -4516,7 +4565,7 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 70,
+      "line": 72,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -4526,36 +4575,6 @@
       "match": "registered",
       "registrations": [
         81
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 95,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "allRecords",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/md/customers",
-      "expression": "'/md/customers'",
-      "match": "registered",
-      "registrations": [
-        96
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 96,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "allRecords",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/md/country-skus",
-      "expression": "'/md/country-skus'",
-      "match": "registered",
-      "registrations": [
-        94
       ],
       "reviewRequired": true
     },
@@ -4566,36 +4585,6 @@
       "method": "GET",
       "wrapperMethod": "allRecords",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/org/warehouses",
-      "expression": "'/org/warehouses'",
-      "match": "registered",
-      "registrations": [
-        68
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 113,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/sal/orders/{param1}",
-      "expression": "`/sal/orders/${id}`",
-      "match": "registered",
-      "registrations": [
-        346
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 114,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "allRecords",
-      "idempotencyHeaderByWrapper": false,
       "pathPattern": "/api/v1/md/customers",
       "expression": "'/md/customers'",
       "match": "registered",
@@ -4606,7 +4595,7 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 115,
+      "line": 98,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -4621,7 +4610,7 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 116,
+      "line": 99,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -4636,43 +4625,28 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 147,
+      "line": 100,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/md/categories",
+      "expression": "'/md/categories'",
+      "match": "registered",
+      "registrations": [
+        88
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "line": 186,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/sal/prices/resolve",
-      "expression": "'/sal/prices/resolve'",
-      "match": "registered",
-      "registrations": [
-        341
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 183,
-      "kind": "http-call",
-      "method": "PUT",
-      "wrapperMethod": "put",
-      "idempotencyHeaderByWrapper": false,
       "pathPattern": "/api/v1/sal/orders/{param1}",
       "expression": "`/sal/orders/${id}`",
-      "match": "registered",
-      "registrations": [
-        348
-      ],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 187,
-      "kind": "http-call",
-      "method": "POST",
-      "wrapperMethod": "postIdem",
-      "idempotencyHeaderByWrapper": true,
-      "pathPattern": "/api/v1/sal/orders",
-      "expression": "'/sal/orders'",
       "match": "registered",
       "registrations": [
         347
@@ -4681,16 +4655,106 @@
     },
     {
       "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
-      "line": 210,
+      "line": 187,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/md/customers",
+      "expression": "'/md/customers'",
+      "match": "registered",
+      "registrations": [
+        96
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "line": 188,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/md/country-skus",
+      "expression": "'/md/country-skus'",
+      "match": "registered",
+      "registrations": [
+        94
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "line": 189,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "allRecords",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/org/warehouses",
+      "expression": "'/org/warehouses'",
+      "match": "registered",
+      "registrations": [
+        68
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "line": 223,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/sal/prices/resolve",
+      "expression": "'/sal/prices/resolve'",
+      "match": "registered",
+      "registrations": [
+        342
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "line": 268,
+      "kind": "http-call",
+      "method": "PUT",
+      "wrapperMethod": "put",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/sal/orders/{param1}",
+      "expression": "`/sal/orders/${id}`",
+      "match": "registered",
+      "registrations": [
+        349
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "line": 272,
+      "kind": "http-call",
+      "method": "POST",
+      "wrapperMethod": "postIdem",
+      "idempotencyHeaderByWrapper": true,
+      "pathPattern": "/api/v1/sal/orders",
+      "expression": "'/sal/orders'",
+      "match": "registered",
+      "registrations": [
+        348
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/sales/SalesOrderList.vue",
+      "line": 299,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
       "pathPattern": "/api/v1/sal/orders/{param1}/submit",
-      "expression": "`/sal/orders/${row.id}/submit`",
+      "expression": "`/sal/orders/${orderId}/submit`",
       "match": "registered",
       "registrations": [
-        349
+        350
       ],
       "reviewRequired": true
     },
@@ -4705,13 +4769,13 @@
       "expression": "`/sal/sign-diffs/${line.outboundLineId}/resolve`",
       "match": "registered",
       "registrations": [
-        359
+        360
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/sales/StoreDaily.vue",
-      "line": 13,
+      "line": 46,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -4720,7 +4784,7 @@
       "expression": "'/sal/store-daily'",
       "match": "registered",
       "registrations": [
-        360
+        361
       ],
       "reviewRequired": true
     },
@@ -5205,7 +5269,7 @@
       "expression": "'/sys/imports'",
       "match": "registered",
       "registrations": [
-        455
+        456
       ],
       "reviewRequired": true
     },
@@ -5587,7 +5651,7 @@
     },
     {
       "file": "jxc-web/src/modules/workbench/JobList.vue",
-      "line": 12,
+      "line": 78,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -5596,52 +5660,41 @@
       "expression": "'/sys/jobs'",
       "match": "registered",
       "registrations": [
-        458
+        459
       ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/workbench/JobList.vue",
-      "line": 12,
-      "kind": "http-call",
-      "method": "GET",
-      "wrapperMethod": "get",
-      "idempotencyHeaderByWrapper": false,
-      "pathPattern": "/api/v1/sys/jobs/worker-status",
-      "expression": "'/sys/jobs/worker-status'",
-      "match": "not-registered",
-      "registrations": [],
-      "reviewRequired": true
-    },
-    {
-      "file": "jxc-web/src/modules/workbench/JobList.vue",
-      "line": 14,
+      "line": 98,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
       "idempotencyHeaderByWrapper": true,
-      "pathPattern": null,
-      "expression": "'/sys/jobs/' + row.id + '/retry'",
+      "pathPattern": "/api/v1/sys/jobs/{param1}/retry",
+      "expression": "`/sys/jobs/${row.id}/retry`",
       "match": "unknown-dynamic",
       "registrations": [],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/workbench/JobList.vue",
-      "line": 17,
+      "line": 110,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
       "idempotencyHeaderByWrapper": false,
-      "pathPattern": null,
-      "expression": "'/sys/jobs/' + row.id + '/download'",
-      "match": "unknown-dynamic",
-      "registrations": [],
+      "pathPattern": "/api/v1/sys/jobs/{param1}/download",
+      "expression": "`/sys/jobs/${row.id}/download`",
+      "match": "registered",
+      "registrations": [
+        461
+      ],
       "reviewRequired": true
     },
     {
       "file": "jxc-web/src/modules/workbench/NotificationList.vue",
-      "line": 32,
+      "line": 79,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -5656,13 +5709,28 @@
     },
     {
       "file": "jxc-web/src/modules/workbench/NotificationList.vue",
-      "line": 42,
+      "line": 80,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/sys/notifications",
+      "expression": "'/sys/notifications'",
+      "match": "registered",
+      "registrations": [
+        59
+      ],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/workbench/NotificationList.vue",
+      "line": 146,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
       "idempotencyHeaderByWrapper": false,
       "pathPattern": "/api/v1/sys/notifications/{param1}/read",
-      "expression": "`/sys/notifications/${n.id}/read`",
+      "expression": "`/sys/notifications/${row.id}/read`",
       "match": "registered",
       "registrations": [
         61
@@ -5671,7 +5739,7 @@
     },
     {
       "file": "jxc-web/src/modules/workbench/NotificationList.vue",
-      "line": 50,
+      "line": 178,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
@@ -5686,7 +5754,7 @@
     },
     {
       "file": "jxc-web/src/modules/workbench/WorkbenchView.vue",
-      "line": 47,
+      "line": 87,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -5701,7 +5769,7 @@
     },
     {
       "file": "jxc-web/src/modules/workbench/WorkbenchView.vue",
-      "line": 55,
+      "line": 119,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",
@@ -5716,7 +5784,7 @@
     },
     {
       "file": "jxc-web/src/modules/workbench/WorkbenchView.vue",
-      "line": 69,
+      "line": 189,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
@@ -8469,7 +8537,7 @@
       "description": "查询适用价格",
       "match": "registered",
       "registrations": [
-        341
+        342
       ],
       "reviewRequired": true
     },
@@ -8548,7 +8616,7 @@
       "description": "订单列表",
       "match": "registered",
       "registrations": [
-        345
+        346
       ],
       "reviewRequired": true
     },
@@ -8561,7 +8629,7 @@
       "description": "新建草稿",
       "match": "registered",
       "registrations": [
-        347
+        348
       ],
       "reviewRequired": true
     },
@@ -8574,7 +8642,7 @@
       "description": "修改",
       "match": "registered",
       "registrations": [
-        348
+        349
       ],
       "reviewRequired": true
     },
@@ -8587,7 +8655,7 @@
       "description": "提交审批",
       "match": "registered",
       "registrations": [
-        349
+        350
       ],
       "reviewRequired": true
     },
@@ -8600,7 +8668,7 @@
       "description": "撤回",
       "match": "registered",
       "registrations": [
-        350
+        351
       ],
       "reviewRequired": true
     },
@@ -8624,7 +8692,7 @@
       "description": "部分取消",
       "match": "registered",
       "registrations": [
-        351
+        352
       ],
       "reviewRequired": true
     },
@@ -8648,7 +8716,7 @@
       "description": "出库前预检（返回逐项结果）",
       "match": "registered",
       "registrations": [
-        352
+        353
       ],
       "reviewRequired": true
     },
@@ -8661,7 +8729,7 @@
       "description": "订单时间轴（审批、出库、签收、收款、退货）",
       "match": "registered",
       "registrations": [
-        353
+        354
       ],
       "reviewRequired": true
     },
@@ -8674,7 +8742,7 @@
       "description": "创建出库单草稿",
       "match": "registered",
       "registrations": [
-        355
+        356
       ],
       "reviewRequired": true
     },
@@ -8687,7 +8755,7 @@
       "description": "确认出库",
       "match": "registered",
       "registrations": [
-        356
+        357
       ],
       "reviewRequired": true
     },
@@ -8700,7 +8768,7 @@
       "description": "签收登记",
       "match": "registered",
       "registrations": [
-        357
+        358
       ],
       "reviewRequired": true
     },
@@ -8713,7 +8781,7 @@
       "description": "处理签收差异",
       "match": "registered",
       "registrations": [
-        359
+        360
       ],
       "reviewRequired": true
     },
@@ -8726,7 +8794,7 @@
       "description": "门店日报",
       "match": "registered",
       "registrations": [
-        360
+        361
       ],
       "reviewRequired": true
     },
@@ -8750,7 +8818,7 @@
       "description": "收款登记",
       "match": "registered",
       "registrations": [
-        362
+        363
       ],
       "reviewRequired": true
     },
@@ -8763,7 +8831,7 @@
       "description": "收款列表（门店、方式、状态、日期）",
       "match": "registered",
       "registrations": [
-        361
+        362
       ],
       "reviewRequired": true
     },
@@ -8776,7 +8844,7 @@
       "description": "到账确认",
       "match": "registered",
       "registrations": [
-        363
+        364
       ],
       "reviewRequired": true
     },
@@ -8789,7 +8857,7 @@
       "description": "驳回、作废",
       "match": "registered",
       "registrations": [
-        364
+        365
       ],
       "reviewRequired": true
     },
@@ -8802,7 +8870,7 @@
       "description": "授信规则（修改即生成新版本）",
       "match": "registered",
       "registrations": [
-        366
+        367
       ],
       "reviewRequired": true
     },
@@ -8826,7 +8894,7 @@
       "description": "授信规则（修改即生成新版本）",
       "match": "registered",
       "registrations": [
-        367
+        368
       ],
       "reviewRequired": true
     },
@@ -8839,7 +8907,7 @@
       "description": "授信规则（修改即生成新版本）",
       "match": "registered",
       "registrations": [
-        368
+        369
       ],
       "reviewRequired": true
     },
@@ -8863,7 +8931,7 @@
       "description": "预览影响",
       "match": "registered",
       "registrations": [
-        369
+        370
       ],
       "reviewRequired": true
     },
@@ -8876,7 +8944,7 @@
       "description": "客户额度视图",
       "match": "registered",
       "registrations": [
-        370
+        371
       ],
       "reviewRequired": true
     },
@@ -8889,7 +8957,7 @@
       "description": "应收列表（到期状态、客户、订单）",
       "match": "registered",
       "registrations": [
-        373
+        374
       ],
       "reviewRequired": true
     },
@@ -8902,7 +8970,7 @@
       "description": "手工核销",
       "match": "registered",
       "registrations": [
-        375
+        376
       ],
       "reviewRequired": true
     },
@@ -8915,7 +8983,7 @@
       "description": "撤销核销",
       "match": "registered",
       "registrations": [
-        376
+        377
       ],
       "reviewRequired": true
     },
@@ -8983,7 +9051,7 @@
       "description": "客户余额",
       "match": "registered",
       "registrations": [
-        371
+        372
       ],
       "reviewRequired": true
     },
@@ -8996,7 +9064,7 @@
       "description": "客户往来时间轴",
       "match": "registered",
       "registrations": [
-        372
+        373
       ],
       "reviewRequired": true
     },
@@ -9009,7 +9077,7 @@
       "description": "生成对账单",
       "match": "registered",
       "registrations": [
-        378
+        379
       ],
       "reviewRequired": true
     },
@@ -9022,7 +9090,7 @@
       "description": "门店按日收款清单",
       "match": "registered",
       "registrations": [
-        380
+        381
       ],
       "reviewRequired": true
     },
@@ -9035,7 +9103,7 @@
       "description": "账单",
       "match": "registered",
       "registrations": [
-        381
+        382
       ],
       "reviewRequired": true
     },
@@ -9048,7 +9116,7 @@
       "description": "账单",
       "match": "registered",
       "registrations": [
-        382
+        383
       ],
       "reviewRequired": true
     },
@@ -9094,7 +9162,7 @@
       "description": "从采购行或物流费用批量生成账单草稿",
       "match": "registered",
       "registrations": [
-        384
+        385
       ],
       "reviewRequired": true
     },
@@ -9107,7 +9175,7 @@
       "description": "确认、作废",
       "match": "registered",
       "registrations": [
-        385
+        386
       ],
       "reviewRequired": true
     },
@@ -9120,7 +9188,7 @@
       "description": "预付",
       "match": "registered",
       "registrations": [
-        390
+        391
       ],
       "reviewRequired": true
     },
@@ -9144,7 +9212,7 @@
       "description": "预付",
       "match": "registered",
       "registrations": [
-        391
+        392
       ],
       "reviewRequired": true
     },
@@ -9179,7 +9247,7 @@
       "description": "确认预付",
       "match": "registered",
       "registrations": [
-        392
+        393
       ],
       "reviewRequired": true
     },
@@ -9192,7 +9260,7 @@
       "description": "付款登记",
       "match": "registered",
       "registrations": [
-        387
+        388
       ],
       "reviewRequired": true
     },
@@ -9216,7 +9284,7 @@
       "description": "付款登记",
       "match": "registered",
       "registrations": [
-        388
+        389
       ],
       "reviewRequired": true
     },
@@ -9251,7 +9319,7 @@
       "description": "付款确认",
       "match": "registered",
       "registrations": [
-        389
+        390
       ],
       "reviewRequired": true
     },
@@ -9264,7 +9332,7 @@
       "description": "核销（跨币种时必填汇率）",
       "match": "registered",
       "registrations": [
-        394
+        395
       ],
       "reviewRequired": true
     },
@@ -9277,7 +9345,7 @@
       "description": "撤销",
       "match": "registered",
       "registrations": [
-        395
+        396
       ],
       "reviewRequired": true
     },
@@ -9345,7 +9413,7 @@
       "description": "往来余额（按币种）",
       "match": "registered",
       "registrations": [
-        396
+        397
       ],
       "reviewRequired": true
     },
@@ -9358,7 +9426,7 @@
       "description": "生成对账单",
       "match": "registered",
       "registrations": [
-        398
+        399
       ],
       "reviewRequired": true
     },
@@ -9371,7 +9439,7 @@
       "description": "到期应付",
       "match": "registered",
       "registrations": [
-        400
+        401
       ],
       "reviewRequired": true
     },
@@ -9384,7 +9452,7 @@
       "description": "可退数量",
       "match": "registered",
       "registrations": [
-        402
+        403
       ],
       "reviewRequired": true
     },
@@ -9397,7 +9465,7 @@
       "description": "销售退货申请",
       "match": "registered",
       "registrations": [
-        403
+        404
       ],
       "reviewRequired": true
     },
@@ -9410,7 +9478,7 @@
       "description": "销售退货申请",
       "match": "registered",
       "registrations": [
-        404
+        405
       ],
       "reviewRequired": true
     },
@@ -9423,7 +9491,7 @@
       "description": "销售退货申请",
       "match": "registered",
       "registrations": [
-        405
+        406
       ],
       "reviewRequired": true
     },
@@ -9458,7 +9526,7 @@
       "description": "提交审批",
       "match": "registered",
       "registrations": [
-        406
+        407
       ],
       "reviewRequired": true
     },
@@ -9471,7 +9539,7 @@
       "description": "实收",
       "match": "registered",
       "registrations": [
-        407
+        408
       ],
       "reviewRequired": true
     },
@@ -9484,7 +9552,7 @@
       "description": "验货并处理库存",
       "match": "registered",
       "registrations": [
-        408
+        409
       ],
       "reviewRequired": true
     },
@@ -9497,7 +9565,7 @@
       "description": "账款处理",
       "match": "registered",
       "registrations": [
-        409
+        410
       ],
       "reviewRequired": true
     },
@@ -9521,7 +9589,7 @@
       "description": "退款申请",
       "match": "registered",
       "registrations": [
-        410
+        411
       ],
       "reviewRequired": true
     },
@@ -9545,7 +9613,7 @@
       "description": "退款申请",
       "match": "registered",
       "registrations": [
-        411
+        412
       ],
       "reviewRequired": true
     },
@@ -9580,7 +9648,7 @@
       "description": "登记实际支付",
       "match": "registered",
       "registrations": [
-        412
+        413
       ],
       "reviewRequired": true
     },
@@ -9593,7 +9661,7 @@
       "description": "采购退货",
       "match": "registered",
       "registrations": [
-        414
+        415
       ],
       "reviewRequired": true
     },
@@ -9617,7 +9685,7 @@
       "description": "采购退货",
       "match": "registered",
       "registrations": [
-        415
+        416
       ],
       "reviewRequired": true
     },
@@ -9652,7 +9720,7 @@
       "description": "退出或退库",
       "match": "registered",
       "registrations": [
-        416
+        417
       ],
       "reviewRequired": true
     },
@@ -9665,7 +9733,7 @@
       "description": "货损、索赔",
       "match": "registered",
       "registrations": [
-        417
+        418
       ],
       "reviewRequired": true
     },
@@ -9689,7 +9757,7 @@
       "description": "货损、索赔",
       "match": "registered",
       "registrations": [
-        418
+        419
       ],
       "reviewRequired": true
     },
@@ -9724,7 +9792,7 @@
       "description": "记录索赔结果",
       "match": "registered",
       "registrations": [
-        419
+        420
       ],
       "reviewRequired": true
     },
@@ -9737,7 +9805,7 @@
       "description": "计价方法",
       "match": "registered",
       "registrations": [
-        339
+        340
       ],
       "reviewRequired": true
     },
@@ -9750,7 +9818,7 @@
       "description": "计价方法",
       "match": "registered",
       "registrations": [
-        340
+        341
       ],
       "reviewRequired": true
     },
@@ -9815,7 +9883,7 @@
       "description": "成本调整列表",
       "match": "registered",
       "registrations": [
-        333
+        334
       ],
       "reviewRequired": true
     },
@@ -9828,7 +9896,7 @@
       "description": "手工调整（需要审批）",
       "match": "registered",
       "registrations": [
-        334
+        335
       ],
       "reviewRequired": true
     },
@@ -9841,7 +9909,7 @@
       "description": "期间费用、直接销售费用",
       "match": "registered",
       "registrations": [
-        336
+        337
       ],
       "reviewRequired": true
     },
@@ -9865,7 +9933,7 @@
       "description": "期间费用、直接销售费用",
       "match": "registered",
       "registrations": [
-        337
+        338
       ],
       "reviewRequired": true
     },
@@ -9913,7 +9981,7 @@
       "description": "利润分析",
       "match": "registered",
       "registrations": [
-        338
+        339
       ],
       "reviewRequired": true
     },
@@ -9937,7 +10005,7 @@
       "description": "发起 AI 分析（异步，返回任务 ID）",
       "match": "registered",
       "registrations": [
-        452
+        453
       ],
       "reviewRequired": true
     },
@@ -9950,7 +10018,7 @@
       "description": "查看分析结果",
       "match": "registered",
       "registrations": [
-        453
+        454
       ],
       "reviewRequired": true
     },
@@ -9963,7 +10031,7 @@
       "description": "账套",
       "match": "registered",
       "registrations": [
-        420
+        421
       ],
       "reviewRequired": true
     },
@@ -10042,7 +10110,7 @@
       "description": "期间列表、生成期间",
       "match": "registered",
       "registrations": [
-        421
+        422
       ],
       "reviewRequired": true
     },
@@ -10055,7 +10123,7 @@
       "description": "科目",
       "match": "registered",
       "registrations": [
-        422
+        423
       ],
       "reviewRequired": true
     },
@@ -10079,7 +10147,7 @@
       "description": "科目",
       "match": "registered",
       "registrations": [
-        423
+        424
       ],
       "reviewRequired": true
     },
@@ -10114,7 +10182,7 @@
       "description": "期初余额",
       "match": "registered",
       "registrations": [
-        424
+        425
       ],
       "reviewRequired": true
     },
@@ -10138,7 +10206,7 @@
       "description": "期初余额",
       "match": "registered",
       "registrations": [
-        425
+        426
       ],
       "reviewRequired": true
     },
@@ -10173,7 +10241,7 @@
       "description": "确认期初（试算平衡）",
       "match": "registered",
       "registrations": [
-        426
+        427
       ],
       "reviewRequired": true
     },
@@ -10186,7 +10254,7 @@
       "description": "映射模板",
       "match": "registered",
       "registrations": [
-        427
+        428
       ],
       "reviewRequired": true
     },
@@ -10243,7 +10311,7 @@
       "description": "复核生效",
       "match": "registered",
       "registrations": [
-        428
+        429
       ],
       "reviewRequired": true
     },
@@ -10256,7 +10324,7 @@
       "description": "用某个事件试算凭证（不保存）",
       "match": "registered",
       "registrations": [
-        429
+        430
       ],
       "reviewRequired": true
     },
@@ -10269,7 +10337,7 @@
       "description": "业务事件生成状态（未生成、失败）",
       "match": "registered",
       "registrations": [
-        430
+        431
       ],
       "reviewRequired": true
     },
@@ -10282,7 +10350,7 @@
       "description": "手动生成或重试（幂等）",
       "match": "registered",
       "registrations": [
-        431
+        432
       ],
       "reviewRequired": true
     },
@@ -10295,7 +10363,7 @@
       "description": "凭证",
       "match": "registered",
       "registrations": [
-        432
+        433
       ],
       "reviewRequired": true
     },
@@ -10308,7 +10376,7 @@
       "description": "凭证",
       "match": "registered",
       "registrations": [
-        433
+        434
       ],
       "reviewRequired": true
     },
@@ -10321,7 +10389,7 @@
       "description": "凭证",
       "match": "registered",
       "registrations": [
-        434
+        435
       ],
       "reviewRequired": true
     },
@@ -10334,7 +10402,7 @@
       "description": "凭证",
       "match": "registered",
       "registrations": [
-        440
+        441
       ],
       "reviewRequired": true
     },
@@ -10358,7 +10426,7 @@
       "description": "状态流转（批量接口：`/batch-audit`、`/batch-post`）",
       "match": "registered",
       "registrations": [
-        435
+        436
       ],
       "reviewRequired": true
     },
@@ -10371,7 +10439,7 @@
       "description": "冲销",
       "match": "registered",
       "registrations": [
-        439
+        440
       ],
       "reviewRequired": true
     },
@@ -10384,7 +10452,7 @@
       "description": "明细账、总账、余额表、日记账",
       "match": "registered",
       "registrations": [
-        441
+        442
       ],
       "reviewRequired": true
     },
@@ -10397,7 +10465,7 @@
       "description": "试算平衡",
       "match": "registered",
       "registrations": [
-        445
+        446
       ],
       "reviewRequired": true
     },
@@ -10410,7 +10478,7 @@
       "description": "子账与总账核对",
       "match": "registered",
       "registrations": [
-        446
+        447
       ],
       "reviewRequired": true
     },
@@ -10423,7 +10491,7 @@
       "description": "结账前检查",
       "match": "registered",
       "registrations": [
-        447
+        448
       ],
       "reviewRequired": true
     },
@@ -10436,7 +10504,7 @@
       "description": "结账",
       "match": "registered",
       "registrations": [
-        449
+        450
       ],
       "reviewRequired": true
     },
@@ -10449,7 +10517,7 @@
       "description": "反结账",
       "match": "registered",
       "registrations": [
-        450
+        451
       ],
       "reviewRequired": true
     },
@@ -10462,7 +10530,7 @@
       "description": "报表",
       "match": "registered",
       "registrations": [
-        451
+        452
       ],
       "reviewRequired": true
     },
@@ -10538,7 +10606,7 @@
       "description": "下载模板",
       "match": "registered",
       "registrations": [
-        454
+        455
       ],
       "reviewRequired": true
     },
@@ -10551,7 +10619,7 @@
       "description": "上传并创建批次（自动开始预校验）",
       "match": "registered",
       "registrations": [
-        455
+        456
       ],
       "reviewRequired": true
     },
@@ -10564,7 +10632,7 @@
       "description": "批次状态、预览",
       "match": "registered",
       "registrations": [
-        456
+        457
       ],
       "reviewRequired": true
     },
@@ -10588,7 +10656,7 @@
       "description": "确认导入（幂等）",
       "match": "registered",
       "registrations": [
-        457
+        458
       ],
       "reviewRequired": true
     },
@@ -10612,7 +10680,7 @@
       "description": "我的导出和异步任务",
       "match": "registered",
       "registrations": [
-        458
+        459
       ],
       "reviewRequired": true
     },
@@ -10625,7 +10693,7 @@
       "description": "下载结果",
       "match": "registered",
       "registrations": [
-        460
+        461
       ],
       "reviewRequired": true
     }

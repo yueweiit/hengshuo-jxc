@@ -3890,7 +3890,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sys.ts",
-            "line": 543
+            "line": 547
           },
           "permissions": {
             "observed": [],
@@ -12701,21 +12701,30 @@
           },
           "facts": {
             "observedCalls": [
+              "String",
               "filter",
               "get",
+              "getTime",
               "handle",
-              "localeCompare",
+              "includes",
               "map",
               "paginate",
               "requireCountry",
               "runPeriodic",
               "sort",
+              "toLowerCase",
+              "trim",
               "visibleTodos"
             ],
             "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
           },
           "errors": {
-            "observed": [],
+            "observed": [
+              {
+                "status": 400,
+                "code": "SYS_BAD_REQUEST"
+              }
+            ],
             "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
           },
           "analysis": {
@@ -12794,7 +12803,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sys.ts",
-            "line": 512
+            "line": 516
           },
           "permissions": {
             "observed": [],
@@ -12919,7 +12928,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sys.ts",
-            "line": 523
+            "line": 527
           },
           "permissions": {
             "observed": [],
@@ -13050,7 +13059,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sys.ts",
-            "line": 531
+            "line": 535
           },
           "permissions": {
             "observed": [],
@@ -36359,7 +36368,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/lgs.ts",
-            "line": 961
+            "line": 997
           },
           "permissions": {
             "observed": [
@@ -36369,7 +36378,7 @@
                   "lgs:shipment:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/lgs.ts",
-                "line": 962
+                "line": 998
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36462,7 +36471,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/lgs.ts",
-            "line": 966
+            "line": 1002
           },
           "permissions": {
             "observed": [],
@@ -40625,7 +40634,9 @@
           },
           "field": {
             "observed": [],
-            "serializerCalls": [],
+            "serializerCalls": [
+              "shipmentOut"
+            ],
             "reviewRequired": true
           },
           "idem": {
@@ -40636,22 +40647,44 @@
           },
           "facts": {
             "observedCalls": [
+              "Number",
               "String",
+              "add",
+              "addFact",
+              "bad",
               "canDocumentDataAccess",
+              "ceil",
+              "delayInfo",
+              "empty",
               "filter",
+              "find",
+              "fromEntries",
               "get",
               "getDb",
               "handle",
               "has",
+              "includes",
+              "isSafeInteger",
+              "localeCompare",
               "map",
+              "max",
+              "min",
               "nameOf",
+              "paged",
+              "product",
+              "productMatches",
               "push",
               "requireCountry",
               "requirePerm",
+              "round",
               "set",
+              "shipmentOut",
+              "slice",
+              "some",
+              "sort",
               "sum",
               "values",
-              "withProduct"
+              "warehouseMatches"
             ],
             "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
           },
@@ -48947,6 +48980,130 @@
         ]
       }
     },
+    "/api/v1/cst/adjustment-batches": {
+      "get": {
+        "operationId": "get__api_v1_cst_adjustment_batches",
+        "tags": [
+          "cst"
+        ],
+        "summary": "GET /api/v1/cst/adjustment-batches",
+        "parameters": [],
+        "security": [
+          {
+            "bearerSession": []
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Observed response envelope only; operation-specific DTO and error status matrix require review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-phase": "M3",
+        "x-backend-status": "registered-gated",
+        "x-mock-status": "registered",
+        "x-registration-indices": [
+          333
+        ],
+        "x-contract-evidence": {
+          "source": {
+            "file": "jxc-web/src/mock/handlers/cstOps.ts",
+            "line": 183
+          },
+          "permissions": {
+            "observed": [
+              {
+                "guard": "requirePerm",
+                "values": [
+                  "cst:adjustment:create"
+                ],
+                "file": "jxc-web/src/mock/handlers/cstOps.ts",
+                "line": 184
+              }
+            ],
+            "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
+          },
+          "scope": {
+            "country": "country header authorization; resource requirements need review",
+            "configuredFields": null,
+            "observedGuards": [
+              "canDataAccess",
+              "requireCountry"
+            ],
+            "reviewRequired": true
+          },
+          "field": {
+            "observed": [
+              {
+                "group": "COST",
+                "write": false,
+                "file": "jxc-web/src/mock/handlers/cstOps.ts",
+                "line": 184
+              }
+            ],
+            "serializerCalls": [],
+            "reviewRequired": true
+          },
+          "idem": {
+            "observedHeader": false,
+            "referencedHelpersMayCheck": true,
+            "required": "unknown; verify docs and service implementation",
+            "hashBinding": "not inferred from AST"
+          },
+          "facts": {
+            "observedCalls": [
+              "Number",
+              "String",
+              "bad",
+              "canDataAccess",
+              "every",
+              "filter",
+              "find",
+              "get",
+              "getDb",
+              "handle",
+              "has",
+              "includes",
+              "isInteger",
+              "isSafeInteger",
+              "join",
+              "map",
+              "nameOf",
+              "num",
+              "paginate",
+              "requireCountry",
+              "requireFieldAccess",
+              "requirePerm",
+              "some",
+              "sort",
+              "sum",
+              "test",
+              "toLowerCase",
+              "trim",
+              "unique",
+              "values",
+              "withProduct"
+            ],
+            "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
+          },
+          "errors": {
+            "observed": [],
+            "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
+          },
+          "analysis": {
+            "completeness": "partial",
+            "reviewRequired": true,
+            "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
+          }
+        }
+      }
+    },
     "/api/v1/cst/adjustments": {
       "get": {
         "operationId": "get__api_v1_cst_adjustments",
@@ -48986,7 +49143,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          333
+          334
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -49010,7 +49167,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 182
+            "line": 207
           },
           "permissions": {
             "observed": [
@@ -49021,7 +49178,7 @@
                   "cst:cost:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 183
+                "line": 208
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -49041,7 +49198,7 @@
                 "group": "COST",
                 "write": false,
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 184
+                "line": 209
               }
             ],
             "serializerCalls": [],
@@ -49055,14 +49212,20 @@
           },
           "facts": {
             "observedCalls": [
+              "String",
               "canDataAccess",
+              "every",
               "filter",
+              "find",
+              "get",
               "getDb",
               "handle",
+              "map",
               "paginate",
               "requireCountry",
               "requireFieldAccess",
-              "requirePerm"
+              "requirePerm",
+              "withProduct"
             ],
             "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
           },
@@ -49148,7 +49311,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          334
+          335
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -49172,7 +49335,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 188
+            "line": 216
           },
           "permissions": {
             "observed": [
@@ -49182,7 +49345,7 @@
                   "cst:adjustment:create"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 189
+                "line": 217
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -49203,7 +49366,7 @@
                 "group": "COST",
                 "write": false,
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 190
+                "line": 218
               }
             ],
             "serializerCalls": [],
@@ -49333,7 +49496,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          335
+          336
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -49359,7 +49522,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 210
+            "line": 238
           },
           "permissions": {
             "observed": [
@@ -49369,7 +49532,7 @@
                   "cst:adjustment:create"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 211
+                "line": 239
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -49467,7 +49630,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          336
+          337
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -49491,7 +49654,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 216
+            "line": 244
           },
           "permissions": {
             "observed": [
@@ -49502,7 +49665,7 @@
                   "cst:profit:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 217
+                "line": 245
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -49522,7 +49685,7 @@
                 "group": "COST",
                 "write": false,
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 218
+                "line": 246
               }
             ],
             "serializerCalls": [],
@@ -49631,7 +49794,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          337
+          338
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -49655,7 +49818,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 222
+            "line": 250
           },
           "permissions": {
             "observed": [
@@ -49665,7 +49828,7 @@
                   "cst:expense:create"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 223
+                "line": 251
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -49685,7 +49848,7 @@
                 "group": "COST",
                 "write": false,
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 224
+                "line": 252
               }
             ],
             "serializerCalls": [],
@@ -49792,7 +49955,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          338
+          339
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -49809,7 +49972,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 253
+            "line": 281
           },
           "permissions": {
             "observed": [
@@ -49819,7 +49982,7 @@
                   "cst:profit:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 254
+                "line": 282
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -49838,7 +50001,7 @@
                 "group": "PROFIT",
                 "write": false,
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 255
+                "line": 283
               }
             ],
             "serializerCalls": [
@@ -49934,7 +50097,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          339
+          340
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -49958,7 +50121,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 273
+            "line": 301
           },
           "permissions": {
             "observed": [
@@ -49969,7 +50132,7 @@
                   "cst:cost:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 274
+                "line": 302
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -50086,7 +50249,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          340
+          341
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -50110,7 +50273,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 279
+            "line": 307
           },
           "permissions": {
             "observed": [
@@ -50120,7 +50283,7 @@
                   "cst:method:config"
                 ],
                 "file": "jxc-web/src/mock/handlers/cstOps.ts",
-                "line": 280
+                "line": 308
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -50220,7 +50383,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          341
+          342
         ],
         "x-contract-evidence": {
           "source": {
@@ -50312,7 +50475,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          342
+          343
         ],
         "x-contract-evidence": {
           "source": {
@@ -50412,7 +50575,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          343
+          344
         ],
         "x-contract-evidence": {
           "source": {
@@ -50508,7 +50671,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          344
+          345
         ],
         "x-contract-evidence": {
           "source": {
@@ -50589,7 +50752,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          345
+          346
         ],
         "x-contract-evidence": {
           "source": {
@@ -50727,7 +50890,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          347
+          348
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -50848,7 +51011,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          346
+          347
         ],
         "x-contract-evidence": {
           "source": {
@@ -50958,7 +51121,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          348
+          349
         ],
         "x-contract-evidence": {
           "source": {
@@ -51111,7 +51274,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          349
+          350
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -51241,7 +51404,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          350
+          351
         ],
         "x-contract-evidence": {
           "source": {
@@ -51353,7 +51516,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          351
+          352
         ],
         "x-contract-evidence": {
           "source": {
@@ -51463,7 +51626,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          352
+          353
         ],
         "x-contract-evidence": {
           "source": {
@@ -51566,7 +51729,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          353
+          354
         ],
         "x-contract-evidence": {
           "source": {
@@ -51670,7 +51833,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          354
+          355
         ],
         "x-contract-evidence": {
           "source": {
@@ -51809,7 +51972,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          355
+          356
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -51972,7 +52135,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          356
+          357
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -52104,7 +52267,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          357
+          358
         ],
         "x-contract-evidence": {
           "source": {
@@ -52208,7 +52371,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          358
+          359
         ],
         "x-contract-evidence": {
           "source": {
@@ -52323,7 +52486,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          359
+          360
         ],
         "x-contract-evidence": {
           "source": {
@@ -52416,7 +52579,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          360
+          361
         ],
         "x-contract-evidence": {
           "source": {
@@ -52516,7 +52679,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          361
+          362
         ],
         "x-contract-evidence": {
           "source": {
@@ -52658,7 +52821,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          362
+          363
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -52820,7 +52983,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          363
+          364
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -52952,7 +53115,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          364
+          365
         ],
         "x-contract-evidence": {
           "source": {
@@ -53066,7 +53229,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          365
+          366
         ],
         "x-contract-evidence": {
           "source": {
@@ -53163,7 +53326,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          366
+          367
         ],
         "x-contract-evidence": {
           "source": {
@@ -53262,7 +53425,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          367
+          368
         ],
         "x-contract-evidence": {
           "source": {
@@ -53368,7 +53531,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          368
+          369
         ],
         "x-contract-evidence": {
           "source": {
@@ -53479,7 +53642,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          369
+          370
         ],
         "x-contract-evidence": {
           "source": {
@@ -53583,7 +53746,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          370
+          371
         ],
         "x-contract-evidence": {
           "source": {
@@ -53691,7 +53854,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          371
+          372
         ],
         "x-contract-evidence": {
           "source": {
@@ -53797,7 +53960,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          372
+          373
         ],
         "x-contract-evidence": {
           "source": {
@@ -53890,7 +54053,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          373
+          374
         ],
         "x-contract-evidence": {
           "source": {
@@ -53987,7 +54150,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          374
+          375
         ],
         "x-contract-evidence": {
           "source": {
@@ -54129,7 +54292,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          375
+          376
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -54266,7 +54429,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          377
+          378
         ],
         "x-contract-evidence": {
           "source": {
@@ -54413,7 +54576,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          376
+          377
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -54597,7 +54760,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          378
+          379
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -54717,7 +54880,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          379
+          380
         ],
         "x-contract-evidence": {
           "source": {
@@ -54813,7 +54976,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          380
+          381
         ],
         "x-contract-evidence": {
           "source": {
@@ -54914,7 +55077,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          381
+          382
         ],
         "x-contract-evidence": {
           "source": {
@@ -55023,7 +55186,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          382
+          383
         ],
         "x-contract-evidence": {
           "source": {
@@ -55105,7 +55268,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          383
+          384
         ],
         "x-contract-evidence": {
           "source": {
@@ -55245,7 +55408,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          384
+          385
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -55407,7 +55570,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          385
+          386
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -55570,7 +55733,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          386
+          387
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -55697,7 +55860,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          387
+          388
         ],
         "x-contract-evidence": {
           "source": {
@@ -55835,7 +55998,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          388
+          389
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -55999,7 +56162,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          389
+          390
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56113,7 +56276,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          390
+          391
         ],
         "x-contract-evidence": {
           "source": {
@@ -56252,7 +56415,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          391
+          392
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56434,7 +56597,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          392
+          393
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56561,7 +56724,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          393
+          394
         ],
         "x-contract-evidence": {
           "source": {
@@ -56697,7 +56860,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          394
+          395
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56859,7 +57022,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          395
+          396
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56981,7 +57144,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          396
+          397
         ],
         "x-contract-evidence": {
           "source": {
@@ -57086,7 +57249,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          397
+          398
         ],
         "x-contract-evidence": {
           "source": {
@@ -57192,7 +57355,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          398
+          399
         ],
         "x-contract-evidence": {
           "source": {
@@ -57270,7 +57433,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          399
+          400
         ],
         "x-contract-evidence": {
           "source": {
@@ -57364,7 +57527,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          400
+          401
         ],
         "x-contract-evidence": {
           "source": {
@@ -57460,7 +57623,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          401
+          402
         ],
         "x-contract-evidence": {
           "source": {
@@ -57557,7 +57720,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          402
+          403
         ],
         "x-contract-evidence": {
           "source": {
@@ -57656,7 +57819,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          403
+          404
         ],
         "x-contract-evidence": {
           "source": {
@@ -57794,7 +57957,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          405
+          406
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -57942,7 +58105,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          404
+          405
         ],
         "x-contract-evidence": {
           "source": {
@@ -58044,7 +58207,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          406
+          407
         ],
         "x-contract-evidence": {
           "source": {
@@ -58176,7 +58339,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          407
+          408
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -58361,7 +58524,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          408
+          409
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -58553,7 +58716,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          409
+          410
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -58689,7 +58852,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          410
+          411
         ],
         "x-contract-evidence": {
           "source": {
@@ -58825,7 +58988,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          411
+          412
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59015,7 +59178,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          412
+          413
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59156,7 +59319,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          413
+          414
         ],
         "x-contract-evidence": {
           "source": {
@@ -59254,7 +59417,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          414
+          415
         ],
         "x-contract-evidence": {
           "source": {
@@ -59390,7 +59553,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          415
+          416
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59582,7 +59745,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          416
+          417
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59726,7 +59889,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          417
+          418
         ],
         "x-contract-evidence": {
           "source": {
@@ -59829,7 +59992,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          418
+          419
         ],
         "x-contract-evidence": {
           "source": {
@@ -59951,7 +60114,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          419
+          420
         ],
         "x-contract-evidence": {
           "source": {
@@ -60209,7 +60372,7 @@
         "x-backend-status": "implemented-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          420
+          421
         ],
         "x-contract-evidence": {
           "reviewStatus": "explicit-M1-review",
@@ -60549,7 +60712,7 @@
         "x-backend-status": "implemented-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          421
+          422
         ],
         "x-contract-evidence": {
           "reviewStatus": "explicit-M1-review",
@@ -60714,7 +60877,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          422
+          423
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -60868,7 +61031,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          423
+          424
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61004,7 +61167,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          424
+          425
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61159,7 +61322,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          425
+          426
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61317,7 +61480,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          426
+          427
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61456,7 +61619,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          427
+          428
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61708,7 +61871,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          428
+          429
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61869,7 +62032,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          429
+          430
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62006,7 +62169,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          430
+          431
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62174,7 +62337,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          431
+          432
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62293,7 +62456,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          432
+          433
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62450,7 +62613,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          434
+          435
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62609,7 +62772,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          433
+          434
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62771,7 +62934,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          440
+          441
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63042,7 +63205,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          435
+          436
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63208,7 +63371,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          436
+          437
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63375,7 +63538,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          437
+          438
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63541,7 +63704,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          438
+          439
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63702,7 +63865,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          439
+          440
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63851,7 +64014,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          441
+          442
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63993,7 +64156,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          442
+          443
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64128,7 +64291,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          443
+          444
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64263,7 +64426,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          444
+          445
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64405,7 +64568,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          445
+          446
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64542,7 +64705,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          446
+          447
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64697,7 +64860,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          447
+          448
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -64843,7 +65006,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          448
+          449
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -64993,7 +65156,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          449
+          450
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65159,7 +65322,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          450
+          451
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65306,7 +65469,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          451
+          452
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65447,7 +65610,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          452
+          453
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65589,7 +65752,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          453
+          454
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65726,7 +65889,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          454
+          455
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -65859,7 +66022,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          455
+          456
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -66060,7 +66223,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          456
+          457
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -66193,7 +66356,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          457
+          458
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -66326,7 +66489,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          458
+          459
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -66459,7 +66622,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          459
+          460
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -66599,7 +66762,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          460
+          461
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
