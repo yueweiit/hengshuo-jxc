@@ -48,7 +48,7 @@ public class ApiExceptionAdvice {
         org.springframework.web.bind.MethodArgumentNotValidException.class})
     public ResponseEntity<ApiEnvelope> invalid(Exception e) { return business(new ApiException(400, "SYS_BAD_REQUEST", "请求参数不正确")); }
     @ExceptionHandler({org.springframework.web.servlet.resource.NoResourceFoundException.class,org.springframework.web.servlet.NoHandlerFoundException.class})
-    public ResponseEntity<ApiEnvelope> missing(Exception e){return business(ApiException.notFound());}
+    public ResponseEntity<ApiEnvelope> missing(Exception e){return business(new ApiException(404,"SYS_API_NOT_FOUND","页面所需接口不存在，请刷新页面或联系管理员核对服务版本"));}
     @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiEnvelope> method(Exception e){return business(new ApiException(405,"SYS_METHOD_NOT_ALLOWED","此接口不支持该操作"));}
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
