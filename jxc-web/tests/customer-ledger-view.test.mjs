@@ -43,7 +43,7 @@ function render(page) {
   })
   const code = compile(source.match(/<template>([\s\S]*)<\/template>/)[1], { mode: 'function', prefixIdentifiers: true }).code
   const app = renderer.createApp({ setup: () => page, render: new Function('Vue', code)(Vue) })
-  for (const [name, tag] of [['ElButton', 'button'], ['ElTimeline', 'ol'], ['ElTimelineItem', 'li'], ['ElTag', 'tag'], ['ElSkeleton', 'skeleton']]) {
+  for (const [name, tag] of [['ElButton', 'button'], ['ElTag', 'tag'], ['ElSkeleton', 'skeleton']]) {
     app.component(name, Vue.defineComponent({ setup: (_, ctx) => () => Vue.h(tag, ctx.attrs, ctx.slots.default?.()) }))
   }
   app.component('ElEmpty', Vue.defineComponent({ props: ['description'], setup: props => () => Vue.h('empty', props.description) }))

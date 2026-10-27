@@ -120,25 +120,23 @@ onBeforeUnmount(() => { active = false })
 <template>
   <div class="customer-ledger">
     <header class="page-title ledger-header">
-      <div class="ledger-navigation">
-        <el-button link type="primary" @click="router.push('/ar/receivables')">返回应收</el-button>
-        <h2>客户往来</h2>
+      <div class="customer-identity">
+        <div class="ledger-title-row">
+          <h2>客户往来</h2>
+          <span id="customer-name" class="customer-name">{{ customerName }}</span>
+        </div>
+        <p class="customer-context muted">
+          <span>客户编号 <span class="mono">{{ Number.isSafeInteger(id) && id > 0 ? id : '-' }}</span></span>
+          <span>查询币种 <span class="ledger-currency">{{ currency || '未提供' }}</span></span>
+        </p>
       </div>
-      <el-button :loading="balance.loading || records.loading" @click="load()">刷新</el-button>
+      <div class="ledger-actions">
+        <el-button @click="router.push('/ar/receivables')">返回应收</el-button>
+        <el-button :loading="balance.loading || records.loading" @click="load()">刷新</el-button>
+      </div>
     </header>
 
-    <section class="page-card ledger-overview" aria-labelledby="customer-name" :aria-busy="balance.loading">
-      <header class="customer-summary">
-        <div class="customer-identity">
-          <h3 id="customer-name">{{ customerName }}</h3>
-          <p class="customer-context muted">
-            <span>客户编号 <span class="mono">{{ Number.isSafeInteger(id) && id > 0 ? id : '-' }}</span></span>
-            <span>查询币种 <span class="ledger-currency">{{ currency || '未提供' }}</span></span>
-          </p>
-        </div>
-        <span class="muted">客户余额概览</span>
-      </header>
-
+    <section class="page-card ledger-overview" aria-label="客户余额" :aria-busy="balance.loading">
       <div v-if="balance.loading" class="ledger-loading" role="status">
         <el-skeleton :rows="2" animated />
         <p class="muted">正在读取客户余额…</p>
@@ -151,22 +149,31 @@ onBeforeUnmount(() => { active = false })
         <p v-if="!currency" class="muted">币种未提供，余额金额暂不展示。</p>
         <dl class="balance-grid">
           <div v-for="metric in metrics" :key="metric.key" class="balance-item">
-            <dt>{{ metric.label }}</dt>
+            <dt class="balance-label">
+              <span>{{ metric.label }}</span>
+              <details class="balance-help">
+                <summary :aria-label="`${metric.label}说明`">说明</summary>
+                <p>{{ metric.help }}</p>
+              </details>
+            </dt>
             <dd class="balance-value">
               <MoneyText v-if="currency" :value="balance.data[metric.key]" :currency="currency" />
               <span v-else class="mono">-</span>
             </dd>
-            <dd class="balance-help muted">{{ metric.help }}</dd>
-          </div>
-          <div class="balance-item credit-item">
-            <dt>授信额度</dt>
-            <dd v-for="field in creditFields" :key="field.key" class="credit-line">
-              <span class="muted">{{ field.label }}</span>
-              <MoneyText v-if="currency" :value="balance.data[field.key]" :currency="currency" />
-              <span v-else class="mono">-</span>
-            </dd>
           </div>
         </dl>
+        <div class="credit-strip">
+          <span class="credit-title">授信额度</span>
+          <dl class="credit-fields">
+            <div v-for="field in creditFields" :key="field.key" class="credit-field">
+              <dt>{{ field.label }}</dt>
+              <dd>
+                <MoneyText v-if="currency" :value="balance.data[field.key]" :currency="currency" />
+                <span v-else class="mono">-</span>
+              </dd>
+            </div>
+          </dl>
+        </div>
       </template>
     </section>
 
@@ -188,81 +195,105 @@ onBeforeUnmount(() => { active = false })
         <el-button size="small" :loading="records.loading" @click="load('records')">重新读取记录</el-button>
       </el-alert>
       <el-empty v-else-if="records.data?.length === 0" description="暂无往来记录" :image-size="64" />
-      <el-timeline v-else-if="records.data" class="ledger-timeline">
-        <el-timeline-item v-for="(event, index) in records.data" :key="`${event.type}:${event.id ?? event.no ?? index}:${event.at ?? ''}`" type="primary" hollow>
-          <div class="record-content">
-            <div class="record-details">
-              <div class="record-heading">
-                <span class="record-type">{{ event.type || '类型未提供' }}</span>
-                <el-tag v-if="event.status" :type="eventStatus(event).type" size="small" disable-transitions>{{ eventStatus(event).label }}</el-tag>
-              </div>
-              <p class="record-number mono">{{ event.no || event.docNo || '单号未提供' }}</p>
-              <p class="record-time muted"><DateTimeText :value="event.at" :known-date="event.bizDate" /></p>
-            </div>
-            <div class="record-amount">
-              <span class="muted">单据金额</span>
+      <table v-else-if="records.data" class="ledger-table" role="table" aria-labelledby="ledger-records-title">
+        <thead role="rowgroup">
+          <tr role="row">
+            <th class="time-column" scope="col" role="columnheader">发生时间</th>
+            <th class="type-column" scope="col" role="columnheader">业务类型</th>
+            <th class="number-column" scope="col" role="columnheader">单据编号</th>
+            <th class="status-column" scope="col" role="columnheader">状态</th>
+            <th class="amount-column" scope="col" role="columnheader">单据金额</th>
+          </tr>
+        </thead>
+        <tbody role="rowgroup">
+          <tr v-for="(event, index) in records.data" :key="`${event.type}:${event.id ?? event.no ?? index}:${event.at ?? ''}`" role="row">
+            <td class="record-time" role="cell"><DateTimeText :value="event.at" :known-date="event.bizDate" /></td>
+            <td class="record-type" role="cell">{{ event.type || '类型未提供' }}</td>
+            <td class="record-number mono" role="cell">{{ event.no || event.docNo || '单号未提供' }}</td>
+            <td class="record-status" role="cell">
+              <el-tag v-if="event.status" :type="eventStatus(event).type" size="small" disable-transitions>{{ eventStatus(event).label }}</el-tag>
+            </td>
+            <td class="record-amount" role="cell">
               <MoneyText v-if="event.amount != null && event.amount !== '' && eventCurrency(event)" :value="event.amount" :currency="eventCurrency(event)" />
               <span v-else class="muted">{{ event.amount == null || event.amount === '' ? '金额未提供' : '币种未提供' }}</span>
-            </div>
-          </div>
-        </el-timeline-item>
-      </el-timeline>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   </div>
 </template>
 
 <style scoped>
-.customer-ledger { min-width: 0; }
-.ledger-header { flex-wrap: wrap; }
-.ledger-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; min-width: 0; }
-.customer-summary, .records-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.customer-summary { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--el-border-color-lighter); }
+.customer-ledger { min-width: 0; max-width: 1280px; margin: 0 auto; }
+.ledger-header { align-items: flex-start; flex-wrap: wrap; margin-bottom: 16px; }
 .customer-identity { min-width: 0; flex: 1; }
-.customer-summary h3 { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
-.customer-context { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 0; }
+.ledger-title-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; }
+.ledger-title-row h2 { flex-shrink: 0; }
+.customer-name { min-width: 0; padding-left: 12px; border-left: 1px solid var(--el-border-color); font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.customer-context { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; }
 .ledger-currency { color: var(--el-text-color-regular); }
-.balance-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 16px; margin: 0; }
+.ledger-actions { display: flex; flex-shrink: 0; align-items: center; gap: 8px; }
+.ledger-actions :deep(.el-button + .el-button) { margin-left: 0; }
+.balance-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; }
 .balance-item { min-width: 0; padding-right: 16px; border-right: 1px solid var(--el-border-color-lighter); }
 .balance-item:last-child { border-right: 0; padding-right: 0; }
-.balance-item dt { color: var(--el-text-color-regular); font-size: 13px; }
-.balance-item dd { margin-left: 0; overflow-wrap: anywhere; }
-.balance-value { margin-top: 12px; font-size: 26px; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; }
-.balance-help { margin-top: 8px; margin-bottom: 0; font-size: 12px; line-height: 1.6; }
-.credit-line { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; margin-bottom: 0; font-size: 14px; }
-.credit-line > :last-child { min-width: 0; margin-left: auto; text-align: right; overflow-wrap: anywhere; }
-.records-header { align-items: center; margin-bottom: 24px; }
+.balance-label { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; color: var(--el-text-color-regular); font-size: 14px; }
+.balance-value { margin: 8px 0 0; font-size: 24px; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.balance-help { position: relative; font-size: 12px; font-weight: 400; }
+.balance-help summary { color: var(--el-text-color-secondary); cursor: pointer; }
+.balance-help p { position: absolute; z-index: 1; top: 100%; left: 0; width: 200px; max-width: calc(100vw - 64px); margin: 8px 0 0; padding: 12px; border: 1px solid var(--el-border-color-light); border-radius: 6px; background: var(--el-bg-color); color: var(--el-text-color-regular); line-height: 1.6; }
+.credit-strip { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 24px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--el-border-color-lighter); font-size: 13px; }
+.credit-title { flex-shrink: 0; font-weight: 500; }
+.credit-fields { display: flex; flex: 1; flex-wrap: wrap; gap: 8px 24px; min-width: 0; margin: 0; }
+.credit-field { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+.credit-field dt { color: var(--el-text-color-regular); }
+.credit-field dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.records-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
 .records-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
-.records-header p { margin: 6px 0 0; }
+.records-header p { margin: 4px 0 0; }
 .ledger-loading { padding: 8px 0; }
 .ledger-loading p { margin: 12px 0 0; }
 .ledger-error { margin: 4px 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.ledger-timeline { padding-left: 4px; margin: 0; }
-.record-content { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--el-border-color-lighter); }
-.ledger-timeline :deep(.el-timeline-item:last-child .record-content) { padding-bottom: 0; border-bottom: 0; }
-.record-details { flex: 1; min-width: 0; }
-.record-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.record-type { font-size: 14px; font-weight: 600; }
-.record-number { margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; }
-.record-time { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
-.record-amount { display: flex; flex-direction: column; gap: 8px; max-width: 50%; min-width: 0; text-align: right; font-size: 14px; overflow-wrap: anywhere; }
-.record-amount > .muted { font-size: 12px; }
-.customer-ledger :deep(.el-button:focus-visible) { outline: 2px solid var(--el-color-primary); outline-offset: 3px; }
+.ledger-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+.ledger-table th, .ledger-table td { padding: 11px 12px; border-bottom: 1px solid var(--el-border-color-lighter); text-align: left; line-height: 22px; overflow-wrap: anywhere; }
+.ledger-table th { background: var(--el-fill-color-light); color: var(--el-text-color-regular); font-size: 13px; font-weight: 500; }
+.ledger-table tbody tr:last-child td { border-bottom: 0; }
+.time-column { width: 22%; }
+.type-column { width: 10%; }
+.number-column { width: 36%; }
+.status-column { width: 12%; }
+.amount-column { width: 20%; }
+.record-time { color: var(--el-text-color-regular); font-size: 13px; }
+.record-type { font-weight: 500; }
+.record-status :deep(.el-tag) { height: auto; min-height: 20px; white-space: normal; overflow-wrap: anywhere; }
+.ledger-table .amount-column, .ledger-table .record-amount { text-align: right; font-variant-numeric: tabular-nums; }
+.customer-ledger :deep(.el-button:focus-visible), .balance-help summary:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   .customer-ledger :deep(.el-skeleton.is-animated .el-skeleton__item) { animation: none; }
 }
-@media (max-width: 1100px) {
-  .balance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .balance-item:nth-child(2n) { padding-right: 0; border-right: 0; }
-}
-@media (max-width: 600px) {
-  .record-content { flex-direction: column; gap: 12px; }
-  .record-amount { max-width: 100%; text-align: left; }
+@media (max-width: 760px) {
+  .ledger-table, .ledger-table tbody { display: block; }
+  .ledger-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .ledger-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "type status" "number number" "time amount"; gap: 6px 12px; padding: 12px 0; border-bottom: 1px solid var(--el-border-color-lighter); }
+  .ledger-table tbody tr:last-child { padding-bottom: 0; border-bottom: 0; }
+  .ledger-table td { min-width: 0; padding: 0; border: 0; }
+  .record-type { grid-area: type; }
+  .ledger-table .record-status { grid-area: status; text-align: right; }
+  .record-number { grid-area: number; }
+  .record-time { grid-area: time; font-size: 12px; }
+  .record-amount { grid-area: amount; }
+  .balance-help p { position: static; width: auto; max-width: none; padding: 8px 0 0; border: 0; margin: 0; }
 }
 @media (max-width: 480px) {
-  .balance-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .balance-item { padding: 0 0 16px; border-right: 0; border-bottom: 1px solid var(--el-border-color-lighter); }
+  .customer-identity { flex-basis: 100%; }
+  .customer-name { width: 100%; padding-left: 0; border-left: 0; }
+  .balance-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .balance-item { padding: 0 0 12px; border-right: 0; border-bottom: 1px solid var(--el-border-color-lighter); }
   .balance-item:last-child { padding-bottom: 0; border-bottom: 0; }
-  .balance-value { font-size: 24px; margin-top: 8px; }
-  .ledger-navigation { gap: 12px; }
+  .balance-value { margin-top: 4px; }
+  .credit-strip { gap: 8px 16px; }
+  .credit-fields { flex-basis: 100%; display: grid; gap: 8px; }
+  .credit-field { justify-content: space-between; }
 }
 </style>
