@@ -21,6 +21,11 @@ public class AccountingController {
     @PostMapping("/mapping-templates/{id}/review") public ApiEnvelope review(@PathVariable long id,@RequestBody Map<String,Object>b,@RequestHeader(value="Idempotency-Key",required=false)String key){return ok(accounting.review(c(),id,b,key));}
     @PostMapping("/mapping-templates/{id}/simulate") public ApiEnvelope simulate(@PathVariable long id,@RequestParam(required=false)Long eventId){return ok(accounting.simulate(c(),id,eventId));}
     @GetMapping("/events") public ApiEnvelope events(@RequestParam Map<String,String>q){return ok(accounting.events(c(),query(q)));}
-    @PostMapping("/events/{id}/generate") public ApiEnvelope generate(@PathVariable long id,@RequestHeader(value="Idempotency-Key",required=false)String key){return ok(accounting.generate(c(),id,key));}
+    @PostMapping("/events/{id}/generate") public ApiEnvelope generate(@PathVariable long id,@RequestBody(required=false)Map<String,Object> body,@RequestHeader(value="Idempotency-Key",required=false)String key){
+        var input=body==null?Map.<String,Object>of():body; // Legacy callers intentionally send no body.
+        if(!Set.of("bookId").containsAll(input.keySet()))throw Inputs.bad("凭证生成仅接受bookId，金额及映射取自原业务事件");
+        Long selected=input.containsKey("bookId")?Inputs.id(input.get("bookId")):null;
+        return ok(accounting.generate(c(),id,selected,key));
+    }
     @GetMapping("/reconcile") public ApiEnvelope reconcile(@RequestParam Map<String,String>q){return ok(accounting.reconcile(c(),query(q)));}
 }
