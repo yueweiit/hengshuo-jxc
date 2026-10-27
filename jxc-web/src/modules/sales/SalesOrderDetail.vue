@@ -182,9 +182,12 @@ function showOutboundFailure() {
   const failure = Object.assign(new Error('出库条件尚未满足，请按明细处理后重新检查'), {
     code: 'SAL_OUTBOUND_BLOCKED', data: { kind: 'OUTBOUND_CHECK', checks: checks.value, orderId: id.value },
   })
+  const sourceScope = detailScope()
   outboundNoticeId = reportError(failure, {
     title: '出库尚未完成', key: `outbound-check:${id.value}:${ob.warehouseId}`, sourcePath: `/sales/orders/${id.value}`,
     beforeNavigate: async action => {
+      // 通知可以跨页面保留；离开原单后用通知里的固定目标，不能读取另一订单的选择。
+      if (sourceScope !== detailScope() || Number(order.value?.id) !== id.value) return
       if (action.intent) { await paymentAction(action.intent); return false }
       ob.visible = false
     },
