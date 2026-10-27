@@ -79,8 +79,14 @@ class LedgerIT extends BasePgIT {
         assertThat(call(201,"POST","/fin/vouchers/"+id+"/post",Map.of("version",v.get("version"))).statusCode()).isEqualTo(400);
         v=action(201,id,"submit",v);
         assertThat(call(201,"POST","/fin/vouchers/"+id+"/audit",Map.of("version",v.get("version"))).body()).contains("FIN_AUDITOR_CONFLICT");
-        v=action(202,id,"audit",v);v=data(ok(201,"POST","/fin/vouchers/"+id+"/unaudit",Map.of("version",v.get("version"),"reason","Synthetic review correction")));v=action(202,id,"audit",v);v=ledger.action(context(201,101,SessionService.digest("ledger-201")),601L,id,"post",Map.of("version",v.get("version")),UUID.randomUUID().toString());
+        v=action(202,id,"audit",v);
+        assertThat(call(201,"POST","/fin/vouchers/"+id+"/unaudit",Map.of("version",v.get("version"))).statusCode()).isEqualTo(400);
+        assertThat(data(ok(201,"GET","/fin/vouchers/"+id,null))).containsEntry("status","AUDITED");
+        v=data(ok(201,"POST","/fin/vouchers/"+id+"/unaudit",Map.of("version",v.get("version"),"reason","Synthetic review correction")));v=action(202,id,"audit",v);v=ledger.action(context(201,101,SessionService.digest("ledger-201")),601L,id,"post",Map.of("version",v.get("version")),UUID.randomUUID().toString());
         assertThat(v).containsEntry("status","POSTED");
+        assertThat(call(201,"PUT","/fin/vouchers/"+id,v).statusCode()).isEqualTo(400);
+        assertThat(call(201,"DELETE","/fin/vouchers/"+id,Map.of("version",v.get("version"))).statusCode()).isEqualTo(400);
+        assertThat(data(ok(201,"GET","/fin/vouchers/"+id,null))).containsEntry("status","POSTED");
         var next=data(call(201,"GET","/fin/trial-balance?periodId=702",null));assertThat(next).containsEntry("balanced",true);
         assertThat(new BigDecimal(next.get("debit").toString())).isEqualByComparingTo("100");
         var reverse=data(ok(201,"POST","/fin/vouchers/"+id+"/reverse",Map.of("version",v.get("version"),"voucherDate","2026-11-10","reason","Synthetic correction")));
@@ -173,6 +179,27 @@ class LedgerIT extends BasePgIT {
         seed("update sys_role set field_policies='{}' where id=203");
         assertThat(call(201,"POST","/fin/vouchers",Map.of("voucherDate","2026-10-15","lines",lines(d,c,10))).statusCode()).isEqualTo(403);
         assertThat(owner.queryForObject("select count(*) from fin_voucher",Integer.class)).isZero();
+    }
+    @Test void manualForeignCurrencyFreezesExplicitAmountsAndRejectsNonleafOrMissingInputs() throws Exception {
+        long credit=account("3001","EQUITY","CREDIT");
+        long parent=id(data(ok(201,"POST","/fin/accounts",Map.of("code","1100","name","AI06非末级","isLeaf",false))));
+        assertThat(call(201,"POST","/fin/vouchers",Map.of("voucherDate","2026-10-15","lines",lines(parent,credit,20))).body()).contains("FIN_ACCOUNT_INVALID");
+        long debit=id(data(ok(201,"POST","/fin/accounts",Map.of("code","1101","name","AI06外币末级","parentId",parent,"fxEnabled",true))));
+        var foreign=new LinkedHashMap<String,Object>(Map.of("accountId",debit,"debit",20,"currency","USD","origAmount",1,"rate",20));
+        for(String field:List.of("debit","origAmount","rate")) {
+            var missing=new LinkedHashMap<>(foreign);missing.remove(field);
+            assertThat(call(201,"POST","/fin/vouchers",Map.of("voucherDate","2026-10-15","lines",List.of(missing,Map.of("accountId",credit,"credit",20)))).statusCode()).as("missing %s",field).isEqualTo(400);
+        }
+        var nil=new LinkedHashMap<>(foreign);nil.put("debit",null);
+        assertThat(call(201,"POST","/fin/vouchers",Map.of("voucherDate","2026-10-15","lines",List.of(nil,Map.of("accountId",credit,"credit",20)))).statusCode()).isEqualTo(400);
+        assertThat(owner.queryForObject("select count(*) from fin_voucher",Integer.class)).isZero();
+        var saved=data(ok(201,"POST","/fin/vouchers",Map.of("voucherDate","2026-10-15","lines",List.of(foreign,Map.of("accountId",credit,"credit",20)))));
+        saved=action(201,id(saved),"submit",saved);saved=action(202,id(saved),"audit",saved);action(201,id(saved),"post",saved);
+        var frozen=owner.queryForMap("select currency,orig_amount,rate,debit from fin_voucher_line where voucher_id=? and account_id=?",id(saved),debit);
+        assertThat(frozen.get("currency")).isEqualTo("USD");
+        assertThat((BigDecimal)frozen.get("orig_amount")).isEqualByComparingTo("1");
+        assertThat((BigDecimal)frozen.get("rate")).isEqualByComparingTo("20");
+        assertThat((BigDecimal)frozen.get("debit")).isEqualByComparingTo("20");
     }
     @Test void batchAuditRollsBackEveryVoucherIfAnyPreparerConflicts() throws Exception {
         long d=account("1001","ASSET","DEBIT"),c=account("3001","EQUITY","CREDIT");
