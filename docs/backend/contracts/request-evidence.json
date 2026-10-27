@@ -2483,7 +2483,7 @@
     },
     {
       "file": "jxc-web/src/modules/inventory/ClassifyRuleList.vue",
-      "line": 16,
+      "line": 35,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2498,7 +2498,7 @@
     },
     {
       "file": "jxc-web/src/modules/inventory/ClassifyRuleList.vue",
-      "line": 29,
+      "line": 51,
       "kind": "http-call",
       "method": "PUT",
       "wrapperMethod": "put",
@@ -2511,7 +2511,7 @@
     },
     {
       "file": "jxc-web/src/modules/inventory/ClassifyRuleList.vue",
-      "line": 30,
+      "line": 52,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
@@ -2526,7 +2526,7 @@
     },
     {
       "file": "jxc-web/src/modules/inventory/ClassifyRuleList.vue",
-      "line": 37,
+      "line": 62,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "post",
