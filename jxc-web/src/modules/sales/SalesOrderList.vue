@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { canEditSalesOrder, canSubmitSalesOrder } from './salesOrderActions'
 import { reactive, ref, watch, toRaw } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -230,7 +231,7 @@ async function resolve(line: Row, _force = false) {
     line.stdPrice = null
     if (!line.manual) line.price = undefined
     line.priceSource = ''
-    line.priceError = error instanceof Error ? error.message : '读取价格失败，请重试'
+    line.priceError = feedbackMessage(error, "读取价格失败，请重试")
   }
 }
 

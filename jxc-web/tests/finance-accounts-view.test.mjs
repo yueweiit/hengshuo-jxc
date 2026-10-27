@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as Vue from 'vue'
 import { compile } from '@vue/compiler-dom'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/finance/AccountList.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
@@ -108,7 +108,7 @@ test('mapping reference failure preserves readable mappings and blocks editing w
   await select(p, 'category-account-maps'); await p.edit()
   assert.equal(p.loadError.value, ''); assert.equal(p.rows.value.length, 1)
   assert.match(p.referenceError.value, /商品分类访问被拒绝/); assert.equal(p.dialog.value, false)
-  const view = render(p); assert.match(view.text, /商品分类访问被拒绝/); assert.match(view.text, /分类 ID 8/)
+  const view = render(p); assert.match(feedbackText(), /商品分类访问被拒绝/); assert.doesNotMatch(view.text, /商品分类访问被拒绝/); assert.match(view.text, /分类 ID 8/)
 })
 
 test('all four existing resources retain their defaults and endpoint contracts', async t => {
@@ -201,5 +201,8 @@ test('compiled template separates no-book, no-data, no-match and failure states 
   assert.ok(view.nodes.some(n => n.label === '账套')); assert.ok(view.nodes.some(n => n.label === '配置类型'))
   await select(p); p.rows.value = []; view = render(p); assert.match(view.text, /暂无.*配置|暂无.*科目/)
   p.rows.value = [account()]; p.keyword.value = '不存在'; view = render(p); assert.match(view.text, /没有匹配/)
-  p.loadError.value = '服务超时'; view = render(p); assert.match(view.text, /服务超时/); assert.match(view.text, /重新加载/)
+  p.loadError.value = '服务超时'; view = render(p); assert.doesNotMatch(view.text, /服务超时/); assert.match(view.text, /操作未完成|尚未加载成功/); assert.match(view.text, /重新加载/)
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

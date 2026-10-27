@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { computed, effectScope, nextTick, reactive, ref, watch } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadVueScript, errorFeedback } from './contracts/load-vue-script.mjs'
 
 async function setup(t, initialPath = '/workbench') {
   const router = createRouter({
@@ -30,6 +30,7 @@ async function setup(t, initialPath = '/workbench') {
     useCountryStore: () => country,
     useI18n: () => ({ t: key => key }),
     ElMessage: { error: message => errors.push(message) },
+    reportError(error, options) { const notice = errorFeedback.reportError(error, options); if (notice) errors.push(notice.message) },
   }, ['items', 'activeKey', 'activateTab', 'removeTab']))
   const open = async path => { await router.push(path); await nextTick() }
   return { ...api, router, country, errors, open }

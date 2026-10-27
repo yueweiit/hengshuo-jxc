@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -41,7 +42,7 @@ const totals = computed(() => {
 })
 let loadSequence = 0, auxSequence = 0, disposed = false
 const context = () => `${getToken()}:${getCountryId()}`
-function errorText(error: unknown) { return error instanceof Error ? error.message : typeof error === 'string' ? error : '操作失败，请重试' }
+
 function assertContext(id: number, scope: string) {
   if (disposed || bookId.value !== id || scope !== context()) throw new Error('账套、国家或登录状态已切换，请在当前页面重试')
 }
@@ -79,7 +80,7 @@ async function load(keepDate = false) {
     loadedBookId.value = id
     ready.value = true
   } catch (error) {
-    if (!disposed && sequence === loadSequence && id === bookId.value) loadError.value = errorText(error)
+    if (!disposed && sequence === loadSequence && id === bookId.value) loadError.value = feedbackMessage(error, "操作失败，请重试")
   } finally { if (sequence === loadSequence) loading.value = false }
 }
 async function changeBook() { writeNotice.value = actionError.value = ''; await load() }
@@ -96,7 +97,7 @@ async function loadAux() {
       if (sequence !== auxSequence || accountId !== form.accountId) return
       auxOptions.value[field] = items
     }
-  } catch (error) { if (sequence === auxSequence && !disposed) auxError.value = errorText(error) }
+  } catch (error) { if (sequence === auxSequence && !disposed) auxError.value = feedbackMessage(error, "操作失败，请重试") }
   finally { if (sequence === auxSequence) loadingAux.value = false }
 }
 async function choose() {
@@ -120,7 +121,7 @@ async function add() {
     writeNotice.value = '期初草稿已保存，尚未确认。若列表刷新失败，请重新加载，无需重复保存。'
     ElMessage.success('期初草稿已保存，尚未确认')
     await load(true)
-  } catch (error) { actionError.value = errorText(error) }
+  } catch (error) { actionError.value = feedbackMessage(error, "操作失败，请重试") }
   finally { saving.value = false }
 }
 async function edit(row: Record<string, any>) {
@@ -143,7 +144,7 @@ async function remove(row: Record<string, any>) {
     await saveIntent.run(scope, 'DELETE /fin/opening-balances/' + row.id, { version: row.version, bookId: id }, key => http.delete('/fin/opening-balances/' + row.id, { params: { version: row.version, bookId: id }, headers: { 'Idempotency-Key': key } }))
     writeNotice.value = '期初草稿已删除。若列表刷新失败，请重新加载，无需重复删除。'
     await load(true)
-  } catch (error) { if (error !== 'cancel' && error !== 'close') actionError.value = errorText(error) }
+  } catch (error) { if (error !== 'cancel' && error !== 'close') actionError.value = feedbackMessage(error, "操作失败，请重试") }
   finally { saving.value = false }
 }
 async function confirm() {
@@ -159,7 +160,7 @@ async function confirm() {
     writeNotice.value = '期初已确认。若列表刷新失败，请重新加载，无需重复确认。'
     ElMessage.success('期初已确认')
     await load(true)
-  } catch (error) { if (error !== 'cancel' && error !== 'close') actionError.value = errorText(error) }
+  } catch (error) { if (error !== 'cancel' && error !== 'close') actionError.value = feedbackMessage(error, "操作失败，请重试") }
   finally { saving.value = false }
 }
 async function initialize() {
@@ -174,7 +175,7 @@ async function initialize() {
     currencies.value = currencyRows
     if (books.value.length === 1) bookId.value = books.value[0]!.id
     await load()
-  } catch (error) { if (!disposed) setupError.value = errorText(error) }
+  } catch (error) { if (!disposed) setupError.value = feedbackMessage(error, "操作失败，请重试") }
   finally { initializing.value = false }
 }
 onMounted(initialize)
@@ -189,7 +190,7 @@ onBeforeUnmount(() => { disposed = true; loadSequence++; auxSequence++ })
         <el-button :loading="loading || initializing" :disabled="saving" @click="setupError ? initialize() : load()">刷新</el-button>
       </div>
       <el-alert title="请以经核对的期初资料录入；保存草稿与确认期初是两个独立操作，确认后不能直接修改。" type="info" :closable="false" show-icon />
-      <div v-if="setupError" class="opening-feedback" role="alert"><span>账套或币种读取失败：{{ setupError }}</span><el-button link type="primary" @click="initialize">重新加载</el-button></div>
+      <div v-if="setupError" class="opening-feedback" role="alert"><span>账套或币种读取失败：操作未完成，请查看全局提示。</span><el-button link type="primary" @click="initialize">重新加载</el-button></div>
       <el-form class="opening-book" label-position="top" @submit.prevent>
         <el-form-item label="账套">
           <el-select v-model="bookId" filterable placeholder="请选择账套" :loading="initializing" :disabled="saving || initializing || !!setupError" @change="changeBook">
@@ -198,9 +199,9 @@ onBeforeUnmount(() => { disposed = true; loadSequence++; auxSequence++ })
         </el-form-item>
         <span v-if="selectedBook" class="muted">本位币：{{ selectedBook.baseCurrency }}</span>
       </el-form>
-      <div v-if="loadError" class="opening-feedback" role="alert"><span>期初明细或科目读取失败：{{ loadError }}</span><el-button link type="primary" @click="load()">重新加载</el-button></div>
+      <div v-if="loadError" class="opening-feedback" role="alert"><span>期初明细或科目读取失败：操作未完成，请查看全局提示。</span><el-button link type="primary" @click="load()">重新加载</el-button></div>
       <el-alert v-if="writeNotice" class="opening-notice" :title="writeNotice" type="success" :closable="false" show-icon />
-      <el-alert v-if="actionError" class="opening-notice" :title="actionError" type="error" :closable="false" show-icon role="alert" />
+      <div v-if="actionError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <p v-if="initializing" class="opening-placeholder" role="status">正在读取账套和币种…</p>
       <el-empty v-else-if="!setupError && !books.length" description="暂无可用账套，请先完成账套配置" :image-size="64" />
       <el-empty v-else-if="!setupError && !bookId" description="请选择账套，查看并录入期初余额" :image-size="64" />
@@ -220,7 +221,7 @@ onBeforeUnmount(() => { disposed = true; loadSequence++; auxSequence++ })
               <el-form-item label="汇率"><el-input-number v-model="form.rate" :min="0" :precision="8" controls-position="right" /></el-form-item>
             </template>
           </div>
-          <div v-if="auxError" class="opening-feedback" role="alert"><span>辅助项读取失败：{{ auxError }}</span><el-button link type="primary" @click="loadAux">重新加载</el-button></div>
+          <div v-if="auxError" class="opening-feedback" role="alert"><span>辅助项读取失败：操作未完成，请查看全局提示。</span><el-button link type="primary" @click="loadAux">重新加载</el-button></div>
           <div class="toolbar opening-editor-actions"><el-button type="primary" native-type="submit" :loading="saving" :disabled="!canWrite">{{ editing ? '保存修改' : '保存期初草稿' }}</el-button><el-button v-if="editing" @click="resetEditor()">取消修改</el-button></div>
         </el-form>
       </section>

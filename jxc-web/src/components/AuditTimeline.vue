@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { http } from '@/api/http'
 import type { PageResult } from '@/api/types'
@@ -53,7 +54,7 @@ async function reload() {
     total.value = res.total
   } catch (error) {
     if (sequence !== requestSequence) return
-    loadError.value = error instanceof Error && error.message ? error.message : '操作日志读取失败，请重试'
+    loadError.value = feedbackMessage(error, '操作日志读取失败，请重试')
   } finally {
     if (sequence === requestSequence) loading.value = false
   }
@@ -65,7 +66,7 @@ defineExpose({ reload })
 
 <template>
   <div class="audit-timeline" :aria-busy="loading">
-    <slot name="layout" :logs="logs" :loading="loading" :load-error="loadError" :total="total" :reload="reload">
+    <slot name="layout" :logs="logs" :loading="loading" :load-error="loadError ? '尚未加载成功' : ''" :total="total" :reload="reload">
     <div class="audit-toolbar">
       <span v-if="!loading && !loadError" class="muted">
         {{ logs.length < total ? '已显示最近' : '已显示' }} {{ logs.length }} 条，共 {{ total }} 条
@@ -74,7 +75,7 @@ defineExpose({ reload })
     </div>
     <p v-if="loading" role="status" class="muted">正在加载操作日志…</p>
     <div v-else-if="loadError" role="alert" class="audit-error">
-      <span>操作日志读取失败：{{ loadError }}</span>
+      <span>操作日志读取失败：操作未完成，请查看全局提示。</span>
       <el-button link type="primary" @click="reload">重试</el-button>
     </div>
     <p v-else-if="!logs.length" class="muted">暂无操作日志</p>

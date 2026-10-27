@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { http } from '@/api/http'
 import AuditDrawer from '@/components/AuditDrawer.vue'
@@ -25,7 +26,7 @@ async function loadReference() {
     if (!result || !result.order || typeof result.order !== 'object' || Array.isArray(result.order)) throw new Error('当前商品资料返回格式不正确')
     reference.value = result.order
   } catch (error) {
-    if (request === sequence) referenceError.value = error instanceof Error && error.message ? error.message : '当前商品资料读取失败'
+    if (request === sequence) referenceError.value = feedbackMessage(error, '当前商品资料读取失败')
   }
 }
 watch(() => [props.resourceId, props.order, props.modelValue], loadReference, { immediate: true })
@@ -36,7 +37,7 @@ defineExpose({ reload })
 
 <template>
   <AuditDrawer v-if="modelValue" ref="audit" :model-value="modelValue" resource-type="purchase-order" :resource-id="resourceId" :context="context" :presentation="presentation" @update:model-value="emit('update:modelValue', $event)" @reload="loadReference">
-    <template #notice><div v-if="referenceError" role="alert" class="audit-reference-error">当前名称参考读取失败：{{ referenceError }}；历史日志仍按已记录内容展示。<el-button link type="primary" @click="loadReference">重试资料</el-button></div></template>
+    <template #notice><div v-if="referenceError" role="alert" class="audit-reference-error">当前名称参考读取失败：操作未完成，请查看全局提示。；历史日志仍按已记录内容展示。<el-button link type="primary" @click="loadReference">重试资料</el-button></div></template>
   </AuditDrawer>
 </template>
 

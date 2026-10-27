@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -38,7 +39,7 @@ const filteredFees = computed(() => {
   return feeOptions.value.filter(f => [f.id, f.docNo, f.expenseItemName, f.carrierName, f.shipmentNo]
     .some(value => value != null && String(value).toLocaleLowerCase().includes(query)))
 })
-const errorText = (error: unknown) => error instanceof Error ? error.message : '读取失败，请重试'
+
 const basisLabel = (basis: string) => bases.find(b => b.value === basis)?.label ?? (basis === 'MANUAL' ? '人工比例' : basis)
 const feeLabel = (fee: Row) => `${fee.docNo ?? `#${fee.id}`} · ${fee.expenseItemName ?? '未提供费用项目'} · ${fee.amount ?? '金额未提供'} ${fee.currency ?? ''}`
 
@@ -80,7 +81,7 @@ async function load() {
     if (disposed || request !== historyRequest || context !== scope()) return
     rows.value = result.map(allocationView); historyReady.value = true
   } catch (error) {
-    if (!disposed && request === historyRequest) historyError.value = errorText(error)
+    if (!disposed && request === historyRequest) historyError.value = feedbackMessage(error, "读取失败，请重试")
   } finally { if (request === historyRequest) historyLoading.value = false }
 }
 async function loadFees() {
@@ -95,7 +96,7 @@ async function loadFees() {
     if (disposed || request !== feesRequest || context !== scope()) return
     fees.value = result
   } catch (error) {
-    if (!disposed && request === feesRequest) feesError.value = errorText(error)
+    if (!disposed && request === feesRequest) feesError.value = feedbackMessage(error, "读取失败，请重试")
   } finally { if (request === feesRequest) feesLoading.value = false }
 }
 async function refresh() {
@@ -129,7 +130,7 @@ async function run(confirm: boolean) {
   } catch (error) {
     if (!disposed && fingerprint === inputKey()) {
       if (error instanceof Error && 'code' in error && ['CST_FEE_CHANGED', 'CST_ESTIMATE_REPLACED', 'CST_ALLOCATION_EXISTS'].includes(String(error.code))) clearPreview()
-      commandError.value = errorText(error)
+      commandError.value = feedbackMessage(error, "读取失败，请重试")
     }
   } finally { busy.value = false }
 }
@@ -154,7 +155,7 @@ onBeforeUnmount(() => { disposed = true; feesRequest++; historyRequest++ })
         <li :class="{ active: !!form.feeId && !canConfirm }"><span>2</span>预览明细</li>
         <li :class="{ active: canConfirm }"><span>3</span>确认分摊</li>
       </ol>
-      <el-alert v-if="feesError" class="state-message" type="warning" :closable="false" show-icon :title="feesError"><template #default><el-button link type="primary" :disabled="feesLoading || busy" @click="loadFees">重试读取费用</el-button></template></el-alert>
+      <div v-if="feesError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" :disabled="feesLoading || busy" @click="loadFees">重试读取费用</el-button></div>
       <el-form class="allocation-form" label-position="top" :disabled="busy" @submit.prevent>
         <el-form-item label="物流费用" class="fee-field">
           <el-select v-model="feeSelection" filterable allow-create default-first-option clearable :filter-method="filterFees" :loading="feesLoading" placeholder="输入单号、项目、物流商、运输批次或费用 ID" @change="chooseFee">
@@ -180,7 +181,7 @@ onBeforeUnmount(() => { disposed = true; feesRequest++; historyRequest++ })
         <div><span>运输批次</span><strong class="mono">{{ selectedFee.shipmentNo ?? '未提供' }}</strong></div>
       </div>
       <p v-else-if="form.feeId" class="muted">已输入费用 ID #{{ form.feeId }}，请预览核对费用来源与分摊明细。</p>
-      <el-alert v-if="commandError" class="state-message" :title="commandError" type="error" :closable="false" show-icon />
+      <div v-if="commandError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <section v-if="preview" class="allocation-preview" aria-label="分摊预览">
         <div class="preview-heading"><div><h3>分摊预览</h3><p>{{ selectedFee?.docNo ?? preview.feeNo }} · {{ basisLabel(preview.basis ?? form.basis) }} · {{ preview.lines.length }} 个批次</p></div><div class="preview-total"><span>分摊合计</span><MoneyText :value="preview.baseAmount" :currency="preview.baseCurrency" /></div></div>
         <p class="preview-source">原费用 <MoneyText :value="preview.feeAmount" :currency="preview.feeCurrency" />，请核对各批次分摊金额后确认。</p>
@@ -194,7 +195,7 @@ onBeforeUnmount(() => { disposed = true; feesRequest++; historyRequest++ })
     </el-card>
     <el-card shadow="never" class="allocation-history">
       <template #header><div class="section-heading"><h3>分摊记录 <span class="record-count">{{ rows.length }}</span></h3><el-button link type="primary" :disabled="busy || historyLoading" @click="load">刷新记录</el-button></div></template>
-      <el-alert v-if="historyError" class="state-message" :title="historyError" type="error" :closable="false" show-icon><template #default><el-button link type="primary" :disabled="busy" @click="load">重试读取分摊记录</el-button></template></el-alert>
+      <div v-if="historyError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" :disabled="busy" @click="load">重试读取分摊记录</el-button></div>
       <el-table v-loading="historyLoading" :data="rows" size="small" stripe :empty-text="historyError ? '分摊记录读取失败' : '暂无分摊记录；确认分摊后将在这里显示'">
         <el-table-column label="物流费用" min-width="220"><template #default="{ row }"><span class="mono">{{ fees.find(f => f.id === row.feeId)?.docNo ?? row.feeNo }}</span></template></el-table-column>
         <el-table-column label="分摊依据" min-width="110"><template #default="{ row }">{{ basisLabel(row.basis) }}</template></el-table-column>

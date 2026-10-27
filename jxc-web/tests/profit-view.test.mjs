@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as Vue from 'vue'
 import { compile } from '@vue/compiler-dom'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/analysis/ProfitView.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
@@ -121,7 +121,7 @@ test('利润失败保留真实原因并允许重试，不冒充未选择', async
   states(p); select(p)
   await p.load()
   const view = render(p)
-  assert.match(view.text, /没有当前账套的读取权限/)
+  assert.match(feedbackText(), /没有当前账套的读取权限/); assert.doesNotMatch(view.text, /没有当前账套的读取权限/)
   assert.doesNotMatch(view.text, /请选择账套|请选择期间|暂无利润记录/)
   assert.equal(p.busy.value, false)
   fail = false; await p.load()
@@ -208,3 +208,6 @@ test('账套缺少期间结构时明确报错，不能视为没有会计期间',
   assert.match(p.booksError.value, /格式/)
   assert.doesNotMatch(render(p).text, /暂无会计期间|暂无可用账套/)
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

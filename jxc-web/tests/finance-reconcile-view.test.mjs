@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import * as Vue from 'vue'
 import ts from 'typescript'
 import { compile } from '@vue/compiler-dom'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/finance/ReconcileView.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
@@ -112,7 +112,7 @@ test('错误对象没有消息时仍显示读取失败，不能留下空白页�
   const p = setup(t, async path => { if (path === '/fin/books') return [book()]; throw new Error('') })
   await p.loadBooks()
   assert.match(p.error.value, /读取失败/)
-  assert.match(render(p).text, /读取失败/)
+  assert.match(feedbackText(), /读取失败/); assert.match(render(p).text, /操作未完成|尚未加载成功/)
 })
 
 test('账套及明细结构缺失时保留格式错误，不伪装为空记录', async t => {
@@ -240,7 +240,7 @@ test('真实模板区分加载、失败和成功空结果，失败重试按钮�
   const p = setup(t, async path => { if (path === '/fin/books') return [book()]; if (fail) throw new Error('接口没有权限'); return [] })
   await p.loadBooks()
   let view = render(p)
-  assert.match(view.text, /接口没有权限/)
+  assert.match(feedbackText(), /接口没有权限/); assert.doesNotMatch(view.text, /接口没有权限/)
   assert.doesNotMatch(view.text, /暂无核对项目/)
   fail = false
   const retry = view.nodes.find(node => node.tag === 'button' && node.children?.some(child => /重新读取核对/.test(child.text ?? '')))
@@ -276,3 +276,6 @@ test('真实模板库存精度保留四位来源小数，权限隐藏时没有�
   p.selectDetail(row({ type: 'INVENTORY' }))
   assert.equal(p.detailTabs.value.some(tab => tab.name === 'precisionDetails'), false)
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

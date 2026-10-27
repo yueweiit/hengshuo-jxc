@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -41,7 +42,7 @@ watch(() => [route.query.sourceId, country.epoch], async ([sourceId]) => {
     }
     if (request === evidenceRequest) evidence.row = row
   } catch (error) {
-    if (request === evidenceRequest) evidence.error = error instanceof Error ? error.message : '付款单读取失败，请重试'
+    if (request === evidenceRequest) evidence.error = feedbackMessage(error, "付款单读取失败，请重试")
   } finally {
     if (request === evidenceRequest) evidence.loading = false
   }
@@ -117,7 +118,7 @@ async function doConfirm() {
   </CrudPage>
   <el-dialog v-model="evidence.visible" title="付款凭证" width="640px" destroy-on-close>
     <p v-if="evidence.loading" class="muted" role="status">正在读取付款单…</p>
-    <p v-else-if="evidence.error" role="alert">{{ evidence.error }}</p>
+    <p v-else-if="evidence.error" role="alert">操作未完成，请查看全局提示。</p>
     <template v-else-if="evidence.row">
       <p>{{ evidence.row.docNo }} · {{ evidence.row.referenceNo }}</p>
       <DocAttachment :key="evidence.row.id" biz-type="AP_PAYMENT" :biz-id="evidence.row.id" category="PAYMENT_OUT_PROOF" readonly />

@@ -9,13 +9,17 @@ import './support.mjs'
 import { loadPagination } from './contracts/load-pagination.mjs'
 import { createCommandIntent } from '../src/api/command-intent.ts'
 import { attachmentDownloadTarget, readBlobError } from '../src/api/attachment-download.ts'
+import { errorFeedback } from './contracts/load-vue-script.mjs'
 
 function httpModule(adapter, session = { token: 'test-session', countryId: 2, cleared: 0 }) {
   const source = readFileSync(new URL('../src/api/http.ts', import.meta.url), 'utf8').replace(/^import .*$/gm, '').replace(/^export \{.*$/gm, '').replace(/^export /gm, '')
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022 } }).outputText
   const errors = []
+  errorFeedback.clearErrors()
   const deps = { axios: { create: config => axios.create({ ...config, adapter }) }, AxiosError: axios.AxiosError, ElMessage: { error: message => errors.push(message) }, getToken: () => session.token, getCountryId: () => session.countryId, clearSession() { session.cleared++ }, router: { replace() {}, currentRoute: { value: { fullPath: '/test' } } }, attachmentDownloadTarget, readBlobError, window: { location: { origin: 'https://jxc.test' } } }
-  const module = new Function('deps', `const {axios,AxiosError,ElMessage,getToken,getCountryId,clearSession,router,attachmentDownloadTarget,readBlobError,window}=deps; ${compiled}; return {http,BizError};`)(deps)
+  deps.rememberFailureContext = errorFeedback.rememberFailureContext
+  deps.reportError = (error, options) => { const notice = errorFeedback.reportError(error, options); if (notice) errors.push(notice.message) }
+  const module = new Function('deps', `const {axios,AxiosError,ElMessage,getToken,getCountryId,clearSession,router,attachmentDownloadTarget,readBlobError,window,rememberFailureContext,reportError}=deps; ${compiled}; return {http,BizError};`)(deps)
   return { ...module, errors }
 }
 const response = (config, data) => ({ config, data, status: 200, statusText: 'OK', headers: {} })

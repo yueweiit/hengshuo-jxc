@@ -1,15 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { computed, reactive, ref } from 'vue'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadVueScript, errorFeedback } from './contracts/load-vue-script.mjs'
 
 function setup(value, options = {}) {
+  errorFeedback.clearErrors()
   const calls = [], messages = [], country = { currentId: 3 }
   const detail = { id: 3, name: '测试国家', defaultCurrency: 'MXN', timezone: 'UTC', locale: 'zh-CN', dateFormat: 'YYYY-MM-DD', numberFormat: '1,234.56', isTest: true, enabledModules: ['sys'], version: 7, logisticsDelayToleranceHours: value }
   const page = loadVueScript(new URL('../src/modules/settings/country/CountryDetail.vue', import.meta.url), {
     computed, reactive, ref, onMounted() {}, useRoute: () => ({ params: { id: '3' } }), useRouter: () => ({}),
     useUserStore: () => ({ hasPerm: () => true, loadMe: async () => calls.push({ method: 'me' }) }), useCountryStore: () => country,
     ElMessage: Object.fromEntries(['warning', 'error', 'success'].map(type => [type, message => messages.push({ type, message })])),
+    reportError(error, options) { const notice = errorFeedback.reportError(error, options); if (notice) messages.push({ type: 'error', message: notice.message }) },
     http: { get: async () => ({ ...detail }), put: async (path, body) => {
       calls.push({ method: 'put', path, body: { ...body } })
       if (options.saveError) throw options.saveError

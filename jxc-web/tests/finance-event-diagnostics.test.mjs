@@ -1,18 +1,20 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ref } from 'vue'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadVueScript, errorFeedback } from './contracts/load-vue-script.mjs'
 
 class BizError extends Error {
   constructor(code, message) { super(message); this.code = code }
 }
 
 function fixture({ result, failure, refreshFailure } = {}) {
+  errorFeedback.clearErrors()
   const calls = [], messages = [], intent = {}
   const refreshed = [{ id: 1207, status: 'FAILED', failReason: 'FIN_MAPPING_MISSING' }]
   const page = loadVueScript(new URL('../src/modules/finance/EventList.vue', import.meta.url), {
     ref, onMounted() {}, useRoute: () => ({ query: {} }), BizError,
     createCommandIntent: () => intent,
+    reportError(error, options) { const notice = errorFeedback.reportError(error, options); if (notice) messages.push({ kind: 'error', text: notice.nextStep }) },
     http: { async postIdem(...args) {
       calls.push({ action: 'generate', args })
       if (failure) throw failure

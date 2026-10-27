@@ -56,7 +56,7 @@ watch(() => props.logs, logs => {
     </div>
     <div class="audit-scroll-body">
       <p v-if="loading" role="status" class="audit-empty">正在加载操作日志…</p>
-      <div v-else-if="loadError" role="alert" class="audit-read-error"><p>操作日志读取失败：{{ loadError }}</p><el-button link type="primary" @click="$emit('reload')">重试</el-button></div>
+      <div v-else-if="loadError" role="alert" class="audit-read-error"><p>操作日志读取失败：操作未完成，请查看全局提示。</p><el-button link type="primary" @click="$emit('reload')">重试</el-button></div>
       <p v-else-if="!logs.length" class="audit-empty">暂无操作日志</p>
       <template v-else>
         <section v-for="group in groups" :key="group.key" class="audit-day">

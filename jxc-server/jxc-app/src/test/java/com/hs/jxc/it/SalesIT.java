@@ -336,5 +336,33 @@ class SalesIT extends BasePgIT {
  }
  Map<String,Object> paymentReadFacts(){return Map.of("orders",owner.queryForList("SELECT * FROM sal_order ORDER BY id"),"receipts",owner.queryForList("SELECT * FROM ar_receipt ORDER BY id"),"allocations",owner.queryForList("SELECT * FROM ar_receipt_order ORDER BY id"),"writeoffs",owner.queryForList("SELECT * FROM ar_writeoff ORDER BY id"),"stock",owner.queryForList("SELECT * FROM inv_stock_summary ORDER BY warehouse_id,product_id"),"events",owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class),"audits",owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class),"idempotency",owner.queryForObject("SELECT count(*) FROM sys_idempotency",Integer.class));}
  Map<String,Object> allocationFacts(long order){return Map.of("order",owner.queryForMap("SELECT * FROM sal_order WHERE id=?",order),"allocations",owner.queryForList("SELECT * FROM sal_order_alloc WHERE order_id=? ORDER BY id",order),"reservations",owner.queryForList("SELECT * FROM inv_reservation WHERE order_id=? ORDER BY id",order),"stocks",owner.queryForList("SELECT * FROM inv_stock_summary ORDER BY warehouse_id,product_id"),"credit",owner.queryForList("SELECT * FROM ar_credit_occupation ORDER BY id"),"events",owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class),"audit",owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class));}
+ @Test @SuppressWarnings("unchecked") void approvalStockFailureExplainsAllShortagesAndRollsBack(){
+  seed("insert into md_product(id,product_code,name,base_unit) values(502,'SECOND','Second product','PCS')");
+  seed("insert into md_country_sku(country_id,product_id) values(101,502)");seed("insert into md_product_unit(product_id,unit,factor_to_base) values(502,'PCS',1)");
+  seed("insert into sal_price(country_id,product_id,price_type,unit,min_qty,price,currency,effective_from) values(101,502,'BASE','PCS',1,10,'MXN','2026-10-01')");
+  var input=new LinkedHashMap<>(body(120,"CASH"));input.put("lines",List.of(Map.of("productId",501,"unit","PCS","qty",120,"warehouseId",401),Map.of("productId",502,"unit","PCS","qty",20,"warehouseId",401)));
+  var order=sales.create(c(),input,key());var before=allocationFacts(id(order));
+  assertThatThrownBy(()->sales.submit(c(),id(order),Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).satisfies(thrown->{
+   var e=(ApiException)thrown;assertThat(e.getCode()).isEqualTo("INV_INSUFFICIENT_AVAILABLE");assertThat(e.getData()).isInstanceOf(Map.class);
+   var data=(Map<String,Object>)e.getData();assertThat(data).containsEntry("kind","STOCK_SHORTAGE").containsEntry("orderId",id(order)).containsEntry("detailsVisible",true);
+   var rows=(List<Map<String,Object>>)data.get("shortages");assertThat(rows).hasSize(2);
+   assertThat(rows).anySatisfy(row->{assertThat(row).containsEntry("productCode","P").containsEntry("warehouseName","Warehouse");assertThat((BigDecimal)row.get("requiredQty")).isEqualByComparingTo("120");assertThat((BigDecimal)row.get("availableQty")).isEqualByComparingTo("100");assertThat((BigDecimal)row.get("shortageQty")).isEqualByComparingTo("20");});
+   assertThat(rows).anySatisfy(row->{assertThat(row).containsEntry("productCode","SECOND");assertThat((BigDecimal)row.get("shortageQty")).isEqualByComparingTo("20");});
+  });assertThat(allocationFacts(id(order))).isEqualTo(before);
+ }
+ @Test @SuppressWarnings("unchecked") void approvalStockFailureGroupsRepeatedSkuAndRestoresOwnPartialReservation(){
+  var input=new LinkedHashMap<>(body(60,"CASH"));input.put("lines",List.of(Map.of("productId",501,"unit","PCS","qty",60,"warehouseId",401),Map.of("productId",501,"unit","PCS","qty",60,"warehouseId",401)));
+  var order=sales.create(c(),input,key());var before=allocationFacts(id(order));
+  assertThatThrownBy(()->sales.submit(c(),id(order),Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).satisfies(thrown->{
+   var e=(ApiException)thrown;assertThat(e.getData()).isInstanceOf(Map.class);var rows=(List<Map<String,Object>>)((Map<String,Object>)e.getData()).get("shortages");assertThat(rows).hasSize(1);
+   assertThat((BigDecimal)rows.getFirst().get("requiredQty")).isEqualByComparingTo("120");assertThat((BigDecimal)rows.getFirst().get("availableQty")).isEqualByComparingTo("100");assertThat((BigDecimal)rows.getFirst().get("shortageQty")).isEqualByComparingTo("20");
+  });assertThat(allocationFacts(id(order))).isEqualTo(before);
+ }
+ @Test @SuppressWarnings("unchecked") void approvalStockFailureDoesNotDiscloseQuantitiesWithoutInventoryView(){
+  var order=order(120,"CASH");seed("update sys_role set permissions='[\"sal:order:view\",\"sal:order:submit\"]' where id=202");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  assertThatThrownBy(()->sales.submit(c(),id(order),Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).satisfies(thrown->{
+   var e=(ApiException)thrown;assertThat(e.getCode()).isEqualTo("INV_INSUFFICIENT_AVAILABLE");assertThat(e.getData()).isInstanceOf(Map.class);var data=(Map<String,Object>)e.getData();assertThat(data).containsEntry("detailsVisible",false);assertThat(data).doesNotContainKeys("shortages","availableQty","requiredQty");
+  });assertThat(owner.queryForObject("select count(*) from inv_reservation where order_id=?",Integer.class,id(order))).isZero();
+ }
  @Override int compete(Callable<?> one,Callable<?> two)throws Exception{return super.compete(one,two,30);}
 }

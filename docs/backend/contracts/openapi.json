@@ -50388,7 +50388,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 341
+            "line": 344
           },
           "permissions": {
             "observed": [
@@ -50399,7 +50399,7 @@
                   "sal:price:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 342
+                "line": 345
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -50480,7 +50480,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 348
+            "line": 351
           },
           "permissions": {
             "observed": [
@@ -50490,7 +50490,7 @@
                   "sal:price:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 349
+                "line": 352
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -50580,7 +50580,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 357
+            "line": 360
           },
           "permissions": {
             "observed": [],
@@ -50676,7 +50676,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 358
+            "line": 361
           },
           "permissions": {
             "observed": [],
@@ -50757,7 +50757,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 364
+            "line": 367
           },
           "permissions": {
             "observed": [
@@ -50767,7 +50767,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 365
+                "line": 368
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -50913,7 +50913,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 381
+            "line": 384
           },
           "permissions": {
             "observed": [],
@@ -51016,7 +51016,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 377
+            "line": 380
           },
           "permissions": {
             "observed": [
@@ -51028,7 +51028,7 @@
                   "sal:outbound:confirm"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 378
+                "line": 381
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -51126,7 +51126,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 382
+            "line": 385
           },
           "permissions": {
             "observed": [
@@ -51137,7 +51137,7 @@
                   "sal:order:edit"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 383
+                "line": 386
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -51297,7 +51297,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 407
+            "line": 410
           },
           "permissions": {
             "observed": [],
@@ -51409,7 +51409,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 408
+            "line": 411
           },
           "permissions": {
             "observed": [
@@ -51419,7 +51419,7 @@
                   "sal:order:submit"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 409
+                "line": 412
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -51521,7 +51521,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 416
+            "line": 419
           },
           "permissions": {
             "observed": [
@@ -51531,7 +51531,7 @@
                   "sal:order:create"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 417
+                "line": 420
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -51631,7 +51631,7 @@
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 454
+            "line": 457
           },
           "permissions": {
             "observed": [
@@ -51642,7 +51642,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 455
+                "line": 458
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -51655,7 +51655,9 @@
           },
           "field": {
             "observed": [],
-            "serializerCalls": [],
+            "serializerCalls": [
+              "readableBusinessFields"
+            ],
             "reviewRequired": true
           },
           "idem": {
@@ -51674,6 +51676,119 @@
               "handle",
               "map",
               "outboundCheck",
+              "readableBusinessFields",
+              "requirePerm"
+            ],
+            "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
+          },
+          "errors": {
+            "observed": [],
+            "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
+          },
+          "analysis": {
+            "completeness": "partial",
+            "reviewRequired": true,
+            "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
+          }
+        }
+      },
+      "post": {
+        "operationId": "post__api_v1_sal_orders_id_outbound_check",
+        "tags": [
+          "sal"
+        ],
+        "summary": "POST /api/v1/sal/orders/:id/outbound-check",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path token; numeric identifier bounds require DTO review."
+          }
+        ],
+        "security": [
+          {
+            "bearerSession": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "unknown; Row/body accesses do not define a complete DTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "Observed response envelope only; operation-specific DTO and error status matrix require review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-phase": "M2",
+        "x-backend-status": "registered-gated",
+        "x-mock-status": "registered",
+        "x-registration-indices": [
+          354
+        ],
+        "x-contract-evidence": {
+          "source": {
+            "file": "jxc-web/src/mock/handlers/sal.ts",
+            "line": 464
+          },
+          "permissions": {
+            "observed": [
+              {
+                "guard": "requirePerm",
+                "values": [
+                  "sal:outbound:create",
+                  "sal:order:view"
+                ],
+                "file": "jxc-web/src/mock/handlers/sal.ts",
+                "line": 465
+              }
+            ],
+            "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
+          },
+          "scope": {
+            "country": "country header authorization; resource requirements need review",
+            "configuredFields": null,
+            "observedGuards": [],
+            "reviewRequired": true
+          },
+          "field": {
+            "observed": [],
+            "serializerCalls": [
+              "readableBusinessFields"
+            ],
+            "reviewRequired": true
+          },
+          "idem": {
+            "observedHeader": false,
+            "referencedHelpersMayCheck": true,
+            "required": "unknown; verify docs and service implementation",
+            "hashBinding": "not inferred from AST"
+          },
+          "facts": {
+            "observedCalls": [
+              "Number",
+              "bad",
+              "findOrder",
+              "handle",
+              "isArray",
+              "outboundCheck",
+              "readableBusinessFields",
               "requirePerm"
             ],
             "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
@@ -51729,12 +51844,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          354
+          355
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 461
+            "line": 470
           },
           "permissions": {
             "observed": [
@@ -51746,7 +51861,7 @@
                   "sal:outbound:confirm"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 462
+                "line": 471
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -51833,12 +51948,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          355
+          356
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 472
+            "line": 481
           },
           "permissions": {
             "observed": [
@@ -51850,7 +51965,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 473
+                "line": 482
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -51972,7 +52087,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          356
+          357
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -51995,7 +52110,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 481
+            "line": 490
           },
           "permissions": {
             "observed": [],
@@ -52135,7 +52250,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          357
+          358
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -52158,7 +52273,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 485
+            "line": 494
           },
           "permissions": {
             "observed": [],
@@ -52267,12 +52382,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          358
+          359
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 486
+            "line": 495
           },
           "permissions": {
             "observed": [
@@ -52282,7 +52397,7 @@
                   "sal:sign:record"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 487
+                "line": 496
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -52371,12 +52486,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          359
+          360
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 511
+            "line": 520
           },
           "permissions": {
             "observed": [
@@ -52387,7 +52502,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 512
+                "line": 521
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -52486,12 +52601,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          360
+          361
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 519
+            "line": 528
           },
           "permissions": {
             "observed": [
@@ -52501,7 +52616,7 @@
                   "sal:sign:record"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 520
+                "line": 529
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -52579,12 +52694,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          361
+          362
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 531
+            "line": 540
           },
           "permissions": {
             "observed": [
@@ -52594,7 +52709,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/sal.ts",
-                "line": 532
+                "line": 541
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -52650,6 +52765,109 @@
         }
       }
     },
+    "/api/v1/ar/receipts/order-context/{id}": {
+      "get": {
+        "operationId": "get__api_v1_ar_receipts_order_context_id",
+        "tags": [
+          "ar"
+        ],
+        "summary": "GET /api/v1/ar/receipts/order-context/:id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Path token; numeric identifier bounds require DTO review."
+          }
+        ],
+        "security": [
+          {
+            "bearerSession": []
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Observed response envelope only; operation-specific DTO and error status matrix require review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-phase": "M2",
+        "x-backend-status": "registered-gated",
+        "x-mock-status": "registered",
+        "x-registration-indices": [
+          363
+        ],
+        "x-contract-evidence": {
+          "source": {
+            "file": "jxc-web/src/mock/handlers/ar.ts",
+            "line": 229
+          },
+          "permissions": {
+            "observed": [
+              {
+                "guard": "requirePerm",
+                "values": [
+                  "ar:receipt:create",
+                  "ar:receipt:confirm"
+                ],
+                "file": "jxc-web/src/mock/handlers/ar.ts",
+                "line": 230
+              }
+            ],
+            "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
+          },
+          "scope": {
+            "country": "country header authorization; resource requirements need review",
+            "configuredFields": null,
+            "observedGuards": [
+              "canDocumentDataAccess"
+            ],
+            "reviewRequired": true
+          },
+          "field": {
+            "observed": [],
+            "serializerCalls": [],
+            "reviewRequired": true
+          },
+          "idem": {
+            "observedHeader": false,
+            "referencedHelpersMayCheck": true,
+            "required": "unknown; verify docs and service implementation",
+            "hashBinding": "not inferred from AST"
+          },
+          "facts": {
+            "observedCalls": [
+              "Number",
+              "canDocumentDataAccess",
+              "find",
+              "getDb",
+              "handle",
+              "notFound",
+              "requirePerm"
+            ],
+            "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
+          },
+          "errors": {
+            "observed": [],
+            "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
+          },
+          "analysis": {
+            "completeness": "partial",
+            "reviewRequired": true,
+            "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
+          }
+        }
+      }
+    },
     "/api/v1/ar/receipts": {
       "get": {
         "operationId": "get__api_v1_ar_receipts",
@@ -52679,12 +52897,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          362
+          364
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 229
+            "line": 235
           },
           "permissions": {
             "observed": [
@@ -52696,7 +52914,7 @@
                   "ar:receivable:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 230
+                "line": 236
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -52736,6 +52954,7 @@
               "paginate",
               "receiptOut",
               "requirePerm",
+              "some",
               "toLowerCase"
             ],
             "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
@@ -52821,7 +53040,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          363
+          365
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -52844,7 +53063,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 242
+            "line": 250
           },
           "permissions": {
             "observed": [],
@@ -52983,7 +53202,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          364
+          366
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -53006,7 +53225,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 243
+            "line": 251
           },
           "permissions": {
             "observed": [],
@@ -53115,12 +53334,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          365
+          367
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 244
+            "line": 252
           },
           "permissions": {
             "observed": [
@@ -53130,7 +53349,7 @@
                   "ar:receipt:confirm"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 245
+                "line": 253
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53229,12 +53448,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          366
+          368
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 251
+            "line": 259
           },
           "permissions": {
             "observed": [
@@ -53244,7 +53463,7 @@
                   "ar:receipt:confirm"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 252
+                "line": 260
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53326,12 +53545,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          367
+          369
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 260
+            "line": 268
           },
           "permissions": {
             "observed": [
@@ -53342,7 +53561,7 @@
                   "ar:credit-rule:edit"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 261
+                "line": 269
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53425,12 +53644,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          368
+          370
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 267
+            "line": 275
           },
           "permissions": {
             "observed": [
@@ -53440,7 +53659,7 @@
                   "ar:credit-rule:edit"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 268
+                "line": 276
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53531,12 +53750,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          369
+          371
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 271
+            "line": 279
           },
           "permissions": {
             "observed": [
@@ -53546,7 +53765,7 @@
                   "ar:credit-rule:edit"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 272
+                "line": 280
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53642,12 +53861,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          370
+          372
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 278
+            "line": 286
           },
           "permissions": {
             "observed": [
@@ -53657,7 +53876,7 @@
                   "ar:credit-rule:edit"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 279
+                "line": 287
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53746,12 +53965,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          371
+          373
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 285
+            "line": 293
           },
           "permissions": {
             "observed": [
@@ -53763,7 +53982,7 @@
                   "ar:credit-rule:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 286
+                "line": 294
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53854,12 +54073,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          372
+          374
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 290
+            "line": 298
           },
           "permissions": {
             "observed": [
@@ -53870,7 +54089,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 291
+                "line": 299
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -53960,12 +54179,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          373
+          375
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 295
+            "line": 303
           },
           "permissions": {
             "observed": [
@@ -53976,7 +54195,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 296
+                "line": 304
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54053,12 +54272,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          374
+          376
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 300
+            "line": 308
           },
           "permissions": {
             "observed": [
@@ -54068,7 +54287,7 @@
                   "ar:receivable:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 301
+                "line": 309
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54150,12 +54369,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          375
+          377
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 309
+            "line": 317
           },
           "permissions": {
             "observed": [
@@ -54166,7 +54385,7 @@
                   "ar:receivable:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 310
+                "line": 318
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54292,7 +54511,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          376
+          378
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -54315,7 +54534,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 316
+            "line": 324
           },
           "permissions": {
             "observed": [
@@ -54325,7 +54544,7 @@
                   "ar:writeoff:create"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 317
+                "line": 325
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54429,12 +54648,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          378
+          380
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 408
+            "line": 416
           },
           "permissions": {
             "observed": [
@@ -54445,7 +54664,7 @@
                   "ar:receivable:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 409
+                "line": 417
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54576,7 +54795,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          377
+          379
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -54599,7 +54818,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 371
+            "line": 379
           },
           "permissions": {
             "observed": [
@@ -54609,7 +54828,7 @@
                   "ar:writeoff:reverse"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 372
+                "line": 380
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54760,7 +54979,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          379
+          381
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -54783,7 +55002,7 @@
         "x-mock-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 412
+            "line": 420
           },
           "permissions": {
             "observed": [
@@ -54793,7 +55012,7 @@
                   "ar:statement:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 413
+                "line": 421
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54880,12 +55099,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          380
+          382
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 416
+            "line": 424
           },
           "permissions": {
             "observed": [
@@ -54895,7 +55114,7 @@
                   "ar:statement:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 417
+                "line": 425
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -54976,12 +55195,12 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          381
+          383
         ],
         "x-contract-evidence": {
           "source": {
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 421
+            "line": 429
           },
           "permissions": {
             "observed": [
@@ -54992,7 +55211,7 @@
                   "sal:order:view"
                 ],
                 "file": "jxc-web/src/mock/handlers/ar.ts",
-                "line": 422
+                "line": 430
               }
             ],
             "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -55077,7 +55296,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          382
+          384
         ],
         "x-contract-evidence": {
           "source": {
@@ -55186,7 +55405,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          383
+          385
         ],
         "x-contract-evidence": {
           "source": {
@@ -55268,7 +55487,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          384
+          386
         ],
         "x-contract-evidence": {
           "source": {
@@ -55408,7 +55627,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          385
+          387
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -55570,7 +55789,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          386
+          388
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -55733,7 +55952,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          387
+          389
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -55860,7 +56079,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          388
+          390
         ],
         "x-contract-evidence": {
           "source": {
@@ -55998,7 +56217,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          389
+          391
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56162,7 +56381,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          390
+          392
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56276,7 +56495,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          391
+          393
         ],
         "x-contract-evidence": {
           "source": {
@@ -56415,7 +56634,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          392
+          394
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56597,7 +56816,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          393
+          395
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -56724,7 +56943,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          394
+          396
         ],
         "x-contract-evidence": {
           "source": {
@@ -56860,7 +57079,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          395
+          397
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -57022,7 +57241,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          396
+          398
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -57144,7 +57363,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          397
+          399
         ],
         "x-contract-evidence": {
           "source": {
@@ -57249,7 +57468,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          398
+          400
         ],
         "x-contract-evidence": {
           "source": {
@@ -57355,7 +57574,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          399
+          401
         ],
         "x-contract-evidence": {
           "source": {
@@ -57433,7 +57652,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          400
+          402
         ],
         "x-contract-evidence": {
           "source": {
@@ -57527,7 +57746,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          401
+          403
         ],
         "x-contract-evidence": {
           "source": {
@@ -57623,7 +57842,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          402
+          404
         ],
         "x-contract-evidence": {
           "source": {
@@ -57720,7 +57939,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          403
+          405
         ],
         "x-contract-evidence": {
           "source": {
@@ -57819,7 +58038,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          404
+          406
         ],
         "x-contract-evidence": {
           "source": {
@@ -57957,7 +58176,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          406
+          408
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -58105,7 +58324,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          405
+          407
         ],
         "x-contract-evidence": {
           "source": {
@@ -58207,7 +58426,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          407
+          409
         ],
         "x-contract-evidence": {
           "source": {
@@ -58339,7 +58558,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          408
+          410
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -58524,7 +58743,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          409
+          411
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -58716,7 +58935,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          410
+          412
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -58852,7 +59071,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          411
+          413
         ],
         "x-contract-evidence": {
           "source": {
@@ -58988,7 +59207,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          412
+          414
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59178,7 +59397,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          413
+          415
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59319,7 +59538,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          414
+          416
         ],
         "x-contract-evidence": {
           "source": {
@@ -59417,7 +59636,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          415
+          417
         ],
         "x-contract-evidence": {
           "source": {
@@ -59553,7 +59772,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          416
+          418
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59745,7 +59964,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          417
+          419
         ],
         "x-contract-evidence": {
           "reviewStatus": "M2-main-flow-review",
@@ -59889,7 +60108,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          418
+          420
         ],
         "x-contract-evidence": {
           "source": {
@@ -59992,7 +60211,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          419
+          421
         ],
         "x-contract-evidence": {
           "source": {
@@ -60114,7 +60333,7 @@
         "x-backend-status": "registered-gated",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          420
+          422
         ],
         "x-contract-evidence": {
           "source": {
@@ -60372,7 +60591,7 @@
         "x-backend-status": "implemented-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          421
+          423
         ],
         "x-contract-evidence": {
           "reviewStatus": "explicit-M1-review",
@@ -60712,7 +60931,7 @@
         "x-backend-status": "implemented-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          422
+          424
         ],
         "x-contract-evidence": {
           "reviewStatus": "explicit-M1-review",
@@ -60877,7 +61096,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          423
+          425
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61031,7 +61250,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          424
+          426
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61167,7 +61386,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          425
+          427
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61322,7 +61541,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          426
+          428
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61480,7 +61699,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          427
+          429
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61619,7 +61838,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          428
+          430
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -61871,7 +62090,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          429
+          431
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62032,7 +62251,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          430
+          432
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62169,7 +62388,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          431
+          433
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62337,7 +62556,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          432
+          434
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62456,7 +62675,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          433
+          435
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62613,7 +62832,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          435
+          437
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62772,7 +62991,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          434
+          436
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -62934,7 +63153,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          441
+          443
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63205,7 +63424,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          436
+          438
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63371,7 +63590,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          437
+          439
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63538,7 +63757,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          438
+          440
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63704,7 +63923,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          439
+          441
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -63865,7 +64084,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          440
+          442
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64014,7 +64233,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          442
+          444
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64156,7 +64375,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          443
+          445
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64291,7 +64510,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          444
+          446
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64426,7 +64645,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          445
+          447
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64568,7 +64787,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          446
+          448
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64705,7 +64924,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          447
+          449
         ],
         "x-contract-evidence": {
           "reviewStatus": "M3-main-flow-review",
@@ -64860,7 +65079,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          448
+          450
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65006,7 +65225,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          449
+          451
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65156,7 +65375,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          450
+          452
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65322,7 +65541,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          451
+          453
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65469,7 +65688,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          452
+          454
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65610,7 +65829,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          453
+          455
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65752,7 +65971,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          454
+          456
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -65889,7 +66108,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          455
+          457
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -66022,7 +66241,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          456
+          458
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -66223,7 +66442,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          457
+          459
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -66356,7 +66575,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          458
+          460
         ],
         "x-contract-evidence": {
           "reviewStatus": "CLOSURE-main-flow-review",
@@ -66489,7 +66708,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          459
+          461
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -66622,7 +66841,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          460
+          462
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",
@@ -66762,7 +66981,7 @@
         "x-backend-status": "implemented-business-foundation",
         "x-mock-status": "registered",
         "x-registration-indices": [
-          461
+          463
         ],
         "x-contract-evidence": {
           "reviewStatus": "M4-main-flow-review",

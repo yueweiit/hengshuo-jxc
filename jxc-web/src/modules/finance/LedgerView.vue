@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { http, createCommandIntent } from '@/api/http'
 import { ElMessage } from 'element-plus'
@@ -57,10 +58,7 @@ const sourceText = computed(() => activeData.value?.source === 'CLOSED_SNAPSHOT'
 let bookSequence = 0, accountsSequence = 0, requestSequence = 0, detailSequence = 0, booksSequence = 0, disposed = false
 const scope = () => `${bookId.value}:${periodId.value}`
 const isRow = (value: unknown): value is Row => value != null && typeof value === 'object' && !Array.isArray(value)
-function errorText(error: unknown) {
-  const reason = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
-  return reason.trim() ? reason : '读取或操作失败，服务未提供错误说明，请重试。'
-}
+
 function validateLedger(value: unknown, type: LedgerTab): asserts value is Row {
   const rows = isRow(value) ? value[type === 'journal' || type === 'detail' ? 'lines' : 'rows'] : undefined
   if (!isRow(value) || !Array.isArray(rows) || !rows.every(isRow) || type === 'detail' && !isRow(value.account)) {
@@ -86,7 +84,7 @@ async function loadDetail() {
     if (!current()) return
     validateLedger(result, 'detail'); detail.value = result
   } catch (error) {
-    if (current()) ledgerErrors.value.detail = errorText(error)
+    if (current()) ledgerErrors.value.detail = feedbackMessage(error, "读取或操作失败，服务未提供错误说明，请重试。")
   } finally {
     if (current()) detailLoading.value = false
   }
@@ -110,7 +108,7 @@ async function load() {
   if (!current()) return
   results.forEach((result, index) => {
     const type = types[index]!
-    if (result.status === 'rejected') { ledgerErrors.value[type] = errorText(result.reason); return }
+    if (result.status === 'rejected') { ledgerErrors.value[type] = feedbackMessage(result.reason, "读取或操作失败，服务未提供错误说明，请重试。"); return }
     if (type === 'general') general.value = result.value
     else if (type === 'balance') balance.value = result.value
     else {
@@ -152,7 +150,7 @@ async function loadAccounts() {
     if (!Array.isArray(result) || !result.every(row => isRow(row) && row.id != null)) throw new Error('科目数据格式异常，请重新加载。')
     accounts.value = result
   } catch (error) {
-    if (current()) accountsError.value = errorText(error)
+    if (current()) accountsError.value = feedbackMessage(error, "读取或操作失败，服务未提供错误说明，请重试。")
   } finally {
     if (current()) accountsLoading.value = false
   }
@@ -168,7 +166,7 @@ async function loadBooks() {
     }
     books.value = result
   } catch (error) {
-    if (!disposed && sequence === booksSequence) booksError.value = errorText(error)
+    if (!disposed && sequence === booksSequence) booksError.value = feedbackMessage(error, "读取或操作失败，服务未提供错误说明，请重试。")
   } finally {
     if (!disposed && sequence === booksSequence) booksLoading.value = false
   }
@@ -208,7 +206,7 @@ async function exportLedger() {
     }, exportIntent)
     exportIntent.reset()
   } catch (error) {
-    if (!disposed) exportError.value = errorText(error)
+    if (!disposed) exportError.value = feedbackMessage(error, "读取或操作失败，服务未提供错误说明，请重试。")
     return
   } finally {
     if (!disposed) exporting.value = false
@@ -216,7 +214,7 @@ async function exportLedger() {
   if (disposed) return
   ElMessage.success('导出任务已创建')
   try { await router.push('/jobs') }
-  catch (error) { exportError.value = '导出任务已创建，无需重复导出；打开任务中心失败：' + errorText(error) }
+  catch (error) { exportError.value = '导出任务已创建，无需重复导出；打开任务中心失败：' + feedbackMessage(error, "读取或操作失败，服务未提供错误说明，请重试。") }
 }
 function voucher(row: Row) { router.push({ path: '/finance/vouchers', query: { voucherId: row.voucherId, bookId: bookId.value } }) }
 onMounted(initialize)
@@ -259,10 +257,10 @@ onBeforeUnmount(() => { disposed = true; bookSequence++; accountsSequence++; req
         <span>本位币：{{ baseCurrency ?? '未提供' }}</span>
         <span>国家时区：{{ country.timezone }}</span>
       </div>
-      <el-alert v-if="booksError" type="error" :closable="false" show-icon :title="'账套读取失败：' + booksError"><el-button link type="primary" @click="initialize">重新加载账套</el-button></el-alert>
-      <el-alert v-if="accountsError" type="error" :closable="false" show-icon :title="'科目读取失败：' + accountsError"><el-button link type="primary" :loading="accountsLoading" @click="loadAccounts">重新加载科目</el-button></el-alert>
-      <el-alert v-if="navigationError" type="warning" :closable="false" show-icon :title="navigationError" />
-      <el-alert v-if="exportError" type="error" :closable="false" show-icon :title="exportError"><el-button link type="primary" @click="router.push('/jobs')">打开任务中心</el-button></el-alert>
+      <div v-if="booksError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" @click="initialize">重新加载账套</el-button></div>
+      <div v-if="accountsError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" :loading="accountsLoading" @click="loadAccounts">重新加载科目</el-button></div>
+      <div v-if="navigationError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
+      <div v-if="exportError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" @click="router.push('/jobs')">打开任务中心</el-button></div>
       <el-tabs v-model="tab" class="ledger-tabs">
         <el-tab-pane v-for="item in tabs" :key="item.name" :label="item.label" :name="item.name" />
       </el-tabs>
@@ -271,9 +269,7 @@ onBeforeUnmount(() => { disposed = true; bookSequence++; accountsSequence++; req
         <el-empty v-else-if="!booksError && !books.length" :image-size="64" description="当前没有可用账套" />
         <el-empty v-else-if="!bookId || !periodId" :image-size="64" description="请选择账套与会计期间查看账簿" />
         <div v-else-if="activeLoading" class="ledger-state muted" role="status">正在读取{{ tabs.find(item => item.name === tab)?.label }}…</div>
-        <el-alert v-else-if="activeError" type="error" :closable="false" show-icon :title="'账簿读取失败：' + activeError">
-          <el-button link type="primary" @click="tab === 'detail' ? loadDetail() : load()">重新加载账簿</el-button>
-        </el-alert>
+        <div v-else-if="activeError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" @click="tab === 'detail' ? loadDetail() : load()">重新加载账簿</el-button></div>
         <el-empty v-else-if="tab === 'detail' && !accountId" :image-size="64" description="请选择会计科目，或从总账、科目余额查看明细" />
         <template v-else-if="activeData">
           <div class="ledger-result-heading">

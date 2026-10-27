@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { feedbackMessage, reportError } from '@/api/error-feedback'
+import { opinionScope, readOpinion, removeOpinion, saveOpinion } from './opinion-draft'
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http } from '@/api/http'
@@ -85,9 +87,7 @@ const compact = ref(false)
 let requestId = 0
 let disposed = false
 
-function errorText(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback
-}
+
 
 async function load() {
   if (disposed) return
@@ -116,7 +116,7 @@ async function load() {
     if (disposed || request !== requestId) return
     rows.value = []
     total.value = 0
-    loadError.value = errorText(error, '审批列表加载失败，请重试')
+    loadError.value = feedbackMessage(error, '审批列表加载失败，请重试')
     forbidden.value = typeof error === 'object' && error !== null && 'code' in error && error.code === 'SYS_FORBIDDEN'
   } finally {
     if (!disposed && request === requestId) loading.value = false
@@ -146,7 +146,7 @@ async function changeSize(value: number) {
 async function refreshTodo() {
   summaryError.value = ''
   try { await todo.refresh() }
-  catch (error) { if (!disposed) summaryError.value = errorText(error, '待办数量刷新失败，请重试') }
+  catch (error) { if (!disposed) summaryError.value = feedbackMessage(error, '待办数量刷新失败，请重试') }
 }
 async function refreshPage() {
   await Promise.all([load(), refreshTodo()])
@@ -161,31 +161,43 @@ function openDetail(row: TaskRow) {
 }
 
 // ---------- 审批动作 ----------
-const action = reactive({ visible: false, type: 'approve' as 'approve' | 'reject', comment: '', task: null as TaskRow | null, saving: false, validation: '', error: '' })
+const action = reactive({ visible: false, type: 'approve' as 'approve' | 'reject', comment: '', task: null as TaskRow | null, saving: false, validation: '' })
+let actionScope = ''
 
 function openAction(row: TaskRow, type: 'approve' | 'reject') {
   if (disposed || action.saving || props.mode !== 'todo' || row.status !== 'PENDING' || row.instanceStatus !== 'PENDING') return
-  Object.assign(action, { visible: true, type, comment: '', task: row, validation: '', error: '' })
+  actionScope = opinionScope()
+  Object.assign(action, { visible: true, type, comment: readOpinion(row.id, type), task: row, validation: '' })
 }
 
 async function submitAction() {
   if (disposed || action.saving || !action.task) return
   action.validation = ''
-  action.error = ''
   if (action.type === 'reject' && !action.comment.trim()) {
     action.validation = '请填写驳回原因'
     return
   }
   action.saving = true
+  const task = action.task, type = action.type, scope = actionScope
   try {
     await http.post(`/wf/tasks/${action.task.id}/${action.type}`, { comment: action.comment.trim() }, { silent: true })
+    removeOpinion(scope, task.id)
     if (disposed) return
     ElMessage.success(action.type === 'approve' ? '已同意' : '已驳回')
     action.visible = false
     drawerVisible.value = false
     await Promise.all([load(), refreshTodo()])
   } catch (error) {
-    if (!disposed) action.error = errorText(error, '审批处理失败，请重试')
+    if (!disposed && action.task?.id === task.id) saveOpinion(scope, task.id, type, action.comment)
+    if (!disposed) reportError(error, {
+      title: `${docTypeLabel(action.task.docType)}${action.type === 'approve' ? '审批未通过' : '驳回未完成'}`,
+      beforeNavigate: () => {
+        if (!disposed && action.task?.id === task.id && action.type === type) {
+          saveOpinion(scope, task.id, type, action.comment)
+          action.visible = false
+        }
+      },
+    })
   } finally {
     if (!disposed) action.saving = false
   }
@@ -240,9 +252,7 @@ onBeforeUnmount(() => {
           <el-button @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>
-      <el-alert v-if="summaryError" class="summary-error" type="warning" :closable="false" show-icon title="待办数量刷新失败">
-        <p>{{ summaryError }}</p><el-button link type="primary" @click="refreshTodo">重试刷新数量</el-button>
-      </el-alert>
+      <div v-if="summaryError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p><el-button link type="primary" @click="refreshTodo">重试刷新数量</el-button></div>
       <div class="list-caption">
         <div class="list-title">{{ applied.keyword || applied.docType ? '筛选结果' : mode === 'todo' ? '待审批单据' : '已处理记录' }}<span class="result-count" :class="{ neutral: mode === 'done' }">{{ loading || loadError ? '—' : total }}</span></div>
         <span class="sort-hint">{{ mode === 'todo' ? '按提交时间从新到旧' : '按处理时间从新到旧' }}</span>
@@ -253,7 +263,7 @@ onBeforeUnmount(() => {
       <div v-else-if="loadError" class="approval-state" role="alert">
         <el-icon class="state-icon"><Lock v-if="forbidden" /><Warning v-else /></el-icon>
         <h3>{{ forbidden ? '当前账号无权查看审批' : '审批列表加载失败' }}</h3>
-        <p class="muted">{{ loadError }}</p>
+        <p class="muted">操作未完成，请查看全局提示。</p>
         <el-button @click="load">重新加载</el-button>
       </div>
       <div v-else-if="!rows.length" class="approval-state">
@@ -385,7 +395,6 @@ onBeforeUnmount(() => {
         <div class="mono">{{ action.task.docNo }}</div><p>{{ action.task.docTitle }}</p>
         <div class="action-context-footer"><span>{{ action.task.nodeName }}</span><ApprovalAmount :value="action.task.amount" :currency="action.task.currency" /></div>
       </div>
-      <el-alert v-if="action.error" class="action-error" :title="action.error" type="error" :closable="false" show-icon />
       <el-form label-position="top" @submit.prevent="submitAction">
         <el-form-item :label="action.type === 'approve' ? '审批意见（选填）' : '驳回原因（必填）'" :required="action.type === 'reject'" :error="action.validation" for="approval-opinion">
           <el-input id="approval-opinion" v-model="action.comment" type="textarea" :rows="4" :disabled="action.saving" :placeholder="action.type === 'approve' ? '请输入审批意见（选填）' : '请说明驳回原因，便于提交人修改'" @input="action.validation = ''" />
@@ -470,7 +479,6 @@ onBeforeUnmount(() => {
 .action-context { padding: 12px; margin-bottom: 18px; background: var(--el-fill-color-light); border-radius: 4px; font-size: 13px; overflow-wrap: anywhere; }
 .action-context p { margin: 4px 0 0; color: var(--el-text-color-regular); font-size: 12px; }
 .action-context-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--el-border-color-light); color: var(--el-text-color-regular); }
-.action-error { margin-bottom: 16px; }
 .opinion-hint { margin: 0; font-size: 12px; }
 .mobile-row { padding: 15px 0; border-bottom: 1px solid var(--el-border-color-light); }
 .mobile-list { border-top: 1px solid var(--el-border-color-light); }

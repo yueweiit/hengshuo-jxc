@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { http } from '@/api/http'
 import StatusTag from './StatusTag.vue'
@@ -84,7 +85,7 @@ async function load() {
     // 旧入口继续将读取错误交给调用方；时间轴入口负责就地错误与重试。
     if (props.presentation !== 'timeline') throw error
     instances.value = []
-    loadError.value = error instanceof Error && error.message ? error.message : '审批记录读取失败，请重试'
+    loadError.value = feedbackMessage(error, "审批记录读取失败，请重试")
   } finally {
     if (!disposed && request === requestId) loading.value = false
   }
@@ -101,7 +102,7 @@ defineExpose({ reload: load })
       <el-skeleton :rows="3" animated /><p class="muted">正在加载审批记录…</p>
     </div>
     <div v-else-if="props.presentation === 'timeline' && loadError" class="history-error" role="alert">
-      <el-alert title="审批记录加载失败" type="error" :closable="false" show-icon><p>{{ loadError }}</p></el-alert>
+      <div  class="request-state" role="status"><p class="muted">尚未加载成功</p></div>
       <el-button @click="load">重新加载记录</el-button>
     </div>
     <el-empty v-else-if="!instances.length" :image-size="48" description="暂无审批记录" />

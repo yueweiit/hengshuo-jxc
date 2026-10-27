@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { http, createCommandIntent } from '@/api/http'
 import type { PageResult } from '@/api/types'
@@ -37,7 +38,7 @@ const currencyField = computed<FieldDef>(() => ({ prop: 'currency', label: '币�
 const productField = computed<FieldDef>(() => ({ prop: 'productId', label: '商品', type: 'select', options: products.value, placeholder: '搜索商品编码或名称' }))
 const scopeKey = () => `${user.token}:${country.currentId}:${country.epoch}`
 const listScope = () => `${scopeKey()}:${form.bookId ?? ''}`
-const errorText = (error: unknown, fallback: string) => error instanceof Error && error.message.trim() ? error.message : fallback
+
 let listRequest = 0, itemRequest = 0, productRequest = 0, setupRequest = 0, disposed = false
 
 async function load() {
@@ -50,7 +51,7 @@ async function load() {
     if (!Array.isArray(result.records) || !Number.isSafeInteger(result.total) || result.total < 0) throw new Error('费用记录分页数据不完整，请重试')
     records.value = result.records; total.value = result.total
   } catch (error) {
-    if (!disposed && request === listRequest && scope === listScope()) { records.value = []; total.value = 0; listError.value = errorText(error, '费用记录读取失败，请重试') }
+    if (!disposed && request === listRequest && scope === listScope()) { records.value = []; total.value = 0; listError.value = feedbackMessage(error, '费用记录读取失败，请重试') }
   } finally { if (!disposed && request === listRequest && scope === listScope()) loading.value = false }
 }
 
@@ -62,7 +63,7 @@ async function loadItems() {
     const result = await allRecords<Row>('/md/expense-items')
     if (!disposed && request === itemRequest && scope === scopeKey()) references.value = result
   } catch (error) {
-    if (!disposed && request === itemRequest && scope === scopeKey()) { references.value = []; itemsError.value = errorText(error, '费用项目读取失败，请重试') }
+    if (!disposed && request === itemRequest && scope === scopeKey()) { references.value = []; itemsError.value = feedbackMessage(error, '费用项目读取失败，请重试') }
   } finally { if (!disposed && request === itemRequest && scope === scopeKey()) itemsLoading.value = false }
 }
 
@@ -76,7 +77,7 @@ async function loadProducts() {
     const result = await options.remote(PRODUCT_SOURCE.remote, PRODUCT_SOURCE.label, PRODUCT_SOURCE.value, PRODUCT_SOURCE.params)
     if (!disposed && request === productRequest && scope === scopeKey()) products.value = result
   } catch (error) {
-    if (!disposed && request === productRequest && scope === scopeKey()) { products.value = []; productError.value = errorText(error, '商品读取失败，请重试') }
+    if (!disposed && request === productRequest && scope === scopeKey()) { products.value = []; productError.value = feedbackMessage(error, '商品读取失败，请重试') }
   } finally { if (!disposed && request === productRequest && scope === scopeKey()) productsLoading.value = false }
 }
 
@@ -93,7 +94,7 @@ async function loadSetup() {
       form.currency = books.value.find(b => b.id === form.bookId)?.baseCurrency ?? country.currency
     }
   } catch (error) {
-    if (!disposed && request === setupRequest && scope === scopeKey()) { books.value = []; currencies.value = []; setupError.value = errorText(error, '账套与币种读取失败，请重试') }
+    if (!disposed && request === setupRequest && scope === scopeKey()) { books.value = []; currencies.value = []; setupError.value = feedbackMessage(error, '账套与币种读取失败，请重试') }
   } finally { if (!disposed && request === setupRequest && scope === scopeKey()) setupLoading.value = false }
 }
 
@@ -131,7 +132,7 @@ async function create() {
     saveIntent.reset(); created.value = result; form.amount = 0; form.productId = null
     query.page = 1; await load()
   } catch (error) {
-    if (!disposed && scope === listScope()) saveError.value = errorText(error, '费用登记失败，请重试')
+    if (!disposed && scope === listScope()) saveError.value = feedbackMessage(error, '费用登记失败，请重试')
   } finally { if (!disposed && scope === listScope()) saving.value = false }
 }
 
@@ -155,8 +156,8 @@ onBeforeUnmount(() => { disposed = true; listRequest++; itemRequest++; productRe
       <p class="page-description">登记期间费用和直接销售费用。资本化费用请走费用分摊，已计入库存成本的费用不会重复扣减利润。</p>
       <div v-if="contextChanged" class="feedback" role="alert"><el-alert title="国家或登录状态已变化，请重新读取当前资料" type="warning" :closable="false" /><el-button @click="initialize">重新读取</el-button></div>
       <template v-else>
-        <div v-if="setupError" class="feedback" role="alert"><el-alert :title="setupError" type="error" :closable="false" show-icon /><el-button :loading="setupLoading" @click="initialize">重试账套与币种</el-button></div>
-        <div v-if="itemsError" class="feedback" role="alert"><el-alert :title="itemsError" type="error" :closable="false" show-icon /><el-button :loading="itemsLoading" @click="loadItems">重试费用项目</el-button></div>
+        <div v-if="setupError" class="feedback" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button :loading="setupLoading" @click="initialize">重试账套与币种</el-button></div>
+        <div v-if="itemsError" class="feedback" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button :loading="itemsLoading" @click="loadItems">重试费用项目</el-button></div>
         <el-form v-if="canWrite" label-position="top" :disabled="saving || setupLoading || itemsLoading" @submit.prevent="create">
           <div class="form-grid">
             <el-form-item v-if="!mockMode" label="所属账套" required><FieldInput v-model="form.bookId" :field="bookField" @update:model-value="chooseBook" /><div class="field-help">{{ form.bookId ? '下方记录按此账套查询' : '请选择账套；下方显示当前授权范围内的记录' }}</div></el-form-item>
@@ -168,10 +169,10 @@ onBeforeUnmount(() => { disposed = true; listRequest++; itemRequest++; productRe
               <FieldInput v-if="canReadProducts" v-model="form.productId" :field="productField" :disabled="productsLoading" />
               <el-input-number v-else v-model="form.productId" :min="1" :precision="0" controls-position="right" placeholder="请输入商品ID" />
               <div class="field-help">{{ canReadProducts ? (productsLoading ? '正在读取商品…' : '该商品承担本笔全部费用') : '当前账号无商品档案查询权限；填写有效商品ID，登记时校验' }}</div>
-              <div v-if="productError" class="field-error" role="alert">{{ productError }} <el-button link type="primary" :loading="productsLoading" @click="loadProducts">重试商品</el-button></div>
+              <div v-if="productError" class="field-error" role="alert">操作未完成，请查看全局提示。 <el-button link type="primary" :loading="productsLoading" @click="loadProducts">重试商品</el-button></div>
             </el-form-item>
           </div>
-          <el-alert v-if="saveError" class="feedback" :title="saveError" type="error" :closable="false" show-icon role="alert" />
+          <div v-if="saveError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
           <div class="form-actions"><span class="muted">登记成功即形成已确认费用，请核对项目、金额和日期。</span><el-button type="primary" native-type="submit" :loading="saving" :disabled="!!setupError || !!itemsError || (!mockMode && !form.bookId)">登记费用</el-button></div>
         </el-form>
         <el-alert v-else title="当前账号仅可查看费用记录，登记需要费用登记、确认及成本字段写入权限" type="info" :closable="false" show-icon />
@@ -181,7 +182,7 @@ onBeforeUnmount(() => { disposed = true; listRequest++; itemRequest++; productRe
     <section class="page-card">
       <div class="page-title"><h2>登记记录</h2><el-button :loading="loading" :disabled="saving || contextChanged" @click="load">刷新记录</el-button></div>
       <p class="record-scope">{{ !mockMode && form.bookId ? `当前账套：${books.find(b => b.id === form.bookId)?.name ?? '#' + form.bookId}` : '当前授权范围内的费用记录' }} · 金额按各单据币种展示</p>
-      <div v-if="listError" class="feedback" role="alert"><el-alert :title="listError" type="error" :closable="false" show-icon /><el-button :disabled="saving" @click="load">重试读取记录</el-button></div>
+      <div v-if="listError" class="feedback" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button :disabled="saving" @click="load">重试读取记录</el-button></div>
       <template v-else-if="!contextChanged">
         <div class="table-scroll" v-loading="loading" :aria-busy="loading">
           <el-table :data="rows" border stripe row-key="id" :empty-text="loading ? '正在读取费用记录…' : '暂无费用记录；登记成功后将在这里显示'">

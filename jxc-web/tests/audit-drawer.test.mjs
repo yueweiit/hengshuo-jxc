@@ -129,7 +129,7 @@ test('the drawer template distinguishes loading, empty success, failure and trun
   page.props.loading = false
   page.props.loadError = '没有查看权限'
   const errorHtml = await page.html()
-  assert.match(errorHtml, /没有查看权限/)
+  assert.doesNotMatch(errorHtml, /没有查看权限/); assert.match(errorHtml, /操作未完成|尚未加载成功/)
   assert.ok(!errorHtml.includes('暂无操作日志'))
   assert.ok(!errorHtml.includes('已显示全部'))
   page.props.loadError = ''

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage, reportError  } from '@/api/error-feedback'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -79,7 +80,7 @@ async function load() {
     r.value = result
     return true
   } catch (error) {
-    if (request === loadRequest && scope === receiptScope()) loadError.value = error instanceof Error ? error.message : '实收单读取失败，请重试'
+    if (request === loadRequest && scope === receiptScope()) loadError.value = feedbackMessage(error, "实收单读取失败，请重试")
     return false
   } finally {
     if (request === loadRequest) {
@@ -94,7 +95,7 @@ async function onScan(code: string) {
   const scope = receiptScope()
   const matches = lines.value.filter(x => matchBarcode(x, code))
   const l = matches.find(x => !checked.value.has(x.id)) ?? matches[0]
-  if (!l) return ElMessage.error(`${code} 不在这张派送单上，请单独登记为异常`)
+  if (!l) return reportError(new Error(`${code} 不在这张派送单上，请单独登记为异常`))
   lineQuery.value = ''
   lineFilter.value = 'all'
   await nextTick()
@@ -120,7 +121,7 @@ const payload = () => ({
 
 async function saveDraft() {
   if (!editable.value) return
-  if (lines.value.some(line => quantityFields.some(key => !validQty(line[key])))) return ElMessage.error('数量必须为非负数，最多四位小数')
+  if (lines.value.some(line => quantityFields.some(key => !validQty(line[key])))) return reportError(new Error('数量必须为非负数，最多四位小数'))
   const scope = receiptScope(), receiptId = id.value
   saving.value = true
   try {
@@ -136,7 +137,7 @@ async function saveDraft() {
 
 async function confirm() {
   if (!editable.value) return
-  if (!allBalanced.value) return ElMessage.error('每行的合格 + 破损 + 待检 + 短缺必须等于派送数量')
+  if (!allBalanced.value) return reportError(new Error('每行的合格 + 破损 + 待检 + 短缺必须等于派送数量'))
   const scope = receiptScope(), receiptId = id.value, body = payload()
   const unchecked = lines.value.filter((l) => !checked.value.has(l.id)).length
   const msg = [
@@ -185,7 +186,7 @@ onMounted(load)
       </div>
       <el-tooltip content="重新读取"><el-button text circle aria-label="重新读取" :disabled="loading || saving" @click="load"><el-icon><Refresh /></el-icon></el-button></el-tooltip>
     </header>
-    <div v-if="loadError" class="receipt-read-error" role="alert"><span>实收单读取失败：{{ loadError }}</span><el-button type="primary" link @click="load">重试读取</el-button></div>
+    <div v-if="loadError" class="receipt-read-error" role="alert"><span>实收单读取失败：操作未完成，请查看全局提示。</span><el-button type="primary" link @click="load">重试读取</el-button></div>
     <template v-else-if="r.id">
       <section class="receipt-info" aria-label="基础资料">
         <dl>
@@ -249,12 +250,12 @@ onMounted(load)
             <template #layout="state">
               <div class="receipt-section-heading"><h3>操作记录 <span v-if="!state.loading && !state.loadError">{{ state.total }} 条</span></h3><div class="receipt-audit-tools"><el-tooltip content="刷新日志"><el-button text circle size="small" aria-label="刷新日志" :disabled="state.loading" @click="state.reload"><el-icon><Refresh /></el-icon></el-button></el-tooltip><el-button link type="primary" @click="auditVisible = true">全部记录<el-icon><ArrowRight /></el-icon></el-button></div></div>
               <p v-if="state.loading" class="receipt-muted" role="status">正在读取操作记录…</p>
-              <div v-else-if="state.loadError" class="receipt-log-error" role="alert">{{ state.loadError }}<el-button link type="primary" @click="state.reload">重试</el-button></div>
+              <div v-else-if="state.loadError" class="receipt-log-error" role="alert">操作未完成，请查看全局提示。<el-button link type="primary" @click="state.reload">重试</el-button></div>
               <p v-else-if="!state.logs.length" class="receipt-muted">暂无操作记录</p>
               <ol v-else class="receipt-log-list"><li v-for="log in state.logs.slice(0, 3)" :key="log.id"><span class="receipt-log-dot"></span><div><b>{{ receiptAudit(log).title }}</b><span class="receipt-muted">{{ log.userName || '操作人未记录' }}</span></div><DateTimeText :value="log.occurredAt" :tz="timezone" /></li></ol>
               <el-drawer v-model="auditVisible" title="操作日志" size="min(640px, 100vw)" append-to-body destroy-on-close class="receipt-audit-drawer">
                 <div class="receipt-audit-context"><span>实收验收</span><b class="mono">{{ r.docNo }}</b><StatusTag :status="r.status" /></div>
-                <AuditDrawerRecords :logs="state.logs" :loading="state.loading" :load-error="state.loadError" :total="state.total" :timezone="timezone" :presentation="receiptAudit" @reload="state.reload" />
+                <AuditDrawerRecords :logs="state.logs" :loading="state.loading" :load-error="state.loadError ? '尚未加载成功' : ''" :total="state.total" :timezone="timezone" :presentation="receiptAudit" @reload="state.reload" />
               </el-drawer>
             </template>
           </AuditTimeline>

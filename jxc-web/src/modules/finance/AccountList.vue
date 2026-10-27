@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage as reason } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -47,7 +48,6 @@ function accountName(id: number) {
   const account = accounts.value.find(row => row.id === id)
   return account ? `${account.code} ${account.name}` : `科目 ID ${id}`
 }
-function reason(error: unknown) { return error instanceof Error ? error.message : String(error) }
 function resetPage() { page.value = 1 }
 
 async function loadBooks() {
@@ -147,9 +147,7 @@ onBeforeUnmount(() => { alive = false; listRequest++; booksRequest++ })
       <el-button v-if="canEdit" type="primary" :disabled="!bookId || loading || booksLoading || !!booksError || !!loadError || !!referenceError || saving" @click="edit()">新增{{ resourceLabel }}</el-button>
     </div>
     <el-alert v-if="mockMode" class="accounts-notice" title="演示模式保留科目查询；核算配置使用真实服务维护。" type="info" :closable="false" />
-    <el-alert v-if="booksError" class="accounts-notice" title="账套加载失败" type="error" :closable="false" show-icon>
-      <p>{{ booksError }}</p><el-button @click="loadBooks">重新加载账套</el-button>
-    </el-alert>
+    <div v-if="booksError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p><el-button @click="loadBooks">重新加载账套</el-button></div>
     <el-form class="accounts-filters" label-position="top" @submit.prevent>
       <el-form-item label="账套">
         <el-select v-model="bookId" filterable placeholder="请选择账套" :loading="booksLoading" :disabled="booksLoading || saving || !!booksError" @change="changeContext">
@@ -165,12 +163,8 @@ onBeforeUnmount(() => { alive = false; listRequest++; booksRequest++ })
       <el-form-item label="列表操作" class="accounts-refresh"><el-button :loading="loading" :disabled="!bookId || booksLoading || !!booksError || saving" @click="load">刷新</el-button></el-form-item>
     </el-form>
 
-    <el-alert v-if="loadError" class="accounts-notice" :title="savedNotice ? '配置已保存，列表刷新失败，无需重复保存' : '配置加载失败'" type="error" :closable="false" show-icon>
-      <p>{{ loadError }}</p><el-button :loading="loading" @click="load">重新加载</el-button>
-    </el-alert>
-    <el-alert v-if="referenceError" class="accounts-notice" title="关联资料加载失败，部分名称显示为 ID，暂不能编辑" type="warning" :closable="false" show-icon>
-      <p>{{ referenceError }}</p><el-button :loading="loading" @click="load">重新加载</el-button>
-    </el-alert>
+    <div v-if="loadError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p><el-button :loading="loading" @click="load">重新加载</el-button></div>
+    <div v-if="referenceError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p><el-button :loading="loading" @click="load">重新加载</el-button></div>
     <div class="accounts-list-heading"><h3>{{ resourceLabel }}</h3><span v-if="bookId && !loading && !loadError && !booksError" class="muted">{{ filteredRows.length }} 条{{ keyword.trim() ? '匹配记录' : '配置' }}</span></div>
     <div class="table-scroll">
       <el-table v-loading="loading || booksLoading" :data="pageRows" row-key="id" border stripe>
@@ -210,7 +204,7 @@ onBeforeUnmount(() => { alive = false; listRequest++; booksRequest++ })
     </div>
 
     <el-dialog v-model="dialog" :title="(editing ? '编辑' : '新增') + resourceLabel" width="min(720px, 94vw)" :close-on-click-modal="!saving" :close-on-press-escape="!saving" :show-close="!saving">
-      <el-alert v-if="saveError" class="accounts-notice" title="配置未保存" type="error" :closable="false" show-icon><p>{{ saveError }}</p></el-alert>
+      <div v-if="saveError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p></div>
       <el-form class="accounts-editor" label-position="top" :disabled="saving" @submit.prevent="save">
         <div v-if="resource !== 'category-account-maps'" class="accounts-form-grid">
           <el-form-item label="编码" required><el-input v-model="form.code" placeholder="请输入编码" /></el-form-item>

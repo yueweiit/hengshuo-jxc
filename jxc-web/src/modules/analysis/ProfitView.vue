@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCountryStore } from '@/stores/country'
 import { http } from '@/api/http'
@@ -29,10 +30,7 @@ const sourceNames: Record<string, string> = {
 }
 const sourceLabel = (value: string | undefined) => value == null ? '来源类型未提供' : sourceNames[value] ?? value
 const periodLabel = (period: Row) => period.name + ' · ' + statusDef(period.status, 'period').label
-function errorText(error: unknown) {
-  const reason = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
-  return reason.trim() ? reason : '读取失败，服务未提供错误说明。'
-}
+
 const isRow = (value: unknown): value is Row => value != null && typeof value === 'object' && !Array.isArray(value)
 const isAmount = (value: unknown) => value == null || (typeof value === 'number' && Number.isFinite(value)) || (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)))
 function validateProfit(value: unknown): asserts value is Row {
@@ -69,7 +67,7 @@ async function loadBooks() {
     }
     books.value = result
   } catch (error) {
-    if (!disposed && request === booksSequence) booksError.value = errorText(error)
+    if (!disposed && request === booksSequence) booksError.value = feedbackMessage(error, "读取失败，服务未提供错误说明。")
   } finally {
     if (!disposed && request === booksSequence) booksLoading.value = false
   }
@@ -87,7 +85,7 @@ async function load() {
     validateProfit(result)
     data.value = result
   } catch (error) {
-    if (!disposed && request === sequence) loadError.value = errorText(error)
+    if (!disposed && request === sequence) loadError.value = feedbackMessage(error, "读取失败，服务未提供错误说明。")
   } finally {
     if (!disposed && request === sequence) busy.value = false
   }
@@ -122,7 +120,7 @@ onBeforeUnmount(() => { disposed = true; sequence++; booksSequence++ })
     <section class="page-card profit-results" :aria-busy="booksLoading || busy" aria-label="利润查询结果">
       <div v-if="booksLoading" class="profit-loading" role="status">正在读取账套…</div>
       <div v-else-if="booksError" class="profit-error" role="alert">
-        <el-alert title="账套读取失败" type="error" :closable="false" show-icon><p>{{ booksError }}</p></el-alert>
+        <div  class="request-state" role="status"><p class="muted">尚未加载成功</p></div>
         <el-button type="primary" plain @click="loadBooks">重新加载账套</el-button>
       </div>
       <el-empty v-else-if="!books.length" :image-size="64" description="暂无可用账套，请联系管理员确认账套与访问权限" />
@@ -131,7 +129,7 @@ onBeforeUnmount(() => { disposed = true; sequence++; booksSequence++ })
       <el-empty v-else-if="periodId == null" :image-size="64" description="请选择期间，查看该期间的利润" />
       <div v-else-if="busy" v-loading="busy" class="profit-loading" role="status">正在读取利润数据…</div>
       <div v-else-if="loadError" class="profit-error" role="alert">
-        <el-alert title="利润读取失败" type="error" :closable="false" show-icon><p>{{ loadError }}</p></el-alert>
+        <div  class="request-state" role="status"><p class="muted">尚未加载成功</p></div>
         <el-button type="primary" plain @click="load">重新加载利润</el-button>
       </div>
       <template v-else-if="data">

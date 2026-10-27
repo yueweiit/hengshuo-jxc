@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dismissError, feedbackMessage, reportError } from '@/api/error-feedback'
 import { canEditSalesOrder, canSubmitSalesOrder, canOutboundSalesOrder } from './salesOrderActions'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -18,7 +19,6 @@ import ApprovalPanel from '@/components/ApprovalPanel.vue'
 import DocAttachment from '@/components/DocAttachment.vue'
 import AuditDrawer from '@/components/AuditDrawer.vue'
 import { salesOrderAudit } from './salesOrderAudit'
-import OutboundPaymentCheck from './OutboundPaymentCheck.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
 import { confirmAction } from '@/utils/action'
 
@@ -55,6 +55,7 @@ const allocationForm = reactive({ visible: false, loading: false, saving: false,
 let cancellationScope = '', allocationScope = '', allocationRequest = 0
 let loadRequest = 0, timelineRequest = 0, checkRequest = 0, checkedScope = ''
 let checkedSelection = ''
+let outboundNoticeId: number | undefined
 const originalAllocations = new Map<number, string>()
 
 let outboundAttempt: { fingerprint: string; draft: Row; bizDate: string } | null = null
@@ -75,7 +76,6 @@ function selectedOutboundLines() {
   return Object.entries(ob.qty).filter(([allocation, qty]) => allowed.has(Number(allocation)) && Number.isFinite(qty) && qty > 0).map(([allocation, qty]) => ({ allocId: Number(allocation), qty })).sort((a, b) => a.allocId - b.allocId)
 }
 function checkSelection() { return JSON.stringify([detailScope(), order.value?.version, ob.warehouseId, ob.visible ? selectedOutboundLines() : null]) }
-const paymentCheck = computed(() => checks.value.find(check => check.item === '现款到账'))
 function canUploadSalesAttachment(field: 'BANK_INFO' | 'CUSTOMER_PRICE') {
   return user.fieldAccess(field) === 'WRITE' && user.hasPerm(['sal:order:create', 'sal:order:submit', 'sal:outbound:confirm'])
 }
@@ -83,9 +83,7 @@ const canConfirmOut = computed(() => canOutbound.value && user.hasPerm('sal:outb
 const canCancel = computed(() => mutableOrder.value && Number(order.value?.openQty) > 0 && user.hasPerm(['sal:order:cancel', 'sal:order:create']))
 const canClose = computed(() => mutableOrder.value && Number(order.value?.openQty) > 0 && user.hasPerm(['sal:order:close', 'sal:order:create']))
 
-function errorMessage(error: unknown) {
-  return error instanceof Error && error.message.trim() ? error.message : '请求失败，请重试'
-}
+
 
 const priceSources: Record<string, string> = { BASE: '基础价', LEVEL: '等级价', CUSTOMER_SKU: '客户专属价', CUSTOMER: '客户价', MANUAL: '人工定价' }
 function priceSourceLabel(value?: string | null) {
@@ -94,6 +92,8 @@ function priceSourceLabel(value?: string | null) {
 }
 
 function resetChecks() {
+  if (outboundNoticeId !== undefined) dismissError(outboundNoticeId)
+  outboundNoticeId = undefined
   ++checkRequest
   checks.value = []
   checkedWarehouseId.value = undefined
@@ -125,7 +125,7 @@ async function load() {
     await restoreOutboundSelection()
     await loadTimeline()
   } catch (error) {
-    if (request === loadRequest && scope === detailScope()) loadError.value = errorMessage(error)
+    if (request === loadRequest && scope === detailScope()) loadError.value = feedbackMessage(error, "请求失败，请重试")
   } finally {
     if (request === loadRequest) loading.value = false
   }
@@ -142,7 +142,7 @@ async function loadTimeline() {
     if (!Array.isArray(result) || !result.every(item => item && typeof item === 'object' && !Array.isArray(item) && typeof item.type === 'string' && typeof item.text === 'string')) throw new Error('时间线返回格式不正确，请重新加载')
     timeline.value = result
   } catch (error) {
-    if (request === timelineRequest && scope === detailScope()) timelineError.value = errorMessage(error)
+    if (request === timelineRequest && scope === detailScope()) timelineError.value = feedbackMessage(error, "请求失败，请重试")
   } finally {
     if (request === timelineRequest) timelineLoading.value = false
   }
@@ -154,7 +154,7 @@ async function runCheck() {
   resetChecks()
   if (!warehouseId || Number(order.value?.id) !== id.value || !warehouses.value.some(warehouse => warehouse.value === warehouseId)) return
   const lines = selectedOutboundLines()
-  if (ob.visible && !lines.length) { checkError.value = '请至少填写一项大于零的本次出库数量'; return }
+  if (ob.visible && !lines.length) { checkError.value = feedbackMessage(new Error('请至少填写一项大于零的本次出库数量'), '出库数量未填写'); return }
   const request = checkRequest, scope = detailScope(), orderId = id.value, selection = checkSelection()
   checkLoading.value = true
   try {
@@ -169,11 +169,26 @@ async function runCheck() {
     checkedScope = scope
     checkedSelection = selection
     checkedWarehouseId.value = warehouseId
+    if (ob.visible && checks.value.some(check => !check.ok)) showOutboundFailure()
   } catch (error) {
-    if (request === checkRequest && scope === detailScope() && ob.warehouseId === warehouseId) checkError.value = errorMessage(error)
+    if (request === checkRequest && scope === detailScope() && ob.warehouseId === warehouseId) checkError.value = feedbackMessage(error, "请求失败，请重试")
   } finally {
     if (request === checkRequest) checkLoading.value = false
   }
+}
+
+function showOutboundFailure() {
+  if (!checks.value.some(check => !check.ok)) return
+  const failure = Object.assign(new Error('出库条件尚未满足，请按明细处理后重新检查'), {
+    code: 'SAL_OUTBOUND_BLOCKED', data: { kind: 'OUTBOUND_CHECK', checks: checks.value, orderId: id.value },
+  })
+  outboundNoticeId = reportError(failure, {
+    title: '出库尚未完成', key: `outbound-check:${id.value}:${ob.warehouseId}`, sourcePath: `/sales/orders/${id.value}`,
+    beforeNavigate: async action => {
+      if (action.intent) { await paymentAction(action.intent); return false }
+      ob.visible = false
+    },
+  })?.id
 }
 
 async function outboundSessionHash() {
@@ -191,7 +206,7 @@ async function paymentAction(action: string) {
       if (scope !== detailScope()) return ElMessage.warning('国家、账号或订单已切换，请重新打开收款入口')
       sessionStorage.setItem(`jxc:outbound:${getCountryId()}:${owner}:${id.value}`, JSON.stringify({ sessionHash, version: order.value?.version, warehouseId: ob.warehouseId, qty: ob.qty, visible: ob.visible }))
     }
-    catch (error) { ElMessage.warning(`无法保留出库选择，返回后请重新填写：${errorMessage(error)}`) }
+    catch (error) { reportError(error, { title: '无法保留出库选择', nextStep: '返回后请重新选择出库仓和数量。' }) }
   }
   router.push({ path, query: { orderId: String(id.value), source: 'sales-outbound', action } })
 }
@@ -218,7 +233,7 @@ async function restoreOutboundSelection() {
     }
     Object.assign(ob, { warehouseId: saved.warehouseId, qty, visible: saved.visible === true })
     await runCheck()
-  } catch (error) { ElMessage.warning(`无法恢复原出库选择：${errorMessage(error)}`) }
+  } catch (error) { reportError(error, { title: '无法恢复原出库选择', nextStep: '请重新选择出库仓和数量后检查。' }) }
 }
 
 async function submit() {
@@ -333,7 +348,7 @@ onMounted(load)
       <span v-if="loading" class="muted" role="status">正在读取订单…</span>
     </div>
     <div v-if="loadError" class="page-card error-panel" role="alert">
-      <el-alert title="订单读取失败" :description="loadError" type="error" :closable="false" show-icon />
+      <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <el-button :loading="loading" @click="load">重新加载订单</el-button>
     </div>
     <template v-else-if="order">
@@ -419,7 +434,7 @@ onMounted(load)
           <el-select id="sales-check-warehouse" v-model="ob.warehouseId" :disabled="!warehouses.length || ob.saving" placeholder="请选择出库仓" @change="runCheck"><el-option v-for="warehouse in warehouses" :key="warehouse.value" :label="warehouse.label" :value="warehouse.value" /></el-select>
           <el-button :loading="checkLoading" :disabled="!warehouses.length || ob.saving" @click="runCheck">{{ checkedWarehouseId === undefined && !checkError ? '开始检查' : '重新检查' }}</el-button>
         </div>
-        <el-alert v-if="checkError" :title="checkError" type="error" :closable="false" show-icon class="mt" />
+        <p v-if="checkError" class="muted" role="status">检查未完成，请处理全局提示后重新检查。</p>
         <p v-if="!warehouses.length" class="muted" role="status">没有可检查的分仓。</p>
         <p v-else-if="checkLoading" class="muted" role="status">正在检查所选出库仓…</p>
         <p v-else-if="!checkError && checkedWarehouseId === undefined" class="muted">尚未检查，请先选择出库仓，再开始检查。</p>
@@ -427,12 +442,9 @@ onMounted(load)
         <el-table v-if="checks.length" :data="checks" row-key="item" border stripe size="small" class="detail-table mt">
           <el-table-column prop="item" label="检查项" width="140" />
           <el-table-column label="结果" width="100"><template #default="{ row }"><el-tag size="small" :disable-transitions="true" :type="row.ok ? 'success' : 'danger'">{{ row.ok ? '通过' : '未通过' }}</el-tag></template></el-table-column>
-          <el-table-column prop="message" label="说明" min-width="220" show-overflow-tooltip />
         </el-table>
         <p class="muted">此处按所选仓全部未出库数量检查；出库弹窗按本次填写数量重新计算。</p>
-        <OutboundPaymentCheck v-if="paymentCheck" :check="paymentCheck" @action="paymentAction" @retry="runCheck" />
-        <el-button v-if="checks.some(c => !c.ok && c.code === 'SAL_PAYMENT_EVIDENCE_REQUIRED') && canUploadSalesAttachment('BANK_INFO')" link type="primary" @click="paymentAction('payment-proof')">去补收款凭证</el-button>
-        <el-button v-if="checks.some(c => !c.ok && c.code === 'SAL_ATTACHMENT_MISSING') && canUploadSalesAttachment('CUSTOMER_PRICE')" link type="primary" @click="paymentAction('sales-doc')">去上传销售单据</el-button>
+        <el-button v-if="checks.some(c => !c.ok)" link type="primary" @click="showOutboundFailure">查看未通过原因与处理入口</el-button>
       </el-tab-pane>
       <el-tab-pane label="销售单据" name="doc">
         <DocAttachment v-if="order && user.fieldAccess('CUSTOMER_PRICE') !== 'HIDDEN'" biz-type="SAL_ORDER" :biz-id="id" category="SALES_DOC" :readonly="!canUploadSalesAttachment('CUSTOMER_PRICE')" />
@@ -445,7 +457,7 @@ onMounted(load)
       <el-tab-pane label="审批" name="approval"><ApprovalPanel v-if="order" doc-type="SALES_ORDER" :doc-id="id" /></el-tab-pane>
       <el-tab-pane label="时间线" name="time">
         <div class="timeline-heading"><div><h4>建单与出库记录</h4><span class="muted">从早到晚<span v-if="!timelineLoading && !timelineError"> · {{ timeline.length }} 条记录</span></span></div><el-button link type="primary" :disabled="timelineLoading" @click="loadTimeline"><el-icon><Refresh /></el-icon>刷新时间线</el-button></div>
-        <div v-if="timelineError" class="error-panel" role="alert"><el-alert :title="timelineError" type="error" :closable="false" show-icon /><el-button :loading="timelineLoading" @click="loadTimeline">重新加载时间线</el-button></div>
+        <div v-if="timelineError" class="error-panel" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button :loading="timelineLoading" @click="loadTimeline">重新加载时间线</el-button></div>
         <p v-else-if="timelineLoading" class="muted" role="status">正在读取时间线…</p>
         <el-timeline v-else-if="orderedTimeline.length" class="order-timeline" aria-label="销售订单建单与出库时间线">
           <el-timeline-item v-for="(item, index) in orderedTimeline" :key="`${item.at}:${item.type}:${index}`" :type="item.type === '建单' ? 'primary' : undefined">
@@ -506,12 +518,9 @@ onMounted(load)
         <el-table-column label="本次（基础）" width="160" align="right"><template #default="{ row }"><el-input-number v-model="ob.qty[row.id]" :disabled="ob.saving" :min="0" :max="row.openQty" :precision="4" controls-position="right" style="width: 100%" @change="runCheck" /></template></el-table-column>
       </el-table>
       <p v-if="checkLoading" class="muted" role="status">正在检查所选出库仓…</p>
-      <div v-else-if="checkError" class="error-panel mt" role="alert"><el-alert :title="checkError" type="error" :closable="false" /><el-button @click="runCheck">重新检查</el-button></div>
+      <div v-else-if="checkError" class="mt" role="status"><p class="muted">检查未完成</p><el-button @click="runCheck">重新检查</el-button></div>
       <p v-else-if="checkedWarehouseId === undefined" class="muted">尚未完成出库检查。<el-button link type="primary" :disabled="!warehouses.length" @click="runCheck">开始检查</el-button></p>
-      <OutboundPaymentCheck v-if="paymentCheck" :check="paymentCheck" @action="paymentAction" @retry="runCheck" />
-      <el-button v-if="checks.some(c => !c.ok && c.code === 'SAL_PAYMENT_EVIDENCE_REQUIRED') && canUploadSalesAttachment('BANK_INFO')" link type="primary" @click="paymentAction('payment-proof')">去补收款凭证</el-button>
-      <el-alert v-for="c in checks.filter((x) => !x.ok && x.item !== '现款到账')" :key="c.item" class="mt" type="error" :title="`${c.item}：${c.message}`" show-icon :closable="false" />
-      <el-button v-if="checks.some(c => !c.ok && c.code === 'SAL_ATTACHMENT_MISSING') && canUploadSalesAttachment('CUSTOMER_PRICE')" link type="primary" @click="paymentAction('sales-doc')">去上传销售单据</el-button>
+      <el-button v-if="checks.some(c => !c.ok)" link type="primary" @click="showOutboundFailure">查看未通过原因与处理入口</el-button>
       <template #footer>
         <el-button :disabled="ob.saving" @click="ob.visible = false">取消</el-button>
         <el-button type="primary" :loading="ob.saving" :disabled="!canConfirmOut" @click="confirmOut">确认出库</el-button>

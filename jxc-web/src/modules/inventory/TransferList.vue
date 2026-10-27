@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -54,7 +55,7 @@ function openReceive(t: Row) {
 }
 function onScan(code: string) {
   const l = (rcv.t.lines as Row[]).find((x) => matchBarcode(x, code))
-  if (!l) return ElMessage.error(`${code} 不在这张调拨单上`)
+  if (!l) return reportError(new Error(`${code} 不在这张调拨单上`))
   rcv.active = l.id
 }
 async function submitReceive() {

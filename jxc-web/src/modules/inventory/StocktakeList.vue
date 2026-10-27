@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -69,7 +70,7 @@ async function openCount(st: Row) {
 }
 function onScan(code: string) {
   const l = (cnt.st.lines as Row[]).find((x) => matchBarcode(x, code))
-  if (!l) return ElMessage.error(`${code} 不在盘点范围内`)
+  if (!l) return reportError(new Error(`${code} 不在盘点范围内`))
   l.countedQty = (l.countedQty ?? 0) + 1
   cnt.active = l.id
 }

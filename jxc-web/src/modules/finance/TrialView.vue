@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { http } from '@/api/http'
 import { useRouter } from 'vue-router'
@@ -57,10 +58,7 @@ const validId = (value: unknown) => typeof value === 'number' && Number.isSafeIn
 const validCurrency = (value: unknown) => value == null || typeof value === 'string' && /^[A-Z]{3}$/.test(value)
 const validAmount = (value: unknown) => value == null || typeof value === 'number' && Number.isFinite(value) ||
   typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))
-function errorText(error: unknown) {
-  const reason = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
-  return reason.trim() ? reason : '读取失败，服务未提供错误说明，请重试。'
-}
+
 function validateTrial(value: unknown, book: number, period: number): asserts value is Row {
   const summaryKeys = groups.flatMap(group => group.amounts.map(amount => amount.summary))
   const rowKeys = groups.flatMap(group => group.amounts.map(amount => amount.row))
@@ -88,7 +86,7 @@ async function loadBooks() {
       changeBook()
     }
   } catch (error) {
-    if (!disposed && sequence === booksSequence) booksError.value = errorText(error)
+    if (!disposed && sequence === booksSequence) booksError.value = feedbackMessage(error, "读取失败，服务未提供错误说明，请重试。")
   } finally {
     if (!disposed && sequence === booksSequence) booksLoading.value = false
   }
@@ -106,7 +104,7 @@ async function load() {
     validateTrial(result, selectedBookId, selectedPeriodId)
     data.value = result
   } catch (error) {
-    if (current()) loadError.value = errorText(error)
+    if (current()) loadError.value = feedbackMessage(error, "读取失败，服务未提供错误说明，请重试。")
   } finally {
     if (current()) busy.value = false
   }
@@ -159,15 +157,11 @@ onBeforeUnmount(() => { disposed = true; requestSequence++; booksSequence++ })
       </div>
       <div class="trial-content" aria-live="polite" :aria-busy="busy || booksLoading">
         <div v-if="booksLoading" class="trial-state muted" role="status">正在读取账套与期间…</div>
-        <el-alert v-else-if="booksError" type="error" :closable="false" show-icon :title="'账套读取失败：' + booksError">
-          <el-button link type="primary" @click="loadBooks">重新加载账套</el-button>
-        </el-alert>
+        <div v-else-if="booksError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" @click="loadBooks">重新加载账套</el-button></div>
         <el-empty v-else-if="!books.length" :image-size="64" description="当前没有可用账套" />
         <el-empty v-else-if="!bookId || !periodId" :image-size="64" description="请选择账套与会计期间查看试算结果" />
         <div v-else-if="busy" class="trial-state muted" role="status">正在读取试算结果…</div>
-        <el-alert v-else-if="loadError" type="error" :closable="false" show-icon :title="'试算结果读取失败：' + loadError">
-          <el-button link type="primary" @click="load">重新查询</el-button>
-        </el-alert>
+        <div v-else-if="loadError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button link type="primary" @click="load">重新查询</el-button></div>
         <template v-else-if="data">
           <el-alert :type="resultState.type" :title="resultState.title" :description="resultState.description" :closable="false" show-icon />
           <div class="trial-summary-heading">
@@ -188,7 +182,7 @@ onBeforeUnmount(() => { disposed = true; requestSequence++; booksSequence++ })
             <h3>科目明细</h3>
             <span class="muted">共 {{ data.rows.length }} 个科目<template v-if="keyword.trim()">，匹配 {{ filteredRows.length }} 个</template>；搜索与分页不改变上方汇总</span>
           </div>
-          <el-alert v-if="navigationError" type="error" :closable="false" show-icon :title="navigationError" />
+          <div v-if="navigationError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
           <div class="table-scroll">
             <el-table :data="pageRows" border stripe size="small" :empty-text="data.rows.length ? '没有匹配的科目，可调整或清空搜索条件' : '当前期间暂无科目余额记录'">
               <el-table-column label="科目编码" min-width="120" show-overflow-tooltip><template #default="{ row }"><span class="mono">{{ row.code ?? '-' }}</span></template></el-table-column>

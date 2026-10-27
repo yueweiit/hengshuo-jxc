@@ -142,7 +142,7 @@ test('the real template renders failure and missing-rule messages without succes
   p.boardError.value = '网络断开'
   p.delayRule.value = { status: 'MISSING', toleranceHours: null, message: '尚未配置物流延误容忍时长' }
   const html = await renderPage(p)
-  assert.match(html, /在途数量读取失败/); assert.match(html, /网络断开/)
+  assert.match(html, /操作未完成|尚未加载成功/); assert.doesNotMatch(html, /网络断开/)
   assert.match(html, /尚未配置物流延误容忍时长/)
   assert.doesNotMatch(html, /当前没有延误批次|当前没有在途或未结差异/)
 })

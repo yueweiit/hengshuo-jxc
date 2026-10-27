@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -48,7 +49,7 @@ let editorBook: number | undefined, editTarget: Row | undefined
 const scope = () => `${getToken()}:${getCountryId()}:${country.epoch}`
 const context = () => ({ scope: scope(), book: bookId.value })
 const isCurrent = (ctx: ReturnType<typeof context>) => alive && ctx.scope === scope() && ctx.book === bookId.value
-const errorMessage = (e: unknown, fallback: string) => e instanceof Error && e.message ? e.message : fallback
+
 function account(line: Row) { return accounts.value.find(a => a.id === line.accountId) }
 function types(line: Row): string[] { return (account(line)?.auxTypes || []).map((t: string) => auxAliases[t] || t) }
 async function loadAux(line: Row) {
@@ -60,7 +61,7 @@ async function loadAux(line: Row) {
 async function changeAccount(line: Row) {
   line.aux = {}; line.currency = baseCurrency.value; line.origAmount = null; line.rate = 1; line.cashflowItemId = null
   const ctx = context()
-  try { await loadAux(line) } catch (e) { if (isCurrent(ctx)) saveError.value = errorMessage(e, '辅助核算选项读取失败，请重新选择科目') }
+  try { await loadAux(line) } catch (e) { if (isCurrent(ctx)) saveError.value = feedbackMessage(e, '辅助核算选项读取失败，请重新选择科目') }
 }
 function addLine() { form.lines.push({ accountId: null, summary: '', debit: 0, credit: 0, aux: {}, currency: baseCurrency.value, origAmount: null, rate: 1 }) }
 function closeDetail() { detailRequest++; current.value = null; detailVisible.value = false; detailLoading.value = false; detailError.value = ''; actionError.value = '' }
@@ -74,7 +75,7 @@ async function load() {
     if (request !== listRequest || !isCurrent(ctx)) return
     if (!Array.isArray(result?.records) || !Number.isSafeInteger(result.total) || result.total < 0) throw new Error('凭证分页数据不完整，请重试')
     rows.value = result.records; total.value = result.total
-  } catch (e) { if (request === listRequest && isCurrent(ctx)) listError.value = errorMessage(e, '凭证读取失败，请重试') }
+  } catch (e) { if (request === listRequest && isCurrent(ctx)) listError.value = feedbackMessage(e, '凭证读取失败，请重试') }
   finally { if (request === listRequest && isCurrent(ctx)) loading.value = false }
 }
 function search() { query.page = 1; total.value = 0; return load() }
@@ -93,7 +94,7 @@ async function loadBooks() {
     const requested = bookId.value ?? Number(route.query.bookId)
     bookId.value = result.some(b => b.id === requested) ? requested : result.length === 1 ? result[0]!.id : undefined
     await load()
-  } catch (e) { if (alive && stamp === scope() && request === booksRequest) booksError.value = errorMessage(e, '账套读取失败，请重试') }
+  } catch (e) { if (alive && stamp === scope() && request === booksRequest) booksError.value = feedbackMessage(e, '账套读取失败，请重试') }
   finally { if (alive && stamp === scope() && request === booksRequest) booksLoading.value = false }
 }
 async function open(row: Row) {
@@ -105,7 +106,7 @@ async function open(row: Row) {
     if (request !== detailRequest || !isCurrent(ctx)) return
     if (result?.id !== row.id || !Array.isArray(result.lines)) throw new Error('凭证详情数据不完整，请重试')
     current.value = result
-  } catch (e) { if (request === detailRequest && isCurrent(ctx)) detailError.value = errorMessage(e, '凭证详情读取失败，请重试') }
+  } catch (e) { if (request === detailRequest && isCurrent(ctx)) detailError.value = feedbackMessage(e, '凭证详情读取失败，请重试') }
   finally { if (request === detailRequest && isCurrent(ctx)) detailLoading.value = false }
 }
 async function edit(row?: Row) {
@@ -127,7 +128,7 @@ async function edit(row?: Row) {
     if (!detail) { addLine(); addLine() }
     for (const line of form.lines) await loadAux(line)
     if (request === editorRequest && isCurrent(ctx)) saveIntent.reset()
-  } catch (e) { if (request === editorRequest && isCurrent(ctx)) editError.value = errorMessage(e, '凭证编辑资料读取失败，请重试') }
+  } catch (e) { if (request === editorRequest && isCurrent(ctx)) editError.value = feedbackMessage(e, '凭证编辑资料读取失败，请重试') }
   finally { if (request === editorRequest && isCurrent(ctx)) editLoading.value = false }
 }
 function closeEditor() { editorRequest++; dialog.value = false; editLoading.value = false }
@@ -145,7 +146,7 @@ async function save() {
     dialog.value = false; ElMessage.success('草稿已保存，审核后方可记账')
     await load()
     if (isCurrent(ctx)) { current.value = updated; detailVisible.value = true }
-  } catch (e) { if (isCurrent(ctx)) saveError.value = errorMessage(e, '草稿保存失败，请重试') }
+  } catch (e) { if (isCurrent(ctx)) saveError.value = feedbackMessage(e, '草稿保存失败，请重试') }
   finally { if (alive) saving.value = false }
 }
 const actions: Record<string, { label: string; permission: string; status: string }> = {
@@ -166,7 +167,7 @@ async function runAction(run: (ctx: ReturnType<typeof context>) => Promise<Row |
     if (!isCurrent(ctx)) return
     ElMessage.success(message); await load()
     if (result && isCurrent(ctx)) { current.value = result; detailVisible.value = true }
-  } catch (e) { if (isCurrent(ctx) && e !== 'cancel' && e !== 'close') actionError.value = errorMessage(e, '凭证操作失败，请重试') }
+  } catch (e) { if (isCurrent(ctx) && e !== 'cancel' && e !== 'close') actionError.value = feedbackMessage(e, '凭证操作失败，请重试') }
   finally { if (alive) acting.value = false }
 }
 async function removeDraft() {
@@ -213,7 +214,7 @@ onBeforeUnmount(() => { alive = false; listRequest++; detailRequest++; editorReq
         <div><h2>凭证</h2><p class="muted">查询与核对凭证，人工草稿审核后方可记账</p></div>
         <el-button v-if="user.hasPerm('fin:voucher:create')" type="primary" :disabled="!bookId || busy || booksLoading" @click="edit()">新建人工凭证</el-button>
       </div>
-      <el-alert v-if="booksError" type="error" :closable="false" show-icon class="feedback"><template #title>{{ booksError }} <el-button link type="primary" @click="loadBooks">重试</el-button></template></el-alert>
+      <div v-if="booksError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p>操作未完成，请查看全局提示。 <el-button link type="primary" @click="loadBooks">重试</el-button></div>
       <el-form inline class="voucher-filters" @submit.prevent="search">
         <el-form-item label="账套"><el-select v-model="bookId" filterable clearable placeholder="请选择账套" :loading="booksLoading" :disabled="busy || booksLoading" @change="changeBook"><el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" /></el-select></el-form-item>
         <el-form-item label="状态"><el-select v-model="status" clearable placeholder="全部状态" :disabled="busy || !bookId" @change="search"><el-option v-for="value in statuses" :key="value" :label="statusDef(value, 'voucher').label" :value="value" /></el-select></el-form-item>
@@ -229,8 +230,8 @@ onBeforeUnmount(() => { alive = false; listRequest++; detailRequest++; editorReq
         <el-button v-if="user.hasPerm('fin:voucher:post')" size="small" :disabled="busy || loading || !canBatch('post')" @click="batch('post')">批量记账</el-button>
         <span class="muted batch-hint">待审核凭证可审核，已审核凭证可记账</span>
       </div>
-      <el-alert v-if="listError" type="error" :closable="false" show-icon class="feedback"><template #title>{{ listError }} <el-button link type="primary" @click="load">重试</el-button></template></el-alert>
-      <el-alert v-if="actionError && !detailVisible" :title="actionError" type="error" :closable="false" show-icon class="feedback" />
+      <div v-if="listError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p>操作未完成，请查看全局提示。 <el-button link type="primary" @click="load">重试</el-button></div>
+      <div v-if="actionError && !detailVisible" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <div class="table-scroll">
         <el-table v-loading="loading || booksLoading" :data="rows" border stripe row-key="id" size="small" @row-click="open" @selection-change="selected = $event">
           <el-table-column v-if="!mockMode && (user.hasPerm('fin:voucher:audit') || user.hasPerm('fin:voucher:post'))" type="selection" width="44" fixed="left" :selectable="() => !busy && !loading" />
@@ -251,7 +252,7 @@ onBeforeUnmount(() => { alive = false; listRequest++; detailRequest++; editorReq
 
     <el-drawer v-model="detailVisible" title="凭证详情" size="min(1080px, 100vw)" :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy" @closed="!detailVisible && closeDetail()">
       <div v-loading="detailLoading" class="voucher-detail">
-        <el-alert v-if="detailError" type="error" :closable="false" show-icon><template #title>{{ detailError }} <el-button link type="primary" @click="open({ id: detailId })">重试</el-button></template></el-alert>
+        <div v-if="detailError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p>操作未完成，请查看全局提示。 <el-button link type="primary" @click="open({ id: detailId })">重试</el-button></div>
         <template v-if="current">
           <div class="detail-heading"><div><h3 class="mono">{{ current.voucherNo }}</h3><span class="muted">{{ selectedBook?.name }} · {{ formatDate(current.voucherDate) }}</span></div><StatusTag :status="current.status" domain="voucher" /></div>
           <div class="toolbar detail-actions">
@@ -259,7 +260,7 @@ onBeforeUnmount(() => { alive = false; listRequest++; detailRequest++; editorReq
             <el-button v-for="(action, path) in actions" v-show="canAct(String(path))" :key="path" :type="['/audit', '/post', '/submit'].includes(String(path)) ? 'primary' : undefined" :loading="acting" :disabled="busy" @click="act(String(path))">{{ action.label }}</el-button>
             <el-button v-if="!mockMode && canEdit" type="danger" plain :disabled="busy" @click="removeDraft">删除草稿</el-button>
           </div>
-          <el-alert v-if="actionError" :title="actionError" type="error" :closable="false" show-icon class="feedback" />
+          <div v-if="actionError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
           <el-descriptions :column="2" border size="small" class="voucher-metadata">
             <el-descriptions-item label="凭证来源">{{ sourceLabel(current.sourceKind) }}</el-descriptions-item><el-descriptions-item label="编制人">{{ current.preparedByName ?? current.preparedBy ?? '-' }}</el-descriptions-item>
             <el-descriptions-item label="摘要" :span="2">{{ current.summary || '-' }}</el-descriptions-item>
@@ -283,7 +284,7 @@ onBeforeUnmount(() => { alive = false; listRequest++; detailRequest++; editorReq
 
     <el-dialog v-model="dialog" :title="editing ? '修改人工凭证草稿' : '新建人工凭证'" width="min(1180px, 96vw)" class="voucher-editor" :close-on-click-modal="false" :close-on-press-escape="!saving" :show-close="!saving" @closed="!dialog && closeEditor()">
       <div v-loading="editLoading" class="editor-body">
-        <el-alert v-if="editError" type="error" :closable="false" show-icon class="feedback"><template #title>{{ editError }} <el-button link type="primary" @click="edit(editTarget)">重试</el-button></template></el-alert>
+        <div v-if="editError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p>操作未完成，请查看全局提示。 <el-button link type="primary" @click="edit(editTarget)">重试</el-button></div>
         <template v-else>
           <p class="muted editor-context">{{ selectedBook?.name }} · 本位币 {{ baseCurrency || '未配置' }} · 保存为草稿</p>
           <el-form label-position="top" :disabled="saving || editLoading" class="editor-fields">
@@ -310,7 +311,7 @@ onBeforeUnmount(() => { alive = false; listRequest++; detailRequest++; editorReq
           <div class="voucher-totals"><span>本位币 {{ baseCurrency || '未配置' }}</span><span>借方 <MoneyText v-if="baseCurrency" :value="totals.debit" :currency="baseCurrency" /></span><span>贷方 <MoneyText v-if="baseCurrency" :value="totals.credit" :currency="baseCurrency" /></span></div>
           <p class="muted">借贷金额与辅助核算由保存时校验；保存草稿不会自动审核或记账。</p>
         </template>
-        <el-alert v-if="saveError" :title="saveError" type="error" :closable="false" show-icon class="feedback" />
+        <div v-if="saveError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       </div>
       <template #footer><el-button :disabled="saving" @click="closeEditor">取消</el-button><el-button type="primary" :loading="saving" :disabled="editLoading || !!editError || !baseCurrency" @click="save">保存草稿</el-button></template>
     </el-dialog>

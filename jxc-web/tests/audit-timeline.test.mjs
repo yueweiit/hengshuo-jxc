@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import * as Vue from 'vue'
 import { renderToString } from '@vue/server-renderer'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/components/AuditTimeline.vue', import.meta.url)
 const log = { id: 1, action: 'UPDATE', userName: '张三', occurredAt: '2026-10-23T02:30:00Z', beforeValue: { remark: '旧备注', status: 'CONFIRMED' }, afterValue: { remark: '新备注', status: 'DRAFT' } }
@@ -129,7 +129,10 @@ test('actual shared template retains default differences, error/retry and trunca
   assert.ok(!html.includes('beforeValue'))
   failed = true; await page.reload()
   const errorHtml = await renderToString(app())
-  assert.match(errorHtml, /读取超时/)
+  assert.match(feedbackText(), /读取超时/); assert.doesNotMatch(errorHtml, /读取超时/)
   assert.match(errorHtml, /重试/)
   assert.ok(!errorHtml.includes('暂无操作日志'))
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

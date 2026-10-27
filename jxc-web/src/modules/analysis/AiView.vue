@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { http, BizError } from '@/api/http'
 import { useCountryStore } from '@/stores/country'
@@ -24,11 +25,7 @@ const canAsk = computed(() => !!selectedPeriod.value && !busy.value && !booksBus
 const exampleQuestions = ['说明本期间毛利的影响因素', '哪些数据需要补齐']
 let alive = true, analysisSequence = 0, booksSequence = 0
 
-function messageOf(reason: unknown) {
-  if (reason instanceof Error && reason.message.trim()) return reason.message
-  if (typeof reason === 'string' && reason.trim()) return reason
-  return '请求失败，未提供错误详情，请重试'
-}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -64,7 +61,7 @@ async function loadBooks() {
     }
     books.value = response
   } catch (reason) {
-    if (current()) booksError.value = messageOf(reason)
+    if (current()) booksError.value = feedbackMessage(reason, "请求失败，未提供错误详情，请重试")
   } finally {
     if (current()) booksBusy.value = false
   }
@@ -97,7 +94,7 @@ async function ask() {
     result.value = response as unknown as AnalysisResult
   } catch (reason) {
     if (current()) {
-      error.value = messageOf(reason)
+      error.value = feedbackMessage(reason, "请求失败，未提供错误详情，请重试")
       errorCode.value = reason instanceof BizError ? reason.code : ''
     }
   } finally {
@@ -128,7 +125,7 @@ onBeforeUnmount(() => { alive = false; analysisSequence++; booksSequence++ })
       <p class="muted ai-intro">解释当前国家、当前权限内已登记的数据，供你核对盈亏原因。</p>
 
       <div v-if="booksError" class="ai-notice" role="alert">
-        <el-alert title="账套与期间加载失败" :description="booksError" type="error" :closable="false" show-icon />
+        <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <el-button size="small" @click="loadBooks">重新加载</el-button>
       </div>
       <p v-else-if="booksBusy" class="muted" role="status">正在加载账套和会计期间…</p>
@@ -169,7 +166,7 @@ onBeforeUnmount(() => { alive = false; analysisSequence++; booksSequence++ })
         </div>
         <div v-if="busy" class="ai-loading" role="status"><el-skeleton :rows="3" /><p class="muted">正在读取数据并生成解释，请稍候…</p></div>
         <div v-else-if="error" class="ai-notice" role="alert">
-          <el-alert :title="providerUnavailable ? 'AI 分析暂不可用，服务尚未配置' : '未能生成分析'" :description="error" :type="providerUnavailable ? 'warning' : 'error'" :closable="false" show-icon />
+          <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
           <p v-if="providerUnavailable" class="muted">当前未生成分析结果。服务配置完成后，可保留这些条件重新尝试。</p>
           <el-button v-else size="small" :disabled="!canAsk" @click="ask">重新分析</el-button>
         </div>

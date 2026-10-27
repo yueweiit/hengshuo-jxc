@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -55,9 +56,7 @@ function sourceName(item: Row) {
   return item.sourceNo || item.voucherNo || item.eventType || item.type || item.message || item.code ||
     (item.sourceId || item.id ? '来源 #' + (item.sourceId || item.id) : '来源资料')
 }
-function failure(error: unknown, fallback: string) {
-  return error instanceof Error && error.message.trim() ? error.message : fallback
-}
+
 let revision = 0, booksRequest = 0, disposed = false
 function resetIntents() {
   for (const intent of [checkIntent, waiveIntent, closeIntent, reopenIntent]) intent.reset()
@@ -84,7 +83,7 @@ async function loadBooks() {
     if (bookId.value != null && !result.some(book => book.id === bookId.value)) bookId.value = undefined
     if (periodId.value != null && !selected.value) periodId.value = undefined
   } catch (error) {
-    if (!disposed && request === booksRequest) booksError.value = failure(error, '账套读取失败，请重新加载')
+    if (!disposed && request === booksRequest) booksError.value = feedbackMessage(error, '账套读取失败，请重新加载')
   } finally {
     if (!disposed && request === booksRequest) booksLoading.value = false
   }
@@ -104,7 +103,7 @@ async function perform(kind: Exclude<Action, ''>, work: (target: Target, current
   catch (error) {
     if (current() && error !== 'cancel' && error !== 'close') {
       const labels = { check: '结账检查', waive: '差异确认', close: '结账', preview: '反结账影响读取', reopen: '反结账' }
-      const message = failure(error, labels[kind] + '失败，请核实后重试')
+      const message = feedbackMessage(error, labels[kind] + '失败，请核实后重试')
       if (kind === 'preview') impactError.value = message
       else { operationError.value = message; canClose.value = false }
     }
@@ -206,10 +205,7 @@ async function reopen() {
         </div>
         <div class="context-meta"><span>{{ country.current?.name || '国家未提供' }}</span><span>{{ currency || '请选择账套查看币种' }}</span><span>{{ country.timezone }}</span></div>
       </div>
-      <el-alert v-if="booksError" :title="booksError" type="error" :closable="false" show-icon>
-        <p>账套或期间状态未刷新，请重新加载后再操作。已成功执行的操作无需重复提交。</p>
-        <el-button :disabled="busy" :loading="booksLoading" @click="loadBooks">重新加载账套</el-button>
-      </el-alert>
+      <div v-if="booksError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>账套或期间状态未刷新，请重新加载后再操作。已成功执行的操作无需重复提交。</p><el-button :disabled="busy" :loading="booksLoading" @click="loadBooks">重新加载账套</el-button></div>
       <el-skeleton v-if="booksLoading && !books.length" :rows="2" animated aria-label="正在读取账套与期间" />
       <el-empty v-else-if="!booksError && !books.length" description="暂无可用账套，请先在账套管理中配置" :image-size="64" />
       <template v-if="books.length">
@@ -241,9 +237,9 @@ async function reopen() {
         <p v-else-if="bookId && !periods.length" class="muted">当前账套暂无会计期间，请先在账套管理中生成期间。</p>
         <p v-else-if="selected?.status === 'NOT_STARTED'" class="muted">该期间尚未开放，不能结账。</p>
       </template>
-      <el-alert v-if="operationError" class="state-message" :title="operationError" type="error" :closable="false" show-icon>
+      <div v-if="operationError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p>
         请核实当前期间与检查结果后重试；如果提交结果不确定，可先重新检查期间状态。
-      </el-alert>
+      </div>
     </section>
 
     <section class="page-card" aria-labelledby="checks-title" :aria-busy="action === 'check'">
@@ -305,7 +301,7 @@ async function reopen() {
 
     <section v-if="!demo && user.hasPerm('fin:period:reopen') && (selected?.status === 'CLOSED' || impactError)" class="page-card" aria-labelledby="impact-title">
       <div class="section-heading"><h3 id="impact-title">反结账影响</h3><span class="muted">先查看依赖，再填写原因</span></div>
-      <el-alert v-if="impactError" :title="impactError" type="error" :closable="false" show-icon><el-button :disabled="busy || !!booksError" @click="previewReopen">重新读取影响</el-button></el-alert>
+      <div v-if="impactError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><el-button :disabled="busy || !!booksError" @click="previewReopen">重新读取影响</el-button></div>
       <el-skeleton v-else-if="action === 'preview'" :rows="2" animated aria-label="正在读取反结账影响" />
       <template v-else-if="impact">
         <el-alert :title="impact.canReopen ? '未发现后续已结账期间；反结账时服务端仍会重新核对依赖。' : '当前不能反结账，请先处理后续已结账期间或核实期间状态。'" :type="impact.canReopen ? 'warning' : 'error'" :closable="false" show-icon />

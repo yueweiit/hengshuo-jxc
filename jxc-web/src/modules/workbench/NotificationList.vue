@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -51,7 +52,7 @@ const canReadAll = computed(() => hasList.value && !busy.value && unreadCount.va
 let requestId = 0
 let disposed = false
 function current(epoch: number) { return !disposed && epoch === country.epoch }
-function errorMessage(failure: unknown, fallback: string) { return failure instanceof Error && failure.message.trim() ? failure.message : fallback }
+
 function typeDef(type?: string | null) {
   if (type == null || type === '') return { label: '类型未提供', tone: 'unknown', icon: 'Bell' }
   return Object.hasOwn(types, type) ? types[type]! : { label: type, tone: 'unknown', icon: 'Bell' }
@@ -93,13 +94,13 @@ async function load() {
     const otherCount = unread ? allCount : unreadCount
     activeCount.value = list.value.total
     if (oppositeCount.status === 'fulfilled') otherCount.value = oppositeCount.value.total
-    else countError.value = errorMessage(oppositeCount.reason, '通知数量加载失败，请刷新重试')
+    else countError.value = feedbackMessage(oppositeCount.reason, '通知数量加载失败，请刷新重试')
   } catch (failure) {
     if (!current(epoch) || request !== requestId) return
     rows.value = []
     total.value = 0
     permissionDenied.value = failure instanceof BizError && failure.code === 'SYS_FORBIDDEN'
-    error.value = errorMessage(failure, '通知加载失败，请重试')
+    error.value = feedbackMessage(failure, '通知加载失败，请重试')
   } finally {
     if (current(epoch) && request === requestId) loading.value = false
   }
@@ -125,7 +126,7 @@ async function changePage(value: number) {
 async function refreshSummary(epoch: number) {
   summaryError.value = ''
   try { await todo.refresh() }
-  catch (failure) { if (current(epoch)) summaryError.value = errorMessage(failure, '工作台角标更新失败，请刷新重试') }
+  catch (failure) { if (current(epoch)) summaryError.value = feedbackMessage(failure, '工作台角标更新失败，请刷新重试') }
 }
 async function refresh() {
   if (busy.value || noCountry.value) return
@@ -158,7 +159,7 @@ async function open(row: NotificationRow) {
       if (current(epoch) && marked) ElMessage.success(unreadOnly.value ? '已标为已读，可在全部通知中查看' : '已标为已读')
     }
   } catch (failure) {
-    if (current(epoch)) actionError.value = `${marked ? '通知已标为已读，但关联业务打开失败：' : ''}${errorMessage(failure, '通知打开失败，请重试')}`
+    if (current(epoch)) actionError.value = `${marked ? '通知已标为已读，但关联业务打开失败：' : ''}${feedbackMessage(failure, '通知打开失败，请重试')}`
   } finally { if (current(epoch)) readingId.value = null }
 }
 
@@ -183,7 +184,7 @@ async function readAll() {
     await Promise.all([load(), refreshSummary(epoch)])
   } catch (failure) {
     // Element Plus以cancel/close明确表达用户取消，不属于接口失败。
-    if (current(epoch) && failure !== 'cancel' && failure !== 'close') actionError.value = errorMessage(failure, '全部标为已读失败，请重试')
+    if (current(epoch) && failure !== 'cancel' && failure !== 'close') actionError.value = feedbackMessage(failure, '全部标为已读失败，请重试')
   } finally { if (current(epoch)) readingAll.value = false }
 }
 
@@ -209,16 +210,16 @@ onBeforeUnmount(() => { disposed = true; requestId++ })
         <span class="sort-hint"><el-icon><Sort /></el-icon>最新通知在前</span>
       </div>
       <div class="notification-feedback" aria-live="polite">
-        <el-alert v-if="countError" :title="`通知数量暂不可用：${countError}`" type="warning" :closable="false" show-icon />
-        <el-alert v-if="actionError" :title="actionError" type="error" :closable="false" show-icon />
-        <el-alert v-if="summaryError" :title="`工作台角标暂未更新：${summaryError}`" type="warning" :closable="false" show-icon />
+        <div v-if="countError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
+        <div v-if="actionError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
+        <div v-if="summaryError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       </div>
       <div class="notification-region" :aria-busy="loading">
         <div v-if="noCountry" class="notification-state"><span class="state-icon"><el-icon><OfficeBuilding /></el-icon></span><strong>请先选择国家</strong><p>选择工作空间后查看对应通知。</p></div>
         <div v-else-if="loading" class="notification-state" role="status"><span class="state-icon"><el-icon class="is-loading"><Loading /></el-icon></span><strong>正在加载通知</strong><p>正在获取当前工作空间的通知，请稍候。</p></div>
         <div v-else-if="error" class="notification-state" :class="{ 'is-error': !permissionDenied }" role="alert">
           <span class="state-icon"><el-icon><Lock v-if="permissionDenied" /><Warning v-else /></el-icon></span>
-          <strong>{{ permissionDenied ? '暂无查看权限' : '通知加载失败' }}</strong><p>{{ error }}</p><el-button v-if="!permissionDenied" type="primary" @click="refresh">重新加载</el-button>
+          <strong>{{ permissionDenied ? '暂无查看权限' : '通知加载失败' }}</strong><p>操作未完成，请查看全局提示。</p><el-button v-if="!permissionDenied" type="primary" @click="refresh">重新加载</el-button>
         </div>
         <div v-else-if="!rows.length" class="notification-state"><span class="state-icon"><el-icon><Bell /></el-icon></span><strong>{{ unreadOnly ? '暂时没有未读通知' : '暂无通知' }}</strong><p>{{ unreadOnly ? '新收到的未读通知会显示在这里。' : '新的抄送、审批结果和系统消息会显示在这里。' }}</p><el-button v-if="unreadOnly" link type="primary" @click="changeFilter(false)">查看全部通知</el-button></div>
         <div v-else class="notification-scroll">

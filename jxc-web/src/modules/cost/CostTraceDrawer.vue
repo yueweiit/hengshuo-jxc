@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Close, Refresh } from '@element-plus/icons-vue'
@@ -54,8 +55,7 @@ async function open(batchId: number) {
     if (isCurrent()) t.value = data
   } catch (error) {
     if (isCurrent()) {
-      const reason = error instanceof Error ? error.message : String(error)
-      loadError.value = reason.trim() ? reason : '请求失败，服务未提供错误说明。'
+      loadError.value = feedbackMessage(error, '成本追溯读取失败，请重试')
     }
   } finally {
     if (isCurrent()) loading.value = false
@@ -96,7 +96,7 @@ defineExpose({ open })
       <main class="trace-content" :aria-busy="loading">
         <div v-if="loading" v-loading="loading" class="trace-loading" role="status">正在读取批次成本…</div>
         <div v-else-if="loadError" class="trace-error" role="alert">
-          <el-alert title="批次成本读取失败" type="error" :closable="false" show-icon><p>{{ loadError }}</p></el-alert>
+          <div  class="request-state" role="status"><p class="muted">尚未加载成功</p></div>
           <el-button type="primary" plain aria-label="重新加载批次成本" @click="reload">重新加载</el-button>
         </div>
         <template v-else-if="t.batchId != null">

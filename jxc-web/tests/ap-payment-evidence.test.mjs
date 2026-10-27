@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import * as vue from 'vue'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/ap/ApPaymentList.vue', import.meta.url)
 const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
@@ -17,6 +17,7 @@ const renderer = vue.createRenderer({
 const nodes = root => [root, ...(root.children || []).flatMap(nodes)]
 const text = node => (node.text || '') + (node.children || []).map(text).join('')
 async function mount(sourceId, get = async () => ({ id: 1373, docNo: 'AI04-PAY', status: 'CONFIRMED' })) {
+  errorFeedback.clearErrors()
   const calls = [], attachments = [], pending = []
   const row = { id: 1373, docNo: 'AI04-PAY', status: 'CONFIRMED', referenceNo: 'ORIGINAL' }
   let state
@@ -57,7 +58,8 @@ test('payment source link reads the native document before showing its original 
 
 test('denied payment source read displays an error and never presents an empty success or a mutable proof', async t => {
   const p = await mount('1373', async () => { throw new Error('没有该付款单查看权限') }); t.after(p.unmount)
-  assert.match(text(p.root), /没有该付款单查看权限/)
+  assert.match(feedbackText(), /没有该付款单查看权限/)
+  assert.doesNotMatch(text(p.root), /没有该付款单查看权限/)
   assert.equal(p.attachments.length, 0); assert.equal(p.state.evidence.row, null)
   assert.equal(p.calls.filter(call => call[0] === 'POST').length, 0)
 })
@@ -66,7 +68,8 @@ test('malformed or mismatched payment detail remains an explicit read failure wi
   for (const detail of [null, {}, { id: 1374, docNo: 'OTHER-PAYMENT' }]) {
     const p = await mount('1373', async () => detail)
     try {
-      assert.match(text(p.root), /付款单数据不完整，请重试/)
+      assert.match(feedbackText(), /付款单数据不完整，请重试/)
+      assert.doesNotMatch(text(p.root), /付款单数据不完整，请重试/)
       assert.equal(p.state.evidence.row, null)
       assert.equal(p.attachments.length, 0)
       assert.deepEqual(p.calls, [['GET', '/ap/payments/1373']])

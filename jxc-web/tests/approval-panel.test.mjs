@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as Vue from 'vue'
 import { compile } from '@vue/compiler-dom'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/components/ApprovalPanel.vue', import.meta.url)
 const statusCode = ts.transpileModule(readFileSync(new URL('../src/utils/status.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
@@ -134,7 +134,7 @@ test('failed timeline reads clear stale records and retry through the existing e
   assert.equal(p.loadError.value, '审批记录读取超时')
   assert.deepEqual(p.instances.value, [])
   let actual = render(p)
-  assert.ok(actual.text.includes('审批记录加载失败'))
+  assert.match(actual.text, /尚未加载成功/); assert.match(feedbackText(), /审批记录读取超时/)
   assert.equal(actual.text.includes('暂无审批记录'), false)
   fail = false; await p.load(); actual = render(p)
   assert.equal(p.loadError.value, '')
@@ -174,3 +174,6 @@ test('the default steps caller keeps its existing rejected-read contract', async
   const p = setup({ presentation: 'steps', get: async () => { throw new Error('无权读取') } })
   await assert.rejects(p.load(), /无权读取/)
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

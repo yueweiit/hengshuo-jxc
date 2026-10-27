@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { http } from '@/api/http'
 import { useCountryStore } from '@/stores/country'
@@ -39,7 +40,7 @@ async function load() {
     if (!Array.isArray(data.records) || !Number.isFinite(data.total) || !Array.isArray(data.books) || !Array.isArray(data.warehouses)) throw new Error('批次查询返回格式不正确，请重试')
     rows.value = data.records; total.value = data.total; books.value = data.books; warehouses.value = data.warehouses
   } catch (failure) {
-    if (current()) error.value = failure instanceof Error ? failure.message : '批次查询失败，请重试'
+    if (current()) error.value = feedbackMessage(failure, '批次查询失败，请重试')
   } finally { if (current()) loading.value = false }
 }
 function search() { query.page = 1; load() }
@@ -61,7 +62,7 @@ defineExpose({ open })
       <el-form-item label="来源仓库"><el-select v-model="query.warehouseId" placeholder="全部来源仓库" clearable @change="search"><el-option v-for="warehouse in warehouses" :key="warehouse.id" :label="warehouse.name" :value="warehouse.id" /></el-select></el-form-item>
       <el-form-item><el-button type="primary" native-type="submit" :loading="loading">查询</el-button></el-form-item>
     </el-form>
-    <div v-if="error" class="query-error" role="alert"><el-alert :title="error" type="error" :closable="false" show-icon /><el-button @click="load">重新加载</el-button></div>
+    <div v-if="error" class="query-error" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button @click="load">重新加载</el-button></div>
     <template v-else>
       <div class="table-scroll" v-loading="loading" :aria-busy="loading">
         <el-table :data="rows" row-key="batchId" border stripe max-height="440" :empty-text="loading ? '正在读取批次…' : query.keyword || query.bookId || query.warehouseId ? '没有匹配的成本批次，请调整筛选条件' : '当前授权范围内没有成本批次'">

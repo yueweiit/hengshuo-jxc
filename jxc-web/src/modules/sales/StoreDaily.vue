@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { useCountryStore } from '@/stores/country'
@@ -49,7 +50,7 @@ async function load() {
     data.value = result
   } catch (cause) {
     if (current(request, epoch)) {
-      error.value = cause instanceof Error && cause.message.trim() ? cause.message : '门店日报读取失败，请重新加载'
+      error.value = feedbackMessage(cause, '门店日报读取失败，请重新加载')
     }
   } finally {
     if (current(request, epoch)) loading.value = false
@@ -94,7 +95,7 @@ onBeforeUnmount(() => { disposed = true })
       <el-skeleton :rows="3" animated />
     </div>
     <div v-else-if="error" class="page-card state-panel" role="alert">
-      <el-alert title="日报读取失败" :description="error" type="error" :closable="false" show-icon />
+      <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <el-button class="retry-button" type="primary" @click="load">重新加载</el-button>
     </div>
     <template v-else-if="data">

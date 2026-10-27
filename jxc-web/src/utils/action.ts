@@ -1,13 +1,17 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { isCancelledFailure, reportError } from '@/api/error-feedback'
 
 /** 二次确认后执行单据动作；用户取消时静默返回 false，接口错误由 http 统一提示 */
 export async function confirmAction(message: string, run: () => Promise<unknown>, opts: { title?: string; success?: string; type?: 'warning' | 'info' } = {}) {
   try {
     await ElMessageBox.confirm(message, opts.title ?? '确认', { type: opts.type ?? 'warning' })
-  } catch {
-    return false
+  } catch (error) {
+    if (isCancelledFailure(error)) return false
+    reportError(error, { title: '确认窗口未能打开' })
+    throw error
   }
-  await run()
+  try { await run() }
+  catch (error) { reportError(error); throw error }
   ElMessage.success(opts.success ?? '已完成')
   return true
 }

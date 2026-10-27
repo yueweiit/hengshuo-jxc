@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { compile, createRenderer, defineComponent, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, toRefs, watch } from 'vue'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 import { attachmentDownloadTarget } from '../src/api/attachment-download.ts'
 
 const file = new File(['invoice'], '发票.png', { type: 'image/png' })
@@ -22,6 +22,7 @@ const renderer = createRenderer({
   nextSibling: node => node.parent?.children[node.parent.children.indexOf(node) + 1],
 })
 const componentFile = new URL('../src/components/DocAttachment.vue', import.meta.url)
+test.beforeEach(() => errorFeedback.clearErrors())
 const template = readFileSync(componentFile, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
 const nodes = root => [root, ...(root.children || []).flatMap(nodes)]
 const textContent = node => (node.text || '') + (node.children || []).map(textContent).join('')
@@ -45,7 +46,7 @@ async function mount(overrides = {}) {
       window: { location: { origin: 'https://jxc.test' } },
       URL: { createObjectURL: blob => { const url = `blob:https://jxc.test/${created.length + 1}`; created.push({ url, blob }); return url }, revokeObjectURL: url => revoked.push(url) },
       document: { createElement: () => { const anchor = { click() { anchor.clicked = true }, remove() { anchor.removed = true } }; anchors.push(anchor); return anchor }, body: { append() {} } },
-    }, ['load', 'upload', 'unlink', 'download', 'previewFile', 'closePreview', 'updatePreviewOpen', 'fileSize', 'items', 'uploads', 'loading', 'loadError', 'actionError', 'preview', 'deletingIds'])
+    }, ['load', 'upload', 'unlink', 'download', 'previewFile', 'previewImageFailed', 'closePreview', 'updatePreviewOpen', 'fileSize', 'items', 'uploads', 'loading', 'loadError', 'actionError', 'preview', 'deletingIds'])
     return overrides.renderTemplate ? { ...toRefs(props), ...state } : () => h('div')
   } })
   if (overrides.renderTemplate) {
@@ -94,13 +95,33 @@ test('unknown transport total shows bytes without inventing a percentage', async
   await result
 })
 
-test('failed upload retains the original reason and never reports completion', async t => {
-  const page = await mount({ http: { post: async () => { throw new Error('附件大小须为1字节至1MB') } } })
+test('failed upload retains the original reason globally and never reports completion', async t => {
+  const page = await mount({ renderTemplate: true, http: { post: async () => { throw new Error('附件大小须为1字节至1MB') } } })
   t.after(page.unmount)
   await assert.rejects(page.state.upload({ file }), /1MB/)
   assert.equal(page.state.uploads.value[0].status, 'error')
   assert.match(page.state.uploads.value[0].error, /1MB/)
   assert.equal(page.successes.length, 0)
+  await nextTick()
+  assert.match(feedbackText(), /1MB/)
+  assert.doesNotMatch(textContent(page.root), /1MB/)
+})
+
+test('图片无法解码时在全局解释并保留下载入口，旧图片事件不能覆盖新预览', async t => {
+  const page = await mount({ renderTemplate: true })
+  t.after(page.unmount)
+  await page.state.previewFile(attachment); await nextTick()
+  const image = nodes(page.root).find(n => n.tag === 'img')
+  assert.ok(image)
+  const fail = image.props.onError
+  fail({ target: { getAttribute: () => image.props.src } })
+  await nextTick()
+  assert.match(feedbackText(), /图片无法显示/)
+  assert.doesNotMatch(textContent(page.root), /图片无法显示/)
+  assert.match(textContent(page.root), /下载/)
+  await page.state.previewFile({ ...attachment, id: 4 })
+  fail({ target: { getAttribute: () => image.props.src } })
+  assert.equal(page.state.preview.error, '')
 })
 
 test('successful upload with failed list refresh removes progress and warns against duplicate upload', async t => {
@@ -364,7 +385,8 @@ test('completing one file preserves other uploads and their failure reasons', as
   second.reject(new Error('网络中断'))
   await secondFailure
   await nextTick()
-  assert.match(textContent(page.root), /网络中断/)
+  assert.match(feedbackText(), /网络中断/)
+  assert.doesNotMatch(textContent(page.root), /网络中断/)
   assert.equal(page.state.uploads.value[0].status, 'error')
   assert.equal(nodes(page.root).filter(node => node.tag === 'progress').length, 1)
 })

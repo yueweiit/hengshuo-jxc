@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -55,7 +56,7 @@ function isAmount(value: unknown) {
   return value == null || value === '' || (typeof value === 'number' && Number.isFinite(value))
     || (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)))
 }
-function failureReason(error: unknown) { return error instanceof Error && error.message.trim() ? error.message : '操作未完成，请重试' }
+
 function parseBalance(value: unknown): PartnerBalance {
   if (!isRecord(value) || !isText(value.partnerName) || !Array.isArray(value.byCurrency)
     || !value.byCurrency.every(row => isRecord(row) && isText(row.currency) && balanceColumns.every(({ key }) => isAmount(row[key])))) {
@@ -84,7 +85,7 @@ async function readSection<T>(state: ReadState<T>, view: string, parse: (value: 
     const result = await http.get<unknown>(`/ap/partners/${partnerId}/${view}`, undefined, { silent: true })
     if (current()) state.data = parse(result)
   } catch (error) {
-    if (current()) state.error = failureReason(error)
+    if (current()) state.error = feedbackMessage(error, "操作未完成，请重试")
   } finally {
     if (current()) state.loading = false
   }
@@ -111,7 +112,7 @@ async function loadReferences() {
     currencies.value = currencyRows
     selectBook(form.bookId ?? Number(route.query.bookId))
   } catch (error) {
-    if (active && requestId === referenceRequest) references.error = failureReason(error)
+    if (active && requestId === referenceRequest) references.error = feedbackMessage(error, "操作未完成，请重试")
   } finally {
     if (active && requestId === referenceRequest) references.loading = false
   }
@@ -134,7 +135,7 @@ async function statement() {
     form.result = result
     ElMessage.success(result.identityOk ? '期初与期间明细已核对' : '已生成，请核对')
   } catch (error) {
-    if (current()) actions.error = failureReason(error)
+    if (current()) actions.error = feedbackMessage(error, "操作未完成，请重试")
   } finally {
     if (active) actions.generating = false
   }
@@ -154,7 +155,7 @@ async function exportStatement() {
     ElMessage.success('导出任务已创建')
     await router.push('/jobs')
   } catch (error) {
-    if (current()) actions.error = failureReason(error)
+    if (current()) actions.error = feedbackMessage(error, "操作未完成，请重试")
   } finally {
     if (active) actions.exporting = false
   }
@@ -177,7 +178,7 @@ onBeforeUnmount(() => { active = false })
       <section class="page-card" aria-labelledby="balance-title">
         <div class="section-heading"><div><h3 id="balance-title">往来余额</h3><p class="partner-name">{{ partnerName }}</p></div><span class="muted">各币种分别列示</span></div>
         <div v-if="balance.loading" class="section-loading" role="status">正在读取余额…</div>
-        <div v-else-if="balance.error" class="section-error" role="alert"><el-alert title="余额读取失败" :description="balance.error" type="error" show-icon :closable="false" /><el-button @click="load('balance')">重新读取余额</el-button></div>
+        <div v-else-if="balance.error" class="section-error" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button @click="load('balance')">重新读取余额</el-button></div>
         <el-table v-else-if="balance.data" :data="balance.data.byCurrency" border stripe class="ledger-table">
           <el-table-column label="币种" width="110"><template #default="{ row }">{{ row.currency?.trim() || '币种未提供' }}</template></el-table-column>
           <el-table-column v-for="column in balanceColumns" :key="column.key" :label="column.label" min-width="170" align="right"><template #default="{ row }"><MoneyText v-if="row.currency?.trim()" :value="row[column.key]" :currency="row.currency" /><span v-else class="muted">币种未提供</span></template></el-table-column>
@@ -188,7 +189,7 @@ onBeforeUnmount(() => { active = false })
       <section class="page-card" aria-labelledby="statement-title">
         <div class="section-heading"><h3 id="statement-title">生成对账单</h3><span class="muted">以下条件仅用于生成对账单</span></div>
         <div v-if="references.loading" class="reference-loading" role="status">正在读取账套与币种…</div>
-        <div v-if="references.error" class="section-error" role="alert"><el-alert title="对账选项读取失败" :description="references.error" type="error" show-icon :closable="false" /><el-button @click="loadReferences">重新读取选项</el-button></div>
+        <div v-if="references.error" class="section-error" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button @click="loadReferences">重新读取选项</el-button></div>
         <el-form label-position="top" class="statement-form" :disabled="references.loading || !!references.error || actions.generating || actions.exporting">
           <el-form-item label="账套" required><el-select v-model="form.bookId" placeholder="请选择对账账套"><el-option v-for="book in books" :key="book.id" :label="book.name" :value="book.id" /></el-select></el-form-item>
           <el-form-item label="币种" required><el-select v-model="form.currency" placeholder="请选择币种"><el-option v-for="currency in currencies" :key="currency.code" :label="currency.code" :value="currency.code" /></el-select></el-form-item>
@@ -200,7 +201,7 @@ onBeforeUnmount(() => { active = false })
           <el-button v-if="form.result && user.hasPerm('ap:statement:export')" :loading="actions.exporting" :disabled="actions.generating" @click="exportStatement">导出已保存对账单</el-button>
           <span v-if="!references.loading && !references.error && !books.length" class="muted">暂无可选账套</span>
         </div>
-        <el-alert v-if="actions.error" class="action-error" title="操作未完成" :description="actions.error" type="error" show-icon :closable="false" />
+        <div v-if="actions.error" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <div v-if="form.result" class="statement-result">
           <el-alert :type="form.result.identityOk ? 'success' : 'warning'" :title="form.result.identityOk ? '对账单已生成，期初与期间明细已核对' : '对账单已生成，请核对期末余额'" show-icon :closable="false" />
           <dl class="statement-values"><div v-for="field in statementFields" :key="field.key"><dt>{{ field.label }}</dt><dd><MoneyText v-if="form.result.currency" :value="form.result[field.key]" :currency="form.result.currency" /><span v-else>币种未提供</span></dd></div></dl>
@@ -210,7 +211,7 @@ onBeforeUnmount(() => { active = false })
       <section class="page-card" aria-labelledby="records-title">
         <div class="section-heading"><h3 id="records-title">往来明细</h3><span v-if="records.data" class="muted">本次读取 {{ records.data.length }} 条</span></div>
         <div v-if="records.loading" class="section-loading" role="status">正在读取往来记录…</div>
-        <div v-else-if="records.error" class="section-error" role="alert"><el-alert title="往来记录读取失败" :description="records.error" type="error" show-icon :closable="false" /><el-button @click="load('records')">重新读取记录</el-button></div>
+        <div v-else-if="records.error" class="section-error" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button @click="load('records')">重新读取记录</el-button></div>
         <el-table v-else-if="records.data" :data="records.data" border stripe class="ledger-table">
           <el-table-column label="发生时间" min-width="210"><template #default="{ row }"><DateTimeText :value="row.at" /></template></el-table-column>
           <el-table-column label="业务类型" width="100"><template #default="{ row }">{{ row.type || '类型未提供' }}</template></el-table-column>

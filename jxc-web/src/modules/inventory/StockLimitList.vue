@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -36,7 +37,7 @@ async function load() {
 }
 
 async function save() {
-  if (dirty.value.some(invalid)) return ElMessage.error('有商品的下限高于上限，请修改后再保存')
+  if (dirty.value.some(invalid)) return reportError(new Error('有商品的下限高于上限，请修改后再保存'))
   saving.value = true
   try {
     await http.putIdem('/inv/limits', {

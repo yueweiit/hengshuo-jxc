@@ -23,7 +23,7 @@ defineExpose({ reload })
           <div class="audit-document-context"><div class="audit-document-identity"><div class="audit-document-label">{{ context.title }}</div><div class="audit-document-number">{{ context.identifier }}</div></div><StatusTag v-if="context.status" :status="context.status" /></div>
         </header>
         <slot name="notice" />
-        <AuditDrawerRecords :logs="state.logs" :loading="state.loading" :load-error="state.loadError" :total="state.total" :timezone="country.timezone" :presentation="presentation" @reload="reload" />
+        <AuditDrawerRecords :logs="state.logs" :loading="state.loading" :load-error="state.loadError ? '尚未加载成功' : ''" :total="state.total" :timezone="country.timezone" :presentation="presentation" @reload="reload" />
       </template>
     </AuditTimeline>
   </el-drawer>

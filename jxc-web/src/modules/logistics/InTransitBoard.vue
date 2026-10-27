@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '@/api/http'
@@ -51,7 +52,7 @@ function checkQuantities(value: Quantities): void {
     throw new Error('看板数量或单位不完整，请重试或联系管理员')
   }
 }
-const message = (error: unknown) => error instanceof Error && error.message ? error.message : '读取失败，请重试'
+
 
 async function loadBoard() {
   const request = ++boardRequest, epoch = country.epoch
@@ -74,7 +75,7 @@ async function loadBoard() {
     total.value = response.total
     page.value = response.page
   } catch (error) {
-    if (active && request === boardRequest && epoch === country.epoch) boardError.value = message(error)
+    if (active && request === boardRequest && epoch === country.epoch) boardError.value = feedbackMessage(error, "读取失败，请重试")
   } finally {
     if (active && request === boardRequest && epoch === country.epoch) loading.value = false
   }
@@ -97,7 +98,7 @@ async function loadDelays() {
     delayPage.value = response.page
     delayRule.value = response.rule
   } catch (error) {
-    if (active && request === delayRequest && epoch === country.epoch) delayError.value = message(error)
+    if (active && request === delayRequest && epoch === country.epoch) delayError.value = feedbackMessage(error, "读取失败，请重试")
   } finally {
     if (active && request === delayRequest && epoch === country.epoch) delayLoading.value = false
   }
@@ -163,7 +164,7 @@ onBeforeUnmount(() => { active = false; boardRequest++; delayRequest++ })
         <span class="muted">展开可查看关联运输批次</span>
       </div>
       <div v-if="boardError" role="alert" class="read-error">
-        <el-alert title="在途数量读取失败" :description="boardError" type="error" :closable="false" show-icon />
+        <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <el-button @click="loadBoard">重新加载</el-button>
       </div>
       <template v-else>
@@ -210,7 +211,7 @@ onBeforeUnmount(() => { active = false; boardRequest++; delayRequest++ })
         <span v-if="delayRule?.status === 'ACTIVE'" class="muted">超过计划 {{ delayRule.toleranceHours }} 小时且未记录对应节点</span>
       </div>
       <div v-if="delayError" role="alert" class="read-error">
-        <el-alert title="延误批次读取失败" :description="delayError" type="error" :closable="false" show-icon />
+        <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <el-button @click="loadDelays">重新加载</el-button>
       </div>
       <el-alert v-else-if="delayRule && delayRule.status !== 'ACTIVE'" :title="delayRule.message" description="暂时无法判定延误，请检查当前国家的物流延误配置。" type="warning" :closable="false" show-icon />

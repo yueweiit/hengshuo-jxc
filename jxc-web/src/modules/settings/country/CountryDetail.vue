@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -99,7 +100,7 @@ async function loadDetail() {
     form.logisticsDelayToleranceHours = hours
   } else {
     form.logisticsDelayToleranceHours = undefined
-    ElMessage.error('物流延误容忍时长配置无效，请重新填写并保存')
+    reportError(new Error('物流延误容忍时长配置无效，请重新填写并保存'))
   }
 }
 
@@ -148,8 +149,8 @@ async function activate() {
     if (e instanceof BizError && e.code === 'SYS_CONFIG_MISSING') {
       missing.value = (e.data as { missing: MissingItem[] }).missing
       tab.value = 'readiness'
-      ElMessage.error('还有阻断缺项，不能启用')
-    } else if (e instanceof BizError) ElMessage.error(e.message)
+      reportError(e, { title: '国家未能启用', nextStep: '请在启用检查中处理阻断缺项后重试。' })
+    } else reportError(e)
   }
 }
 

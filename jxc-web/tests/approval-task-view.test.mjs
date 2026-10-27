@@ -1,7 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { reactive, ref } from 'vue'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadVueScript, errorFeedback } from './contracts/load-vue-script.mjs'
+import { loadTsModule } from './contracts/load-ts-module.mjs'
+const drafts = loadTsModule(new URL('../src/modules/approval/opinion-draft.ts', import.meta.url))
 
 const file = new URL('../src/modules/approval/ApprovalTaskList.vue', import.meta.url)
 const result = (records = [], total = records.length) => ({ records, total, page: 1, size: 20 })
@@ -9,6 +11,7 @@ const task = (id = 1) => ({ id, docType: 'SALES_ORDER', docId: id, docNo: `SO-00
 function setup(options = {}) {
   const calls = [], unmounted = []
   const page = loadVueScript(file, {
+    ...drafts,
     reactive, ref, onMounted() {}, onBeforeUnmount: fn => unmounted.push(fn),
     defineProps: () => ({ mode: options.mode ?? 'todo' }),
     useTodoStore: () => ({ refresh: async () => { calls.push(['summary']); await options.summary?.() } }),
@@ -141,17 +144,30 @@ test('rejected requests preserve the opinion and allow an explicit retry', async
   p.openAction(task(), 'reject'); p.action.comment = '请补充凭证'; await p.submitAction()
   assert.equal(p.action.visible, true)
   assert.equal(p.action.comment, '请补充凭证')
-  assert.equal(p.action.error, '单据已失效，请刷新')
+  assert.equal(errorFeedback.getErrors().at(-1).message, '单据已失效，请刷新')
   assert.equal(p.action.saving, false)
   fail = false; await p.submitAction()
   assert.equal(p.action.visible, false)
+})
+
+test('通过全局入口离开再返回时恢复失败意见，成功审批后清除', async () => {
+  const p = setup({ post: async () => { throw new Error('库存不足') } })
+  p.openAction(task(98), 'approve'); p.action.comment = '已核对单据'; await p.submitAction()
+  await errorFeedback.getErrors().at(-1).beforeNavigate({ label: '查看库存' })
+  p.unmounted.forEach(fn => fn())
+  const returned = setup()
+  returned.openAction(task(98), 'approve')
+  assert.equal(returned.action.comment, '已核对单据')
+  await returned.submitAction()
+  const again = setup(); again.openAction(task(98), 'approve')
+  assert.equal(again.action.comment, '')
 })
 
 test('successful processing refreshes list and summary; summary failure never reclassifies the write', async () => {
   const p = setup({ summary: async () => { throw new Error('汇总暂不可用') } })
   p.openAction(task(), 'approve'); await p.submitAction()
   assert.equal(p.action.visible, false)
-  assert.equal(p.action.error, '')
+  assert.equal(Object.hasOwn(p.action, 'error'), false, '错误只保存在全局出口，不在审批表单重复存一份')
   assert.equal(p.summaryError.value, '汇总暂不可用')
   assert.equal(p.calls.filter(call => call[0] === 'post').length, 1)
   assert.equal(p.calls.filter(call => call[0] === 'get').length, 1)
@@ -163,7 +179,7 @@ test('list reload failure after a successful write remains a list error without 
   p.openAction(task(), 'approve'); await p.submitAction()
   assert.equal(p.action.visible, false)
   assert.equal(p.loadError.value, '列表读取失败')
-  assert.equal(p.action.error, '')
+  assert.equal(Object.hasOwn(p.action, 'error'), false)
   assert.equal(p.calls.filter(call => call[0] === 'post').length, 1)
 })
 

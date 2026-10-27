@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -144,7 +145,7 @@ async function load() {
     sh.value = s
     related.value = r
   } catch (error) {
-    if (request === loadRequest) loadError.value = error instanceof Error && error.message ? error.message : '运输批次读取失败，请重试'
+    if (request === loadRequest) loadError.value = feedbackMessage(error, "运输批次读取失败，请重试")
   } finally {
     if (request === loadRequest) loading.value = false
   }
@@ -257,11 +258,7 @@ onMounted(load)
 
 <template>
   <div v-loading="loading" class="page shipment-detail">
-    <el-alert v-if="loadError" type="error" :closable="false" show-icon class="shipment-load-error">
-      <template #title>运输批次读取失败</template>
-      <div>{{ loadError }}</div>
-      <el-button size="small" @click="load">重新加载</el-button>
-    </el-alert>
+    <div v-if="loadError" class="request-state" role="status"><p class="muted">尚未加载成功</p><el-button size="small" @click="load">重新加载</el-button></div>
     <template v-else>
     <section class="shipment-section shipment-overview" aria-label="运输批次基础资料">
       <div class="shipment-heading">

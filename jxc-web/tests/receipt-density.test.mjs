@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { computed, reactive, ref, watch, nextTick } from 'vue'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadVueScript, errorFeedback } from './contracts/load-vue-script.mjs'
 
 const line = (id, overrides = {}) => ({ id, productId: id, productCode: `SKU-${id}`, productName: `商品${id}`, spec: '标准', dispatchQty: 10, goodQty: 10, damagedQty: 0, pendingInspectQty: 0, shortQty: 0, ...overrides })
 const doc = (lines, id = 71) => ({ id, status: 'DRAFT', version: 1, lines })
@@ -12,6 +12,7 @@ function page(data = doc([line(1)]), read, beforeConfirm) {
     computed, ref, nextTick, watch: (...args) => { const stop = watch(...args); stops.push(stop); return stop }, onMounted() {}, onBeforeUnmount() {},
     useRoute: () => route, useRouter: () => ({}), useUserStore: () => ({ hasPerm: () => true }), useCountryStore: () => ({ timezone: 'America/Mexico_City' }),
     getCountryId: () => 2, getToken: () => 'session', createCommandIntent: () => ({}),
+    reportError(error, options) { const notice = errorFeedback.reportError(error, options); if (notice) errors.push(notice.message) },
     BizError: class extends Error {}, ElMessage: { error: text => errors.push(text), success: text => successes.push(text), warning: text => warnings.push(text) }, ElMessageBox: { confirm: async text => { confirmText = text; await beforeConfirm?.() } },
     document: { getElementById: id => ({ scrollIntoView: () => scrolled.push(id) }) },
     matchBarcode: (row, code) => row.productCode === code || (row.barcodeText ?? '').split(/\s+/).includes(code),

@@ -1,5 +1,5 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
-import { ElMessage } from 'element-plus'
+import { rememberFailureContext, reportError, type ErrorFeedbackOptions } from '@/api/error-feedback'
 import type { ApiResult } from './types'
 import { getToken, getCountryId, clearSession } from '@/utils/session'
 import { router } from '@/router'
@@ -10,10 +10,12 @@ export { createCommandIntent, newIdempotencyKey } from './command-intent'
 export class BizError extends Error {
   code: string
   data: unknown
-  constructor(code: string, message: string, data?: unknown) {
+  traceId?: string
+  constructor(code: string, message: string, data?: unknown, traceId?: string) {
     super(message)
     this.code = code
     this.data = data
+    this.traceId = traceId
   }
 }
 
@@ -31,43 +33,62 @@ function scopedConfig(config: RequestOptions): RequestOptions {
 function assertScope(scope: string) {
   if (scope !== requestScope()) throw new BizError('CONTEXT_CHANGED', '国家或登录状态已切换，请在当前页面重试')
 }
+function requestContext(config: RequestOptions): RequestOptions {
+  return { ...config, feedback: { sourcePath: router.currentRoute?.value?.fullPath, ...config.feedback } }
+}
+function assertCurrentRead(config: RequestOptions) {
+  if ((config.method ?? 'GET').toUpperCase() === 'GET' && config.feedback?.sourcePath && config.feedback.sourcePath !== router.currentRoute?.value?.fullPath) {
+    throw new BizError('CONTEXT_CHANGED', '已离开原页面，请在当前页面重试')
+  }
+}
 
-function handleError(err: AxiosError<ApiResult>): never {
+function fail(error: BizError, config: RequestOptions): never {
+  const method = (config.method ?? 'GET').toUpperCase()
+  rememberFailureContext(error, {
+    method,
+    ...(method === 'GET' ? { key: `${config.url}:${JSON.stringify(config.params ?? {})}` } : {}),
+    ...config.feedback,
+  })
+  if (!config.silent) reportError(error)
+  throw error
+}
+
+function handleError(err: AxiosError<ApiResult>, config: RequestOptions): never {
   const status = err.response?.status
   const body = err.response?.data
-  const code = body?.code ?? 'NETWORK_ERROR'
-  const message = body?.message || err.message
-  const silent = (err.config as RequestOptions | undefined)?.silent
+  const code = body?.code ?? (status ? `HTTP_${status}` : err.code ?? 'NETWORK_ERROR')
+  const message = body?.message || err.message || '请求失败，未收到有效响应'
 
   if (status === 401) {
     clearSession()
     router.replace({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } })
-  } else if (!silent) {
-    ElMessage.error(message)
   }
-  throw new BizError(code, message, body?.data)
+  return fail(new BizError(code, message, body?.data, body?.traceId), config)
 }
 
 export interface RequestOptions extends AxiosRequestConfig {
-  /** 不弹出错误提示，由调用方自行处理 */
+  /** 延后至调用方核对当前请求有效性后，通过reportError/feedbackMessage报告。不是吞掉失败。 */
   silent?: boolean
+  feedback?: ErrorFeedbackOptions
 }
 
 async function request<T>(config: RequestOptions): Promise<T> {
+  config = requestContext(config)
   const scope = requestScope()
   try {
     const res = await instance.request<ApiResult<T>>(scopedConfig(config))
     assertScope(scope)
+    assertCurrentRead(config)
     const body = res.data
     if (body.code !== 'OK') {
-      if (!config.silent) ElMessage.error(body.message)
-      throw new BizError(body.code, body.message, body.data)
+      fail(new BizError(body.code, body.message, body.data, body.traceId), config)
     }
     return body.data
   } catch (e) {
     assertScope(scope)
+    assertCurrentRead(config)
     if (e instanceof BizError) throw e
-    return handleError(e as AxiosError<ApiResult>)
+    return handleError(e as AxiosError<ApiResult>, config)
   }
 }
 
@@ -76,16 +97,19 @@ export const http = {
   async attachmentBlob(url: string, options?: RequestOptions): Promise<Blob> {
     const target = attachmentDownloadTarget(url, window.location.origin)
     const scope = requestScope()
+    const config = requestContext({ ...options, url: target.url, method: 'GET' })
     try {
       const response = await instance.request<Blob>(scopedConfig({ ...options, baseURL: '', url: target.url, method: 'GET', responseType: 'blob' }))
       assertScope(scope)
+      assertCurrentRead(config)
       return response.data
     } catch (error) {
       assertScope(scope)
+      assertCurrentRead(config)
       const failure = error as AxiosError<ApiResult>
       const envelope = await readBlobError(failure.response?.data)
       if (envelope && failure.response) failure.response.data = envelope
-      return handleError(failure)
+      return handleError(failure, config)
     }
   },
   get<T>(url: string, params?: object, options?: RequestOptions) {

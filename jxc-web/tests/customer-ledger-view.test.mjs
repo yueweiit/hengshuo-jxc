@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as Vue from 'vue'
 import { compile } from '@vue/compiler-dom'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/ar/CustomerLedger.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
@@ -79,7 +79,7 @@ test('余额失败不阻断往来记录，单独重试余额保留已读记录',
   await p.load()
   assert.equal(p.balance.error, '余额服务暂不可用')
   assert.deepEqual(p.records.data, [entry()])
-  assert.match(render(p).text, /余额服务暂不可用/)
+  assert.match(feedbackText(), /余额服务暂不可用/); assert.doesNotMatch(render(p).text, /余额服务暂不可用/)
   fail = false
   const retry = render(p).nodes.find(node => node.tag === 'button' && node.children?.some(child => /重新读取余额/.test(child.text ?? '')))
   await retry.onClick()
@@ -95,7 +95,7 @@ test('记录失败保留余额且不能伪装为空记录，单独重试可以�
   await p.load()
   assert.equal(p.balance.data.openAr, '1200.50')
   const failed = render(p)
-  assert.match(failed.text, /没有往来查看权限/)
+  assert.match(feedbackText(), /没有往来查看权限/); assert.doesNotMatch(failed.text, /没有往来查看权限/)
   assert.doesNotMatch(failed.text, /暂无往来记录/)
   fail = false
   const retry = failed.nodes.find(node => node.tag === 'button' && node.children?.some(child => /重新读取记录/.test(child.text ?? '')))
@@ -241,3 +241,6 @@ test('无客户名称时保留实际客户标识，页面命令调用现有返�
   await buttons.find(node => node.children?.some(child => /刷新/.test(child.text ?? ''))).onClick()
   assert.equal(p.calls.length, 2)
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

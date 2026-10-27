@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -65,7 +66,7 @@ function resetFilters() { keyword.value = ''; typeFilter.value = ''; activeStatu
 function changePage(value: number) { page.value = value; clampPage() }
 function changeSize(value: number) { if ([20, 50, 100].includes(value)) { size.value = value; page.value = 1 } }
 function openDetail(row: JobRow) { selectedRow.value = row; actionError.value = ''; detailOpen.value = true }
-function errorMessage(error: unknown, fallback: string) { return error instanceof Error && error.message ? error.message : fallback }
+
 function isForbidden(error: unknown) { return typeof error === 'object' && error !== null && 'code' in error && error.code === 'SYS_FORBIDDEN' }
 
 let disposed = false, listRequest = 0
@@ -87,7 +88,7 @@ async function loadJobs() {
   } catch (error) {
     if (!current(epoch) || request !== listRequest) return
     rows.value = []; selectedRow.value = null; detailOpen.value = false
-    listError.value = errorMessage(error, '任务加载失败，请重试'); listForbidden.value = isForbidden(error)
+    listError.value = feedbackMessage(error, '任务加载失败，请重试'); listForbidden.value = isForbidden(error)
   } finally { if (current(epoch) && request === listRequest) loading.value = false }
 }
 async function retry(row: JobRow) {
@@ -99,7 +100,7 @@ async function retry(row: JobRow) {
     if (!current(epoch)) return
     retryIntent.reset(); ElMessage.success('重试请求已提交，任务状态以刷新结果为准')
     await loadJobs()
-  } catch (error) { if (current(epoch)) actionError.value = `重试失败：${errorMessage(error, '请稍后重试')}` }
+  } catch (error) { if (current(epoch)) actionError.value = `重试失败：${feedbackMessage(error, '请稍后重试')}` }
   finally { if (current(epoch)) retryingId.value = null }
 }
 async function download(row: JobRow) {
@@ -115,7 +116,7 @@ async function download(row: JobRow) {
     try { const anchor = document.createElement('a'); anchor.href = url; anchor.download = result.filename; anchor.click() }
     finally { setTimeout(() => URL.revokeObjectURL(url), 1000) }
     ElMessage.success('已开始下载导出文件')
-  } catch (error) { if (current(epoch)) actionError.value = `下载失败：${errorMessage(error, '请稍后重试')}` }
+  } catch (error) { if (current(epoch)) actionError.value = `下载失败：${feedbackMessage(error, '请稍后重试')}` }
   finally { if (current(epoch)) downloadingId.value = null }
 }
 
@@ -148,7 +149,7 @@ onBeforeUnmount(() => { disposed = true; media?.removeEventListener('change', up
           <el-form-item label="关键词" class="keyword-field"><el-input v-model="keyword" aria-label="任务编号或类型" placeholder="任务编号 / 类型" :disabled="loading" clearable @clear="search"><template #prefix><el-icon><Search /></el-icon></template></el-input></el-form-item>
           <el-form-item class="filter-actions"><el-button native-type="submit" :disabled="loading">搜索</el-button><el-button text :disabled="loading" @click="resetFilters">重置</el-button></el-form-item>
         </el-form>
-        <el-alert v-if="actionError && !detailOpen" :title="actionError" type="error" show-icon class="action-error" @close="actionError = ''" />
+        <div v-if="actionError && !detailOpen" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <div v-if="listError" class="list-error" role="alert"><el-result icon="error" :title="listForbidden ? '没有查看权限' : '任务加载失败'" :sub-title="listError"><template v-if="!listForbidden" #extra><el-button @click="loadJobs">重新加载</el-button></template></el-result></div>
         <el-table v-else v-loading="loading" :data="pageRows" row-key="id" border stripe class="jobs-table" :max-height="compact ? 460 : 'max(300px, calc(100dvh - 570px))'" aria-label="导出任务列表">
           <el-table-column label="导出任务" :min-width="compact ? 105 : 200"><template #default="{ row }"><div class="task-name"><span class="file-symbol"><el-icon><Document /></el-icon></span><span>{{ jobLabel(row.jobType) }}</span></div><div class="task-id mono">#{{ row.id }}</div></template></el-table-column>
@@ -163,7 +164,7 @@ onBeforeUnmount(() => { disposed = true; media?.removeEventListener('change', up
       <div class="page-foot"><span>时间按当前国家时区显示：{{ country.timezone }}</span><span>最近刷新：<DateTimeText :value="lastRefreshedAt" /></span></div>
     </template>
     <el-drawer v-model="detailOpen" title="任务详情" size="min(480px, 100vw)" destroy-on-close>
-      <template v-if="selectedRow"><div class="detail-heading"><h3>{{ jobLabel(selectedRow.jobType) }}</h3><el-tag :type="jobState(selectedRow.status).type" size="small">{{ jobState(selectedRow.status).label }}</el-tag></div><dl class="detail-list"><dt>任务编号</dt><dd class="mono">#{{ selectedRow.id }}</dd><dt>任务类型</dt><dd>{{ jobLabel(selectedRow.jobType) }}<span class="detail-subline mono">{{ selectedRow.jobType }}</span></dd><dt>账套编号</dt><dd>{{ selectedRow.bookId ?? '-' }}</dd><dt>发起时间</dt><dd><DateTimeText :value="selectedRow.createdAt" /></dd><dt>到期时间</dt><dd><DateTimeText :value="selectedRow.expiresAt" /></dd><dt>诊断代码</dt><dd class="mono">{{ selectedRow.lastError || '-' }}</dd></dl><div class="detail-note"><strong>{{ processingHint(selectedRow).text }}</strong><p>{{ processingHint(selectedRow).detail }}</p></div><el-alert v-if="actionError" :title="actionError" type="error" show-icon @close="actionError = ''" /></template>
+      <template v-if="selectedRow"><div class="detail-heading"><h3>{{ jobLabel(selectedRow.jobType) }}</h3><el-tag :type="jobState(selectedRow.status).type" size="small">{{ jobState(selectedRow.status).label }}</el-tag></div><dl class="detail-list"><dt>任务编号</dt><dd class="mono">#{{ selectedRow.id }}</dd><dt>任务类型</dt><dd>{{ jobLabel(selectedRow.jobType) }}<span class="detail-subline mono">{{ selectedRow.jobType }}</span></dd><dt>账套编号</dt><dd>{{ selectedRow.bookId ?? '-' }}</dd><dt>发起时间</dt><dd><DateTimeText :value="selectedRow.createdAt" /></dd><dt>到期时间</dt><dd><DateTimeText :value="selectedRow.expiresAt" /></dd><dt>诊断代码</dt><dd class="mono">{{ selectedRow.lastError || '-' }}</dd></dl><div class="detail-note"><strong>{{ processingHint(selectedRow).text }}</strong><p>{{ processingHint(selectedRow).detail }}</p></div><div v-if="actionError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div></template>
       <template #footer><el-button @click="detailOpen = false">关闭</el-button><el-button v-if="selectedRow && canRetry(selectedRow)" type="primary" :loading="retryingId === selectedRow.id" :disabled="actionBusy || loading" @click="retry(selectedRow)">重试</el-button><el-button v-if="selectedRow && canDownload(selectedRow)" type="primary" :loading="downloadingId === selectedRow.id" :disabled="actionBusy || loading" @click="download(selectedRow)">下载</el-button></template>
     </el-drawer>
   </div>

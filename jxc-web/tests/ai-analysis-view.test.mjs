@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import * as Vue from 'vue'
 import { compile } from '@vue/compiler-dom'
 import { readFileSync } from 'node:fs'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/analysis/AiView.vue', import.meta.url)
 const response = { output: '净销售与出库成本需要分别核对。', disclaimer: '仅按已登记数据解释。' }
@@ -289,8 +289,8 @@ test('the compiled failure view keeps provider configuration visible instead of 
   const p = selected({ post: async () => { throw new BizError('AI_PROVIDER_NOT_CONFIGURED', '尚未配置模型') } })
   await p.ask()
   const actual = renderPage(p)
-  assert.match(actual.text, /AI 分析暂不可用，服务尚未配置/)
-  assert.match(actual.text, /尚未配置模型/)
+  assert.match(feedbackText(), /AI 服务尚未配置/)
+  assert.match(feedbackText(), /尚未配置模型/); assert.doesNotMatch(actual.text, /尚未配置模型/)
   assert.doesNotMatch(actual.text, /选择账套和会计期间，开始查看/)
 })
 
@@ -305,8 +305,8 @@ test('the compiled loading view and book failure keep their own status and retry
   const failed = setup({ get: async () => { throw new Error('无权读取账套') } })
   await failed.loadBooks()
   const actual = renderPage(failed)
-  assert.match(actual.text, /账套与期间加载失败/)
-  assert.match(actual.text, /无权读取账套/)
+  assert.match(actual.text, /操作未完成|尚未加载成功/)
+  assert.match(feedbackText(), /无权读取账套/); assert.doesNotMatch(actual.text, /无权读取账套/)
   assert.match(actual.text, /重新加载/)
   assert.doesNotMatch(actual.text, /当前没有可用账套/)
 })
@@ -332,3 +332,6 @@ test('the compiled result explicitly identifies absent time, completeness and so
   assert.match(actual.text, /生成时间未提供/)
   assert.match(actual.text, /未提供可核对的来源标识/)
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

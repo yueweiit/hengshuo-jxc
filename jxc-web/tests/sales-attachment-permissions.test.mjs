@@ -22,7 +22,7 @@ async function mount(groups, permissions) {
     ...salesOrderActions, computed, reactive, ref, watch() {}, onMounted() {}, createCommandIntent: () => ({}),
     useRoute: () => ({ params: { id: '1164' } }), useRouter: () => ({}), useCountryStore: () => ({}),
     useUserStore: () => ({ fieldAccess: group => groups[group] ?? 'HIDDEN', hasPerm: codes => (Array.isArray(codes) ? codes : [codes]).some(code => permissions.includes(code)) }),
-  }, ['order', 'id', 'user'])
+  }, ['order', 'id', 'user', 'canUploadSalesAttachment'])
   page.order.value = { id: 1164 }
   const attachment = defineComponent({
     props: ['bizType', 'bizId', 'category', 'readonly'],

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as Vue from 'vue'
 import { compile } from '@vue/compiler-dom'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/finance/ClosingView.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
@@ -101,7 +101,7 @@ test('账套首次读取展示加载；失败保留原因，重新读取恢复�
   pending.reject(new Error('账套服务超时'))
   await loading
   assert.equal(p.booksError.value, '账套服务超时')
-  assert.match(render(p), /账套服务超时/)
+  assert.match(feedbackText(), /账套服务超时/); assert.doesNotMatch(render(p), /账套服务超时/)
   assert.doesNotMatch(render(p), /暂无可用账套/)
   await p.loadBooks()
   assert.equal(p.booksError.value, '')
@@ -346,3 +346,6 @@ test('期间未开放、已关闭或含未知结果时，服务端可结账标�
   assert.equal(p.readyToClose.value, false)
   p.checks.value = []; assert.equal(p.readyToClose.value, false)
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

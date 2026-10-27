@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -76,7 +77,7 @@ let todoRequest = 0
 let noticeRequest = 0
 let disposed = false
 function current(epoch: number) { return !disposed && country.epoch === epoch }
-function errorMessage(error: unknown, fallback: string) { return error instanceof Error ? error.message : fallback }
+
 
 async function loadTodos() {
   const request = ++todoRequest
@@ -104,7 +105,7 @@ async function loadTodos() {
     if (!current(epoch) || request !== todoRequest) return
     todos.value = []
     total.value = 0
-    todoError.value = errorMessage(error, '待办加载失败，请重试')
+    todoError.value = feedbackMessage(error, '待办加载失败，请重试')
   } finally {
     if (current(epoch) && request === todoRequest) loading.value = false
   }
@@ -121,7 +122,7 @@ async function loadNotifications() {
   } catch (error) {
     if (!current(epoch) || request !== noticeRequest) return
     notifications.value = []
-    noticeError.value = errorMessage(error, '通知加载失败，请重试')
+    noticeError.value = feedbackMessage(error, '通知加载失败，请重试')
   } finally {
     if (current(epoch) && request === noticeRequest) noticesLoading.value = false
   }
@@ -131,7 +132,7 @@ async function refreshSummary() {
   const epoch = country.epoch
   summaryError.value = ''
   try { await todo.refresh() }
-  catch (error) { if (current(epoch)) summaryError.value = errorMessage(error, '待办数量刷新失败，请重试') }
+  catch (error) { if (current(epoch)) summaryError.value = feedbackMessage(error, '待办数量刷新失败，请重试') }
 }
 
 async function refreshWorkbench() {
@@ -193,7 +194,7 @@ async function openNotification(n: NotificationRow) {
     if (n.link) await router.push(n.link)
     else await loadNotifications()
   } catch (error) {
-    if (current(epoch)) noticeError.value = errorMessage(error, '通知打开失败，请重试')
+    if (current(epoch)) noticeError.value = feedbackMessage(error, '通知打开失败，请重试')
   } finally { if (current(epoch)) readingNotice.value = false }
 }
 
@@ -243,7 +244,7 @@ onBeforeUnmount(() => { disposed = true; clearInterval(timer); media?.removeEven
           </button>
         </div>
       </section>
-      <el-alert v-if="summaryError" :title="summaryError" type="error" :closable="false" show-icon class="summary-error" />
+      <div v-if="summaryError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
 
       <div class="workbench-grid">
         <section class="workbench-panel todo-panel" aria-labelledby="todo-title">
@@ -262,7 +263,7 @@ onBeforeUnmount(() => { disposed = true; clearInterval(timer); media?.removeEven
               <template #append><el-button aria-label="搜索待办" title="搜索待办" @click="search"><el-icon><Search /></el-icon></el-button></template>
             </el-input><el-tooltip v-if="compact" :content="order === 'desc' ? '最新创建优先' : '最早创建优先'"><el-button :aria-label="`创建时间排序：${order === 'desc' ? '最新优先' : '最早优先'}`" @click="toggleOrder"><el-icon><SortDown v-if="order === 'desc'" /><SortUp v-else /></el-icon></el-button></el-tooltip></div>
           </div>
-          <div v-if="todoError" class="load-error" role="alert"><el-icon><Warning /></el-icon><span>{{ todoError }}</span><el-button link type="primary" @click="loadTodos">重试</el-button></div>
+          <div v-if="todoError" class="load-error" role="alert"><el-icon><Warning /></el-icon><span>操作未完成，请查看全局提示。</span><el-button link type="primary" @click="loadTodos">重试</el-button></div>
           <el-table v-else v-loading="loading" :data="todos" class="todo-table" :max-height="'max(320px, calc(100dvh - 470px))'" :empty-text="loading ? '正在加载待办' : query || activeType ? '没有匹配的待办' : '当前没有待办'">
             <el-table-column label="待办事项" :min-width="compact ? 180 : 230">
               <template #default="{ row }">
@@ -284,7 +285,7 @@ onBeforeUnmount(() => { disposed = true; clearInterval(timer); media?.removeEven
         <aside class="workbench-sidebar" aria-label="通知与常用入口">
           <section class="workbench-panel notice-panel" aria-labelledby="notice-title">
             <header class="panel-heading"><div class="heading-title"><h2 id="notice-title">未读通知</h2><span class="count-badge">{{ todo.unreadNotifications }}</span></div><el-button link type="primary" @click="router.push('/notifications')">全部<el-icon><ArrowRight /></el-icon></el-button></header>
-            <div v-if="noticeError" class="load-error" role="alert"><span>{{ noticeError }}</span><el-button link type="primary" @click="loadNotifications">重试</el-button></div>
+            <div v-if="noticeError" class="load-error" role="alert"><span>操作未完成，请查看全局提示。</span><el-button link type="primary" @click="loadNotifications">重试</el-button></div>
             <div v-else v-loading="noticesLoading" class="notices">
               <div v-if="!notifications.length" class="notice-empty"><span class="notice-illustration" aria-hidden="true"><el-icon><Bell /></el-icon><span class="notice-check"><el-icon><Check /></el-icon></span></span><strong>{{ noticesLoading ? '正在加载通知' : '暂时没有未读通知' }}</strong><span>{{ country.current?.name }}</span></div>
               <button v-for="n in notifications" :key="n.id" class="notice" type="button" :disabled="readingNotice" @click="openNotification(n)"><strong>{{ n.title }}</strong><span>{{ n.content }}</span><small><DateTimeText :value="n.createdAt" /></small></button>

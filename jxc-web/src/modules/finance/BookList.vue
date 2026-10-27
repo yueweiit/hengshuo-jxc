@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -41,7 +42,7 @@ let readVersion = 0, disposed = false
 const context = () => `${country.currentId}:${country.epoch}:${user.token}`
 const current = (scope: string) => !disposed && scope === context()
 const pageScope = context()
-const errorText = (error: unknown, fallback: string) => error instanceof Error && error.message.trim() ? error.message : fallback
+
 
 async function load() {
   const request = ++readVersion, scope = context()
@@ -64,7 +65,7 @@ async function load() {
   } catch (error) {
     if (request !== readVersion || !current(scope)) return
     books.value = []; loaded.value = false
-    listError.value = errorText(error, '账套读取失败，请检查连接后重新加载')
+    listError.value = feedbackMessage(error, '账套读取失败，请检查连接后重新加载')
   } finally {
     if (request === readVersion && current(scope)) loading.value = false
   }
@@ -101,7 +102,7 @@ async function save() {
     if (!current(scope)) return
     dialog.value = false; ElMessage.success('账套名称已保存'); await load()
   } catch (error) {
-    if (current(scope)) saveError.value = errorText(error, '账套名称保存失败，请重试')
+    if (current(scope)) saveError.value = feedbackMessage(error, '账套名称保存失败，请重试')
   } finally { if (current(scope)) busy.value = false }
 }
 async function activate(row: Book) {
@@ -115,7 +116,7 @@ async function activate(row: Book) {
     if (!current(scope)) return
     ElMessage.success('账套已启用，期间和财务配置仍须独立完成'); await load()
   } catch (error) {
-    if (current(scope) && error !== 'cancel' && error !== 'close') actionError.value = errorText(error, '账套启用失败，请重试')
+    if (current(scope) && error !== 'cancel' && error !== 'close') actionError.value = feedbackMessage(error, '账套启用失败，请重试')
   } finally { if (current(scope)) busy.value = false }
 }
 async function gen(bookId: number) {
@@ -133,7 +134,7 @@ async function gen(bookId: number) {
     ElMessage.success(res.created === 0 ? '所选范围内的期间已齐全，无需新增' : `已补齐 ${res.created} 个期间`)
     await load()
   } catch (error) {
-    if (current(scope)) actionError.value = errorText(error, '会计期间补齐失败，请重试')
+    if (current(scope)) actionError.value = feedbackMessage(error, '会计期间补齐失败，请重试')
   } finally { if (current(scope)) busy.value = false }
 }
 onMounted(load)
@@ -151,7 +152,7 @@ onBeforeUnmount(() => { disposed = true; readVersion++ })
     </header>
     <el-alert v-if="mockMode" title="演示模式仅供查看，不能修改或启用账套、补齐期间。" type="info" :closable="false" class="page-notice" />
     <section v-if="listError" class="page-card" role="alert">
-      <el-alert title="账套读取失败" :description="listError" type="error" :closable="false" show-icon />
+      <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <el-button class="retry-button" :disabled="busy" :loading="loading" @click="load">重新加载</el-button>
     </section>
     <div v-else-if="loading && !loaded" class="page-card"><el-skeleton :rows="6" animated aria-label="正在读取账套与会计期间" /></div>
@@ -174,7 +175,7 @@ onBeforeUnmount(() => { disposed = true; readVersion++ })
           <div><dt>本位币</dt><dd class="mono">{{ b.baseCurrency || '-' }}</dd></div>
         </dl>
         <el-alert v-if="b.status === 'DRAFT'" title="账套尚未启用" description="启用仅开放业务归属，不补填未知期初金额；会计期间、计价方法和财务启用须分别配置。" type="info" :closable="false" class="book-notice" />
-        <el-alert v-if="actionError && actionBook === b.id" :title="actionError" type="error" :closable="false" show-icon class="book-notice" role="alert" />
+        <div v-if="actionError && actionBook === b.id" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <div v-if="canConfigure" class="period-config">
           <h4>补齐会计期间</h4>
           <el-form :model="periodForms[b.id]" label-position="top" class="period-form" @submit.prevent="gen(b.id)">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -49,7 +50,7 @@ async function loadContext() {
     contextOrder.value = result
     if (route.query.action === 'register' && user.hasPerm('ar:receipt:create') && !confirmOnly.value) await open()
   } catch (error) {
-    if (request === contextRequest) contextError.value = error instanceof Error ? error.message : '来源订单读取失败'
+    if (request === contextRequest) contextError.value = feedbackMessage(error, '来源订单读取失败')
   } finally { if (request === contextRequest) contextLoading.value = false }
 }
 function returnToOrder() {
@@ -95,7 +96,7 @@ async function open() {
 }
 async function openFromToolbar() {
   try { await open() }
-  catch (error) { ElMessage.warning(error instanceof Error ? error.message : '收款登记选项读取失败') }
+  catch (error) { feedbackMessage(error, '收款登记选项读取失败') }
 }
 async function save() {
   if (!form.bookId) return ElMessage.warning('请选择收款账套')
@@ -128,7 +129,7 @@ onMounted(loadContext)
 
 <template>
   <p v-if="contextLoading" class="muted" role="status">正在读取来源订单…</p>
-  <el-alert v-if="contextError" title="来源订单读取失败" :description="contextError" type="error" :closable="false" />
+  <div v-if="contextError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
   <el-button v-if="contextError" @click="loadContext">重新读取来源订单</el-button>
   <div v-if="contextOrder" class="source-order"><span>当前订单：{{ contextOrder.docNo }}；处理后请返回订单重新检查出库条件。</span><el-button v-if="user.hasPerm('sal:order:view')" link type="primary" @click="returnToOrder">返回本订单</el-button><el-button link @click="showCustomerReceipts = !showCustomerReceipts">{{ showCustomerReceipts ? '只看本单收款' : '查看该客户收款（含未分配）' }}</el-button></div>
   <CrudPage v-if="route.query.orderId == null || contextOrder" :key="JSON.stringify([receiptQuery, country.epoch])" ref="page" :title="confirmOnly ? '到账确认' : '收款登记'" resource="/ar/receipts" :columns="columns" :search-fields="searchFields" :default-query="receiptQuery" :can-create="false" :can-toggle="false" :actions-width="220">

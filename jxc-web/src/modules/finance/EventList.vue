@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -31,7 +32,7 @@ async function gen(row: Row) {
   } catch (error) {
     if (!(error instanceof Error)) throw error
     const code = error instanceof BizError ? error.code : ''
-    ElMessage.error(diagnostic(row, code, error.message))
+    reportError(error, { title: '凭证生成未完成', nextStep: diagnostic(row, code, error.message) })
   }
   await load()
 }

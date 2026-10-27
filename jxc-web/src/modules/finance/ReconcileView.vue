@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { http } from '@/api/http'
 import { useCountryStore } from '@/stores/country'
@@ -58,7 +59,7 @@ function selectDetail(row: Row) { detail.value = row; changeTab('details') }
 function changeTab(name: string | number) { activeTab.value = name as DetailTab; detailPage.value = 1 }
 function changeSize(size: number) { detailSize.value = size; detailPage.value = 1 }
 function clearResults() { rows.value = []; detail.value = null; error.value = ''; queried.value = false; detailPage.value = 1 }
-function failureMessage(failure: unknown, fallback: string) { return failure instanceof Error && failure.message.trim() ? failure.message : fallback }
+
 
 async function load() {
   const request = ++queryRequest
@@ -77,7 +78,7 @@ async function load() {
     rows.value = data
     queried.value = true
   } catch (failure) {
-    if (current()) error.value = failureMessage(failure, '核对读取失败，请重试')
+    if (current()) error.value = feedbackMessage(failure, '核对读取失败，请重试')
   } finally {
     if (current()) loading.value = false
   }
@@ -103,7 +104,7 @@ async function loadBooks() {
     bookLoading.value = false
     await changeBook()
   } catch (failure) {
-    if (!disposed && request === bookRequest) bookError.value = failureMessage(failure, '账套读取失败，请重试')
+    if (!disposed && request === bookRequest) bookError.value = feedbackMessage(failure, '账套读取失败，请重试')
   } finally {
     if (!disposed && request === bookRequest) bookLoading.value = false
   }
@@ -136,12 +137,12 @@ onBeforeUnmount(() => { disposed = true; ++bookRequest; ++queryRequest })
         <span>本位币：{{ selectedBook?.baseCurrency || '未提供' }}</span>
       </div>
       <div v-if="bookError" class="reconcile-error" role="alert">
-        <el-alert :title="'账套读取失败：' + bookError" type="error" :closable="false" show-icon />
+        <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <el-button @click="loadBooks">重新读取账套</el-button>
       </div>
       <p v-else-if="bookLoading" class="muted" role="status">正在读取账套与期间…</p>
       <div v-else-if="error" class="reconcile-error" role="alert">
-        <el-alert :title="'核对读取失败：' + error" type="error" :closable="false" show-icon />
+        <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
         <el-button @click="load">重新读取核对</el-button>
       </div>
       <p v-else-if="loading" class="muted" role="status">正在核对子账与总账…</p>

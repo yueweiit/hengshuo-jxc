@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { http } from '@/api/http'
@@ -91,7 +92,7 @@ async function readSection<T>(state: ReadState<T>, view: string, parse: (value: 
     if (current()) state.data = parse(result)
   } catch (error) {
     if (active && requestId === state.requestId) {
-      state.error = error instanceof Error && error.message ? error.message : '读取失败，请重试'
+      state.error = feedbackMessage(error, '客户往来读取失败，请重试')
     }
   } finally {
     if (active && requestId === state.requestId) state.loading = false
@@ -141,10 +142,7 @@ onBeforeUnmount(() => { active = false })
         <el-skeleton :rows="2" animated />
         <p class="muted">正在读取客户余额…</p>
       </div>
-      <el-alert v-else-if="balance.error" title="客户余额读取失败" type="error" :closable="false" show-icon>
-        <p class="ledger-error">{{ balance.error }}</p>
-        <el-button size="small" :loading="balance.loading" @click="load('balance')">重新读取余额</el-button>
-      </el-alert>
+      <div v-else-if="balance.error" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p class="ledger-error">操作未完成，请查看全局提示。</p><el-button size="small" :loading="balance.loading" @click="load('balance')">重新读取余额</el-button></div>
       <template v-else-if="balance.data">
         <p v-if="!currency" class="muted">币种未提供，余额金额暂不展示。</p>
         <dl class="balance-grid">
@@ -190,10 +188,7 @@ onBeforeUnmount(() => { active = false })
         <el-skeleton :rows="3" animated />
         <p class="muted">正在读取往来记录…</p>
       </div>
-      <el-alert v-else-if="records.error" title="往来记录读取失败" type="error" :closable="false" show-icon>
-        <p class="ledger-error">{{ records.error }}</p>
-        <el-button size="small" :loading="records.loading" @click="load('records')">重新读取记录</el-button>
-      </el-alert>
+      <div v-else-if="records.error" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p class="ledger-error">操作未完成，请查看全局提示。</p><el-button size="small" :loading="records.loading" @click="load('records')">重新读取记录</el-button></div>
       <el-empty v-else-if="records.data?.length === 0" description="暂无往来记录" :image-size="64" />
       <table v-else-if="records.data" class="ledger-table" role="table" aria-labelledby="ledger-records-title">
         <thead role="rowgroup">

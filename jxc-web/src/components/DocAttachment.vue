@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type UploadRequestOptions } from 'element-plus'
 import { http } from '@/api/http'
@@ -55,14 +56,12 @@ function controller() {
   requests.add(request)
   return request
 }
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : '请求失败，请重试'
-}
+
 function fileSize(bytes: number) {
   return bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-async function load() {
+async function load(afterUpload = false) {
   const epoch = generation
   const sequence = ++listRequest
   const request = controller()
@@ -79,7 +78,7 @@ async function load() {
     emit('change', items.value)
     return true
   } catch (error) {
-    if (current(epoch) && sequence === listRequest) loadError.value = `附件列表加载失败：${errorMessage(error)}`
+    if (current(epoch) && sequence === listRequest) loadError.value = `附件列表加载失败：${feedbackMessage(error, afterUpload ? '文件已上传，无需重复上传。附件列表刷新未完成' : '附件列表读取未完成')}`
     return false
   } finally {
     requests.delete(request)
@@ -113,11 +112,11 @@ async function upload(opt: UploadRequestOptions) {
     entry.status = 'success'
     uploads.value = uploads.value.filter(active => active !== entry)
     ElMessage.success('已上传')
-    if (!await load() && current(epoch) && loadError.value) loadError.value = `文件已上传，无需重复上传。${loadError.value}`
+    if (!await load(true) && current(epoch) && loadError.value) loadError.value = `文件已上传，无需重复上传。${loadError.value}`
   } catch (error) {
     if (!current(epoch)) return
     entry.status = 'error'
-    entry.error = errorMessage(error)
+    entry.error = feedbackMessage(error, `附件“${entry.fileName}”上传未完成`)
     throw error
   } finally {
     requests.delete(request)
@@ -142,7 +141,7 @@ async function unlink(item: AttachmentItem) {
     if (preview.item?.id === item.id) closePreview()
     emit('change', items.value)
   } catch (error) {
-    if (current(epoch) && error !== 'cancel' && error !== 'close') actionError.value = `删除失败：${errorMessage(error)}`
+    if (current(epoch) && error !== 'cancel' && error !== 'close') actionError.value = `删除失败：${feedbackMessage(error, "请求失败，请重试")}`
   } finally {
     requests.delete(request)
     if (current(epoch)) deletingIds.value.delete(item.id)
@@ -176,7 +175,7 @@ async function download(item: AttachmentItem) {
       setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
     }
   } catch (error) {
-    if (current(epoch)) actionError.value = `下载失败：${errorMessage(error)}`
+    if (current(epoch)) actionError.value = `下载失败：${feedbackMessage(error, "请求失败，请重试")}`
   } finally {
     requests.delete(request)
   }
@@ -190,6 +189,10 @@ function closePreview() {
 
 function updatePreviewOpen(open: boolean) {
   if (!open) closePreview()
+}
+function previewImageFailed(event: Event) {
+  if (disposed || !preview.open || (event.target as HTMLImageElement | null)?.getAttribute('src') !== preview.url) return
+  preview.error = feedbackMessage(new Error('图片无法显示，请下载后查看'), '附件预览未完成')
 }
 
 async function previewFile(item: AttachmentItem) {
@@ -206,7 +209,7 @@ async function previewFile(item: AttachmentItem) {
     preview.kind = type === 'application/pdf' ? 'pdf' : /^(image\/(png|jpeg|gif|webp|bmp|avif))$/.test(type || '') ? 'image' : 'unsupported'
     if (preview.kind !== 'unsupported') preview.url = URL.createObjectURL(blob)
   } catch (error) {
-    if (current(epoch) && sequence === previewRequest) preview.error = `预览失败：${errorMessage(error)}`
+    if (current(epoch) && sequence === previewRequest) preview.error = `预览失败：${feedbackMessage(error, "请求失败，请重试")}`
   } finally {
     requests.delete(request)
     if (current(epoch) && sequence === previewRequest) preview.loading = false
@@ -243,7 +246,7 @@ defineExpose({ reload: load })
         <div class="upload-heading">
           <span class="file-name">{{ file.fileName }}</span>
           <span :class="['upload-status', { 'is-error': file.status === 'error' }]">
-            {{ file.status === 'error' ? file.error : file.status === 'saving' ? '已发送，正在保存…' : file.percentage === undefined ? `正在上传 · 已发送 ${fileSize(file.loaded)}` : `正在上传 ${file.percentage}%` }}
+            {{ file.status === 'error' ? '上传未完成' : file.status === 'saving' ? '已发送，正在保存…' : file.percentage === undefined ? `正在上传 · 已发送 ${fileSize(file.loaded)}` : `正在上传 ${file.percentage}%` }}
           </span>
         </div>
         <progress v-if="file.status === 'uploading' && file.percentage === undefined" class="upload-indeterminate" :aria-label="`${file.fileName} 正在上传，总大小未知`" />
@@ -251,10 +254,10 @@ defineExpose({ reload: load })
       </li>
     </ul>
     <div v-if="loadError" class="attachment-error" role="alert">
-      <span>{{ loadError }}</span>
+      <span>操作未完成，请查看全局提示。</span>
       <el-button link type="primary" size="small" :loading="loading" @click="load">重新加载</el-button>
     </div>
-    <p v-if="actionError" class="attachment-error" role="alert">{{ actionError }}</p>
+    <p v-if="actionError" class="attachment-error" role="alert">操作未完成，请查看全局提示。</p>
     <p v-if="loading" class="muted" role="status">正在加载附件…</p>
     <el-empty v-else-if="!items.length && !loadError && !uploads.length" :image-size="48" description="暂无附件" />
     <ul v-if="items.length" class="list" aria-label="已上传附件">
@@ -271,11 +274,11 @@ defineExpose({ reload: load })
       </li>
     </ul>
     <el-dialog :model-value="preview.open" :title="preview.item?.fileName || '附件预览'" width="min(900px, 94vw)" append-to-body destroy-on-close @update:model-value="updatePreviewOpen">
-      <p v-if="actionError" class="attachment-error" role="alert">{{ actionError }}</p>
+      <p v-if="actionError" class="attachment-error" role="alert">操作未完成，请查看全局提示。</p>
       <div v-loading="preview.loading" class="preview-body" :aria-busy="preview.loading">
         <p v-if="preview.loading" class="muted" role="status">正在读取附件…</p>
-        <p v-else-if="preview.error" class="attachment-error" role="alert">{{ preview.error }}</p>
-        <img v-else-if="preview.kind === 'image'" class="preview-image" :src="preview.url" :alt="preview.item?.fileName" @error="preview.error = '图片无法显示，请下载后查看'" />
+        <p v-else-if="preview.error" class="attachment-error" role="alert">操作未完成，请查看全局提示。</p>
+        <img v-else-if="preview.kind === 'image'" class="preview-image" :src="preview.url" :alt="preview.item?.fileName" @error="previewImageFailed" />
         <object v-else-if="preview.kind === 'pdf'" class="preview-pdf" :data="preview.url" type="application/pdf" :aria-label="preview.item?.fileName">
           <p>浏览器暂不支持 PDF 预览，请使用下方“下载”按钮查看。</p>
         </object>

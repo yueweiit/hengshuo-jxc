@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, type TabPaneName } from 'element-plus'
+import type { TabPaneName } from 'element-plus'
 import { useCountryStore } from '@/stores/country'
 
 interface TabItem {
@@ -51,7 +52,7 @@ async function activateTab(name: TabPaneName): Promise<boolean> {
     await router.push(target.fullPath)
     return route.fullPath === target.fullPath
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : String(error))
+    reportError(error)
     return false
   }
 }

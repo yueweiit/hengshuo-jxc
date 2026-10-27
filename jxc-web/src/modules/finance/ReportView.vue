@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -31,7 +32,7 @@ const canManageTemplates = computed(() => !demo && user.hasPerm(['fin:mapping:ed
 const demo = import.meta.env.MODE === 'demo' && import.meta.env.VITE_USE_MOCK === 'true'
 let requestSequence = 0
 let templateSequence = 0
-function failureMessage(error: unknown) { return error instanceof Error ? error.message : String(error) }
+
 async function loadBooks() {
   booksBusy.value = true; booksError.value = ''
   try {
@@ -39,7 +40,7 @@ async function loadBooks() {
     if (!Array.isArray(result)) throw new Error('账套返回内容不完整，请重新加载')
     books.value = result
   }
-  catch (error) { booksError.value = failureMessage(error) }
+  catch (error) { booksError.value = feedbackMessage(error, "操作未完成，请重试") }
   finally { booksBusy.value = false }
 }
 async function load() {
@@ -52,7 +53,7 @@ async function load() {
     if (!result || !Array.isArray(result.lines)) throw new Error('报表返回内容不完整，请重新加载')
     if (sequence === requestSequence) data.value = result
   } catch (error) {
-    if (sequence === requestSequence) reportError.value = failureMessage(error)
+    if (sequence === requestSequence) reportError.value = feedbackMessage(error, "操作未完成，请重试")
   } finally { if (sequence === requestSequence) busy.value = false }
 }
 function changeBook() {
@@ -74,7 +75,7 @@ async function loadTemplates() {
       templates.value = rows; templateAccounts.value = accounts
     }
   } catch (error) {
-    if (sequence === templateSequence && selectedBookId === bookId.value && selectedType === tab.value) templateError.value = failureMessage(error)
+    if (sequence === templateSequence && selectedBookId === bookId.value && selectedType === tab.value) templateError.value = feedbackMessage(error, "操作未完成，请重试")
   } finally { if (sequence === templateSequence) templatesBusy.value = false }
 }
 function newTemplate() { templateForm.id = templateForm.version = undefined; templateForm.name = ''; templateForm.rule = 'CATEGORY_V1'; templateForm.lines = [] }
@@ -98,7 +99,7 @@ async function createTemplate() {
     if (templateForm.id) await http.putIdem('/fin/report-templates/' + templateForm.id, payload, templateIntent)
     else await http.postIdem('/fin/report-templates', payload, templateIntent)
     newTemplate(); templateNotice.value = '模板草稿已保存，请财务复核后生效'; ElMessage.success(templateNotice.value); await loadTemplates()
-  } catch (error) { commandError.value = failureMessage(error) }
+  } catch (error) { commandError.value = feedbackMessage(error, "操作未完成，请重试") }
   finally { commandBusy.value = false }
 }
 async function reviewTemplate(row: Row) {
@@ -109,14 +110,14 @@ async function reviewTemplate(row: Row) {
     await http.postIdem('/fin/report-templates/' + row.id + '/review', { bookId: bookId.value, version: row.version }, reviewIntent)
     templateNotice.value = '模板已复核生效'; await loadTemplates(); await load()
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') commandError.value = failureMessage(error)
+    if (error !== 'cancel' && error !== 'close') commandError.value = feedbackMessage(error, "操作未完成，请重试")
   } finally { commandBusy.value = false }
 }
 async function exportReport() {
   if (working.value || !bookId.value || !periodId.value || !data.value || data.value.available === false || demo || !user.hasPerm('fin:report:export')) return
   commandBusy.value = true; exportError.value = ''
   try { await http.postIdem('/fin/reports/' + tab.value + '/export', { bookId: bookId.value, periodId: periodId.value }, exportIntent); ElMessage.success('导出任务已创建'); await router.push('/jobs') }
-  catch (error) { exportError.value = failureMessage(error) }
+  catch (error) { exportError.value = feedbackMessage(error, "操作未完成，请重试") }
   finally { commandBusy.value = false }
 }
 onMounted(loadBooks)
@@ -158,7 +159,7 @@ onMounted(loadBooks)
       </el-radio-group>
       <div v-if="booksBusy" class="report-loading" role="status"><el-skeleton :rows="3" animated /><span class="muted">正在读取账套…</span></div>
       <div v-else-if="booksError" class="report-feedback" role="alert">
-        <el-alert title="账套读取失败" type="error" :closable="false" show-icon><p>{{ booksError }}</p></el-alert>
+        <div  class="request-state" role="status"><p class="muted">尚未加载成功</p></div>
         <el-button @click="loadBooks">重新加载账套</el-button>
       </div>
       <el-empty v-else-if="!books.length" description="当前国家没有可用账套" :image-size="64" />
@@ -166,7 +167,7 @@ onMounted(loadBooks)
       <el-empty v-else-if="!periods.length" description="当前账套没有会计期间，请先在账套管理中配置" :image-size="64" />
       <div v-else-if="busy" class="report-loading" role="status"><el-skeleton :rows="5" animated /><span class="muted">正在读取{{ reportTitle }}…</span></div>
       <div v-else-if="reportError" class="report-feedback" role="alert">
-        <el-alert title="报表读取失败" type="error" :closable="false" show-icon><p>{{ reportError }}</p></el-alert>
+        <div  class="request-state" role="status"><p class="muted">尚未加载成功</p></div>
         <el-button @click="load">重新加载报表</el-button>
       </div>
       <template v-else-if="data">
@@ -208,17 +209,17 @@ onMounted(loadBooks)
         <p class="muted report-note">金额取自已记账事实或对应结账快照。下钻路径：报表项目 → 科目余额 → 明细账 → 凭证 → 业务来源。</p>
       </template>
       <el-empty v-else description="请选择会计期间查看报表" :image-size="64" />
-      <el-alert v-if="exportError" class="report-alert" title="导出操作失败" type="error" :closable="false" show-icon><p>{{ exportError }}</p></el-alert>
+      <div v-if="exportError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p></div>
     </section>
 
     <el-dialog v-model="templateDialog" class="report-template-dialog" title="当前账套报表模板" width="min(1000px, calc(100vw - 24px))" :close-on-click-modal="!working" :close-on-press-escape="!working" :show-close="!working">
       <p class="report-template-context">{{ selectedBook?.name }} · {{ reportTitle }}</p>
       <p class="muted report-note">新版本先保存为草稿，财务复核后用于实时报表；已结账报表继续读取原快照。</p>
       <el-alert v-if="templateNotice" class="report-alert" :title="templateNotice" type="success" :closable="false" show-icon />
-      <el-alert v-if="commandError" class="report-alert" title="模板操作失败" type="error" :closable="false" show-icon><p>{{ commandError }}</p></el-alert>
+      <div v-if="commandError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p></div>
       <div v-if="templatesBusy" class="report-loading" role="status"><el-skeleton :rows="3" animated /><span class="muted">正在读取模板与所需科目…</span></div>
       <div v-else-if="templateError" class="report-feedback" role="alert">
-        <el-alert title="模板或科目读取失败" type="error" :closable="false" show-icon><p>{{ templateError }}</p><span v-if="templateNotice">上述操作已成功，无需重复提交，请重新加载列表。</span></el-alert>
+        <div  class="request-state" role="status"><p class="muted">尚未加载成功</p></div>
         <el-button @click="loadTemplates">重新加载模板</el-button>
       </div>
       <template v-else>

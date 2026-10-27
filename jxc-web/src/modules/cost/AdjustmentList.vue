@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -52,7 +53,7 @@ async function load() {
     if (!current()) return
     rows.value = result.records; total.value = source != null ? result.records.length : result.total
     if (created.value) created.value = result.records.find(row => row.id === created.value?.id) ?? created.value
-  } catch (error) { if (current()) listError.value = error instanceof Error ? error.message : '调整记录读取失败，请重试' }
+  } catch (error) { if (current()) listError.value = feedbackMessage(error, '调整记录读取失败，请重试') }
   finally { if (current()) loading.value = false }
 }
 function search() { query.page = 1; load() }
@@ -91,7 +92,7 @@ async function create() {
     form.amount = 0; form.reason = ''; clearBatch()
     await load()
     if (scope === listContext()) ElMessage.success(created.value?.status === 'CONFIRMED' ? '调整已确认' : '调整已保存，请完成审批后确认')
-  } catch (error) { if (scope === listContext()) mutationError.value = error instanceof Error ? error.message : '保存调整失败，请重试' }
+  } catch (error) { if (scope === listContext()) mutationError.value = feedbackMessage(error, '保存调整失败，请重试') }
   finally { if (scope === listContext()) busy.value = false }
 }
 async function confirm(row: Row) {
@@ -105,7 +106,7 @@ async function confirm(row: Row) {
     if (scope !== listContext()) return
     if (updated.status === 'CONFIRMED') ElMessage.success('调整已确认')
     else ElMessage.info('调整尚未确认，请查看审批状态')
-  } catch (error) { if (scope === listContext()) mutationError.value = error instanceof Error ? error.message : '确认调整失败，请重试' }
+  } catch (error) { if (scope === listContext()) mutationError.value = feedbackMessage(error, '确认调整失败，请重试') }
   finally { if (scope === listContext()) busy.value = false }
 }
 const displayStatus = (row: Row) => row.status === 'CONFIRMED' ? row.status : row.approvalStatus && row.approvalStatus !== 'PENDING' ? row.approvalStatus : row.status
@@ -120,7 +121,7 @@ onMounted(load)
       <div class="page-title"><h2>成本调整</h2><el-tag type="info" effect="plain">{{ mockMode ? '演示模式' : '审批后确认生效' }}</el-tag></div>
       <p class="page-description">为指定批次补记成本差额。库存部分调整批次成本，已售部分计入当期已售成本。</p>
       <el-alert v-if="created" :type="created.status === 'CONFIRMED' ? 'success' : 'info'" :closable="false" class="feedback"><template #title>调整 {{ created.docNo }} <StatusTag :status="displayStatus(created)" />{{ created.status === 'CONFIRMED' ? '；已确认。' : '；已保存，审批通过后仍须确认才会生效。' }}</template></el-alert>
-      <el-alert v-if="mutationError" :title="mutationError" type="error" :closable="false" class="feedback" show-icon />
+      <div v-if="mutationError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <el-alert v-if="!canWrite" title="当前账号缺少成本调整或成本字段修改权限，可查看已有记录。" type="warning" :closable="false" class="feedback" />
       <el-form label-position="top" :disabled="busy || !canWrite" @submit.prevent="create">
         <div class="form-grid">
@@ -157,7 +158,7 @@ onMounted(load)
         <el-form-item label="调整对象"><el-select v-model="query.target" clearable placeholder="全部对象" @change="search"><el-option label="库存成本" value="INVENTORY" /><el-option label="已售成本" value="COGS" /><el-option label="库存与已售成本" value="MIXED" /></el-select></el-form-item>
         <el-form-item label="单据状态"><el-select v-model="query.status" clearable placeholder="全部状态" @change="search"><el-option label="待审批 / 确认" value="PENDING_APPROVAL" /><el-option label="已确认" value="CONFIRMED" /></el-select></el-form-item>
       </el-form>
-      <div v-if="listError" class="query-error" role="alert"><el-alert :title="listError" type="error" :closable="false" show-icon /><el-button @click="load">重新加载</el-button></div>
+      <div v-if="listError" class="query-error" role="alert"><div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div><el-button @click="load">重新加载</el-button></div>
       <template v-else>
         <div class="table-scroll" v-loading="loading" :aria-busy="loading">
           <el-table :data="rows" border stripe row-key="id" :empty-text="loading ? '正在读取调整记录…' : '没有匹配的调整记录'">

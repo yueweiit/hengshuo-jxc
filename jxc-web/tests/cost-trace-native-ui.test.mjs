@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as Vue from 'vue'
 import { compile } from '@vue/compiler-dom'
-import { loadVueScript } from './contracts/load-vue-script.mjs'
+import {loadVueScript, errorFeedback, feedbackText } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/cost/CostTraceDrawer.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
@@ -105,8 +105,8 @@ test('a failed trace displays the real reason and retries the same batch instead
     const h = page(async () => { if (fail) throw new Error(message); return native() })
     await assert.doesNotReject(h.p.open(2521))
     const failed = render(h)
-    assert.match(failed.text, /批次成本读取失败/); assert.doesNotMatch(failed.text, /没有找到批次|暂无估值变动/)
-    if (message) assert.ok(failed.text.includes(message))
+    assert.match(failed.text, /尚未加载成功/); assert.match(feedbackText(), /成本追溯读取失败/); assert.doesNotMatch(failed.text, /没有找到批次|暂无估值变动/)
+    if (message) { assert.ok(feedbackText().includes(message)); assert.ok(!failed.text.includes(message)) }
     const retry = failed.buttons.find(button => button['aria-label'] === '重新加载批次成本')
     assert.ok(retry, 'the failed trace must offer an accessible retry action even when the server omitted a reason')
     fail = false; await retry.onClick()
@@ -164,3 +164,6 @@ test('missing currencies never use a country currency or render null identities 
   assert.match(view.text, /币种未返回/); assert.match(view.text, /750/); assert.match(view.text, /30\.209333333333/)
   assert.doesNotMatch(view.text, /#null|#undefined|CNY|MXN/); h.stop()
 })
+
+// Errors are application-level; each case starts with a clean global presentation.
+test.beforeEach(() => errorFeedback.clearErrors())

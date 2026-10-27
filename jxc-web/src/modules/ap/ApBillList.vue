@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage, reportError } from '@/api/error-feedback'
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -59,7 +60,7 @@ function sourceLabel(row: Row) {
 function partnerLabel(row: Row) {
   return row.partnerName || `${row.sourceType === 'LGS_FEE' ? '物流商' : '供应商'} #${row.partnerId}`
 }
-function failureReason(error: unknown) { return error instanceof Error ? error.message : '发生未知错误，请重试' }
+
 const recognitionDialog = ref(false), recognitionBusy = ref(false), executionSubjects = ref<Row[]>([]), recognitionIntent = createCommandIntent()
 const recognitionForm = reactive<{ sourceKind: string; mode: string; executionSubjectUserId: number | null; version?: number }>({ sourceKind: 'PURCHASE', mode: 'BILL_CONFIRMED', executionSubjectUserId: null })
 async function loadRecognition() { const rule = await http.get<Row>('/ap/recognition-rules/' + recognitionForm.sourceKind); recognitionForm.mode = rule.mode; recognitionForm.version = rule.version; recognitionForm.executionSubjectUserId = rule.executionSubjectUserId ?? null; recognitionIntent.reset() }
@@ -111,7 +112,7 @@ async function loadSources() {
     sources.fees = res.fees
     sourceUi.tab = res.poLines.length || !res.fees.length ? 'purchase' : 'logistics'
   } catch (error) {
-    if (request === sourceRequest && visible.value && !disposed) sourceUi.loadError = failureReason(error)
+    if (request === sourceRequest && visible.value && !disposed) sourceUi.loadError = feedbackMessage(error, "发生未知错误，请重试")
   } finally {
     if (request === sourceRequest) sourceUi.loading = false
   }
@@ -142,7 +143,7 @@ async function create() {
       sources: sources.picked.map((s) => (s.sourceType === 'LGS_FEE' ? s : { ...s, qty: Math.min(s.qty, s.openQty) })),
     }, createIntent, { silent: true })
   } catch (error) {
-    if (!disposed) sourceUi.createError = failureReason(error)
+    if (!disposed) sourceUi.createError = feedbackMessage(error, "发生未知错误，请重试")
     return
   } finally {
     sourceUi.saving = false
@@ -151,7 +152,7 @@ async function create() {
   ElMessage.success('已生成草稿账单')
   closeSources()
   try { await page.value?.reload() }
-  catch (error) { ElMessage.warning(`草稿已生成，账单列表刷新失败：${failureReason(error)}。请重新查询，无需重复生成。`) }
+  catch (error) { reportError(error, { title: '草稿已生成，账单列表刷新未完成', nextStep: '请重新查询账单列表，无需重复生成草稿。' }) }
 }
 async function confirm(row: Row) {
   await http.postIdem(`/ap/bills/${row.id}/confirm`, {}, actionIntent)
@@ -192,7 +193,7 @@ async function confirm(row: Row) {
       <span v-if="!sourceUi.loading && !sourceUi.loadError" class="source-result-count">显示 {{ filteredSources.length }} / {{ currentSources.length }} 条</span>
     </div>
     <div v-if="sourceUi.loadError" class="source-load-error" role="alert">
-      <el-alert title="来源读取失败" :description="sourceUi.loadError" type="error" show-icon :closable="false" />
+      <div  class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <el-button @click="loadSources">重新加载</el-button>
     </div>
     <el-table v-show="!sourceUi.loadError" ref="sourceTable" v-loading="sourceUi.loading" element-loading-text="正在读取账单来源…"
@@ -219,7 +220,7 @@ async function confirm(row: Row) {
     </el-table>
     <p v-if="!sourceUi.loadError" class="source-scroll-hint">表格可左右滑动，查看往来对象、数量和金额。</p>
     <p v-if="selectionIssue" class="source-issue" role="alert">{{ selectionIssue }}</p>
-    <el-alert v-if="sourceUi.createError" class="source-submit-error" title="草稿生成失败" :description="sourceUi.createError" type="error" show-icon :closable="false" />
+    <div v-if="sourceUi.createError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
     <template #footer>
       <div class="source-footer">
         <div class="source-selection" aria-live="polite">

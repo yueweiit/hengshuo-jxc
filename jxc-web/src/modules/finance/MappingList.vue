@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onMounted, ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { getToken, getCountryId } from '@/utils/session'
@@ -20,7 +21,7 @@ const saving = ref(false), saveError = ref(''), action = ref(''), actionError = 
 const simulating = ref(false), simError = ref('')
 const busy = computed(() => saving.value || !!action.value)
 let readSequence = 0, simulationSequence = 0
-const errorText = (error: unknown) => error instanceof Error && error.message.trim() ? error.message : '请求失败，未收到有效的错误说明，请重试'
+
 const amountFields = ['postingInventoryAmount', 'postingCogsAmount', 'postingCounterpartAmount', 'differenceAmount', 'apAmount', 'costAmount', 'amount', 'amountExclTax', 'taxAmount', 'cogsAmount', 'billBaseAmount', 'payBaseAmount', 'fxDiff', 'inventoryAmount', 'soldAmount', 'baseAmount', 'purchaseAmount', 'feeAmount', 'offsetAmount', 'refundableAmount']
 const newLine = () => ({ direction: 'DEBIT', accountRule: { type: 'FIXED', code: '' }, amountExpr: 'amount', auxJson: '{}', summary: '', cashflowItemId: null })
 function clearSimulation() {
@@ -55,7 +56,7 @@ async function load() {
     if (!current()) return
     rows.value = templates; events.value = sourceEvents; cashflows.value = items
   } catch (error) {
-    if (current()) loadError.value = errorText(error)
+    if (current()) loadError.value = feedbackMessage(error, "请求失败，未收到有效的错误说明，请重试")
   } finally {
     if (current()) loading.value = false
   }
@@ -71,7 +72,7 @@ async function initialize() {
   } catch (error) {
     books.value = []; bookId.value = undefined
     await load()
-    booksError.value = errorText(error)
+    booksError.value = feedbackMessage(error, "请求失败，未收到有效的错误说明，请重试")
   } finally {
     booksLoading.value = false
   }
@@ -105,7 +106,7 @@ async function save() {
     editor.value = false
     await load()
   } catch (error) {
-    saveError.value = errorText(error)
+    saveError.value = feedbackMessage(error, "请求失败，未收到有效的错误说明，请重试")
   } finally {
     saving.value = false
   }
@@ -117,7 +118,7 @@ async function runAction(row: Row, name: string, execute: () => Promise<unknown>
     await execute()
     await load()
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') actionError.value = errorText(error)
+    if (error !== 'cancel' && error !== 'close') actionError.value = feedbackMessage(error, "请求失败，未收到有效的错误说明，请重试")
   } finally {
     action.value = ''
   }
@@ -142,7 +143,7 @@ async function simulate() {
     const result = await http.post<Row>('/fin/mapping-templates/' + templateId + '/simulate?eventId=' + selectedEvent, {}, { silent: true })
     if (current()) sim.value = result
   } catch (error) {
-    if (current()) simError.value = errorText(error)
+    if (current()) simError.value = feedbackMessage(error, "请求失败，未收到有效的错误说明，请重试")
   } finally {
     if (current()) simulating.value = false
   }
@@ -168,13 +169,9 @@ onMounted(initialize)
         <el-button :loading="booksLoading || loading" :disabled="busy || editor" @click="booksError ? initialize() : load()">刷新</el-button>
         <span v-if="bookId && !loading && !loadError" class="muted">共 {{ rows.length }} 个映射版本</span>
       </div>
-      <el-alert v-if="booksError" class="mapping-alert" type="error" title="账套读取失败" :description="booksError" :closable="false" show-icon>
-        <template #default><p>{{ booksError }}</p><el-button :loading="booksLoading" @click="initialize">重试读取账套</el-button></template>
-      </el-alert>
-      <el-alert v-else-if="loadError" class="mapping-alert" type="error" title="映射与试算资料读取失败" :closable="false" show-icon>
-        <template #default><p>{{ loadError }}</p><el-button @click="load">重试读取</el-button></template>
-      </el-alert>
-      <el-alert v-if="actionError" class="mapping-alert" type="error" title="操作未完成" :description="actionError" :closable="false" show-icon />
+      <div v-if="booksError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p><el-button :loading="booksLoading" @click="initialize">重试读取账套</el-button></div>
+      <div v-else-if="loadError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p><p>操作未完成，请查看全局提示。</p><el-button @click="load">重试读取</el-button></div>
+      <div v-if="actionError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <div v-if="booksLoading || loading" class="mapping-loading" role="status" aria-live="polite">{{ booksLoading ? '正在读取账套…' : '正在读取映射与试算资料…' }}<el-skeleton :rows="4" animated /></div>
       <el-empty v-else-if="!booksError && !bookId" :description="books.length ? '请先选择账套，再查看凭证映射' : '暂无可用账套，请先维护账套'" :image-size="72" />
       <div v-else-if="!booksError && !loadError" class="table-scroll">
@@ -215,7 +212,7 @@ onMounted(initialize)
         <el-button type="primary" plain :disabled="!eventId || busy" :loading="simulating" @click="simulate">{{ simError ? '重新试算' : '开始试算' }}</el-button>
       </div>
       <el-alert v-if="!selectedEvents.length" title="当前账套没有同类业务事件，暂时无法试算" type="info" :closable="false" show-icon />
-      <el-alert v-if="simError" class="mapping-alert" title="试算失败" :description="simError" type="error" :closable="false" show-icon />
+      <div v-if="simError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <p v-if="simulating" class="muted" role="status" aria-live="polite">正在读取所选事件并试算…</p>
       <template v-if="sim">
         <p class="simulation-source">试算来源：<span class="mono">{{ sim.sourceNo ?? '来源单号未记录' }}</span></p>
@@ -237,7 +234,7 @@ onMounted(initialize)
 
     <el-dialog v-model="editor" class="mapping-editor" :title="editingId ? '编辑待复核映射' : '新增映射版本'" width="min(1180px, calc(100vw - 24px))" top="5vh" :close-on-click-modal="!saving" :close-on-press-escape="!saving" :show-close="!saving">
       <p class="muted mapping-note">{{ books.find(b => b.id === bookId)?.name }} · 保存为待复核版本，复核后才生效。</p>
-      <el-alert v-if="saveError" class="mapping-alert" title="保存未完成" :description="saveError" type="error" :closable="false" show-icon />
+      <div v-if="saveError" class="request-state" role="status"><p class="muted">操作未完成，请查看全局提示。</p></div>
       <el-form label-position="top" :disabled="saving" @submit.prevent="save">
         <div class="editor-fields">
           <el-form-item label="事件类型"><el-input v-model="form.eventType" :disabled="!!editingId" placeholder="例如 AR_RECEIPT_CONFIRMED" /></el-form-item>
