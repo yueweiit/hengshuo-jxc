@@ -6,7 +6,8 @@ import { useUserStore } from '@/stores/user'
 import CrudPage from '@/components/crud/CrudPage.vue'
 import MoneyText from '@/components/MoneyText.vue'
 import type { ColumnDef, CrudPageExpose, FieldDef } from '@/components/crud/types'
-import { CURRENCY_SOURCE, COST_TREATMENTS } from '@/modules/master/options'
+import { CURRENCY_SOURCE } from '@/modules/master/options'
+import { feeTreatmentLabel } from './feeTreatment'
 import { CARRIER_SOURCE, ESTIMATE_FLAGS, FEE_REF_TYPES, FEE_STATUS, optionText } from '@/modules/shared/bizOptions'
 import { confirmAction, queryDefaults } from '@/utils/action'
 import FeeForm from './FeeForm.vue'
@@ -82,7 +83,7 @@ async function voidFee(f: Row) {
     <template #col-ref="{ row }">{{ row.refTypeLabel }} · <span class="mono">{{ row.refNo }}</span></template>
     <template #col-expenseItemName="{ row }">
       {{ row.expenseItemName }}
-      <div class="muted">{{ optionText(COST_TREATMENTS, row.costTreatment) }}</div>
+      <div class="muted">{{ feeTreatmentLabel(row.costTreatment) }}</div>
     </template>
     <template #col-estimateFlag="{ row }">
       <el-tag :type="row.estimateFlag === 'ESTIMATE' ? 'warning' : 'success'" size="small">{{ optionText(ESTIMATE_FLAGS, row.estimateFlag) }}</el-tag>

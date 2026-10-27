@@ -17,6 +17,11 @@ public interface LogisticsApi {
  record CostFee(long id,long bookId,long entityId,long shipmentId,String docNo,String status,String currency,BigDecimal amount,String baseCurrency,BigDecimal baseAmount,BigDecimal rate,String costStatus,String treatment,String estimateFlag,Long estimateFeeId,Long actualFeeId,int version,java.time.LocalDate bizDate){}
  record CostTarget(long batchId,long warehouseId,long productId,BigDecimal qty,BigDecimal grossWeight,BigDecimal volume){}
  record InventoryAccountingFact(long feeId,long confirmationOrder,BigDecimal amount,java.time.LocalDate bizDate){}
+ /** Null amount is an incomplete frozen fact, never a zero expense. */
+ record PeriodExpense(long id,String docNo,java.time.LocalDate bizDate,BigDecimal amount,boolean estimated,
+                      Long confirmationId,Long rateEventId,Long estimateRateEventId,String reason){}
+ /** Current authorization with immutable confirmation/rate facts at the requested cutoff; no writes. */
+ List<PeriodExpense> periodExpenses(Access access,long bookId,java.time.LocalDate from,java.time.LocalDate to,java.time.Instant knownAt);
  /** Frozen capitalized fee principal; actual fees contribute only their frozen difference. */
  List<InventoryAccountingFact> inventoryAccountingFacts(long countryId,long bookId);
  CostFee costFee(Access access,long feeId,boolean lock);
