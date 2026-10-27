@@ -129,12 +129,26 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         Files.writeString(target, json.writerWithDefaultPrettyPrinter().writeValueAsString(snapshot), StandardCharsets.UTF_8);
         String browserScript = System.getProperty("ai02.browserScript");
         if (browserScript != null) {
-            var browser = new ProcessBuilder("node", browserScript, target.toString(), String.valueOf(runtimePort),
+            var command = new ProcessBuilder("node", browserScript, target.toString(), String.valueOf(runtimePort),
                 System.getProperty("ai02.frontendDir"), System.getProperty("ai02.playwrightModule"))
-                .redirectErrorStream(true).redirectOutput(Path.of(directory, name + "-browser.log").toFile()).start();
+                .redirectErrorStream(true).redirectOutput(Path.of(directory, name + "-browser.log").toFile());
+            String applicationImage = System.getProperty("ai02.dockerApplicationImage");
+            boolean dockerProbe = applicationImage != null && Set.of("UI-native-flow-after-page-confirmations",
+                "PUR06-PUR07-transship-hold-release-fee").contains(name);
+            if (dockerProbe) {
+                command.environment().put("AI02_DOCKER_APPLICATION_IMAGE", applicationImage);
+                command.environment().put("AI02_DOCKER_GATEWAY_IMAGE", Objects.requireNonNull(System.getProperty("ai02.dockerGatewayImage")));
+                command.environment().put("AI02_VERIFIED_ARTIFACTS", Objects.requireNonNull(System.getProperty("ai02.verifiedArtifacts")));
+                command.environment().put("AI02_TEST_PG_CONTAINER", PgDatabase.PG.getContainerId());
+                command.environment().put("AI02_TEST_PG_PASSWORD", PgDatabase.PASSWORD);
+            }
+            var browser = command.start();
             try {
-                assertThat(browser.waitFor(120, TimeUnit.SECONDS)).as("独立页面核验应在120秒内退出").isTrue();
+                assertThat(browser.waitFor(dockerProbe ? 240 : 120, TimeUnit.SECONDS)).as("独立页面及显式Docker核验须在有界时间内退出").isTrue();
                 assertThat(browser.exitValue()).as("页面核验日志：" + name + "-browser.log").isZero();
+                if (dockerProbe) for (String table : List.of("inv_stock_summary", "inv_batch", "cst_inbound_cost", "lgs_receipt_line", "lgs_shipment_line", "lgs_hold", "lgs_hold_line", "lgs_fee"))
+                    assertThat(owner.queryForList("select * from " + table)).as("镜像只读核验不得改写原生事实：" + table)
+                        .containsExactlyInAnyOrderElementsOf(rows(snapshot.get(table)));
             } finally {
                 if (browser.isAlive()) {
                     browser.descendants().forEach(ProcessHandle::destroyForcibly);
@@ -375,6 +389,11 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         actor = 211;
         var shipment = shipment(export(domestic(purchase, 10, 0, 0, true), 10, true), 10);
         depart(shipment);
+        actor = 201;
+        var beforeDestinationReceipt = rows(((Map<?,?>) replenishments.list(c())).get("records")).getFirst();
+        assertThat((BigDecimal) beforeDestinationReceipt.get("fulfilledQty")).isZero();
+        assertThat(owner.queryForObject("select count(*) from inv_batch", Integer.class)).isZero();
+        evidence("GAP06-demand-before-destination-receipt");
         receive(deliver(shipment, 10), 10, 0, 0, 0);
         actor = 201;
         var listed = rows(((Map<?,?>) replenishments.list(c())).get("records")).getFirst();
@@ -435,7 +454,9 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         evidence("PUR12-configured-threshold-three-boundaries");
     }
 
-    @Test void supplierPriceAndPaymentChangesInvalidateTheOldApprovalBeforeAnyDelivery() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"supplierId", "unitPrice", "paymentTerms"})
+    void supplierPriceAndPaymentChangesInvalidateTheOldApprovalBeforeAnyDelivery(String field) throws Exception {
         configureTwoStagePurchaseRule();
         var order = purchase("PCS", 1, 101);
         approvePurchase(id(order));
@@ -443,9 +464,19 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         var approved = pur.get(c(), "orders", id(order));
         assertThat(approved).containsEntry("status", "CONFIRMED");
         seed("insert into md_supplier(id,country_id,code,name,settle_currency) values(805,101,'AI02-TEST-S2','AI02-TEST supplier two','CNY')");
-        var changed = pur.update(c(), "orders", id(order), Map.of("version", approved.get("version"),
-            "supplierId", 805, "paymentTerms", "NET30", "lines", List.of(Map.of("productId", 501, "unit", "PCS", "qty", 1, "unitPrice", 102))));
+        Map<String,Object> change = switch (field) {
+            case "supplierId" -> Map.of("supplierId", 805L);
+            case "unitPrice" -> Map.of("lines", List.of(Map.of("productId", 501, "unit", "PCS", "qty", 1, "unitPrice", 102)));
+            case "paymentTerms" -> Map.of("paymentTerms", "NET30");
+            default -> throw new IllegalArgumentException("未知关键字段：" + field);
+        };
+        var body = new LinkedHashMap<String,Object>(Map.of("version", approved.get("version")));
+        body.putAll(change);
+        var changed = pur.update(c(), "orders", id(order), body);
         assertThat(changed).containsEntry("status", "DRAFT");
+        assertThat(changed.get("supplierId")).isEqualTo(field.equals("supplierId") ? 805L : approved.get("supplierId"));
+        assertThat(changed.get("paymentTerms")).isEqualTo(field.equals("paymentTerms") ? "NET30" : approved.get("paymentTerms"));
+        assertThat((BigDecimal) first(changed).get("unitPrice")).isEqualByComparingTo(field.equals("unitPrice") ? "102" : "101");
         assertThat(owner.queryForObject("select status from wf_instance where doc_id=?", String.class, id(order))).isEqualTo("INVALIDATED");
         actor = 211;
         assertThatThrownBy(() -> domestic(changed, 1, 0, 0, true)).isInstanceOf(ApiException.class);
@@ -455,7 +486,7 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         actor = 211;
         domestic(changed, 1, 0, 0, true);
         assertThat(owner.queryForObject("select count(*) from wf_task where assignee_id=261 and status='APPROVED'", Integer.class)).isEqualTo(2);
-        evidence("PUR12-key-economic-fields-reapproval");
+        evidence("PUR12-key-economic-fields-reapproval-" + field);
     }
 
     @Test void cancellationAndClosePreserveAlreadyReceivedSourcesAndOnlyCancelUndeliveredQuantity() throws Exception {
@@ -498,6 +529,7 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
     }
 
     @Test void transshipDifferenceAndPartialHoldReleaseKeepEveryTransitBucketNonnegativeAndConserved() throws Exception {
+        seed("insert into md_dict(country_id,dict_type,code,label_i18n,seq,status) values(101,'HOLD_REASON','CUSTOMS','{\"zh-CN\":\"AI02-TEST CUSTOMS\"}',1,'ENABLED')");
         var purchase = purchase("PCS", 20, 7);
         actor = 211;
         var source = export(domestic(purchase, 20, 0, 0, true), 20, true);
