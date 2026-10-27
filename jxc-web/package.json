@@ -8,6 +8,9 @@
     "dev:demo": "vite --mode demo --port 5174",
     "build:demo": "vue-tsc -b && vite build --mode demo",
     "test": "node --test tests/*.test.mjs",
+    "test:e2e:core": "node --test e2e/*.test.mjs",
+    "test:e2e:prepare": "node e2e/preflight.mjs",
+    "test:e2e": "node e2e/run.mjs",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b"
@@ -28,6 +31,7 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@types/node": "^26.6.5",
     "@vitejs/plugin-vue": "^6.0.10",
     "msw": "^3.0.3",
