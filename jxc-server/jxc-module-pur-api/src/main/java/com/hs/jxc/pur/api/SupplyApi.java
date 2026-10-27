@@ -8,6 +8,8 @@ public interface SupplyApi {
  record ReturnSource(long orderId,long orderLineId,long supplierId,long productId,long entityId,long bookId,String currency,BigDecimal unitPrice,BigDecimal availableQty,BigDecimal orderAvailableQty){}
  /** Minimal immutable order identity for authorized accounting; no price or master-data grant. */
  Map<String,Object> financialOrderReference(Access access,long bookId,long orderId);
+ /** Caller authorizes its cost row and supplies that row's exact book/warehouse/order; returns identity only. */
+ Map<String,Object> costOrderReference(Access access,long bookId,long warehouseId,long orderId);
  /** Minimal labels for a caller-authorized logistics source; country/book/order/source identity is rechecked by PUR. */
  Map<String,Object> logisticsSourceReference(Access access,long bookId,long orderId,String sourceType,long sourceLineId);
  Source lockSource(Access access,String sourceType,long sourceLineId);
