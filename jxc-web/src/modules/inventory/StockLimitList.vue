@@ -6,7 +6,7 @@ import { allRecords } from '@/api/pagination'
 import { useUserStore } from '@/stores/user'
 import FieldInput from '@/components/crud/FieldInput.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
-import { ALERT_TAG, ALERT_TYPES, ALL_WAREHOUSE_SOURCE, USER_SOURCE, optionText } from '@/modules/shared/bizOptions'
+import { ALERT_TAG, ALERT_TYPES, ALL_WAREHOUSE_SOURCE, INVENTORY_LIMIT_OWNER_SOURCE, optionText } from '@/modules/shared/bizOptions'
 
 const intent = createCommandIntent()
 
@@ -85,7 +85,7 @@ onMounted(load)
             <template #default="{ row }"><el-switch v-model="row.alertEnabled" :disabled="!canEdit" size="small" /></template>
           </el-table-column>
           <el-table-column label="负责人" width="160">
-            <template #default="{ row }"><FieldInput v-model="row.ownerId" :field="{ prop: 'ownerId', label: '负责人', type: 'select', options: USER_SOURCE }" :disabled="!canEdit" clearable /></template>
+            <template #default="{ row }"><FieldInput v-model="row.ownerId" :field="{ prop: 'ownerId', label: '负责人', type: 'select', options: INVENTORY_LIMIT_OWNER_SOURCE }" :disabled="!canEdit" clearable /></template>
           </el-table-column>
           <el-table-column label="当前预警" min-width="120">
             <template #default="{ row }"><el-tag v-for="a in row.alerts" :key="a" :type="ALERT_TAG[a]" size="small">{{ optionText(ALERT_TYPES, a) }}</el-tag></template>
