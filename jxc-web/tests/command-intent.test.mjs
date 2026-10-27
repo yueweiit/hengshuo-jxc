@@ -86,7 +86,7 @@ test('a created outbound draft is reused when its confirmation response fails', 
   const order = { id: 1, openQty: 2, approvalStatus: 'APPROVED', fulfillmentStatus: 'PENDING_OUTBOUND', lines: [{ allocs: [{ id: 10, warehouseId: 401, warehouseName: 'Warehouse', openQty: 2 }] }] }
   const http = {
     get: async url => url.endsWith('/timeline') ? [] : url.endsWith('/outbound-check') ? { checks: [] } : order,
-    post: async () => ({ id: 500 + ++creates }),
+    post: async url => url.endsWith('/outbound-check') ? { checks: [] } : ({ id: 500 + ++creates }),
     postIdem: async (url, body, intent) => {
       if (url === '/sal/outbounds') return { id: 500 + ++creates }
       confirmations++

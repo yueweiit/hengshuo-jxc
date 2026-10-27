@@ -17,21 +17,23 @@ function deferred() {
 }
 function detail(read) {
   const route = reactive({ params: { id: '71' } }), country = { epoch: 1, timezone: 'America/Mexico_City' }
-  const calls = [], writes = [], warnings = [], stops = []
-  const names = ['order', 'loading', 'load', 'loadError', 'timeline', 'orderedTimeline', 'auditVisible', 'auditContext', 'timelineError', 'timelineLoading', 'loadTimeline', 'ob', 'checks', 'runCheck', 'checkError', 'checkLoading', 'checkedWarehouseId', 'canConfirmOut', 'confirmOut', 'fullOrder', 'warehouses']
+  const calls = [], writes = [], warnings = [], stops = [], navigations = [], storage = new Map()
+  const names = ['order', 'loading', 'load', 'loadError', 'timeline', 'orderedTimeline', 'auditVisible', 'auditContext', 'timelineError', 'timelineLoading', 'loadTimeline', 'ob', 'checks', 'runCheck', 'checkError', 'checkLoading', 'checkedWarehouseId', 'canConfirmOut', 'confirmOut', 'fullOrder', 'warehouses', 'paymentAction']
   const page = loadVueScript(file, {
     ...salesOrderActions, computed, reactive, ref, watch: (...args) => { const stop = watch(...args); stops.push(stop); return stop }, onMounted() {},
-    useRoute: () => route, useRouter: () => ({}), useCountryStore: () => country,
-    useUserStore: () => ({ hasPerm: () => true, fieldAccess: () => 'WRITE' }),
+    useRoute: () => route, useRouter: () => ({ push: target => navigations.push(target) }), useCountryStore: () => country,
+    useUserStore: () => ({ user: { id: 1 }, hasPerm: () => true, fieldAccess: () => 'WRITE' }),
+    sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     createCommandIntent: () => ({}), getCountryId: () => 2, getToken: () => 'owner', todayIn: () => '2026-10-24',
     commandPayloadFingerprint: value => JSON.stringify(value),
     ElMessage: { warning: value => warnings.push(value), success() {} },
     http: {
       get: async (url, params) => { calls.push({ url, params }); return read ? read(url, params) : url.endsWith('/timeline') ? [] : url.endsWith('/outbound-check') ? passed : fixture(Number(url.split('/').at(-1))) },
+      post: async (url, params) => { calls.push({ url, params, method: 'POST' }); return read ? read(url, params) : passed },
       postIdem: async (url, body) => { writes.push({ url, body }); return { id: 99 } },
     },
   }, names.filter(name => new RegExp(`(?:function|const|let)\\s+${name}\\b`).test(source)))
-  return { ...page, route, country, calls, writes, warnings, dispose: () => stops.forEach(stop => stop()) }
+  return { ...page, route, country, calls, writes, warnings, navigations, storage, dispose: () => stops.forEach(stop => stop()) }
 }
 
 test('订单读取失败清除旧订单并保留原因，重试后恢复详情', async t => {
@@ -199,4 +201,46 @@ test('授权仓库明细不反推被服务端移除的整单汇总', async t => 
   assert.equal(p.order.value.totalQty, undefined)
   assert.equal(p.order.value.totalAmount, undefined)
   assert.equal(p.order.value.lines.length, 1)
+})
+
+test('出库弹窗按当前数量预查，数量改变立即废弃上次检查', async t => {
+  const p = detail(); t.after(p.dispose); p.order.value = fixture()
+  p.ob.warehouseId = 401; p.ob.qty = { 31: 2 }; p.ob.visible = true
+  await p.runCheck()
+  assert.deepEqual(p.calls.at(-1), { url: '/sal/orders/71/outbound-check', params: { warehouseId: 401, lines: [{ allocId: 31, qty: 2 }] }, method: 'POST' })
+  assert.equal(p.canConfirmOut.value, true)
+  p.ob.qty[31] = 3
+  assert.equal(p.canConfirmOut.value, false)
+})
+
+test('旧数量的慢检查不能放行新数量，零数量不可确认', async t => {
+  const old = deferred()
+  const p = detail((_url, params) => params.lines?.[0]?.qty === 2 ? old.promise : passed)
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401; p.ob.qty = { 31: 2 }; p.ob.visible = true
+  const pending = p.runCheck(); p.ob.qty[31] = 3
+  old.resolve(passed); await pending
+  assert.equal(p.canConfirmOut.value, false)
+  p.ob.qty[31] = 0; await p.runCheck()
+  assert.equal(p.canConfirmOut.value, false)
+  await p.confirmOut(); assert.deepEqual(p.writes, [])
+})
+
+test('收款处理返回后恢复选择并重新检查，不复用离开前的通过结果', async t => {
+  const p = detail(); t.after(p.dispose); await p.load()
+  p.ob.warehouseId = 401; p.ob.qty = { 31: 2 }; p.ob.visible = true
+  await p.paymentAction('view')
+  assert.deepEqual(p.navigations.at(-1), { path: '/ar/receipts', query: { orderId: '71', source: 'sales-outbound', action: 'view' } })
+  p.route.query = { resumeOutbound: '1' }; await p.load()
+  assert.equal(p.ob.visible, true); assert.equal(p.ob.qty[31], 2)
+  assert.equal(p.calls.at(-2).method, 'POST')
+  assert.equal(p.canConfirmOut.value, true)
+  assert.equal(p.storage.size, 0)
+})
+
+test('现款检查缺少金额明细不能用零值代替或放行', async t => {
+  const p = detail(() => ({ checks: [{ item: '现款到账', ok: true, message: '通过' }] }))
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401
+  await p.runCheck()
+  assert.match(p.checkError.value, /收款.*明细|金额.*明细/)
+  assert.equal(p.canConfirmOut.value, false)
 })

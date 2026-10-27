@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
 import { allRecords } from '@/api/pagination'
@@ -17,12 +17,44 @@ const createIntent = createCommandIntent()
 
 type Row = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 const route = useRoute()
+const router = useRouter()
 const user = useUserStore(), country = useCountryStore()
 const page = ref<CrudPageExpose>()
 const confirmOnly = computed(() => route.path.endsWith('/confirm'))
 const options = reactive({ customers: [] as Row[], accounts: [] as Row[], orders: [] as Row[], books: [] as Row[] })
 const form = reactive({ visible: false, saving: false, bookId: undefined as number | undefined, customerId: undefined as number | undefined, method: 'CASH', amount: 0, fundAccountId: undefined as number | undefined, referenceNo: '', orderId: undefined as number | undefined, plannedAmount: 0 })
 const proof = reactive({ visible: false, id: 0 })
+const contextOrder = ref<Row | null>(null)
+const contextError = ref('')
+const contextLoading = ref(false)
+const showCustomerReceipts = ref(false)
+const sourceOrderId = computed(() => {
+  const raw = route.query?.orderId
+  if (raw == null) return undefined
+  const id = Number(raw)
+  return typeof raw === 'string' && /^\d+$/.test(raw) && Number.isSafeInteger(id) && id > 0 ? id : undefined
+})
+const receiptQuery = computed(() => ({ ...(confirmOnly.value ? { status: 'PENDING_CONFIRM' } : {}), ...(contextOrder.value && showCustomerReceipts.value ? { customerId: contextOrder.value.customerId, bookId: contextOrder.value.bookId } : sourceOrderId.value ? { orderId: sourceOrderId.value } : {}) }))
+let contextRequest = 0
+async function loadContext() {
+  const request = ++contextRequest
+  contextOrder.value = null; contextError.value = ''; contextLoading.value = false; showCustomerReceipts.value = false
+  if (route.query?.orderId == null) return
+  if (!sourceOrderId.value) { contextError.value = '来源订单编号不合法，请返回原订单重新操作'; return }
+  contextLoading.value = true
+  try {
+    const result = await http.get<Row>(`/ar/receipts/order-context/${sourceOrderId.value}`, undefined, { silent: true })
+    if (request !== contextRequest) return
+    if (!result || result.id !== sourceOrderId.value || !result.docNo) throw new Error('来源订单返回格式不正确')
+    contextOrder.value = result
+    if (route.query.action === 'register' && user.hasPerm('ar:receipt:create') && !confirmOnly.value) await open()
+  } catch (error) {
+    if (request === contextRequest) contextError.value = error instanceof Error ? error.message : '来源订单读取失败'
+  } finally { if (request === contextRequest) contextLoading.value = false }
+}
+function returnToOrder() {
+  if (contextOrder.value) router.push({ path: `/sales/orders/${contextOrder.value.id}`, query: { resumeOutbound: '1' } })
+}
 
 const columns: ColumnDef[] = [
   { prop: 'docNo', label: '收款单', width: 180 },
@@ -32,6 +64,7 @@ const columns: ColumnDef[] = [
   { prop: 'openAmount', label: '未核销', width: 130 },
   { prop: 'accountName', label: '账户', minWidth: 140 },
   { prop: 'status', label: '状态', type: 'status', width: 110 },
+  { prop: 'orders', label: '订单分配', minWidth: 190 },
   { prop: 'referenceNo', label: '参考号', width: 140 },
 ]
 const searchFields: FieldDef[] = [
@@ -43,17 +76,26 @@ const searchFields: FieldDef[] = [
 
 async function open() {
   createIntent.reset()
+  const scope = JSON.stringify([route.query?.orderId, country.epoch, user.user?.id])
   const [customers, accounts, orders, books] = await Promise.all([
     allRecords<Row>('/md/customers', { status: 'ENABLED' }),
     allRecords<Row>('/md/fund-accounts', { status: 'ENABLED' }),
-    allRecords<Row>('/sal/orders'),
+    sourceOrderId.value ? http.get<Row>(`/ar/receipts/order-context/${sourceOrderId.value}`, undefined, { silent: true }).then(order => [order]) : allRecords<Row>('/sal/orders'),
     http.get<Row[]>('/org/books'),
   ])
+  if (scope !== JSON.stringify([route.query?.orderId, country.epoch, user.user?.id])) throw new Error('国家、账号或来源订单已切换，请重新打开收款登记')
   options.customers = customers
   options.accounts = accounts
   options.books = books
   options.orders = orders
+  const selected = sourceOrderId.value ? orders.find(order => order.id === sourceOrderId.value) : undefined
+  if (route.query?.orderId != null && !selected) throw new Error('来源订单不可读取或无权访问，请返回原订单核对')
   Object.assign(form, { visible: true, bookId: books.length === 1 ? books[0]!.id : undefined, method: 'CASH', amount: 0, customerId: undefined, fundAccountId: undefined, referenceNo: '', orderId: undefined, plannedAmount: 0 })
+  if (selected) Object.assign(form, { bookId: selected.bookId, customerId: selected.customerId, orderId: selected.id })
+}
+async function openFromToolbar() {
+  try { await open() }
+  catch (error) { ElMessage.warning(error instanceof Error ? error.message : '收款登记选项读取失败') }
 }
 async function save() {
   if (!form.bookId) return ElMessage.warning('请选择收款账套')
@@ -63,7 +105,7 @@ async function save() {
       bookId: form.bookId, customerId: form.customerId, method: form.method, amount: form.amount, fundAccountId: form.fundAccountId, referenceNo: form.referenceNo,
       orders: form.orderId && form.plannedAmount > 0 ? [{ orderId: form.orderId, plannedAmount: form.plannedAmount }] : [],
     }, createIntent)
-    ElMessage.success('已登记，转账需财务确认到账')
+    ElMessage.success('已登记；现金和转账都需要确认到账，才能计入订单收款')
     form.visible = false
     page.value?.reload()
   } finally {
@@ -80,16 +122,23 @@ async function reject(row: Row) {
   ElMessage.success('已驳回')
   page.value?.reload()
 }
+watch(() => [route.query?.orderId, route.query?.action, confirmOnly.value, country.epoch, user.user?.id], () => { form.visible = false; proof.visible = false; loadContext() })
+onMounted(loadContext)
 </script>
 
 <template>
-  <CrudPage ref="page" :title="confirmOnly ? '到账确认' : '收款登记'" resource="/ar/receipts" :columns="columns" :search-fields="searchFields" :default-query="confirmOnly ? { status: 'PENDING_CONFIRM' } : {}" :can-create="false" :can-toggle="false" :actions-width="220">
+  <p v-if="contextLoading" class="muted" role="status">正在读取来源订单…</p>
+  <el-alert v-if="contextError" title="来源订单读取失败" :description="contextError" type="error" :closable="false" />
+  <el-button v-if="contextError" @click="loadContext">重新读取来源订单</el-button>
+  <div v-if="contextOrder" class="source-order"><span>当前订单：{{ contextOrder.docNo }}；处理后请返回订单重新检查出库条件。</span><el-button v-if="user.hasPerm('sal:order:view')" link type="primary" @click="returnToOrder">返回本订单</el-button><el-button link @click="showCustomerReceipts = !showCustomerReceipts">{{ showCustomerReceipts ? '只看本单收款' : '查看该客户收款（含未分配）' }}</el-button></div>
+  <CrudPage v-if="route.query.orderId == null || contextOrder" :key="JSON.stringify([receiptQuery, country.epoch])" ref="page" :title="confirmOnly ? '到账确认' : '收款登记'" resource="/ar/receipts" :columns="columns" :search-fields="searchFields" :default-query="receiptQuery" :can-create="false" :can-toggle="false" :actions-width="220">
     <template #toolbar>
-      <el-button v-if="!confirmOnly && user.hasPerm('ar:receipt:create')" type="primary" @click="open">登记收款</el-button>
+      <el-button v-if="!confirmOnly && user.hasPerm('ar:receipt:create')" type="primary" :disabled="!!contextError || contextLoading" @click="openFromToolbar">登记收款</el-button>
     </template>
-    <template #header><p class="muted">现金和转账都先登记。转账确认到账后才能核销；系统不连接银行。</p></template>
+    <template #header><p class="muted">现金和转账都先登记，再确认到账。只有已确认且分配到订单的收款才能用于现款出库；系统不连接银行。</p></template>
     <template #col-amount="{ row }"><MoneyText :value="row.amount" :currency="row.currency" /></template>
     <template #col-openAmount="{ row }"><MoneyText :value="row.openAmount" :currency="row.currency" /></template>
+    <template #col-orders="{ row }"><span v-if="Array.isArray(row.orders)">{{ row.orders.length ? row.orders.map((order: Row) => order.orderNo).join('、') : '未分配到订单' }}</span><span v-else>分配信息未返回</span></template>
     <template #row-actions="{ row }">
       <el-button v-if="row.method === 'TRANSFER'" link @click="proof.id = row.id; proof.visible = true">凭证</el-button>
       <template v-if="row.status === 'PENDING_CONFIRM' && user.hasPerm('ar:receipt:confirm')">

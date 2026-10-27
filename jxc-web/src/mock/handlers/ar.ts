@@ -226,6 +226,12 @@ function receivableOut(r: Row, ctx?: Ctx) {
 }
 
 export const arHandlers = [
+  http.get(`${API}/ar/receipts/order-context/:id`, handle((ctx, { params }) => {
+    requirePerm(ctx, ['ar:receipt:create', 'ar:receipt:confirm'])
+    const order = getDb().salOrders.find(order => order.countryId === ctx.countryId && order.id === Number(params.id))
+    if (!order || !canDocumentDataAccess(ctx, 'SAL_ORDER', order)) notFound()
+    return { id: order.id, docNo: order.docNo, bookId: order.bookId, customerId: order.customerId, currency: order.currency }
+  })),
   http.get(`${API}/ar/receipts`, handle((ctx) => {
     requirePerm(ctx, ['ar:receipt:create', 'ar:receipt:confirm', 'ar:receivable:view'])
     const sp = ctx.url.searchParams
@@ -233,6 +239,8 @@ export const arHandlers = [
     if (sp.get('status')) rows = rows.filter((r) => r.status === sp.get('status'))
     if (sp.get('method')) rows = rows.filter((r) => r.method === sp.get('method'))
     if (sp.get('customerId')) rows = rows.filter((r) => r.customerId === Number(sp.get('customerId')))
+    if (sp.get('bookId')) rows = rows.filter((r) => r.bookId === Number(sp.get('bookId')))
+    if (sp.get('orderId')) rows = rows.filter((r) => (r.orders ?? []).some((allocation: Row) => allocation.orderId === Number(sp.get('orderId'))))
     if (sp.get('keyword')) {
       const k = sp.get('keyword')!.toLowerCase()
       rows = rows.filter((r) => r.docNo.toLowerCase().includes(k) || String(r.referenceNo ?? '').toLowerCase().includes(k))

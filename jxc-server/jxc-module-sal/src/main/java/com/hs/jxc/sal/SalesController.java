@@ -13,6 +13,7 @@ public class SalesController {
  @PostMapping("/orders/{id}/cancel-lines")public ApiEnvelope cancel(@PathVariable long id,@RequestBody Map<String,Object>b,@RequestHeader(value="Idempotency-Key",required=false)String key){return ok(s.cancel(c(),Inputs.id(id),b,key,false));}
  @PostMapping("/orders/{id}/close")public ApiEnvelope close(@PathVariable long id,@RequestBody Map<String,Object>b,@RequestHeader(value="Idempotency-Key",required=false)String key){return ok(s.cancel(c(),Inputs.id(id),b,key,true));}
  @GetMapping("/orders/{id}/outbound-check")public ApiEnvelope check(@PathVariable long id,@RequestParam long warehouseId){return ok(s.check(c(),Inputs.id(id),Inputs.id(warehouseId)));}
+ @PostMapping("/orders/{id}/outbound-check")public ApiEnvelope checkSelection(@PathVariable long id,@RequestBody Map<String,Object>b){return ok(s.checkSelection(c(),Inputs.id(id),b));}
  @GetMapping("/orders/{id}/timeline")public ApiEnvelope timeline(@PathVariable long id){return ok(s.timeline(c(),Inputs.id(id)));}
  @GetMapping("/prices")public ApiEnvelope prices(@RequestParam Map<String,String>q){return ok(s.prices(c(),q));}
  @GetMapping("/prices/resolve")public ApiEnvelope resolve(@RequestParam Map<String,String>q){return ok(s.resolvePrice(c(),q));}

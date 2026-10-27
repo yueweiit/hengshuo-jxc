@@ -4,6 +4,110 @@ import com.hs.jxc.common.api.ApiException;import com.hs.jxc.common.context.Reque
 /** Real PostgreSQL and object storage business acceptance, without mocked domain modules. */
 @org.springframework.context.annotation.Import(CountryCalendarIT.TimeConfiguration.class)
 class SalesIT extends BasePgIT {
+ @Test void currentAndLegacyOrderProofNamesAreBothAcceptedWithoutExtraReceipts(){
+  var o=approved(5,"CASH");doc(o);
+  var receipt=ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","TRANSFER","amount",100,"referenceNo","bank-reference","bizTime","2026-10-15T12:00:00Z","orders",List.of(Map.of("orderId",id(o),"plannedAmount",100))),key());
+  ar.receiptAction(c(),id(receipt),"confirm",Map.of("arrivalDate","2026-10-15"),key());
+  for(String type:List.of("SALES_ORDER","SAL_ORDER")){
+   var proof=attachments.upload(c(),type,id(o),"PAYMENT_PROOF",type+".txt","text/plain",type.getBytes(StandardCharsets.UTF_8));
+   var response=(Map<?,?>)sales.check(c(),id(o),401);
+   var evidenceCheck=((List<?>)response.get("checks")).stream().map(value->(Map<?,?>)value).filter(value->"收款凭证".equals(value.get("item"))).findFirst().orElseThrow();
+   assertThat(evidenceCheck.get("ok")).isEqualTo(true);
+   attachments.unlink(c(),id(proof),"isolated proof-name scenario");
+  }
+  assertThat(owner.queryForObject("select count(*) from ar_receipt",Integer.class)).isEqualTo(1);
+ }
+ @Test void warehouseOnlyVisibilityDoesNotExposeWholeOrderPaymentTotals(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  seed("delete from sys_user_data_scope where user_id=201");seed("insert into sys_user_data_scope(country_id,user_id,scope_type,warehouse_id,granted_by) values(101,201,'WAREHOUSE',401,201)");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(p).doesNotContainKeys("requiredAmount","confirmedAmount","shortageAmount","shippedAmount","outboundAmount","pendingAmount");
+  assertThat(p.get("amountsVisible")).isEqualTo(false);
+ }
+ @Test void persistedOutboundCheckKeepsResultWithoutEmbeddingNewPaymentTotals(){
+  var o=approved(5,"CASH");doc(o);cash(o,100);
+  sales.confirmOutbound(c(),id(out(o,5)),Map.of("bizDate","2026-10-15"),key());
+  assertThat(owner.queryForObject("select check_result::text from sal_outbound",String.class)).doesNotContain("requiredAmount","confirmedAmount","pendingAmount");
+ }
+ @Test void paymentProofStorageFailureIsNotLackOfPermission()throws Exception{
+  var o=approved(5,"CASH");doc(o);
+  var receipt=ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","TRANSFER","amount",100,"referenceNo","bank-reference","bizTime","2026-10-15T12:00:00Z","orders",List.of(Map.of("orderId",id(o),"plannedAmount",100))),key());
+  ar.receiptAction(c(),id(receipt),"confirm",Map.of("arrivalDate","2026-10-15"),key());
+  var proof=attachments.upload(c(),"SAL_ORDER",id(o),"PAYMENT_PROOF","payment.txt","text/plain","payment proof".getBytes(StandardCharsets.UTF_8));
+  String object=owner.queryForObject("select storage_key from sys_attachment where id=?",String.class,id(proof));
+  try(var client=MinioTestStorage.client()){client.removeObject(io.minio.RemoveObjectArgs.builder().bucket(MinioTestStorage.BUCKET).object(object).build());}
+  assertThatThrownBy(()->sales.check(c(),id(o),401)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("ATTACHMENT_MISSING");
+ }
+ @Test void selectedPrecheckAddsPastOutboundWithoutLosingUsedReceiptCoverage(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  sales.confirmOutbound(c(),id(out(o,2)),Map.of("bizDate","2026-10-15"),key());
+  var p=payment(sales.checkSelection(c(),id(o),Map.of("warehouseId",401,"lines",List.of(Map.of("allocId",id(alloc(o)),"qty",4)))));
+  assertThat(new BigDecimal(p.get("shippedAmount").toString())).isEqualByComparingTo("40");
+  assertThat(new BigDecimal(p.get("outboundAmount").toString())).isEqualByComparingTo("80");
+  assertThat(new BigDecimal(p.get("requiredAmount").toString())).isEqualByComparingTo("120");
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isEqualByComparingTo("100");
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("20");
+ }
+ @Test void pendingReceiptIsExplainedButCannotCountAsConfirmedCash(){
+  var o=approved(10,"CASH");doc(o);
+  ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","CASH","amount",100,"bizTime","2026-10-15T12:00:00Z","orders",List.of(Map.of("orderId",id(o),"plannedAmount",100))),key());
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isZero();
+  assertThat(new BigDecimal(p.get("pendingAmount").toString())).isEqualByComparingTo("100");
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("200");
+  assertThat(p.get("canManageReceipts")).isEqualTo(true);
+ }
+ @Test void confirmedButUnassignedReceiptIsNotCashForThisOrder(){
+  var o=approved(10,"CASH");doc(o);
+  var receipt=ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","CASH","amount",200,"bizTime","2026-10-15T12:00:00Z"),key());
+  ar.receiptAction(c(),id(receipt),"confirm",Map.of("arrivalDate","2026-10-15"),key());
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isZero();
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("200");
+ }
+ @Test void precheckRejectsForeignDuplicateAndZeroAllocations(){
+  var first=approved(5,"CASH");var second=approved(5,"CASH");doc(first);
+  assertThatThrownBy(()->sales.checkSelection(c(),id(first),Map.of("warehouseId",401,"lines",List.of(Map.of("allocId",id(alloc(second)),"qty",1))))).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SYS_BAD_REQUEST");
+  assertThatThrownBy(()->sales.checkSelection(c(),id(first),Map.of("warehouseId",401,"lines",List.of(Map.of("allocId",id(alloc(first)),"qty",0))))).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_QTY_EXCEEDED");
+  var line=Map.of("allocId",id(alloc(first)),"qty",1);
+  assertThatThrownBy(()->sales.checkSelection(c(),id(first),Map.of("warehouseId",401,"lines",List.of(line,line)))).isInstanceOf(ApiException.class);
+ }
+ @Test void hiddenTotalsAreRemovedByServerAndReceiptEvidenceLackOfAccessIsExplicit(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  seed("update sys_role set permissions='[\"sal:order:view\",\"sal:outbound:create\"]',field_policies='{\"ORDER_TOTAL\":\"HIDDEN\",\"CUSTOMER_PRICE\":\"WRITE\",\"BANK_INFO\":\"HIDDEN\"}' where id=202");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  var result=sales.check(c(),id(o),401);var p=payment(result);
+  assertThat(p).doesNotContainKeys("requiredAmount","confirmedAmount","shortageAmount","shippedAmount","outboundAmount","pendingAmount");
+  assertThat(p.get("canManageReceipts")).isEqualTo(false);
+  assertThat(result.toString()).contains("请有出库确认权限").doesNotContain("缺少有效收款凭证");
+ }
+ @Test void receiptOnlyConfirmerCanReadMinimalOrderContextWithoutSalesAmounts(){
+  var o=order(5,"CASH");
+  seed("update sys_role set permissions='[\"ar:receipt:confirm\"]' where id=202");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  assertThat(ar.receiptOrderContext(c(),id(o))).containsEntry("id",id(o)).containsEntry("bookId",601L).containsEntry("customerId",801L).doesNotContainKeys("totalAmount","lines","paidAmount");
+ }
+ @SuppressWarnings("unchecked") Map<String,Object> payment(Object result){
+  var response=(Map<String,Object>)result;
+  return (Map<String,Object>)((List<Map<String,Object>>)response.get("checks")).stream().filter(x->x.get("item").equals("现款到账")).findFirst().orElseThrow().get("payment");
+ }
+ @Test void cashPrecheckExplainsConfirmedAllocationAndShortageWithoutBusinessWrites(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  var before=owner.queryForMap("SELECT (SELECT count(*) FROM sal_outbound) outbounds,(SELECT count(*) FROM ar_receipt) receipts,(SELECT count(*) FROM ar_writeoff) writeoffs");
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(p).isNotNull();
+  assertThat(new BigDecimal(p.get("requiredAmount").toString())).isEqualByComparingTo("200");
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isEqualByComparingTo("100");
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("100");
+  assertThat(owner.queryForMap("SELECT (SELECT count(*) FROM sal_outbound) outbounds,(SELECT count(*) FROM ar_receipt) receipts,(SELECT count(*) FROM ar_writeoff) writeoffs")).isEqualTo(before);
+ }
+ @Test void postedPrecheckUsesSelectedQuantityAndDoesNotCreateAnOutbound()throws Exception{
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  String body="{\"warehouseId\":401,\"lines\":[{\"allocId\":"+id(alloc(o))+",\"qty\":4}]}";
+  var request=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/v1/sal/orders/"+id(o)+"/outbound-check")).header("Authorization","Bearer sales-fixture").header("X-Country-Id","101").header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
+  var response=HttpClient.newHttpClient().send(request,HttpResponse.BodyHandlers.ofString());
+  assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+  assertThat(response.body()).contains("\"requiredAmount\":80","\"confirmedAmount\":100","\"shortageAmount\":0");
+  assertThat(owner.queryForObject("select count(*) from sal_outbound",Integer.class)).isZero();
+ }
  @Autowired CountryCalendarIT.BusinessClock clock;
  @Value("${local.server.port}")int port;@Autowired SalesService sales;@Autowired ReceivablesService ar;@Autowired InventoryApi inv;@Autowired AttachmentService attachments;
  static final String HASH=com.hs.jxc.sys.service.SessionService.digest("sales-fixture");RequestContext c(){return new RequestContext(201,101L,"sales-it",HASH);}String key(){return UUID.randomUUID().toString();}long id(Map<String,Object>r){return ((Number)r.get("id")).longValue();}

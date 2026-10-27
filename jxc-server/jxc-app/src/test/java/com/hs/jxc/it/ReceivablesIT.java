@@ -3,6 +3,11 @@ import com.hs.jxc.ar.ReceivablesService;import com.hs.jxc.common.context.Request
 import java.math.BigDecimal;import java.time.LocalDate;import java.util.*;import java.util.function.Supplier;
 import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;import static org.assertj.core.api.Assertions.*;
 class ReceivablesIT extends BasePgIT {
+ @Test @SuppressWarnings("unchecked") void receiptOrderFilterFindsOnlyTheRequestedOrdersOriginalReceipts(){
+  for(long order:List.of(1001L,1002L))ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","CASH","amount",100,"bizTime","2026-10-15T12:00:00Z","orders",List.of(Map.of("orderId",order,"plannedAmount",100))),key());
+  var result=(Map<String,Object>)ar.list(c(),"receipts",Map.of("orderId","1001"));
+  assertThat((List<?>)result.get("records")).hasSize(1);
+ }
  @Autowired ReceivablesService ar;@Autowired AuthorizationService auth;
  static final String HASH=SessionService.digest("ar-fixture");final LocalDate day=LocalDate.of(2026,10,15);
  RequestContext c(){return new RequestContext(201,101L,"ar-it",HASH);}String key(){return UUID.randomUUID().toString();}long id(Map<String,Object>r){return ((Number)r.get("id")).longValue();}

@@ -7,6 +7,20 @@ const ar = await import('../src/mock/handlers/ar.ts')
 const ap = await import('../src/mock/handlers/ap.ts')
 const rtn = await import('../src/mock/handlers/rtn.ts')
 
+test('演示出库数量检查和收款定位遵守实际页面的新接口契约', async () => {
+  const db = freshDb()
+  const product = db.products[0]
+  const order = sal.createSalesOrder(context(), { customerId: 601, paymentType: 'CASH', lines: [{ productId: product.id, unit: product.baseUnit, qty: 10, warehouseId: 401, price: 10, manualPriceFlag: true }] })
+  const checked = await callApi(sal.salHandlers, 'POST', `/sal/orders/${order.id}/outbound-check`, { warehouseId: 401, lines: [{ allocId: order.lines[0].allocs[0].id, qty: 4 }] })
+  assert.equal(checked.status, 200)
+  assert.equal(checked.data.checks.find(row => row.item === '现款到账').payment.requiredAmount, 40)
+  const selected = await callApi(ar.arHandlers, 'GET', `/ar/receipts/order-context/${order.id}`)
+  assert.equal(selected.status, 200)
+  assert.equal(selected.data.id, order.id)
+  assert.equal(selected.data.customerId, 601)
+  assert.equal(selected.data.totalAmount, undefined)
+})
+
 function creditFixture(db) {
   db.arCreditRules = [{ id: 90001, countryId: 1, targetType: 'CUSTOMER', targetId: 601, paymentMode: 'CREDIT_ALLOWED', creditLimit: 1000, currency: 'MXN', termDays: 30, dueBasis: 'OUTBOUND_DATE', overduePolicy: 'WARN', allowException: false, effectiveFrom: '2020-01-01', status: 'ACTIVE' }]
   db.arReceivables = []
