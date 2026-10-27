@@ -47972,7 +47972,7 @@
       "docs/backend/contracts/m4-surface.json",
       "docs/backend/contracts/closure-surface.json"
     ],
-    "operationCount": 299,
+    "operationCount": 300,
     "note": "Reviewed main-flow declarations are separate from bounded Controller registration and service/HTTP verification evidence."
   }
 }
