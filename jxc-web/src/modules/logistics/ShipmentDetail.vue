@@ -16,7 +16,7 @@ import FieldInput from '@/components/crud/FieldInput.vue'
 import { confirmAction } from '@/utils/action'
 import { formatDate, countryDateTimeInput, countryDateTimeToIso } from '@/utils/format'
 import { nowMs } from '@/utils/datetime'
-import { BUCKETS, HOLD_REASON_SOURCE, MANUAL_NODES, MX_WAREHOUSE_SOURCE, TRANSPORT_MODES, USER_SOURCE, optionText } from '@/modules/shared/bizOptions'
+import { BUCKETS, HOLD_REASON_SOURCE, MANUAL_NODES, MX_WAREHOUSE_SOURCE, TRANSPORT_MODES, HOLD_OWNER_SOURCE, optionText } from '@/modules/shared/bizOptions'
 import ShipmentForm from './ShipmentForm.vue'
 import FeeForm from './FeeForm.vue'
 import './shipment-detail.scss'
@@ -556,7 +556,7 @@ onMounted(load)
           <el-col :span="12"><el-form-item label="停放地点" required><el-input v-model="hold.parkLocation" placeholder="例如：曼萨尼约港外堆场 B 区" /></el-form-item></el-col>
           <el-col :span="12">
             <el-form-item label="责任人" required>
-              <FieldInput v-model="hold.ownerId" :field="{ prop: 'ownerId', label: '责任人', type: 'select', options: USER_SOURCE }" />
+              <FieldInput v-model="hold.ownerId" :field="{ prop: 'ownerId', label: '责任人', type: 'select', options: HOLD_OWNER_SOURCE }" />
             </el-form-item>
           </el-col>
           <el-col :span="12"><el-form-item label="复查日期" required><el-date-picker v-model="hold.reviewDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" /></el-form-item></el-col>
