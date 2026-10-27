@@ -48,8 +48,8 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
             "pur:receipt:confirm", "pur:export:create", "pur:export:confirm", "lgs:shipment:create",
             "lgs:shipment:edit", "lgs:shipment:view", "lgs:shipment:dispatch", "lgs:node:record",
             "lgs:delivery:create", "lgs:delivery:dispatch", "lgs:discrepancy:handle", "lgs:hold:create",
-            "lgs:hold:release", "lgs:transship:create", "lgs:fee:create", "lgs:fee:confirm"));
-        job(221, 222, "AI02-WAREHOUSE", List.of("lgs:shipment:view", "lgs:receipt:confirm"));
+            "lgs:hold:release", "lgs:transship:create", "lgs:fee:create", "lgs:fee:confirm"), Map.of("COST", "WRITE"));
+        job(221, 222, "AI02-WAREHOUSE", List.of("lgs:shipment:view", "lgs:receipt:confirm"), Map.of("COST", "HIDDEN", "ORDER_TOTAL", "HIDDEN"));
         seed("insert into md_exchange_rate(country_id,from_ccy,to_ccy,rate_date,scope,rate,status,confirmed_by,confirmed_at) values(101,'CNY','MXN','2026-10-15','PURCHASE_COST',2.5,'CONFIRMED',201,clock_timestamp())");
         assertThat(owner.queryForList("select permissions::text from sys_role", String.class))
             .noneMatch(value -> value.contains("\"*\""));
@@ -59,10 +59,10 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         seed("update sys_role set permissions=?::jsonb where id=?", json.writeValueAsString(permissions), role);
     }
 
-    private void job(long user, long role, String code, List<String> permissions) {
+    private void job(long user, long role, String code, List<String> permissions, Map<String,String> fieldPolicies) {
         seed("insert into sys_user(id,username,password_hash,display_name,status) values(?,?,'unused',?,'ENABLED')", user, code, code);
         seed("insert into sys_session(token_hash,user_id,expires_at) values(?,?,clock_timestamp()+interval '1 hour')", token(user), user);
-        seed("insert into sys_role(id,country_id,code,name,permissions,field_policies) values(?,101,?,?,?::jsonb,'{\"COST\":\"WRITE\",\"ORDER_TOTAL\":\"WRITE\"}')", role, code, code, json.writeValueAsString(permissions));
+        seed("insert into sys_role(id,country_id,code,name,permissions,field_policies) values(?,101,?,?,?::jsonb,?::jsonb)", role, code, code, json.writeValueAsString(permissions), json.writeValueAsString(fieldPolicies));
         seed("insert into sys_user_role(country_id,user_id,role_id) values(101,?,?)", user, role);
         seed("insert into sys_user_data_scope(country_id,user_id,scope_type,book_id,granted_by) values(101,?,'BOOK',601,201)", user);
         if (Set.of(211L, 221L, 231L).contains(user))
@@ -263,31 +263,50 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         depart(shipment);
         var receipt = receive(deliver(shipment, 2), 2, 0, 0, 0);
         long receiptLine = id(first(receipt));
+        assertThat(owner.queryForMap("select book_id,warehouse_id,po_id from cst_inbound_cost where source_type='LGS_RECEIPT' and source_line_id=?", receiptLine))
+            .containsExactlyInAnyOrderEntriesOf(Map.of("book_id", 601L, "warehouse_id", 401L, "po_id", id(order)));
         var before = owner.queryForMap("select (select count(*) from sys_biz_event) events,(select count(*) from sys_audit_log) audits,(select count(*) from inv_batch) batches");
         actor = 201;
         permissions(202, List.of("cst:cost:view"));
+        seed("update sys_role set field_policies='{\"COST\":\"READ\",\"ORDER_TOTAL\":\"HIDDEN\"}' where id=202");
         inCountry(101, () -> {
             var access = authorization.authorize(c());
             assertThat(access.has("cst:cost:view")).isTrue();
             assertThat(access.has("lgs:shipment:view")).isFalse();
+            assertThat(access.has("pur:order:view")).isFalse();
             assertThat(lgs.receiptCostReference(access, 601, receiptLine))
                 .containsExactlyInAnyOrderEntriesOf(Map.of("receiptId", id(receipt), "receiptNo", receipt.get("docNo")));
+            assertThat(pur.costOrderReference(access, 601, 401, id(order)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of("bookId", 601L, "supplierId", 801L, "docNo", order.get("docNo")));
             return null;
         });
         assertThatThrownBy(() -> inCountry(101, () -> lgs.receiptCostReference(authorization.authorize(c()), 602, receiptLine)))
             .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
         assertThatThrownBy(() -> inCountry(101, () -> lgs.receiptCostReference(authorization.authorize(c()), 601, receiptLine + 9999)))
             .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
+        assertThatThrownBy(() -> inCountry(101, () -> pur.costOrderReference(authorization.authorize(c()), 602, 401, id(order))))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
+        assertThatThrownBy(() -> inCountry(101, () -> pur.costOrderReference(authorization.authorize(c()), 601, 401, id(order) + 9999)))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
         seed("insert into org_warehouse(id,country_id,entity_id,code,name) values(402,101,301,'AI02-OTHER','Other warehouse')");
         seed("delete from sys_user_data_scope where user_id=201");
         seed("insert into sys_user_data_scope(country_id,user_id,scope_type,warehouse_id,granted_by) values(101,201,'WAREHOUSE',402,201)");
         assertThatThrownBy(() -> inCountry(101, () -> lgs.receiptCostReference(authorization.authorize(c()), 601, receiptLine)))
             .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
+        assertThatThrownBy(() -> inCountry(101, () -> pur.costOrderReference(authorization.authorize(c()), 601, 401, id(order))))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
         seed("update sys_user_data_scope set warehouse_id=401 where user_id=201");
         inCountry(101, () -> {
             assertThat(lgs.receiptCostReference(authorization.authorize(c()), 601, receiptLine)).containsEntry("receiptNo", receipt.get("docNo"));
+            assertThat(pur.costOrderReference(authorization.authorize(c()), 601, 401, id(order))).containsEntry("docNo", order.get("docNo"));
             return null;
         });
+        assertThatThrownBy(() -> inCountry(101, () -> pur.financialOrderReference(authorization.authorize(c()), 601, id(order))))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
+        var allowed = inCountry(101, () -> authorization.authorize(c()));
+        var otherCountry = new com.hs.jxc.sys.api.Access(allowed.userId(), 102L, false, allowed.permissions(), allowed.fieldGroups(), allowed.scope(), allowed.validUntil());
+        assertThatThrownBy(() -> inCountry(102, () -> pur.costOrderReference(otherCountry, 601, 401, id(order))))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("NOT_FOUND");
         assertThat(owner.queryForMap("select (select count(*) from sys_biz_event) events,(select count(*) from sys_audit_log) audits,(select count(*) from inv_batch) batches")).isEqualTo(before);
     }
 
@@ -331,7 +350,7 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
 
     @Test void salesDemandRemainsTextWhileReplenishmentPurchaseAndReceiptUseTypedLinks() throws Exception {
         NumberFixtures.seed(101, "REPLENISH");
-        job(231, 232, "AI02-SALES", List.of("sal:order:create", "sal:order:submit", "sal:order:view"));
+        job(231, 232, "AI02-SALES", List.of("sal:order:create", "sal:order:submit", "sal:order:view"), Map.of("ORDER_TOTAL", "WRITE", "COST", "HIDDEN"));
         seed("insert into org_store(id,country_id,entity_id,code,name) values(305,101,301,'AI02-TEST-STORE','AI02-TEST store')");
         seed("insert into sys_user_data_scope(country_id,user_id,scope_type,store_id,granted_by) values(101,231,'STORE',305,201)");
         seed("insert into md_customer(id,country_id,code,name,store_id) values(804,101,'AI02-TEST-CUSTOMER','AI02-TEST customer',305)");
@@ -369,11 +388,11 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
     }
 
     private void configureTwoStagePurchaseRule() {
-        job(241, 242, "AI02-WORKFLOW-ADMIN", List.of("wf:rule:edit"));
+        job(241, 242, "AI02-WORKFLOW-ADMIN", List.of("wf:rule:edit"), Map.of("COST", "HIDDEN", "ORDER_TOTAL", "HIDDEN"));
         seed("delete from sys_user_data_scope where user_id=241");
         seed("insert into sys_user_data_scope(country_id,user_id,scope_type,granted_by) values(101,241,'COUNTRY_ALL',201)");
-        job(251, 252, "AI02-PURCHASE-MANAGER", List.of("pur:order:view"));
-        job(261, 262, "AI02-FINANCE-REVIEW", List.of("pur:order:view"));
+        job(251, 252, "AI02-PURCHASE-MANAGER", List.of("pur:order:view"), Map.of("COST", "READ"));
+        job(261, 262, "AI02-FINANCE-REVIEW", List.of("pur:order:view"), Map.of("COST", "READ"));
         actor = 241;
         workflow.configure(c(), "PURCHASE_ORDER", Map.of("version", 1, "approvalRequired", true,
             "keyFields", List.of("supplierId", "paymentTerms", "lines")));
