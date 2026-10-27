@@ -465,7 +465,20 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApPaymentList.vue",
-      "line": 37,
+      "line": 38,
+      "kind": "http-call",
+      "method": "GET",
+      "wrapperMethod": "get",
+      "idempotencyHeaderByWrapper": false,
+      "pathPattern": "/api/v1/ap/payments/{param1}",
+      "expression": "`/ap/payments/${id}`",
+      "match": "unknown-dynamic",
+      "registrations": [],
+      "reviewRequired": true
+    },
+    {
+      "file": "jxc-web/src/modules/ap/ApPaymentList.vue",
+      "line": 67,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -480,7 +493,7 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApPaymentList.vue",
-      "line": 37,
+      "line": 67,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -495,7 +508,7 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApPaymentList.vue",
-      "line": 38,
+      "line": 68,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -510,7 +523,7 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApPaymentList.vue",
-      "line": 38,
+      "line": 68,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -525,7 +538,7 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApPaymentList.vue",
-      "line": 54,
+      "line": 84,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",
@@ -540,7 +553,7 @@
     },
     {
       "file": "jxc-web/src/modules/ap/ApPaymentList.vue",
-      "line": 69,
+      "line": 99,
       "kind": "http-call",
       "method": "POST",
       "wrapperMethod": "postIdem",

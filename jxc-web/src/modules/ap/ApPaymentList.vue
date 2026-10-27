@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
 import { allRecords } from '@/api/pagination'
@@ -14,8 +15,37 @@ import type { ColumnDef, CrudPageExpose } from '@/components/crud/types'
 type Row = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 const user = useUserStore()
 const country = useCountryStore()
+const route = useRoute()
 const saveIntent = createCommandIntent()
 const confirmation = reactive({ visible: false, saving: false, row: null as Row | null, referenceNo: '', key: createCommandIntent() })
+const evidence = reactive({ visible: false, row: null as Row | null, loading: false, error: '' })
+let evidenceRequest = 0
+function openEvidence(row: Row) {
+  evidenceRequest++
+  Object.assign(evidence, { visible: true, row, loading: false, error: '' })
+}
+watch(() => [route.query.sourceId, country.epoch], async ([sourceId]) => {
+  const request = ++evidenceRequest
+  Object.assign(evidence, { visible: false, row: null, loading: false, error: '' })
+  if (sourceId == null || sourceId === '') return
+  const id = Number(sourceId)
+  Object.assign(evidence, { visible: true, loading: true })
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    Object.assign(evidence, { loading: false, error: '付款单来源编号无效' })
+    return
+  }
+  try {
+    const row = await http.get<Row>(`/ap/payments/${id}`)
+    if (!row || row.id !== id || typeof row.docNo !== 'string' || !row.docNo.trim()) {
+      throw new Error('付款单数据不完整，请重试')
+    }
+    if (request === evidenceRequest) evidence.row = row
+  } catch (error) {
+    if (request === evidenceRequest) evidence.error = error instanceof Error ? error.message : '付款单读取失败，请重试'
+  } finally {
+    if (request === evidenceRequest) evidence.loading = false
+  }
+}, { immediate: true })
 const page = ref<CrudPageExpose>()
 const partners = ref<Row[]>([])
 const accounts = ref<Row[]>([])
@@ -75,15 +105,25 @@ async function doConfirm() {
 </script>
 
 <template>
-  <CrudPage ref="page" title="付款登记" resource="/ap/payments" :columns="columns" :can-create="false" :can-toggle="false" :actions-width="120">
+  <CrudPage ref="page" title="付款登记" resource="/ap/payments" :columns="columns" :can-create="false" :can-toggle="false" :actions-width="160">
     <template #toolbar><el-button v-if="user.hasPerm('ap:payment:create')" type="primary" @click="open">登记付款</el-button></template>
     <template #header><p class="muted">这里只登记付款结果，不向银行发起转账。</p></template>
     <template #col-payAmount="{ row }"><MoneyText :value="row.payAmount" :currency="row.payCurrency" /></template>
     <template #col-openAmount="{ row }"><MoneyText :value="row.openAmount" :currency="row.payCurrency" /></template>
     <template #row-actions="{ row }">
+      <el-button link type="primary" @click="openEvidence(row)">查看凭证</el-button>
       <el-button v-if="row.status === 'PENDING_CONFIRM' && user.hasPerm('ap:payment:confirm')" link type="primary" @click="confirm(row)">确认</el-button>
     </template>
   </CrudPage>
+  <el-dialog v-model="evidence.visible" title="付款凭证" width="640px" destroy-on-close>
+    <p v-if="evidence.loading" class="muted" role="status">正在读取付款单…</p>
+    <p v-else-if="evidence.error" role="alert">{{ evidence.error }}</p>
+    <template v-else-if="evidence.row">
+      <p>{{ evidence.row.docNo }} · {{ evidence.row.referenceNo }}</p>
+      <DocAttachment :key="evidence.row.id" biz-type="AP_PAYMENT" :biz-id="evidence.row.id" category="PAYMENT_OUT_PROOF" readonly />
+    </template>
+    <template #footer><el-button @click="evidence.visible = false">关闭</el-button></template>
+  </el-dialog>
   <el-dialog v-model="form.visible" title="登记付款" width="480px">
     <el-form label-width="88px">
       <el-form-item label="账套" required><el-select v-model="form.bookId" @change="bookChanged"><el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" /></el-select></el-form-item>

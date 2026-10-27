@@ -644,7 +644,7 @@
       "method": "GET",
       "path": "/api/v1/fin/reconcile",
       "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
-      "line": 25,
+      "line": 30,
       "symbol": "reconcile"
     },
     {
