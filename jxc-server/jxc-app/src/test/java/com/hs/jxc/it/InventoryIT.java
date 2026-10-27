@@ -64,8 +64,8 @@ class InventoryIT extends BasePgIT {
   assertThat(owner.queryForObject("SELECT count(*) FROM inv_freeze",Integer.class)).isEqualTo(2);
  }
  @Test void concurrentReserveNeverOversells() throws Exception {
-  inCountry(101,()->inventory.inbound(actor,inbound(901,"5","0","0")));var pool=Executors.newFixedThreadPool(8);var start=new CountDownLatch(1);
-  try{List<Future<Boolean>> results=new ArrayList<>();for(int j=0;j<8;j++){long alloc=1000+j;results.add(pool.submit(()->{start.await();try{inCountry(101,()->{inventory.reserve(actor,new InventoryApi.Reservation(601,401,501,801,901,alloc,BigDecimal.ONE,date));return null;});return true;}catch(com.hs.jxc.common.api.ApiException e){return false;}}));}start.countDown();int success=0;for(var f:results)if(f.get(15,TimeUnit.SECONDS))success++;assertThat(success).isEqualTo(5);assertThat(owner.queryForObject("SELECT reserved_qty FROM inv_stock_summary",BigDecimal.class)).isEqualByComparingTo("5");}finally{pool.shutdownNow();}
+  inCountry(101,()->inventory.inbound(actor,inbound(901,"5","0","0")));var pool=Executors.newFixedThreadPool(8);var start=new CountDownLatch(1);var rejected=new ConcurrentLinkedQueue<String>();
+  try{List<Future<Boolean>> results=new ArrayList<>();for(int j=0;j<8;j++){long alloc=1000+j;results.add(pool.submit(()->{start.await();try{inCountry(101,()->{inventory.reserve(actor,new InventoryApi.Reservation(601,401,501,801,901,alloc,BigDecimal.ONE,date));return null;});return true;}catch(com.hs.jxc.common.api.ApiException e){rejected.add(e.getCode());return false;}}));}start.countDown();int success=0;for(var f:results)if(f.get(15,TimeUnit.SECONDS))success++;assertThat(rejected).hasSize(3).containsOnly("INV_INSUFFICIENT_AVAILABLE");System.out.println("AI09_CONCURRENT_REJECTION InventoryIT#concurrentReserveNeverOversells "+rejected);assertThat(success).isEqualTo(5);assertThat(owner.queryForObject("SELECT reserved_qty FROM inv_stock_summary",BigDecimal.class)).isEqualByComparingTo("5");}finally{pool.shutdownNow();}
  }
  @Test void persistedCountLockRejectsNewReceiptAndRollbackHasNoFacts(){
   inCountry(101,()->{inventory.lockStocktake(actor,601,401,List.of(501L),1001,date);return null;});
