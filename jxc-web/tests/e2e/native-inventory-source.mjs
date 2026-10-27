@@ -227,9 +227,9 @@ try {
     await page.getByRole('option', { name: '本地自然周', exact: true }).click()
     await field('订单指标').locator('.el-select').click()
     await page.getByRole('option', { name: '订单张数', exact: true }).click()
-    for (const row of await dialog.getByRole('row').all()) {
-      const inputs = row.getByRole('spinbutton')
-      if (await inputs.count()) await inputs.last().fill('1')
+    for (const row of await dialog.locator('.classify-condition').all()) {
+      const inputs = row.locator('.condition-order').getByRole('spinbutton')
+      if (await inputs.count()) await inputs.first().fill('1')
     }
     await dialog.getByRole('button', { name: '保存', exact: true }).click()
     await dialog.waitFor({ state: 'hidden' })
