@@ -92,6 +92,26 @@ class AttachmentIT extends BasePgIT {
             assertThat(owner.queryForObject("SELECT count(*) FROM sys_attachment",Integer.class)).isZero();
         }
     }
+    @Test void unavailableObjectStoreLeavesNoValidEvidenceAndRecoversWithoutDuplicateMetadata() throws Exception {
+        var docker=org.testcontainers.DockerClientFactory.instance().client();
+        String container=MinioTestStorage.MINIO.getContainerId();
+        try {
+            docker.pauseContainerCmd(container).exec();
+            var ctx=context(81101,81001,SessionService.digest(TOKEN));
+            assertThatThrownBy(()->attachments.upload(ctx,"ORG_ENTITY",81301,"IMPORT_FILE","outage.txt","text/plain",CONTENT))
+                .isInstanceOf(ApiException.class).extracting("code").isEqualTo("STORAGE_UNAVAILABLE");
+            assertThat(owner.queryForObject("SELECT count(*) FROM sys_attachment",Integer.class)).isZero();
+            assertThat(owner.queryForObject("SELECT count(*) FROM sys_attachment_link",Integer.class)).isZero();
+            assertThat(owner.queryForObject("SELECT count(*) FROM sys_audit_log WHERE action='ATTACHMENT_UPLOAD'",Integer.class)).isZero();
+        } finally {
+            if(Boolean.TRUE.equals(docker.inspectContainerCmd(container).exec().getState().getPaused()))
+                docker.unpauseContainerCmd(container).exec();
+        }
+        long id=upload("ORG_ENTITY",81301,"IMPORT_FILE").get("id").asLong();
+        assertThat(owner.queryForObject("SELECT count(*) FROM sys_attachment",Integer.class)).isEqualTo(1);
+        assertThat(owner.queryForObject("SELECT count(*) FROM sys_attachment_link",Integer.class)).isEqualTo(1);
+        assertThat(getBytes(proxy(id),true).body()).isEqualTo(CONTENT);
+    }
     @Test void revocationRejectsPreviouslyIssuedDownloadAndMetadata() throws Exception {
         long id=upload("ORG_ENTITY",81301,"IMPORT_FILE").get("id").asLong();String proxy=proxy(id);
         owner.update("DELETE FROM sys_user_data_scope WHERE user_id=81101");
