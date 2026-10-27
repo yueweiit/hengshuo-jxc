@@ -2455,7 +2455,7 @@
     },
     {
       "file": "jxc-web/src/modules/inventory/AnalysisView.vue",
-      "line": 15,
+      "line": 22,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "allRecords",
@@ -2470,7 +2470,7 @@
     },
     {
       "file": "jxc-web/src/modules/inventory/AnalysisView.vue",
-      "line": 20,
+      "line": 38,
       "kind": "http-call",
       "method": "GET",
       "wrapperMethod": "get",

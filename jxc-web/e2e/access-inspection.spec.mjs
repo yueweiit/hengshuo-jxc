@@ -17,5 +17,5 @@ test('连续链完成后只读核对门店与仓库范围，不重试确认',asy
  await read('warehouse_a','/logistics/receipts/'+receiptId,'/lgs/receipts/'+receiptId,200);
  await read('warehouse_b','/logistics/receipts/'+receiptId,'/lgs/receipts/'+receiptId,404);
  const after=facts();assert.deepEqual(after,before);
- e.run.checks.N03={status:'PASS',meaning:'A/B门店销售单及A/B仓实收单读取隔离；同会话换岗见sameSessionSwitch',results};e.save();save(join(e.dir,'access-inspection.json'),{status:'ok',readOnlyBusiness:true,results,before,after});
+ e.run.checks[e.layer==='docker'?'dockerScope':'N03']={status:'PASS',meaning:'销售A读取A单/销售B拒绝A单；仓管A按实际授权读取A实收/仓管B拒绝A实收；不据此声称扩大账套范围后仍为纯仓库权限',results};e.save();save(join(e.dir,(e.layer==='docker'?'docker-':'')+'access-inspection.json'),{status:'ok',layer:e.layer,readOnlyBusiness:true,results,before,after});
 });

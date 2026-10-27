@@ -6,10 +6,10 @@ import { finishStep,failStep,redact,BusinessFailure,classifyFailure } from './co
 
 export {BusinessFailure} from './core.mjs';
 export class Evidence {
- constructor(){const current=load(join(sourceRoot,'runtime/validation/sales-flow-e2e/current.json'));this.dir=current.directory;this.prep=load(join(this.dir,'preparation.json'));assert.equal(this.prep.status,'ok');this.run=load(join(this.dir,'run.json'));this.currentStep=null;}
+ constructor(){const current=load(join(sourceRoot,'runtime/validation/sales-flow-e2e/current.json'));this.dir=current.directory;this.prep=load(join(this.dir,'preparation.json'));assert.equal(this.prep.status,'ok');this.run=load(join(this.dir,'run.json'));this.currentStep=null;this.layer=process.env.JXC_E2E_LAYER||'host';assert.ok(['host','docker'].includes(this.layer));}
  save(){save(join(this.dir,'run.json'),redact(this.run));}
- response(role,path,method,status,body){appendFileSync(join(this.dir,'responses.jsonl'),JSON.stringify(redact({time:new Date().toISOString(),step:this.currentStep,role,path,method,status,body}))+'\n','utf8');}
- async shot(page,label){const fileName=String(label).replace(/[<>:"/\\|?*\x00-\x1f]/g,'_');const path=join(this.dir,'screenshots',fileName+'.png');await page.screenshot({path,fullPage:true});return path;}
+ response(role,path,method,status,body){appendFileSync(join(this.dir,'responses.jsonl'),JSON.stringify(redact({time:new Date().toISOString(),layer:this.layer,step:this.currentStep,role,path,method,status,body}))+'\n','utf8');}
+ async shot(page,label){const fileName=(this.layer==='docker'?'docker-':'')+String(label).replace(/[<>:"/\\|?*\x00-\x1f]/g,'_');const path=join(this.dir,'screenshots',fileName+'.png');await page.screenshot({path,fullPage:true});return path;}
  async step(id,role,page,action){
   if(['PASS','EXPECTED_REJECTION','PREVIOUS_RUN'].includes(this.run.steps.find(s=>s.id===id).status))return;
   assert.notEqual(this.run.status,'FAILED','存在业务失败，请先查看报告，禁止重复执行');this.currentStep=id;

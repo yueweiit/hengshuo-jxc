@@ -1,6 +1,6 @@
 package com.hs.jxc.it;
 import com.hs.jxc.ar.ReceivablesService;import com.hs.jxc.common.context.RequestContext;import com.hs.jxc.common.api.ApiException;import com.hs.jxc.sys.service.*;import com.hs.jxc.sys.api.Access;
-import java.math.BigDecimal;import java.time.LocalDate;import java.util.*;import java.util.concurrent.*;import java.util.function.Supplier;
+import java.math.BigDecimal;import java.time.LocalDate;import java.util.*;import java.util.function.Supplier;
 import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;import static org.assertj.core.api.Assertions.*;
 class ReceivablesIT extends BasePgIT {
  @Autowired ReceivablesService ar;@Autowired AuthorizationService auth;
@@ -74,5 +74,4 @@ class ReceivablesIT extends BasePgIT {
   assertThatThrownBy(()->authorized(a->{ar.reserveRefund(a,601,801,"MXN",note,1201,new BigDecimal("1.00001"),day);return true;})).isInstanceOf(ApiException.class);assertThat(owner.queryForObject("select reserved_amount from ar_credit_note",BigDecimal.class)).isEqualByComparingTo("0");
   assertThatThrownBy(()->authorized(a->ar.settleSalesReturn(a,601,1101,1001,801,"MXN",new BigDecimal("100"),day))).isInstanceOf(ApiException.class);
  }
- int compete(Callable<?> one,Callable<?> two)throws Exception{var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);try{var fs=List.of(pool.submit(()->{start.await();return one.call();}),pool.submit(()->{start.await();return two.call();}));start.countDown();int n=0;for(var f:fs)try{f.get(20,TimeUnit.SECONDS);n++;}catch(ExecutionException e){if(!(e.getCause() instanceof ApiException))throw e;}return n;}finally{pool.shutdownNow();}}
 }

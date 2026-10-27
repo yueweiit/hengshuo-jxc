@@ -7,6 +7,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 class MasterImportIT extends BasePgIT {
  @Autowired ImportService imports;
+ final com.hs.jxc.common.api.JsonCodec sourceJson=new com.hs.jxc.common.api.JsonCodec();
  @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
  final RequestContext actor=new RequestContext(201,101L,"master-import","a".repeat(64));
  @BeforeEach void fixture(){InventoryIT.seedBase();seed("INSERT INTO org_store(id,country_id,entity_id,code,name) VALUES(301,101,301,'S','Store')");seed("INSERT INTO sys_authz_epoch(country_id) VALUES(101)");seed("UPDATE sys_user SET is_platform_admin=true WHERE id=201");seed("INSERT INTO sys_session(token_hash,user_id,expires_at) VALUES(repeat('a',64),201,clock_timestamp()+interval '1 hour')");seed("INSERT INTO sys_role(id,country_id,code,name,permissions,field_policies) VALUES(211,101,'MASTER','Master','[\"*\"]','{\"COST\":\"WRITE\",\"BANK_INFO\":\"WRITE\"}')");seed("INSERT INTO sys_user_role(country_id,user_id,role_id) VALUES(101,201,211)");seed("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,granted_by) VALUES(101,201,'COUNTRY_ALL',201)");}
@@ -41,14 +42,18 @@ class MasterImportIT extends BasePgIT {
   seed("INSERT INTO sys_session(token_hash,user_id,expires_at) VALUES(?,201,clock_timestamp()+interval '1 hour')",com.hs.jxc.sys.service.SessionService.digest(token));
   var batch=imports.create(actor,Map.of("importType","PRODUCT","rows",List.of(Map.of("productCode","AI07-RETRY","name","AI07原生导入","baseUnit","PCS"))));
   long id=((Number)batch.get("id")).longValue();
-  assertThat(confirmHttp(id,token,intent,"{}").statusCode()).isEqualTo(200);
-  assertThat(confirmHttp(id,token,intent,"{}").statusCode()).isEqualTo(200);
+  var original=confirmHttp(id,token,intent,"{}");assertThat(original.statusCode()).isEqualTo(200);
+  var replay=confirmHttp(id,token,intent,"{}");assertThat(replay.statusCode()).isEqualTo(200);
+  var firstData=(Map<?,?>)sourceJson.readMap(original.body()).get("data");
+  assertThat(((Number)firstData.get("id")).longValue()).isEqualTo(id);
+  assertThat(sourceJson.readMap(replay.body()).get("data")).isEqualTo(firstData);
   var changed=confirmHttp(id,token,intent,"{\"rows\":[{\"productCode\":\"FORGED\"}]}");
   assertThat(changed.statusCode()).as(changed.body()).isEqualTo(400);
   assertThat(confirmHttp(id,token,UUID.randomUUID().toString(),"{}").statusCode()).isEqualTo(409);
   assertThat(owner.queryForObject("SELECT count(*) FROM md_product WHERE product_code='AI07-RETRY'",Integer.class)).isEqualTo(1);
   assertThat(owner.queryForObject("SELECT count(*) FROM md_product WHERE product_code='FORGED'",Integer.class)).isZero();
   assertThat(owner.queryForObject("SELECT count(*) FROM sys_import_source",Integer.class)).isEqualTo(1);
+  saveNativeEvidence("native-import-confirm-retry.json",Map.of("sourceTest","MasterImportIT.confirmRetryReplaysOneNativeProductAndRejectsChangedPayload","batch",imports.detail(actor,id),"nativeTarget",owner.queryForMap("SELECT * FROM md_product WHERE product_code='AI07-RETRY'"),"sourceClaims",owner.queryForList("SELECT * FROM sys_import_source"),"originalResult",firstData,"changedPayloadHttpStatus",changed.statusCode()));
  }
  @org.junit.jupiter.params.ParameterizedTest
  @org.junit.jupiter.params.provider.ValueSource(strings={"PRICE","STOCK_LIMIT","CREDIT_RULE"})
@@ -85,7 +90,13 @@ class MasterImportIT extends BasePgIT {
   assertThat(new java.math.BigDecimal(nativeRow.get(column).toString())).isEqualByComparingTo(row.get(field).toString());
   assertThat(owner.queryForObject("SELECT count(*) FROM "+table,Long.class)).isEqualTo(before+1);
   assertThat(owner.queryForObject("SELECT count(*) FROM sys_import_source WHERE import_type=?",Integer.class,type)).isEqualTo(1);
-  String directory=System.getProperty("jxc.ai07.evidence.dir");if(directory!=null){java.nio.file.Files.createDirectories(java.nio.file.Path.of(directory));java.nio.file.Files.writeString(java.nio.file.Path.of(directory,"catalog-import-"+type+".json"),new com.hs.jxc.common.api.JsonCodec().write(Map.of("type",type,"input",row,"preview",batch,"confirmed",result,"nativeTarget",nativeRow,"fieldsBefore",fieldsBefore,"fieldsAfter",owner.queryForObject("SELECT field_policies::text FROM sys_role WHERE id=211",String.class))),java.nio.charset.StandardCharsets.UTF_8);}
+  saveNativeEvidence("catalog-import-"+type+".json",Map.of("type",type,"input",row,"preview",batch,"confirmed",result,"nativeTarget",nativeRow,"fieldsBefore",fieldsBefore,"fieldsAfter",owner.queryForObject("SELECT field_policies::text FROM sys_role WHERE id=211",String.class)));
+ }
+ /** Source export is opt-in; failed exports still fail the test rather than becoming empty evidence. */
+ void saveNativeEvidence(String file,Object data) throws Exception {
+  String directory=System.getProperty("jxc.ai07.evidence.dir");if(directory==null)return;
+  var output=java.nio.file.Path.of(directory);java.nio.file.Files.createDirectories(output);
+  java.nio.file.Files.writeString(output.resolve(file),sourceJson.write(data),java.nio.charset.StandardCharsets.UTF_8);
  }
  java.net.http.HttpResponse<String> confirmHttp(long id,String token,String key,String body) throws Exception {
   return java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:"+port+"/api/v1/sys/imports/"+id+"/confirm"))

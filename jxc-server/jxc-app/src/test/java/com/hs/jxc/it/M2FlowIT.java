@@ -50,18 +50,21 @@ class M2FlowIT extends SupplyFixtures {
  }
  @org.junit.jupiter.api.AfterEach void saveInventorySourceFacts(org.junit.jupiter.api.TestInfo info) throws Exception {
   String directory=System.getProperty("jxc.ai03.evidenceDir");
-  if(directory==null||!info.getTestMethod().orElseThrow().getName().equals("purchaseToCustomerRefundKeepsStockAmountsAndOriginalCostsConsistent"))return;
+  String method=info.getTestMethod().orElseThrow().getName();
+  if(directory==null||!Set.of("purchaseToCustomerRefundKeepsStockAmountsAndOriginalCostsConsistent","threeSalesCarryTheEntireFrozenCostIntoThePostedLedger").contains(method))return;
   var evidence=new LinkedHashMap<String,Object>();
-  evidence.put("sourceTest","M2FlowIT.purchaseToCustomerRefundKeepsStockAmountsAndOriginalCostsConsistent");
+  evidence.put("sourceTest","M2FlowIT."+method);
+  evidence.put("runtime",Map.of("postgresContainerId",PgDatabase.PG.getContainerId(),"postgresImageId",PgDatabase.PG.getContainerInfo().getImageId(),"minioContainerId",MinioTestStorage.MINIO.getContainerId(),"minioImageId",MinioTestStorage.MINIO.getContainerInfo().getImageId(),"gitHeadAtExecution",System.getProperty("jxc.test.sourceSha","NOT_SUPPLIED")));
   evidence.put("scope","本轮原生采购实收、销售出库、退货与记账；实际阶段以表中事实及执行报告为准，无直接插入交易事实");
-  var tables=owner.queryForList("SELECT tablename FROM pg_tables WHERE schemaname='public' AND (tablename LIKE 'pur_%' OR tablename LIKE 'lgs_%' OR tablename LIKE 'inv_%' OR tablename LIKE 'sal_%' OR tablename IN ('cst_inbound_cost','cst_cogs','sys_biz_event','fin_voucher','fin_voucher_line','fin_event_result')) ORDER BY tablename",String.class);
+  var tables=owner.queryForList("SELECT tablename FROM pg_tables WHERE schemaname='public' AND (tablename LIKE 'pur_%' OR tablename LIKE 'lgs_%' OR tablename LIKE 'inv_%' OR tablename LIKE 'sal_%' OR tablename LIKE 'ar_%' OR tablename LIKE 'ap_%' OR tablename LIKE 'rtn_%' OR tablename LIKE 'cst_%' OR tablename IN ('md_currency','md_product_unit','md_exchange_rate','sys_country','fin_book','fin_period','sys_biz_event','fin_voucher','fin_voucher_line','fin_event_result')) ORDER BY tablename",String.class);
   for(String table:tables){
    var rows=owner.queryForList("SELECT * FROM "+table);
    for(var row:rows)row.replaceAll((column,value)->value instanceof java.sql.Date date?date.toLocalDate().toString():value);
    evidence.put(table,rows);
   }
   var output=java.nio.file.Path.of(directory);java.nio.file.Files.createDirectories(output);
-  java.nio.file.Files.writeString(output.resolve("native-purchase-receipt-outbound-return-demand.json"),inventorySourceJson.write(evidence),java.nio.charset.StandardCharsets.UTF_8);
+  String file=method.equals("purchaseToCustomerRefundKeepsStockAmountsAndOriginalCostsConsistent")?"native-purchase-receipt-outbound-return-demand.json":"native-precision-purchase-sales-ledger.json";
+  java.nio.file.Files.writeString(output.resolve(file),inventorySourceJson.write(evidence),java.nio.charset.StandardCharsets.UTF_8);
  }
  /** Native-source command protocol checks, distinct from refresh/re-login and transport-loss tests. */
  Map<String,Object> replayNative(String command,Map<String,Object> body,Map<String,Object> changed,
