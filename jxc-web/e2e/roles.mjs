@@ -9,7 +9,7 @@ export class Roles {
   await page.goto('http://127.0.0.1:15199/login');await page.locator('#login-language').selectOption('zh-CN');await page.locator('#account').fill(username);await page.locator('#password').fill(credential.password);
   const mePromise=page.waitForResponse(response=>response.url().includes('/api/v1/auth/me')&&response.request().method()==='GET');
   await page.locator('button[type=submit]').click();const meResponse=await mePromise;const me=(await meResponse.json()).data;
-  assert.equal(me.user.username,username);assert.equal(me.currentCountryId,3);await page.waitForURL(url=>url.pathname!=='/login');
+  assert.equal(me.user.username,username);assert.equal(me.currentCountryId,this.evidence.prep.countryId);await page.waitForURL(url=>url.pathname!=='/login');
   const facts={username,userId:me.user.id,countryId:me.currentCountryId,permissions:me.permissions,displayName:me.user.displayName};
   this.evidence.run.checks['login:'+role]={status:'PASS',...facts};this.evidence.save();return facts;
  }

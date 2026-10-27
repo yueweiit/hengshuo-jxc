@@ -1,27 +1,33 @@
 import assert from 'node:assert/strict';
 
-// This archived driver uses these IDs in its original read-only oracles. Verify
-// their actual native configuration before issuing any business command.
+// Resolve native configuration by its unique test identity, never by sequence IDs.
 export const fixtureIdentities=[
- ['countries','code','MX',3],['books','code','AI09-B01',6],
- ['stores','code','AI09-STORE-A',23],
- ['warehouses','code','AI09-WH-A',26],['warehouses','code','AI09-WH-B',33],
- ['products','product_code','AI09-A-M',132],
- ['customers','code','AI09-A-CASH',167],['customers','code','AI09-A-CREDIT',172],
- ['users','username','ai09_manager_a',70],['users','username','ai09_warehouse_a',95],['users','username','ai09_accountant',110],['users','username','ai09_fin_reviewer',115],
- ['fundAccounts','name','AI09主体比索银行',401],
- ['financeAccounts','code','1002',350],['financeAccounts','code','1405',362],
- ['financeAccounts','code','6001',377],['financeAccounts','code','6401',380],
+ ['countries','code','MX','countryId'],['books','code','AI09-B01','bookId'],
+ ['stores','code','AI09-STORE-A','storeA'],
+ ['warehouses','code','AI09-WH-A','warehouseA'],['warehouses','code','AI09-WH-B','warehouseB'],
+ ['products','product_code','AI09-A-M','productId'],
+ ['customers','code','AI09-A-CASH','customerId'],['customers','code','AI09-A-CREDIT','creditCustomerId'],
+ ['users','username','ai09_manager_a','managerAId'],['users','username','ai09_warehouse_a','warehouseAUserId'],['users','username','ai09_accountant','accountantId'],['users','username','ai09_fin_reviewer','reviewerId'],
+ ['fundAccounts','name','AI09主体比索银行','bankAccountId'],
+ ['financeAccounts','code','1002','bankGlAccountId'],['financeAccounts','code','1405','inventoryGlAccountId'],
+ ['financeAccounts','code','6001','revenueGlAccountId'],['financeAccounts','code','6401','cogsGlAccountId'],
 ];
 export function validateFixtureIdentity(inventory){
- for(const [table,field,value,id] of fixtureIdentities){
+ const resolved={};
+ for(const [table,field,value,key] of fixtureIdentities){
   assert.ok(Array.isArray(inventory[table]),'缺少配置清单：'+table);
   const rows=inventory[table].filter(row=>row[field]===value);
   assert.equal(rows.length,1,`必须唯一识别配置：${table}.${field}=${value}`);
-  assert.equal(rows[0].id,id,`原生配置ID已变化，先适配驱动，禁止强制改库：${table}.${field}=${value}`);
+  assert.ok(Number.isSafeInteger(rows[0].id)&&rows[0].id>0,`原生配置编号无效：${table}.${field}=${value}`);
+  resolved[key]=rows[0].id;
  }
- const periods=inventory.periods.filter(row=>row.book_id===6&&row.fiscal_year===2026&&row.period_no===10);
+ const periods=inventory.periods.filter(row=>row.book_id===resolved.bookId&&row.fiscal_year===2026&&row.period_no===10);
  assert.equal(periods.length,1,'必须唯一识别本组业务期间');
- assert.equal(periods[0].id,18,'业务期间ID已变化，先适配驱动');
- return true;
+ assert.ok(Number.isSafeInteger(periods[0].id)&&periods[0].id>0,'业务期间编号无效');
+ const actorIds={};
+ for(const row of inventory.users){
+  assert.ok(row.username.startsWith('ai09_'),'禁止混入非本组岗位');
+  actorIds[row.username.slice(5)]=row.id;
+ }
+ return {...resolved,periodId:periods[0].id,actorIds};
 }

@@ -49,19 +49,19 @@ export async function prepare() {
  const before=inventory();save(join(directory,'before.json'),before);
  try {
   assert.equal(before.database,'jxc_test_ai09');assert.equal(before.readOnly,'on');assert.equal(before.countries.length,1);assert.equal(before.countries[0].code,'MX');assert.equal(before.countries[0].default_currency,'MXN');
-  validateFixtureIdentity(before);
+  const identities=validateFixtureIdentity(before);
   const product=before.products.find(p=>p.product_code==='AI09-A-M');assert.ok(product);
-  for(const stock of before.stock.filter(s=>s.product_id===product.id&&s.warehouse_id===26))for(const key of ['on_hand_qty','reserved_qty','frozen_qty'])assert.equal(Number(stock[key]),0,'主商品库存前置条件不满足：'+key);
-  assert.ok(before.warehouses.some(w=>w.id===26&&w.type==='WAREHOUSE'&&w.store_id===23));assert.equal(before.users.length,13);
+  for(const stock of before.stock.filter(s=>s.product_id===product.id&&s.warehouse_id===identities.warehouseA))for(const key of ['on_hand_qty','reserved_qty','frozen_qty'])assert.equal(Number(stock[key]),0,'主商品库存前置条件不满足：'+key);
+  assert.ok(before.warehouses.some(w=>w.id===identities.warehouseA&&w.type==='WAREHOUSE'&&w.store_id===identities.storeA));assert.equal(before.users.length,13);
   assert.ok(before.prices.some(p=>p.product_code==='AI09-A-M'&&p.currency==='MXN'&&Number(p.price)===100));
   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Mexico_City',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   assert.ok(before.periods.some(p=>p.status==='OPEN'&&p.start_date<=date&&p.end_date>=date),'业务日期期间未开放');
-  const pending=sqlJSON("SELECT jsonb_build_object('tasks',(SELECT count(*) FROM wf_task WHERE country_id=3 AND status='PENDING'),'returns',(SELECT count(*) FROM rtn_sales_return WHERE country_id=3 AND status NOT IN ('COMPLETED','CANCELLED','REJECTED')))");
+  const pending=sqlJSON(`SELECT jsonb_build_object('tasks',(SELECT count(*) FROM wf_task WHERE country_id=${identities.countryId} AND status='PENDING'),'returns',(SELECT count(*) FROM rtn_sales_return WHERE country_id=${identities.countryId} AND status NOT IN ('COMPLETED','CANCELLED','REJECTED')))`);
   assert.equal(pending.tasks,0,'存在其他未完成审批');assert.equal(pending.returns,0,'存在未完成退货');
   const dump='/tmp/'+id+'.dump';local.docker(configuration,['exec',configuration.JXC_DB_CONTAINER,'pg_dump','-U','postgres','-d','jxc_test_ai09','-Fc','-f',dump]);
   local.docker(configuration,['cp',configuration.JXC_DB_CONTAINER+':'+dump,join(directory,'backup/database.dump')]);
   local.docker(configuration,['cp',configuration.JXC_MINIO_CONTAINER+':/data/'+configuration.JXC_STORAGE_BUCKET,join(directory,'backup/minio-bucket')]);
-  const preparation={status:'ok',id,directory,date,productId:product.id,countryId:3,bookId:6,warehouseA:26,warehouseB:33,customerId:167,creditCustomerId:172,bankAccountId:401,backendJarSha256:sha(readFileSync(configuration.JXC_APP_JAR)),frontendSourceSha256:sourceFingerprint(),sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:sourceRoot,encoding:'utf8'}).trim(),testCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:fileURLToPath(new URL('../..',import.meta.url)),encoding:'utf8'}).trim(),browserUsed:false};
+  const preparation={status:'ok',id,directory,date,...identities,backendJarSha256:sha(readFileSync(configuration.JXC_APP_JAR)),frontendSourceSha256:sourceFingerprint(),sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:sourceRoot,encoding:'utf8'}).trim(),testCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:fileURLToPath(new URL('../..',import.meta.url)),encoding:'utf8'}).trim(),browserUsed:false};
   preparation.frontendDistSha256=distFingerprint();preparation.frontendServingMode='vite-preview-production-dist';
   save(join(directory,'preparation.json'),preparation);console.log(JSON.stringify({status:'ok',directory,id,date,productId:product.id,backup:true}));return preparation;
  }catch(error){save(join(directory,'preparation.json'),{status:'error',message:error.message,directory,id});run.status='PRECONDITION_BLOCKED';run.issues.push({classification:'environment',message:error.message});save(join(directory,'run.json'),run);throw error;}

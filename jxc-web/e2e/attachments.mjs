@@ -26,7 +26,7 @@ export async function uploadSVG(e,page,root,{role,bizType,bizId,category,docNo,a
   attachment={id:result.data.id,fileName,role,bizType,bizId,category,sourceAsset:path,sourceSha256:sha(bytes),sourceSize:bytes.length};e.run.attachments.push(attachment);e.save();
  }
  const facts=e.oracle(`SELECT jsonb_build_object('attachment',(SELECT to_jsonb(a) FROM sys_attachment a WHERE id=${attachment.id}),'links',(SELECT jsonb_agg(to_jsonb(l)) FROM sys_attachment_link l WHERE attachment_id=${attachment.id}))`);
- assert.equal(facts.attachment.country_id,3);assert.equal(facts.attachment.status,'VALID');assert.equal(facts.attachment.object_status,'AVAILABLE');assert.equal(facts.attachment.category,category);assert.equal(facts.attachment.content_type,'image/svg+xml');assert.equal(facts.attachment.sha256,attachment.sourceSha256);assert.equal(Number(facts.attachment.size),attachment.sourceSize);assert.equal(facts.attachment.uploaded_by,e.run.checks['login:'+role].userId);
+ assert.equal(facts.attachment.country_id,e.prep.countryId);assert.equal(facts.attachment.status,'VALID');assert.equal(facts.attachment.object_status,'AVAILABLE');assert.equal(facts.attachment.category,category);assert.equal(facts.attachment.content_type,'image/svg+xml');assert.equal(facts.attachment.sha256,attachment.sourceSha256);assert.equal(Number(facts.attachment.size),attachment.sourceSize);assert.equal(facts.attachment.uploaded_by,e.run.checks['login:'+role].userId);
  assert.ok(facts.links.some(l=>l.biz_type===bizType&&l.biz_id===bizId&&l.unlinked_at===null));attachment.metadata=facts;
  verifyObject(e,attachment);
  await verifyDownload(e,page,root,attachment);return attachment;

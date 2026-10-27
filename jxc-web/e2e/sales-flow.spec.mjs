@@ -26,7 +26,7 @@ test('隔离MXN销售主链01至34步，逐岗连续执行并保留来源',async
  const order=e.run.documents.salesOrder,manager=await roles.get('manager_a');
  await e.step('02','manager_a',manager,async()=>{
   const approval=await approve(manager,order.docNo,e.run.id,'INV_INSUFFICIENT_AVAILABLE');
-  const facts=e.oracle(`SELECT jsonb_build_object('order',(SELECT to_jsonb(o) FROM sal_order o WHERE id=${order.id}),'tasks',(SELECT jsonb_agg(to_jsonb(t)) FROM wf_task t JOIN wf_instance i ON i.id=t.instance_id WHERE i.doc_id=${order.id} AND i.doc_type='SALES_ORDER'),'stock',(SELECT jsonb_agg(to_jsonb(s)) FROM inv_stock_summary s WHERE warehouse_id=26 AND product_id=132))`);
+  const facts=e.oracle(`SELECT jsonb_build_object('order',(SELECT to_jsonb(o) FROM sal_order o WHERE id=${order.id}),'tasks',(SELECT jsonb_agg(to_jsonb(t)) FROM wf_task t JOIN wf_instance i ON i.id=t.instance_id WHERE i.doc_id=${order.id} AND i.doc_type='SALES_ORDER'),'stock',(SELECT jsonb_agg(to_jsonb(s)) FROM inv_stock_summary s WHERE warehouse_id=${e.prep.warehouseA} AND product_id=${e.prep.productId}))`);
   if(facts.order.approval_status!=='PENDING'||facts.tasks.some(t=>t.status==='APPROVED'))throw new BusinessFailure('缺货审批拒绝后单据或任务发生错误变更',facts);return {expectedRejection:true,approval,facts};
  });
  const buyer=await roles.get('buyer');
