@@ -5,6 +5,11 @@ class M2FlowIT extends SupplyFixtures {
  @Autowired java.util.List<com.hs.jxc.fin.api.FinancialSourceProvider> financialSources;
  @Autowired SalesService sales;@Autowired ReceivablesService ar;@Autowired ReturnsService returns;@Autowired WorkflowService workflow;@Autowired AttachmentService attachments;
  @DynamicPropertySource static void storage(DynamicPropertyRegistry r){r.add("jxc.storage.endpoint",MinioTestStorage::endpoint);r.add("jxc.storage.access-key",()->MinioTestStorage.ACCESS);r.add("jxc.storage.secret-key",()->MinioTestStorage.SECRET);r.add("jxc.storage.bucket",()->MinioTestStorage.BUCKET);}
+ @Autowired com.hs.jxc.sal.api.SalesStatsApi inventoryDemandStats;
+ @Autowired com.hs.jxc.common.api.JsonCodec inventorySourceJson;
+ @org.junit.jupiter.api.BeforeEach void prefixInventoryEvidence(){
+  if(System.getProperty("jxc.ai03.evidenceDir")!=null)seed("UPDATE sys_doc_number_rule SET prefix='AI03'||left(prefix,16) WHERE country_id=101");
+ }
  @Test void purchaseToCustomerRefundKeepsStockAmountsAndOriginalCostsConsistent(){
   seed("update sys_role set field_policies='{\"COST\":\"WRITE\",\"CUSTOMER_PRICE\":\"WRITE\",\"ORDER_TOTAL\":\"WRITE\",\"BANK_INFO\":\"WRITE\",\"CREDIT\":\"WRITE\",\"PROFIT\":\"WRITE\"}' where id=202");
   seed("insert into md_exchange_rate(country_id,from_ccy,to_ccy,rate_date,scope,rate,status,confirmed_by,confirmed_at) values(101,'CNY','MXN','2026-10-15','PURCHASE_COST',2.5,'CONFIRMED',201,clock_timestamp())");
@@ -27,6 +32,36 @@ class M2FlowIT extends SupplyFixtures {
   var cash=inCountry(101,()->financialSources.stream().flatMap(p->p.balances(authAccess(),601,java.time.LocalDate.of(2026,10,15),"CASH").stream()).toList());
   assertThat(cash.stream().map(r->new BigDecimal(r.get("amount").toString())).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("30");
   postActualBusinessEventsAndReconcile();
+  // 在同一原生链验证统计消费者，避免为库存统计再次执行整条采购/退货链。
+  inCountry(101,()->{
+   var access=authAccess();var from=java.time.LocalDate.of(2026,10,1);var through=java.time.LocalDate.of(2026,10,31);
+   for(String dimension:List.of("COUNTRY","WAREHOUSE")){
+    long dimensionId=dimension.equals("COUNTRY")?101:401;
+    var rows=inventoryDemandStats.orders(access,dimension,dimensionId,501,from,through);assertThat(rows).hasSize(1);
+    assertThat((BigDecimal)rows.getFirst().get("qty")).isEqualByComparingTo("2");
+    assertThat((BigDecimal)rows.getFirst().get("outboundQty")).isEqualByComparingTo("2");
+    assertThat((BigDecimal)rows.getFirst().get("returnedQty")).isEqualByComparingTo("1");
+    assertThat((BigDecimal)rows.getFirst().get("unassignedQty")).isZero();
+    assertThat(inventoryDemandStats.orders(access,dimension,dimensionId,501,from,through)).isEqualTo(rows);
+   }
+   return null;
+  });
+  assertThat(owner.queryForObject("SELECT count(*) FROM sal_order",Integer.class)).isEqualTo(1);
+ }
+ @org.junit.jupiter.api.AfterEach void saveInventorySourceFacts(org.junit.jupiter.api.TestInfo info) throws Exception {
+  String directory=System.getProperty("jxc.ai03.evidenceDir");
+  if(directory==null||!info.getTestMethod().orElseThrow().getName().equals("purchaseToCustomerRefundKeepsStockAmountsAndOriginalCostsConsistent"))return;
+  var evidence=new LinkedHashMap<String,Object>();
+  evidence.put("sourceTest","M2FlowIT.purchaseToCustomerRefundKeepsStockAmountsAndOriginalCostsConsistent");
+  evidence.put("scope","本轮原生采购实收、销售出库、退货与记账；实际阶段以表中事实及执行报告为准，无直接插入交易事实");
+  var tables=owner.queryForList("SELECT tablename FROM pg_tables WHERE schemaname='public' AND (tablename LIKE 'pur_%' OR tablename LIKE 'lgs_%' OR tablename LIKE 'inv_%' OR tablename LIKE 'sal_%' OR tablename IN ('cst_inbound_cost','cst_cogs','sys_biz_event','fin_voucher','fin_voucher_line','fin_event_result')) ORDER BY tablename",String.class);
+  for(String table:tables){
+   var rows=owner.queryForList("SELECT * FROM "+table);
+   for(var row:rows)row.replaceAll((column,value)->value instanceof java.sql.Date date?date.toLocalDate().toString():value);
+   evidence.put(table,rows);
+  }
+  var output=java.nio.file.Path.of(directory);java.nio.file.Files.createDirectories(output);
+  java.nio.file.Files.writeString(output.resolve("native-purchase-receipt-outbound-return-demand.json"),inventorySourceJson.write(evidence),java.nio.charset.StandardCharsets.UTF_8);
  }
  /** Native-source command protocol checks, distinct from refresh/re-login and transport-loss tests. */
  Map<String,Object> replayNative(String command,Map<String,Object> body,Map<String,Object> changed,
