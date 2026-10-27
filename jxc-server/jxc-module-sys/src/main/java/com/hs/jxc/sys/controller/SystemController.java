@@ -14,6 +14,7 @@ public class SystemController {
     private RequestContext ctx(){return RequestContextHolder.require();}
     private ApiEnvelope ok(Object data){return ApiEnvelope.ok(data,ctx().traceId());}
     @GetMapping("/user-options") public ApiEnvelope userOptions(){return ok(service.userOptions(ctx()));}
+    @GetMapping("/business-user-options") public ApiEnvelope businessUserOptions(@RequestParam String purpose){return ok(service.businessUserOptions(ctx(),purpose));}
     @GetMapping("/users") public ApiEnvelope users(@RequestParam Map<String,String> query){return ok(service.users(ctx(),query));}
     @GetMapping("/users/{id}") public ApiEnvelope user(@PathVariable long id){return ok(service.user(ctx(),Inputs.id(id)));}
     @PostMapping("/users") public ApiEnvelope createUser(@RequestBody Map<String,Object> b){return ok(service.createUser(ctx(),b));}

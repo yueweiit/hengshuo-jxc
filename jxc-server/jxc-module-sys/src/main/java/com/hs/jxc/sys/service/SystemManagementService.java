@@ -68,6 +68,17 @@ public class SystemManagementService {
         }
         var after=grants(a,id);audit(a,unique!=null&&scopes!=null?"设置授权":unique!=null?"设置角色":"设置数据范围","user",id,before,after);return after;
     });}
+    /** Business labels use current country membership, without user-management visibility or mutations. */
+    public List<Map<String,Object>> businessUserOptions(RequestContext c,String purpose){return tx.execute(s->{
+        var a=auth.authorize(c);a.requireCountry();
+        String[] permissions=switch(purpose){
+            case "LOGISTICS_HOLD"->new String[]{"lgs:hold:create","lgs:hold:release","lgs:shipment:view"};
+            case "INVENTORY_LIMIT"->new String[]{"inv:limit:config"};
+            default->throw bad("不支持的业务人员引用用途");
+        };
+        a.require(permissions);a.requireRow(Map.of("countryId",a.requireCountry()));
+        return jdbc.queryForList("SELECT u.id,u.display_name AS \"displayName\" FROM sys_user u WHERE u.status='ENABLED' AND EXISTS(SELECT 1 FROM sys_user_role ur JOIN sys_role r ON r.country_id=ur.country_id AND r.id=ur.role_id AND r.status='ENABLED' WHERE ur.user_id=u.id AND ur.country_id=?) ORDER BY u.display_name,u.id",a.requireCountry());
+    });}
     public List<Map<String,Object>> userOptions(RequestContext c){return tx.execute(s->{var a=auth.authorize(c);if(!a.platformAdmin()){a.requireCountry();a.require("sys:user:edit","wf:rule:edit","sys:watcher:edit","org:store:edit");}
         return jdbc.queryForList("SELECT id,username,display_name,status,is_platform_admin,created_country_id FROM sys_user WHERE status='ENABLED' ORDER BY display_name,id").stream().filter(r->a.platformAdmin()||manageable(a,r)).map(r->Map.<String,Object>of("id",r.get("id"),"username",r.get("username"),"displayName",r.get("display_name"))).toList();
     });}

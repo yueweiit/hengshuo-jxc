@@ -97,6 +97,7 @@ test('command success is preserved if the subsequent list refresh fails', async 
 
 test('renaming trims input, rejects blank names and preserves the fetched version', async () => {
   const h = harness({ extra: ['saveError'] }); await h.p.load(); h.p.edit(h.p.books.value[0]); h.p.form.name = '   '
+  h.p.books.value[0].version = 9
   await h.p.save(); assert.equal(h.writes.length, 0); assert.ok(h.p.saveError.value)
   h.p.form.name = '  新账套  '; await h.p.save()
   assert.deepEqual(h.writes[0].body, { name: '新账套', version: 3 }); assert.equal(h.p.dialog.value, false); h.stop()
@@ -108,6 +109,12 @@ test('a failed rename leaves the dialog and name available for retry', async () 
 })
 
 test('activation cancellation does not write or display a failure', async () => {
+  for (const options of [{ permitted: false, get: async () => [book(1, 'DRAFT')] }, { get: async () => [book(1, 'ACTIVE')] }]) {
+    let confirmations = 0
+    const guarded = harness({ ...options, confirm: async () => { confirmations++ } }); await guarded.p.load()
+    await guarded.p.activate(guarded.p.books.value[0])
+    assert.equal(confirmations, 0); assert.equal(guarded.writes.length, 0); assert.equal(guarded.p.busy.value, false); guarded.stop()
+  }
   const h = harness({ get: async () => [book(1, 'DRAFT')], confirm: async () => { throw 'cancel' }, extra: ['actionError'] })
   await h.p.load(); await assert.doesNotReject(h.p.activate(h.p.books.value[0]))
   assert.equal(h.writes.length, 0); assert.equal(h.p.busy.value, false); assert.equal(h.p.actionError.value, ''); h.stop()
@@ -115,8 +122,8 @@ test('activation cancellation does not write or display a failure', async () => 
 
 test('activation retains its versioned endpoint and explicit business boundary', async () => {
   let prompt
-  const h = harness({ get: async () => [book(1, 'DRAFT')], confirm: async text => { prompt = text } }); await h.p.load(); await h.p.activate(h.p.books.value[0])
-  assert.deepEqual(h.writes[0].body, { version: 3 }); assert.equal(h.writes[0].path, '/fin/books/1/activate'); assert.match(prompt, /不录入期初/); h.stop()
+  const h = harness({ get: async () => [book(1, 'DRAFT')], confirm: async text => { prompt = text; h.p.books.value[0].version = 9 } }); await h.p.load(); await h.p.activate(h.p.books.value[0])
+  assert.equal(h.writes.length, 1); assert.deepEqual(h.writes[0].body, { version: 3 }); assert.equal(h.writes[0].path, '/fin/books/1/activate'); assert.match(prompt, /不录入期初/); h.stop()
 })
 
 test('unmounting during confirmation prevents a late activation write', async () => {

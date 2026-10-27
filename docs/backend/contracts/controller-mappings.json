@@ -3649,142 +3649,149 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/sys/users",
+      "path": "/api/v1/sys/business-user-options",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
       "line": 17,
+      "symbol": "businessUserOptions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/users",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 18,
       "symbol": "users"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/users/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 18,
+      "line": 19,
       "symbol": "user"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 19,
+      "line": 20,
       "symbol": "createUser"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 20,
+      "line": 21,
       "symbol": "updateUser"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users/{id}/enable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 21,
+      "line": 22,
       "symbol": "enableUser"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users/{id}/disable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 22,
+      "line": 23,
       "symbol": "disableUser"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users/{id}/reset-password",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 23,
+      "line": 24,
       "symbol": "resetPassword"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/users/{id}/grants",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 24,
+      "line": 25,
       "symbol": "grants"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}/grants",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 26,
+      "line": 27,
       "symbol": "setGrants"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}/roles",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 28,
+      "line": 29,
       "symbol": "userRoles"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}/data-scopes",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 30,
+      "line": 31,
       "symbol": "userScopes"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/roles",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 31,
+      "line": 32,
       "symbol": "roles"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/roles/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 32,
+      "line": 33,
       "symbol": "role"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/roles",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 33,
+      "line": 34,
       "symbol": "createRole"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/roles/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 34,
+      "line": 35,
       "symbol": "updateRole"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/roles/{id}/enable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 35,
+      "line": 36,
       "symbol": "enableRole"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/roles/{id}/disable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 36,
+      "line": 37,
       "symbol": "disableRole"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/roles/{id}/permissions",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 38,
+      "line": 39,
       "symbol": "permissions"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/roles/{id}/field-policies",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 40,
+      "line": 41,
       "symbol": "fields"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/permissions/tree",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 41,
+      "line": 42,
       "symbol": "permissionTree"
     },
     {
