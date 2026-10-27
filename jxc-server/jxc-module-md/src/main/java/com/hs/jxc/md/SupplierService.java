@@ -6,7 +6,28 @@ public class SupplierService {
  public SupplierService(JdbcTemplate j,AuthorizationService a,AuditWriter w,IdempotencyExecutor i,FieldPolicyService f,BankAccountCipher cipher,LedgerApi ledger,BookGate gates,BookResolver books){jdbc=j;auth=a;audit=w;idem=i;fields=f;this.cipher=cipher;this.ledger=ledger;this.gates=gates;this.books=books;}
  private String table(String kind){return switch(kind){case "suppliers"->"md_supplier";case "logistics-providers"->"md_logistics_provider";case "expense-items"->"md_expense_item";default->throw ApiException.notFound();};}
  private boolean expense(String kind){return kind.equals("expense-items");}private String edit(String kind){return expense(kind)?"md:expense-item:edit":"md:partner:edit";}
- public Object list(RequestContext c,String kind){Access a=auth.authorize(c);a.require(expense(kind)?"md:expense-item:edit":"md:partner:view","pur:order:create","lgs:shipment:create","lgs:fee:create","ap:bill:view",expense(kind)?"cst:expense:create":"md:partner:view");var rows=new ArrayList<Map<String,Object>>();if(kind.equals("partners")){for(String k:List.of("suppliers","logistics-providers"))for(var r:jdbc.queryForList("SELECT * FROM "+table(k)+" WHERE country_id=? ORDER BY id DESC",a.requireCountry()))rows.add(out(a,k,DbRows.camel(r)));Map<Long,Map<String,Object>>dedup=new LinkedHashMap<>();for(var r:rows){long id=((Number)r.get("id")).longValue();if(dedup.containsKey(id))dedup.get(id).put("partnerType","BOTH");else dedup.put(id,r);}rows=new ArrayList<>(dedup.values());}else for(var r:jdbc.queryForList("SELECT * FROM "+table(kind)+" WHERE country_id=? ORDER BY id DESC",a.requireCountry()))rows.add(out(a,kind,DbRows.camel(r)));return Map.of("records",rows,"total",rows.size(),"page",1,"size",rows.size());}
+ public Object list(RequestContext c,String kind,Map<String,String> query){
+  Access a=auth.authorize(c);a.require(expense(kind)?"md:expense-item:edit":"md:partner:view","pur:order:create","lgs:shipment:create","lgs:fee:create","ap:bill:view",expense(kind)?"cst:expense:create":"md:partner:view");
+  String status=listFilter(query,"status",Set.of("ENABLED","DISABLED"),"状态筛选不合法");
+  String type=kind.equals("partners")?listFilter(query,"partnerType",Set.of("SUPPLIER","LOGISTICS","BOTH"),"往来单位类型筛选不合法"):null;
+  List<String> kinds=!kind.equals("partners")?List.of(kind):"SUPPLIER".equals(type)?List.of("suppliers"):"LOGISTICS".equals(type)?List.of("logistics-providers"):List.of("suppliers","logistics-providers");
+  Map<Long,Map<String,Object>> selected=new LinkedHashMap<>();
+  for(String source:kinds){
+   var args=status==null?new Object[]{a.requireCountry()}:new Object[]{a.requireCountry(),status};
+   for(var value:jdbc.queryForList("SELECT * FROM "+table(source)+" WHERE country_id=?"+(status==null?"":" AND status=?")+" ORDER BY id DESC",args)){
+    var row=out(a,source,DbRows.camel(value));
+    if("BOTH".equals(type)&&!"BOTH".equals(row.get("partnerType")))continue;
+    selected.putIfAbsent(((Number)row.get("id")).longValue(),row);
+   }
+  }
+  var rows=new ArrayList<>(selected.values());
+  return Map.of("records",rows,"total",rows.size(),"page",1,"size",rows.size());
+ }
+ /** 清空筛选控件表示不筛选；非法值必须明确报错。 */
+ private static String listFilter(Map<String,String> query,String key,Set<String> allowed,String message){
+  String value=query.get(key);if(value==null||value.isBlank())return null;
+  if(!allowed.contains(value))throw Inputs.bad(message);return value;
+ }
  public Map<String,Object> get(RequestContext c,String kind,long id){Access a=auth.authorize(c);a.require(expense(kind)?"md:expense-item:edit":"md:partner:view","pur:order:create","lgs:shipment:create",expense(kind)?"cst:expense:create":"md:partner:view");if(kind.equals("partners"))kind=partnerKind(a,id);return out(a,kind,row(a,kind,id,false));}
  public Map<String,Object> save(RequestContext c,String kind,Long id,Map<String,Object>b,String key){Access a=auth.authorize(c);a.require(edit(kind));fields.requireWrite(a,b,"COST");if(expense(kind))return saveExpense(c,a,id,b,key);String k=kind;if(k.equals("partners"))k=id==null?(Inputs.text(b,"partnerType","SUPPLIER").equals("LOGISTICS")?"logistics-providers":"suppliers"):partnerKind(a,id);String target=k;if(id==null)return idem.execute(c,"POST","/api/v1/md/"+kind,key,b,null,()->{var r=write(c,a,target,null,b);if("BOTH".equals(b.get("partnerType"))){long rid=((Number)r.get("id")).longValue();jdbc.update("INSERT INTO md_logistics_provider(id,country_id,code,name,settle_currency,located_country,payment_terms,contact,phone,address,created_by) SELECT id,country_id,code,name,settle_currency,located_country,payment_terms,contact,phone,address,created_by FROM md_supplier WHERE country_id=? AND id=?",a.requireCountry(),rid);syncBoth(a,rid);}return r;},r->row(a,target,((Number)r.get("id")).longValue(),false));var saved=write(c,a,target,id,b);if(kind.equals("partners")&&jdbc.queryForObject("SELECT count(*) FROM md_supplier s JOIN md_logistics_provider l ON l.country_id=s.country_id AND l.id=s.id WHERE s.country_id=? AND s.id=?",Integer.class,a.requireCountry(),id)==1)syncBoth(a,id);return saved;}
  private Map<String,Object> saveExpense(RequestContext c,Access a,Long id,Map<String,Object>b,String key){
