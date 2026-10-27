@@ -44,6 +44,37 @@ class PurchaseSourcePresentationIT extends SupplyFixtures {
   seed("UPDATE sys_role SET permissions=?::jsonb,field_policies='{}' WHERE id=202",forExport?"[\"pur:export:create\"]":"[\"lgs:shipment:create\"]");assertThat(read(path)).hasSize(2);if(!forExport)assertThat(response(path+"?excludeShipmentId="+id(draft)).statusCode()).isEqualTo(403);
   seed("INSERT INTO fin_book(id,country_id,entity_id,code,name,base_currency,status) VALUES(602,101,301,'OTHER','Other book','MXN','ACTIVE')");seed("DELETE FROM sys_user_data_scope WHERE user_id=201");seed("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,book_id,granted_by) VALUES(101,201,'BOOK',602,201)");assertThat(read(path)).isEmpty();
  }
+ @org.junit.jupiter.api.Test
+ void exportSelectorKeepsOnlyPositiveBalancesWithoutRemovingHistory()throws Exception{
+  var po=order();
+  var exhausted=domestic(po,10,0,0,true);
+  var remaining=domestic(po,10,0,0,true);
+  var historicalExport=export(exhausted,10,true);
+  export(remaining,4,true);
+  int audits=owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class);
+  int events=owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class);
+  var facts=owner.queryForList("SELECT id,qualified_qty,exported_qty,shipped_qty,returned_qty FROM pur_domestic_receipt_line ORDER BY id");
+
+  var selected=read("/export-nodes/sources");
+  assertThat(selected).extracting(row->row.get("receiptLineId").toString())
+   .containsExactly(String.valueOf(id(first(remaining))));
+  number(selected.getFirst(),"exportableQty","6");
+  var historicalReceipt=readObject("/domestic-receipts/"+id(exhausted));
+  number(rows(historicalReceipt.get("lines")).getFirst(),"exportableQty","0");
+  var historicalNode=readObject("/export-nodes/"+id(historicalExport));
+  assertThat(historicalNode).containsEntry("status","CONFIRMED");
+  number(rows(historicalNode.get("lines")).getFirst(),"qty","10");
+  assertThat(rows(readObject("/domestic-receipts?orderId="+id(po)).get("records"))).hasSize(2);
+  assertThat(rows(readObject("/export-nodes?orderId="+id(po)).get("records"))).hasSize(2);
+  assertThat(owner.queryForList("SELECT id,qualified_qty,exported_qty,shipped_qty,returned_qty FROM pur_domestic_receipt_line ORDER BY id")).isEqualTo(facts);
+  assertThat(owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class)).isEqualTo(audits);
+  assertThat(owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class)).isEqualTo(events);
+
+  export(remaining,6,true);
+  assertThat(read("/export-nodes/sources")).isEmpty();
+  assertThat(rows(readObject("/export-nodes?orderId="+id(po)).get("records"))).hasSize(3);
+  assertThat(rows(readObject("/domestic-receipts?orderId="+id(po)).get("records"))).hasSize(2);
+ }
  @ParameterizedTest @CsvSource({"America/Mexico_City,2026-09-30","Asia/Shanghai,2026-10-01"})
  void nativePurchaseAndShipmentDefaultsUseConfiguredCountryDayWhileExplicitReceiptAndExportDatesRemain(String timezone,String day){
   seed("UPDATE sys_country SET timezone=? WHERE id=101",timezone);seed("INSERT INTO fin_period(country_id,book_id,fiscal_year,period_no,start_date,end_date,status) VALUES(101,601,2026,9,'2026-09-01','2026-09-30','OPEN')");
