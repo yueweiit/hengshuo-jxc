@@ -231,7 +231,7 @@ onMounted(load)
         <el-tab-pane v-for="s in COST_STATUS" :key="String(s.value)" :label="`${s.label}（${counts[String(s.value)] ?? 0}）`" :name="String(s.value)" />
       </el-tabs>
       <el-form inline @submit.prevent="search">
-        <el-form-item label="批次 / 单号"><el-input v-model="q.keyword" clearable style="width: 180px" /></el-form-item>
+        <el-form-item label="批次号"><el-input v-model="q.keyword" placeholder="按批次号查询" clearable style="width: 180px" /></el-form-item>
         <el-form-item label="商品"><div style="width: 200px"><FieldInput v-model="q.productId" :field="{ prop: 'productId', label: '商品', type: 'select', options: PRODUCT_SOURCE }" clearable /></div></el-form-item>
         <el-form-item label="仓库"><div style="width: 160px"><FieldInput v-model="q.warehouseId" :field="{ prop: 'warehouseId', label: '仓库', type: 'select', options: MX_WAREHOUSE_SOURCE }" clearable /></div></el-form-item>
         <el-form-item label="供应商"><div style="width: 180px"><FieldInput v-model="q.supplierId" :field="{ prop: 'supplierId', label: '供应商', type: 'select', options: SUPPLIER_SOURCE }" clearable /></div></el-form-item>
