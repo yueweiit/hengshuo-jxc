@@ -9,6 +9,7 @@ import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
+import PurchaseImportProductReview from './PurchaseImportProductReview.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 
@@ -144,6 +145,7 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <PurchaseImportSources :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
       <PurchaseImportTable :page="page" :disabled="disabled" @remove="remove" />
+      <PurchaseImportProductReview :page="page" />
     </section>
 
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">

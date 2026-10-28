@@ -16,46 +16,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /** 仅替换外部解析网络；授权、租约、MinIO、迁移和全部CRUD使用真实实现。 */
-class PurchaseImportSourceIT extends BasePgIT {
-    @Autowired PurchaseImportService imports;
-    @Autowired PurchaseImportTaskService tasks;
-    @Autowired com.hs.jxc.common.api.JsonCodec codec;
-    @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
-    @MockitoBean PurchaseImportRecognitionClient parser;
-    final String tokenHash=SessionService.digest("purchase-import-source-test");
-    final RequestContext actor=new RequestContext(201,101L,"source-test",tokenHash);
-    final byte[] file="PK-test-source".getBytes(StandardCharsets.UTF_8);
-    @DynamicPropertySource static void storage(DynamicPropertyRegistry r) {
-        r.add("jxc.purchase-import.worker-enabled",()->true);
-        r.add("jxc.storage.endpoint",MinioTestStorage::endpoint);
-        r.add("jxc.storage.access-key",()->MinioTestStorage.ACCESS);
-        r.add("jxc.storage.secret-key",()->MinioTestStorage.SECRET);
-        r.add("jxc.storage.bucket",()->MinioTestStorage.BUCKET);
-    }
-    @BeforeEach void fixture() {
-        InventoryIT.seedBase();
-        owner.update("INSERT INTO sys_authz_epoch(country_id) VALUES(101)");
-        owner.update("INSERT INTO sys_session(token_hash,user_id,expires_at) VALUES(?,201,clock_timestamp()+interval '1 hour')",tokenHash);
-        owner.update("INSERT INTO sys_role(id,country_id,code,name,permissions,field_policies) VALUES(801,101,'IMPORT','Import','[\"pur:order:*\"]','{\"COST\":\"WRITE\",\"CUSTOMER_PRICE\":\"WRITE\",\"ORDER_TOTAL\":\"WRITE\"}')");
-        owner.update("INSERT INTO sys_user_role(country_id,user_id,role_id) VALUES(101,201,801)");
-        owner.update("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,book_id,granted_by) VALUES(101,201,'BOOK',601,201)");
-        owner.update("INSERT INTO md_currency(code,name) VALUES('USD','美元')");
-        owner.update("INSERT INTO md_supplier(id,country_id,code,name,settle_currency) VALUES(901,101,'S','Supplier','USD')");
-    }
-    Map<String,Object> header(){var h=new LinkedHashMap<String,Object>();h.put("bookId",601);h.put("supplierId",901);h.put("currency","USD");h.put("orderDate","2026-10-28");h.put("expectedDate",null);h.put("paymentTerms","");h.put("prepayRatio","0");h.put("termDays",null);return h;}
-    Map<String,Object> values(){var v=new LinkedHashMap<String,Object>();for(String k:List.of("sourceOrderNo","photo","productSpec","purchaseQty","saleUnitPrice","saleTotal","purchaseUnitPrice","freight","landedUnitCost","usdUnitCost","usdTotal"))v.put(k,null);v.put("sourceOrderNo","PO-1");v.put("productSpec","S");v.put("purchaseQty","10");v.put("purchaseUnitPrice","53.1234567890");return v;}
-    @SuppressWarnings("unchecked") List<Map<String,Object>> rows(Map<String,Object> b){return (List<Map<String,Object>>)b.get("rows");}
-    UUID id(Map<String,Object>b){return UUID.fromString(b.get("batchId").toString());}
-    UUID task(Map<String,Object>b){return UUID.fromString(b.get("taskId").toString());}
-    Map<String,Object> upload(String key){return imports.upload(actor,"采购.xlsx",file,header(),null,key);}
-    Map<String,Object> document(){
-        var source=Map.of("fileSha256",com.hs.jxc.attachment.AttachmentObjectStore.sha256(file),"parserVersion","fixture-v1");
-        return new LinkedHashMap<>(Map.of("format","SourceDocumentV1","source",source,"sheets",List.of(Map.of("name","采购","role","PURCHASE")),"rows",List.of(Map.of("sourceSheet","采购","sourceRow",2,"originalValues",Map.of("G","53.1234567890"),"rawNumericTexts",Map.of("G","53.1234567890"),"formulas",Map.of(),"cachedValues",Map.of(),"normalizedValues",values())),"images",List.of(),"associations",List.of(),"warnings",List.of(),"errors",List.of()));
-    }
-    void parse(Map<String,Object>b){
-        doReturn(document()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());
-        tasks.execute(101,task(b));
-    }
+class PurchaseImportSourceIT extends PurchaseImportFixture {
     @Test void uploadIsDurableAndOnlySuccessfulParsingProducesRowsWithoutBusinessWrites(){
         var b=upload(UUID.randomUUID().toString());assertThat(rows(b)).isEmpty();assertThat(b.get("status")).isEqualTo("PARSING");parse(b);
         var saved=imports.get(actor,id(b));assertThat(rows(saved)).hasSize(1);assertThat(rows(saved).getFirst()).containsEntry("purchaseUnitPrice","53.1234567890").containsEntry("sourceRow",2);
@@ -118,7 +79,7 @@ class PurchaseImportSourceIT extends BasePgIT {
         owner.update("DELETE FROM sys_user_data_scope WHERE user_id=201");assertThatThrownBy(()->imports.get(actor,id(b))).isInstanceOf(ApiException.class).extracting("status").isEqualTo(404);assertThatThrownBy(()->imports.content(actor,id(b),source,false)).isInstanceOf(ApiException.class).extracting("status").isEqualTo(404);
     }
     @Test void appendingUsesCurrentHeaderAndAllocatesStableRowsWithoutDuplicateParsing(){
-        var b=upload(UUID.randomUUID().toString());parse(b);var appended=imports.upload(actor,"another.xlsx",file,header(),id(b),UUID.randomUUID().toString());parse(appended);tasks.execute(101,task(appended));var saved=imports.get(actor,id(b));assertThat(rows(saved)).extracting(r->r.get("rowNo")).containsExactly(1,2);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source",Integer.class)).isEqualTo(2);
+        var b=upload(UUID.randomUUID().toString());parse(b);owner.update("UPDATE pur_order_import_batch SET header=jsonb_set(header,'{prepayRatio}','\"0.000000\"') WHERE batch_id=?",id(b));var appended=imports.upload(actor,"another.xlsx",file,header(),id(b),UUID.randomUUID().toString());parse(appended);tasks.execute(101,task(appended));var saved=imports.get(actor,id(b));assertThat(rows(saved)).extracting(r->r.get("rowNo")).containsExactly(1,2);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source",Integer.class)).isEqualTo(2);
     }
     java.net.http.HttpResponse<String> httpUpload(String base)throws Exception {
         String boundary="purchase-source-boundary";String body="--"+boundary+"\r\nContent-Disposition: form-data; name=\"header\"\r\n\r\n"+codec.write(header())+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"purchase.xlsx\"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\nPK-test-source\r\n--"+boundary+"--\r\n";
@@ -150,6 +111,7 @@ class PurchaseImportSourceIT extends BasePgIT {
             String expected=com.hs.jxc.attachment.AttachmentObjectStore.sha256(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("target/jxc-app-0.1.0-SNAPSHOT.jar")));assertThat(app.execInContainer("sha256sum","/app/app.jar").getStdout()).startsWith(expected+" ");
             var saved=imports.get(actor,id(b));long rowId=((Number)rows(saved).getFirst().get("id")).longValue();var value=values();value.put("purchaseQty","12");
             var changed=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/v1/pur/order-imports/"+id(b)+"/rows/"+rowId)).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Content-Type","application/json").PUT(java.net.http.HttpRequest.BodyPublishers.ofString(codec.write(Map.of("version",1,"values",value)))).build();var edited=http.send(changed,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(edited.statusCode()).as(edited.body()).isEqualTo(200);assertThat(edited.body()).contains("12.0000");
+            owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\"]'::jsonb WHERE id=801");var decision=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/v1/pur/order-imports/"+id(b)+"/rows/"+rowId+"/decision")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Content-Type","application/json").PUT(java.net.http.HttpRequest.BodyPublishers.ofString(codec.write(Map.of("version",2,"decision","EXISTING","productId",501,"unit","PCS")))).build();var confirmed=http.send(decision,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(confirmed.statusCode()).as(confirmed.body()).isEqualTo(200);assertThat(confirmed.body()).contains("READY");assertThat(owner.queryForObject("SELECT count(*) FROM sys_audit_log WHERE action='PUR_IMPORT_PRODUCT_DECISION'",Integer.class)).isEqualTo(1);
         }
     }
     @Test void approvedRealParserBridgePersistsSixtyRowsAndOriginalImages()throws Exception {

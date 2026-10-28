@@ -39,6 +39,7 @@ async function render(state) {
   app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
   app.component('PurchaseImportTable', { render: () => null })
   app.component('PurchaseImportSources', { render: () => null })
+  app.component('PurchaseImportProductReview', { render: () => null })
   return renderToString(app)
 }
 
@@ -96,6 +97,29 @@ test('真实来源组件呈现解析失败、工作表选择和逐规格原图�
   assert.match(html, /原第2行/)
   assert.match(html, /归属待核实/)
   assert.match(html, /确认属于本行/)
+})
+
+test('商品确认界面按真实目录状态显示，取消新品确认不创建商品', async () => {
+  const { state } = workspace()
+  Object.assign(state.page.state, { batchId, status: 'REVIEW', rows: [{ ...row, readiness: 'NEEDS_SETUP', matchedProductId: 501, setupReasons: ['商品尚未在本国启用'] }] })
+  const source = new URL('../src/modules/purchase/PurchaseImportProductReview.vue', import.meta.url)
+  const bindings = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => ({ page: state.page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: { async get() { throw new Error('目录连接失败') } } }, ['selectedRow', 'keyword', 'products', 'productId', 'unit', 'catalogLoading', 'catalogError', 'catalogLoaded', 'mode', 'fresh', 'choices', 'row', 'selectedProduct', 'readyCount', 'locked', 'search', 'confirmExisting', 'createNew'])
+  bindings.selectedRow.value = row.id
+  bindings.products.value = [{ id: 501, productCode: 'SKU', name: '真实商品', spec: 'S', status: 'ENABLED', units: [{ unit: 'PCS' }] }]
+  await bindings.search()
+  assert.match(bindings.catalogError.value, /目录连接失败/)
+  assert.equal(bindings.products.value.length, 1)
+  Object.assign(bindings.fresh.value, { productCode: 'NEW', name: '新品', baseUnit: 'PCS' })
+  await bindings.createNew()
+  assert.deepEqual(bindings.choices.value, {})
+  const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+  const app = createSSRApp({ setup: () => ({ ...bindings, page: state.page }), render: compile(template) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
+  for (const name of ['ElSelect', 'ElOption', 'ElButton', 'ElInput', 'ElRadioGroup', 'ElRadioButton', 'ElForm', 'ElFormItem', 'ElAlert', 'RouterLink']) app.component(name, slot)
+  const html = await renderToString(app)
+  assert.match(html, /商品已选定，仍需配置/)
+  assert.match(html, /商品尚未在本国启用/)
+  assert.match(html, /\/master\/products/)
 })
 
 test('接口适配器发送真实multipart和带版本的保存删除约定', async () => {

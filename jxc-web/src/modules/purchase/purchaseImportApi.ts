@@ -18,4 +18,6 @@ export const purchaseImportApi: PurchaseImportApi = {
   deleteRow: (id, row) => http.delete(`${batchPath(id)}/rows/${row.id}`, { headers: { 'If-Match': String(row.version) }, silent: true }),
   retryTask: (id, key, sheet) => http.post(`${base}/tasks/${encodeURIComponent(id)}/retry`, { sheet }, { headers: { 'Idempotency-Key': key }, silent: true }),
   associate: (id, row, imageId, association) => http.put(`${batchPath(id)}/rows/${row.id}/images/${imageId}/association`, { version: row.version, association }, { silent: true }),
+  decide: (id, row, input) => http.put(`${batchPath(id)}/rows/${row.id}/decision`, { ...input, version: row.version }, { silent: true }),
+  createProduct: (id, row, input, key) => http.post(`${batchPath(id)}/rows/${row.id}/products`, input, { headers: { 'Idempotency-Key': key }, silent: true }),
 }

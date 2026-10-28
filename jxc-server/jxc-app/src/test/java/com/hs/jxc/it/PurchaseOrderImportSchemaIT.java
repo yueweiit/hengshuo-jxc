@@ -34,7 +34,7 @@ class PurchaseOrderImportSchemaIT extends BasePgIT {
         assertThat(stored.get("freight")).isNull();
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import", Integer.class)).isEqualTo(2);
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order", Integer.class)).isEqualTo(orders);
-        assertThat(owner.queryForObject("SELECT count(*) FROM pg_constraint WHERE conrelid='pur_order_import'::regclass AND contype='f' AND confrelid NOT IN ('pur_order_import_batch'::regclass,'pur_order_import_source'::regclass)", Integer.class)).isZero();
+        assertThat(owner.queryForObject("SELECT count(*) FROM pg_constraint WHERE conrelid='pur_order_import'::regclass AND contype='f' AND confrelid NOT IN ('pur_order_import_batch'::regclass,'pur_order_import_source'::regclass,'sys_user'::regclass)", Integer.class)).isZero();
     }
 
     @Test void invalidNumbersAndDuplicateSourceRowsAreRejectedByTheDatabase() {
