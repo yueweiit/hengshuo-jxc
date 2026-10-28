@@ -32,7 +32,7 @@ let active = true, refsSequence = 0
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleTasks() {
   clearTimeout(taskTimer)
-  if (active && (state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) && state.batchId) taskTimer = setTimeout(async () => { if (await page.refreshTasks()) scheduleTasks() }, 2000)
+  if (active && (state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) && state.batchId) taskTimer = setTimeout(async () => { if (await page.refreshTasks() || state.edit || state.loading || state.saving || state.importing || page.headerDirty()) scheduleTasks() }, 2000)
 }
 watch(() => [state.batchId, state.status, state.tasks.map(task => `${task.id}:${task.status}`).join(',')], scheduleTasks)
 

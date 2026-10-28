@@ -11,21 +11,21 @@ const model = loadTsModule(new URL('../src/modules/purchase/purchaseImportModel.
 const batchId = '11111111-2222-4333-8444-555555555555'
 const header = { bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2026-10-28', expectedDate: null, paymentTerms: '', prepayRatio: '0', termDays: null }
 const row = { id: 10, version: 1, rowNo: 1, sourceOrderNo: 'NY-051', photo: null, productSpec: 'S', purchaseQty: '10', saleUnitPrice: null, saleTotal: null, purchaseUnitPrice: '53', freight: null, landedUnitCost: null, usdUnitCost: null, usdTotal: null }
-function workspace(confirm = async () => {}) {
+function workspace(confirm = async () => {}, timerDependencies = {}) {
   const navigations = [], requests = [], removed = []
   const state = loadVueScript(file, {
     ref, computed, watch, onMounted() {}, onBeforeUnmount() {}, defineProps: () => ({ downloading: false, downloadError: '' }), defineEmits: () => () => {},
     useCountryStore: () => ({ timezone: 'Asia/Shanghai', currentId: 101, epoch: 0 }), useUserStore: () => ({ token: 'test' }),
     useRoute: () => ({ query: { from: 'test' } }), useRouter: () => ({ async replace(target) { navigations.push(target) } }),
     todayIn: () => '2026-10-28', ...model,
-    ElMessageBox: { confirm },
+    ElMessageBox: { confirm }, ...timerDependencies,
     http: { async get(path) { assert.equal(path, '/org/books'); return [{ id: 1, name: '账套', baseCurrency: 'USD' }] } },
     allRecords: async path => path === '/md/partners' ? [{ id: 2, name: '供应商' }] : [{ code: 'USD' }],
     purchaseImportApi: {
       async upload(selected, fields) { requests.push([selected, fields]); return { batchId, header: { ...header }, rows: [{ ...row }] } },
       async deleteRow(_batch, selected) { removed.push(selected.id); return { deleted: true, id: selected.id } },
     },
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'headerLocked', 'route', 'loadReferences', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'headerLocked', 'route', 'loadReferences', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks'])
   return { state, navigations, requests, removed }
 }
 
@@ -231,4 +231,33 @@ test('费用待办区分未知与零，展示来源且保存失败保留编辑',
   for (const name of ['ElButton', 'ElInput', 'ElSelect', 'ElOption', 'ElCheckbox', 'RouterLink']) app.component(name, slot)
   const html = await renderToString(app)
   assert.match(html, /待核实/); assert.match(html, /待登记/); assert.match(html, /0.0000000000/); assert.match(html, /G2\+H2/); assert.match(html, /import-source-7/)
+})
+
+
+test('本地编辑使任务读取暂缓时仍会接续轮询，网络错误明确保留', async () => {
+  const timers = []
+  const { state } = workspace(async () => {}, { setTimeout(callback) { timers.push(callback); return timers.length }, clearTimeout() {}, watch() {} })
+  state.page.headerDirty = () => false
+  Object.assign(state.page.state, { batchId, status: 'REVIEW', tasks: [{ id: batchId, kind: 'MATCH', status: 'RUNNING' }], edit: { id: 10, field: null, values: row } })
+  state.page.refreshTasks = async () => false
+  state.scheduleTasks(); await timers.shift()()
+  assert.equal(timers.length, 1)
+  state.page.state.edit = null
+  state.page.refreshTasks = async () => { state.page.failure(new Error('网络读取失败')); return false }
+  await timers.shift()()
+  assert.equal(timers.length, 0); assert.match(state.page.state.error, /网络读取失败/)
+})
+
+
+test('表头编辑绑定开始版本，轮询的新版本不能替旧编辑稿越过冲突校验', async () => {
+  const { state } = workspace(); state.page.headerDirty = () => false
+  const received = []; state.page.saveGroup = async (group, header) => { received.push([group.version, { ...header }]); return false }
+  const group = { id: 8, version: 2, header: { ...header, termDays: 0 } }
+  const props = { page: state.page, books: [], suppliers: [], currencies: [] }
+  const source = new URL('../src/modules/purchase/PurchaseImportDraftPreview.vue', import.meta.url)
+  const bindings = loadVueScript(source, { ref, computed, watch() {}, onBeforeUnmount() {}, defineProps: () => props, ElMessageBox: {}, http: {} }, ['editing', 'header', 'edit', 'save'])
+  bindings.edit(group); bindings.header.value.paymentTerms = '本地核对中的内容'
+  await bindings.save({ ...group, version: 3, header: { ...group.header, termDays: 30 } })
+  assert.equal(received[0][0], 2); assert.equal(bindings.editing.value, 8)
+  assert.equal(received[0][1].termDays, 0)
 })

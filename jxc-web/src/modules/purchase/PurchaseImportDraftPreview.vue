@@ -5,12 +5,13 @@ import { http } from '@/api/http'
 import type { ImportDraftGroup, PurchaseImportModel } from './purchaseImportModel'
 
 const props = defineProps<{ page: PurchaseImportModel; books: { id: number; name: string }[]; suppliers: { id: number; name: string }[]; currencies: { code: string }[] }>()
+const editingVersion = ref<number | null>(null)
 const editing = ref<number | null>(null), header = ref<Record<string, any>>({}), split = ref<number[]>([])
 const enabled = ref(false), capabilityError = ref(''), capabilityLoading = ref(false)
 const locked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.headerDirty())
 let active = true, epoch = 0
 watch(() => props.page.state.batchId, async () => {
-  editing.value = null; enabled.value = false; capabilityError.value = ''
+  editing.value = null; editingVersion.value = null; enabled.value = false; capabilityError.value = ''
   const context = ++epoch
   if (!props.page.state.batchId) return
   capabilityLoading.value = true
@@ -20,8 +21,8 @@ watch(() => props.page.state.batchId, async () => {
   } catch (error) { if (active && context === epoch) capabilityError.value = error instanceof Error ? error.message : '读取创建权限失败' }
   finally { if (active && context === epoch) capabilityLoading.value = false }
 }, { immediate: true })
-function edit(group: ImportDraftGroup) { editing.value = group.id; header.value = { ...group.header }; split.value = [] }
-async function save(group: ImportDraftGroup) { if (await props.page.saveGroup(group, header.value, split.value)) editing.value = null }
+function edit(group: ImportDraftGroup) { editing.value = group.id; editingVersion.value = group.version; header.value = { ...group.header }; split.value = [] }
+async function save(group: ImportDraftGroup) { if (editing.value !== group.id || editingVersion.value === null) return; if (await props.page.saveGroup({ ...group, version: editingVersion.value }, header.value, split.value)) { editing.value = null; editingVersion.value = null } }
 function groupRows(group: ImportDraftGroup) { return props.page.state.rows.filter(row => row.groupId === group.id) }
 function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', READY: '可确认建单', CREATING: '创建处理中', CREATED: '已创建草稿', FAILED: '创建失败', UNKNOWN: '创建结果待核实' } as Record<string, string>)[group.createStatus] }
 async function create(group: ImportDraftGroup) {

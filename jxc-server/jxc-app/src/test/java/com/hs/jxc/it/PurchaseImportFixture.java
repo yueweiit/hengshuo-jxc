@@ -45,6 +45,7 @@ abstract class PurchaseImportFixture extends BasePgIT {
     Map<String,Object> header(){var h=new LinkedHashMap<String,Object>();h.put("bookId",601);h.put("supplierId",901);h.put("currency","USD");h.put("orderDate","2026-10-28");h.put("expectedDate",null);h.put("paymentTerms","");h.put("prepayRatio","0");h.put("termDays",null);return h;}
     Map<String,Object> values(){var v=new LinkedHashMap<String,Object>();for(String k:List.of("sourceOrderNo","photo","productSpec","purchaseQty","saleUnitPrice","saleTotal","purchaseUnitPrice","freight","landedUnitCost","usdUnitCost","usdTotal"))v.put(k,null);v.put("sourceOrderNo","PO-1");v.put("productSpec","S");v.put("purchaseQty","10");v.put("purchaseUnitPrice","53.1234567890");return v;}
     @SuppressWarnings("unchecked") List<Map<String,Object>> rows(Map<String,Object> b){return (List<Map<String,Object>>)b.get("rows");}
+    @SuppressWarnings("unchecked") List<Map<String,Object>> groups(Map<String,Object>b){return (List<Map<String,Object>>)b.get("groups");}
     UUID id(Map<String,Object>b){return UUID.fromString(b.get("batchId").toString());}
     UUID task(Map<String,Object>b){return UUID.fromString(b.get("taskId").toString());}
     Map<String,Object> upload(String key){return imports.upload(actor,"采购.xlsx",file,header(),null,key);}
