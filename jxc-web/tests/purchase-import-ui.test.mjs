@@ -110,7 +110,7 @@ test('商品确认界面按真实目录状态显示，取消新品确认不创�
   const { state } = workspace()
   Object.assign(state.page.state, { batchId, status: 'REVIEW', rows: [{ ...row, readiness: 'NEEDS_SETUP', matchedProductId: 501, setupReasons: ['商品尚未在本国启用'] }] })
   const source = new URL('../src/modules/purchase/PurchaseImportProductReview.vue', import.meta.url)
-  const bindings = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => ({ page: state.page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: { async get() { throw new Error('目录连接失败') } } }, ['selectedRow', 'keyword', 'products', 'productId', 'unit', 'catalogLoading', 'catalogError', 'catalogLoaded', 'mode', 'fresh', 'choices', 'row', 'selectedProduct', 'readyCount', 'pickerLocked', 'locked', 'search', 'confirmExisting', 'createNew'])
+  const bindings = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => ({ page: state.page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: { async get() { throw new Error('目录连接失败') } } }, ['selectedRow', 'keyword', 'products', 'productId', 'unit', 'catalogLoading', 'catalogError', 'catalogLoaded', 'mode', 'fresh', 'choices', 'row', 'selectedProduct', 'readyCount', 'pickerLocked', 'locked', 'search', 'confirmExisting', 'createNew', 'matchEnabled', 'capabilityError', 'candidateRun', 'candidateProduct', 'matchInputs', 'inputsDirty', 'currentMatch', 'chooseCandidate', 'manualSelection', 'saveInputs', 'routeLabel'])
   bindings.selectedRow.value = row.id
   bindings.products.value = [{ id: 501, productCode: 'SKU', name: '真实商品', spec: 'S', status: 'ENABLED', units: [{ unit: 'PCS' }] }]
   await bindings.search()
@@ -189,4 +189,26 @@ test('图库组件保留索引失败原因和独立重试，取消重建不发�
   for (const name of ['ElButton', 'ElAlert']) app.component(name, slot)
   const html = await renderToString(app)
   assert.match(html, /最近一次图库构建失败/); assert.match(html, /索引构建失败/); assert.match(html, /继续原照片／索引任务/); assert.match(html, /仍可人工确认商品并创建采购草稿/)
+})
+
+
+test('候选卡显示规格冲突和原始分数，选择后仍需人工确认单位', async () => {
+  const { state } = workspace()
+  const candidate = { productId: 501, product: { id: 501, productCode: 'SKU', name: '真实商品', spec: 'M', units: [{ unit: 'PCS' }] }, visualScore: 0.987, textEvidence: [], visualEvidence: [{}], conflicts: ['原行规格与候选商品规格不同'] }
+  Object.assign(state.page.state, { batchId, status: 'REVIEW', rows: [{ ...row, readiness: 'UNRESOLVED', matchTaskId: batchId, matchResult: { runId: batchId, inputRevision: 1, text: { status: 'NO_INPUT', reason: '没有商品编码或名称' }, image: { status: 'FOUND', reason: '正式图库外观候选' }, candidates: [candidate], explanation: { status: 'UNAVAILABLE', message: '解释服务不可用，原始结果已保留' } } }] })
+  state.page.headerDirty = () => false
+  const calls = []; state.page.decideProduct = async (_row, input) => { calls.push(input); return true }
+  const source = new URL('../src/modules/purchase/PurchaseImportProductReview.vue', import.meta.url)
+  const names = ['selectedRow', 'keyword', 'products', 'productId', 'unit', 'catalogLoading', 'catalogError', 'catalogLoaded', 'mode', 'fresh', 'choices', 'row', 'selectedProduct', 'readyCount', 'pickerLocked', 'locked', 'search', 'confirmExisting', 'createNew', 'matchEnabled', 'capabilityError', 'candidateRun', 'candidateProduct', 'matchInputs', 'inputsDirty', 'currentMatch', 'chooseCandidate', 'manualSelection', 'saveInputs', 'routeLabel']
+  const bindings = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => ({ page: state.page }), ElMessageBox: {}, http: { async get() { return { recognitionEnabled: true } } } }, names)
+  bindings.selectedRow.value = row.id; bindings.chooseCandidate(candidate)
+  assert.equal(calls.length, 0); assert.equal(bindings.unit.value, '')
+  bindings.unit.value = 'PCS'; await bindings.confirmExisting()
+  assert.deepEqual(calls[0], { decision: 'EXISTING', productId: 501, unit: 'PCS', runId: batchId })
+  const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+  const app = createSSRApp({ setup: () => ({ ...bindings, page: state.page }), render: compile(template) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
+  for (const name of ['ElSelect', 'ElOption', 'ElButton', 'ElInput', 'ElRadioGroup', 'ElRadioButton', 'ElForm', 'ElFormItem', 'ElAlert', 'RouterLink']) app.component(name, slot)
+  const html = await renderToString(app)
+  assert.match(html, /0.9870/); assert.match(html, /非正确概率/); assert.match(html, /规格不同/); assert.match(html, /解释服务不可用/)
 })

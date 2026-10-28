@@ -21,6 +21,7 @@ public interface ProductImageApi {
     Map<String,Object> generationStatus(RequestContext ctx,String generation);
     void failGeneration(RequestContext ctx,String generation,String message);
     Map<String,Object> publishIndex(RequestContext ctx,String generation,Map<String,Object> input,Map<String,Object> result,Runnable commitGuard);
+    Map<String,Object> indexReference(RequestContext ctx,String generation);
     AttachmentService.Download indexContent(RequestContext ctx,String generation);
     List<Map<String,Object>> resolveHits(RequestContext ctx,String generation,List<Map<String,Object>> hits);
 }

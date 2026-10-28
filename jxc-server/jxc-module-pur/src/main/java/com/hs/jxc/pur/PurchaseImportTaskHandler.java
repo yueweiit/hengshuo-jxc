@@ -9,5 +9,6 @@ interface PurchaseImportTaskHandler {
     Set<String> kinds();
     void execute(PurchaseImportTaskService.Lease lease,PurchaseImportTaskService runtime);
     void validate(RequestContext ctx,Map<String,Object> task);
+    default void retry(RequestContext ctx,Map<String,Object> task){validate(ctx,task);}
     AttachmentService.Download asset(RequestContext ctx,Map<String,Object> task,long assetId);
 }

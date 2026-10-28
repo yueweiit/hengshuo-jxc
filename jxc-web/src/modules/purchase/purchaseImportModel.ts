@@ -26,8 +26,11 @@ export const importColumns = [
 export type ImportField = typeof importColumns[number]['key']
 export type ImportValues = Record<ImportField, string | null>
 export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED' | 'CONFIRMED' | 'REJECTED'; publishStatus?: string; publishedProductId?: number | null; productImageId?: number | null }
-export type ImportRow = ImportValues & { id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
-export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[] } }
+export interface MatchInputs { suppliedProductCode: string | null; suppliedProductName: string | null; supplierProductCode: string | null }
+export interface MatchCandidate { productId: number; product: { id: number; productCode: string; name: string; spec: string | null; units: { unit: string }[] }; visualScore: number | null; textEvidence: { reason: string }[]; visualEvidence: unknown[]; conflicts: string[] }
+export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: number; status: string; text: { status: string; reason: string }; image: { status: string; reason: string; errors?: { reason: string }[] }; candidates: MatchCandidate[]; explanation: { status: string; message: string; candidateNotes?: { productId: number; message: string }[] } }
+export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
+export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number } }
 export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; warnings?: { sourceRow?: number; message: string }[] }
 export interface ImportDraftGroup { id: number; version: number; sourceOrderNo: string; header: ImportHeader & { taxRate?: string | null; priceTaxBasis?: string | null }; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number; sourceSheet?: string; sourceRow?: number; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
@@ -36,13 +39,15 @@ export interface PurchaseImportApi {
   upload(file: File, header: ImportHeader, batchId: string | null, key: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
   saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
-  saveRow(batchId: string, row: ImportRow, values: ImportValues): Promise<unknown>
+  saveRow(batchId: string, row: ImportRow, values: ImportValues, matchInputs?: MatchInputs): Promise<unknown>
   deleteRow(batchId: string, row: ImportRow): Promise<unknown>
   retryTask?(taskId: string, key: string, sheet: string | null): Promise<unknown>
   associate?(batchId: string, row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED'): Promise<unknown>
   decide?(batchId: string, row: ImportRow, input: Record<string, unknown>): Promise<unknown>
   createProduct?(batchId: string, row: ImportRow, input: Record<string, unknown>, key: string): Promise<unknown>
   publishPhotos?(batchId: string, row: ImportRow, imageIds: number[], key: string): Promise<unknown>
+  startMatches?(batchId: string, batchVersion: number, rowIds: number[], key: string): Promise<unknown>
+  explain?(batchId: string, row: ImportRow, key: string): Promise<unknown>
   gallery?(): Promise<unknown>
   rebuildGallery?(batchId: string, key: string): Promise<unknown>
   previews?(batchId: string, batchVersion: number): Promise<unknown>
@@ -89,6 +94,11 @@ function readRow(value: unknown): ImportRow {
   if (!record(value) || !positiveId(value.id) || !positiveId(value.version) || !positiveId(value.rowNo)) throw new Error('后端返回的明细编号、版本或源行号不完整')
   if (value.images !== undefined && (!Array.isArray(value.images) || value.images.some(image => !record(image) || !positiveId(image.id) || typeof image.sha256 !== 'string' || !['UNCONFIRMED', 'CONFIRMED', 'REJECTED'].includes(String(image.status))))) throw new Error('后端返回的原图关联不完整')
   if (value.readiness !== undefined && !['UNRESOLVED', 'NEEDS_SETUP', 'READY'].includes(String(value.readiness))) throw new Error('后端返回的商品确认状态无效')
+  if (value.matchResult !== undefined && value.matchResult !== null) {
+    const run = value.matchResult
+    const route = (v: unknown) => record(v) && ['FOUND', 'NOT_FOUND', 'NO_INPUT', 'UNAVAILABLE', 'FAILED'].includes(String(v.status)) && typeof v.reason === 'string'
+    if (!record(run) || run.format !== 'MatchRunV1' || !isBatchId(run.runId) || !positiveId(run.inputRevision) || !['OK', 'PARTIAL', 'FAILED'].includes(String(run.status)) || !route(run.text) || !route(run.image) || !Array.isArray(run.candidates) || run.candidates.some(c => !record(c) || !positiveId(c.productId) || !record(c.product) || c.product.id !== c.productId || typeof c.product.productCode !== 'string' || typeof c.product.name !== 'string' || !Array.isArray(c.product.units) || !Array.isArray(c.textEvidence) || !Array.isArray(c.visualEvidence) || !Array.isArray(c.conflicts) || c.conflicts.some(v => typeof v !== 'string') || c.visualScore !== null && (typeof c.visualScore !== 'number' || !Number.isFinite(c.visualScore) || c.visualScore < -1.00001 || c.visualScore > 1.00001)) || !record(run.explanation) || !['READY', 'UNAVAILABLE', 'FAILED', 'NOT_REQUESTED'].includes(String(run.explanation.status)) || typeof run.explanation.message !== 'string') throw new Error('后端返回的候选证据不完整，请重新读取')
+  }
   return { ...value, ...normalizeValues(value as ImportValues), id: value.id, version: value.version, rowNo: value.rowNo } as ImportRow
 }
 function readGroup(value: unknown): ImportDraftGroup {
@@ -311,6 +321,32 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     const request = JSON.parse(JSON.stringify(input)) as Record<string, unknown>
     return write('saving', () => api.createProduct!(state.batchId!, { ...row }, request, key), response => applyReview(row, response))
   }
+  const matchKeys = new Map<string, string>()
+  async function saveMatchInputs(row: ImportRow, input: MatchInputs) {
+    if (!state.batchId || busy() || state.edit || headerDirty() || rowLocked(row)) return false
+    const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, value?.trim() || null])) as unknown as MatchInputs
+    if (Object.values(normalized).some(value => value !== null && value.length > 200)) { failure(new Error('补充文字最多200个字符')); return false }
+    const values = Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues
+    return write('saving', () => api.saveRow(state.batchId!, row, values, normalized), response => applyReview(row, response))
+  }
+  async function startMatches(rowIds: number[]) {
+    if (!api.startMatches || !state.batchId || busy() || state.edit || headerDirty() || !rowIds.length || new Set(rowIds).size !== rowIds.length || rowIds.some(id => !state.rows.some(row => row.id === id && !rowLocked(row)))) return false
+    const signature = JSON.stringify([state.batchId, state.version, rowIds])
+    if (!matchKeys.has(signature)) matchKeys.set(signature, newKey())
+    return write('saving', () => api.startMatches!(state.batchId!, state.version, rowIds, matchKeys.get(signature)!), response => {
+      if (!record(response) || !Array.isArray(response.taskIds) || response.taskIds.length !== rowIds.length || response.taskIds.some(id => !isBatchId(id))) throw new Error('后端未确认候选任务')
+      applyBatch(readBatch(response)); matchKeys.delete(signature); state.success = '候选任务已登记，请等待结果并人工核对'
+    })
+  }
+  async function explainMatch(row: ImportRow) {
+    if (!api.explain || !state.batchId || busy() || state.edit || headerDirty() || rowLocked(row) || !row.matchResult || row.matchResult.inputRevision !== row.version) return false
+    const signature = JSON.stringify([row.id, row.version, row.matchResult.runId, 'EXPLAIN'])
+    if (!matchKeys.has(signature)) matchKeys.set(signature, newKey())
+    return write('saving', () => api.explain!(state.batchId!, row, matchKeys.get(signature)!), response => {
+      if (!record(response) || !isBatchId(response.id) || response.status !== 'QUEUED') throw new Error('后端未确认解释任务')
+      state.tasks.push({ id: response.id, kind: 'EXPLAIN', status: 'QUEUED', result: { rowId: row.id } }); matchKeys.delete(signature)
+    })
+  }
   const photoKeys = new Map<string, string>()
   async function publishPhotos(row: ImportRow, imageIds: number[]) {
     if (!api.publishPhotos || !state.batchId || busy() || state.edit || headerDirty()) return false
@@ -377,8 +413,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
-    state.groups = []; creationIntents.clear(); photoKeys.clear(); rebuildKey = ''; ++gallerySequence; state.gallery = null; state.galleryError = ''; state.galleryLoading = false
+    state.groups = []; creationIntents.clear(); photoKeys.clear(); matchKeys.clear(); rebuildKey = ''; ++gallerySequence; state.gallery = null; state.galleryError = ''; state.galleryLoading = false
   }
-  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, invalidate }
+  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, saveMatchInputs, startMatches, explainMatch, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, invalidate }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

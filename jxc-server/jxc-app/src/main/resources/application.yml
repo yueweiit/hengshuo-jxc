@@ -28,6 +28,10 @@ spring:
       file-size-threshold: 0
 jxc:
   purchase-import:
+    recognition:
+      enabled: ${JXC_PURCHASE_IMPORT_RECOGNITION_ENABLED:false}
+    n8n-url: ${JXC_PURCHASE_IMPORT_N8N_URL:}
+    n8n-key: ${JXC_PURCHASE_IMPORT_N8N_KEY:}
     draft-creation:
       enabled: ${JXC_PURCHASE_IMPORT_DRAFT_CREATION_ENABLED:false}
     worker-enabled: ${JXC_PURCHASE_IMPORT_WORKER_ENABLED:false}
