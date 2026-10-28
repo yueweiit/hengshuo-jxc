@@ -311,11 +311,13 @@ onMounted(load)
 
     <section class="shipment-section shipment-quantities" aria-labelledby="shipment-quantity-title">
       <div class="shipment-section-heading shipment-quantity-heading">
+
+        <div class="shipment-heading-text"><h3 id="shipment-quantity-title">数量分桶</h3><span class="muted">{{ filteredLines.length }} / {{ lines.length }} 条明细</span><el-tag v-if="rank >= RANK.IN_TRANSIT" :type="identityOk ? 'success' : 'danger'" effect="plain" size="small">{{ identityOk ? '数量恒等校验通过' : '数量不平，请检查' }}</el-tag></div>
         <div class="shipment-quantity-controls">
           <el-input v-model="lineQuery" clearable size="small" placeholder="商品编码 / 名称 / 来源" aria-label="筛选商品" class="shipment-line-search"><template #prefix><el-icon><Search /></el-icon></template></el-input>
         </div>
-        <div class="shipment-heading-text"><h3 id="shipment-quantity-title">数量分桶</h3><span class="muted">{{ filteredLines.length }} / {{ lines.length }} 条明细</span><el-tag v-if="rank >= RANK.IN_TRANSIT" :type="identityOk ? 'success' : 'danger'" effect="plain" size="small">{{ identityOk ? '数量恒等校验通过' : '数量不平，请检查' }}</el-tag></div>
         <button type="button" class="shipment-quantity-toggle" :aria-expanded="quantityExpanded" aria-controls="shipment-quantity-body" :aria-label="quantityExpanded ? '收起数量分桶' : '展开数量分桶'" :title="quantityExpanded ? '收起数量分桶' : '展开数量分桶'" @click="quantityExpanded = !quantityExpanded"><el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon></button>
+      
       </div>
       <div v-show="quantityExpanded" id="shipment-quantity-body" class="shipment-quantity-body">
         <div class="table-scroll">
