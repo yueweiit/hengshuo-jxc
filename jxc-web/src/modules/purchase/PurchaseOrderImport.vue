@@ -2,6 +2,7 @@
 import { onBeforeUnmount, ref } from 'vue'
 import { http } from '@/api/http'
 import { reportError } from '@/api/error-feedback'
+import PurchaseImportWorkspace from './PurchaseImportWorkspace.vue'
 
 interface TemplateFile {
   fileName: string
@@ -10,6 +11,7 @@ interface TemplateFile {
 }
 
 const downloading = ref(false)
+const downloadError = ref('')
 let active = true
 onBeforeUnmount(() => { active = false })
 
@@ -48,12 +50,16 @@ async function downloadTemplate() {
   }
 }
 
+async function handleDownload() {
+  downloadError.value = ''
+  try { await downloadTemplate() }
+  catch (error) { if (active) downloadError.value = error instanceof Error ? error.message : '模板下载失败，请重试' }
+}
+
 </script>
 
 <template>
   <div class="page">
-    <el-button type="primary" :loading="downloading" @click="downloadTemplate">
-      <el-icon><Download /></el-icon>下载模板
-    </el-button>
+    <PurchaseImportWorkspace :downloading="downloading" :download-error="downloadError" @download="handleDownload" />
   </div>
 </template>
