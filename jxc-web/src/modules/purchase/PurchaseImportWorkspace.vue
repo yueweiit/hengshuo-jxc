@@ -8,6 +8,7 @@ import { useCountryStore } from '@/stores/country'
 import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
 import PurchaseImportTable from './PurchaseImportTable.vue'
+import PurchaseImportSources from './PurchaseImportSources.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 
@@ -23,6 +24,12 @@ const refsLoading = ref(false), refsError = ref(''), dialogVisible = ref(false),
 const fileInput = ref<HTMLInputElement>()
 const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value)
 let active = true, refsSequence = 0
+let taskTimer: ReturnType<typeof setTimeout> | undefined
+function scheduleTasks() {
+  clearTimeout(taskTimer)
+  if (active && state.status === 'PARSING' && state.batchId) taskTimer = setTimeout(async () => { if (await page.refreshTasks()) scheduleTasks() }, 2000)
+}
+watch(() => [state.batchId, state.status], scheduleTasks)
 
 async function loadReferences() {
   const request = ++refsSequence
@@ -102,7 +109,7 @@ watch(() => [country.currentId, country.epoch, user.token], () => {
   void loadReferences()
   if (route.query.batchId !== undefined) void router.replace({ query: { ...route.query, batchId: undefined } }).catch(error => { if (active) page.failure(error) })
 }, { flush: 'sync' })
-onBeforeUnmount(() => { active = false; ++refsSequence; page.invalidate() })
+onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer); page.invalidate() })
 </script>
 
 <template>
@@ -130,17 +137,18 @@ onBeforeUnmount(() => { active = false; ++refsSequence; page.invalidate() })
     </section>
 
     <section class="import-section import-details" aria-labelledby="import-details-title">
-      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="disabled || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
+      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
       <el-alert v-if="page.headerDirty()" type="warning" title="基础信息已修改，请先保存后再编辑明细。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />
+      <PurchaseImportSources :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
       <PurchaseImportTable :page="page" :disabled="disabled" @remove="remove" />
     </section>
 
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
-      <ol class="import-notices"><li>注意文件格式，请上传 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>导入后请逐项核对，确认数据无误。</li></ol>
+      <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>解析保存完成后请逐项核对，原图位置需要人工确认。</li></ol>
       <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="state.importing" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
       <el-alert v-if="downloadError" :title="downloadError" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />

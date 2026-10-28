@@ -25,15 +25,20 @@ export const importColumns = [
 ] as const
 export type ImportField = typeof importColumns[number]['key']
 export type ImportValues = Record<ImportField, string | null>
-export type ImportRow = ImportValues & { id: number; version: number; rowNo: number }
-export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[] }
+export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED' | 'CONFIRMED' | 'REJECTED' }
+export type ImportRow = ImportValues & { id: number; version: number; rowNo: number; sourceId?: number; sourceSheet?: string; sourceRow?: number; images?: ImportImage[]; batchVersion?: number }
+export interface ImportTask { id: string; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[] } }
+export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; warnings?: { sourceRow?: number; message: string }[] }
+export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
   upload(file: File, header: ImportHeader, batchId: string | null, key: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
-  saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[]): Promise<unknown>
+  saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
   saveRow(batchId: string, row: ImportRow, values: ImportValues): Promise<unknown>
   deleteRow(batchId: string, row: ImportRow): Promise<unknown>
+  retryTask?(taskId: string, key: string, sheet: string | null): Promise<unknown>
+  associate?(batchId: string, row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED'): Promise<unknown>
 }
 export const isBatchId = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -72,7 +77,8 @@ function normalizeValues(values: ImportValues): ImportValues {
 
 function readRow(value: unknown): ImportRow {
   if (!record(value) || !positiveId(value.id) || !positiveId(value.version) || !positiveId(value.rowNo)) throw new Error('后端返回的明细编号、版本或源行号不完整')
-  return { ...normalizeValues(value as ImportValues), id: value.id, version: value.version, rowNo: value.rowNo }
+  if (value.images !== undefined && (!Array.isArray(value.images) || value.images.some(image => !record(image) || !positiveId(image.id) || typeof image.sha256 !== 'string' || !['UNCONFIRMED', 'CONFIRMED', 'REJECTED'].includes(String(image.status))))) throw new Error('后端返回的原图关联不完整')
+  return { ...value, ...normalizeValues(value as ImportValues), id: value.id, version: value.version, rowNo: value.rowNo } as ImportRow
 }
 function readBatch(value: unknown): ImportBatch {
   if (!record(value) || !isBatchId(value.batchId) || !record(value.header) || !Array.isArray(value.rows)) throw new Error('后端返回的导入批次不完整，请检查接口')
@@ -81,7 +87,11 @@ function readBatch(value: unknown): ImportBatch {
   if (message) throw new Error(`后端返回的基础信息不完整：${message}`)
   const rows = value.rows.map(readRow)
   if (new Set(rows.map(row => row.id)).size !== rows.length || new Set(rows.map(row => row.rowNo)).size !== rows.length) throw new Error('后端返回了重复的明细编号或源行号')
-  return { batchId: value.batchId, header: { ...header }, rows }
+  if (value.version !== undefined && !positiveId(value.version)) throw new Error('后端返回的批次版本无效')
+  if (value.status !== undefined && !['DRAFT', 'PARSING', 'REVIEW', 'COMPLETED', 'CANCELLED', 'FAILED'].includes(String(value.status))) throw new Error('后端返回的批次状态无效')
+  for (const field of ['sources', 'tasks']) if (value[field] !== undefined && !Array.isArray(value[field])) throw new Error('后端返回的来源或任务不完整')
+  if (Array.isArray(value.tasks) && value.tasks.some(task => !record(task) || !isBatchId(task.id) || !['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'NEEDS_REAUTH', 'STALE'].includes(String(task.status)))) throw new Error('后端返回的任务状态无效')
+  return { ...value, batchId: value.batchId, header: { ...header }, rows } as unknown as ImportBatch
 }
 
 /** 页面只有一个编辑草稿；网络、解析、持久化错误始终保留为明确错误状态。 */
@@ -92,9 +102,10 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     edit: null as { id: number; field: ImportField | null; values: ImportValues } | null,
     loading: false, importing: false, saving: false, deletingId: null as number | null,
     error: '', errors: [] as ImportIssue[], success: '',
+    version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
   })
   let epoch = 0, readSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
-  const busy = () => state.loading || state.importing || state.saving
+  const busy = () => state.loading || state.importing || state.saving || state.status === 'PARSING'
   const headerDirty = () => state.batchId !== null && JSON.stringify(state.header) !== savedHeader
   function failure(error: unknown) {
     state.success = ''
@@ -109,6 +120,11 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.batchId = batch.batchId
     state.header = batch.header
     state.rows = batch.rows
+    // 兼容旧header/rows响应；仅缺少新增元数据时采用历史REVIEW语义。
+    state.version = batch.version === undefined ? 1 : batch.version
+    state.status = batch.status === undefined ? 'REVIEW' : batch.status
+    state.sources = batch.sources === undefined ? [] : batch.sources
+    state.tasks = batch.tasks === undefined ? [] : batch.tasks
     state.edit = null
     savedHeader = JSON.stringify(state.header)
   }
@@ -160,11 +176,11 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (selectedFile !== file || signature !== intentSignature) { intentKey = newKey(); selectedFile = file; intentSignature = signature }
     return write('importing', () => api.upload(file, header, state.batchId, intentKey), response => {
       const batch = readBatch(response)
-      if (batch.rows.length === 0) throw new Error('后端返回的导入结果没有明细，请核对文件')
+      if (batch.rows.length === 0 && !(batch.status === 'PARSING' && batch.tasks?.some(task => ['QUEUED', 'RUNNING'].includes(task.status)))) throw new Error('后端返回的导入结果没有明细或有效解析任务，请核对文件')
       if (state.batchId !== null && batch.batchId !== state.batchId) throw new Error('后端返回的导入批次与当前批次不一致')
       applyBatch(batch)
       selectedFile = null; intentKey = ''; intentSignature = ''
-      state.success = `已导入并保存${batch.rows.length}条明细，请核对无误`
+      if (batch.status !== 'PARSING') state.success = `已导入并保存${batch.rows.length}条明细，请核对无误`
     })
   }
   function startEdit(row: ImportRow, field: ImportField | null) {
@@ -185,6 +201,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       const updated = readRow(response)
       if (updated.id !== row.id || updated.rowNo !== row.rowNo || updated.version <= row.version) throw new Error('后端返回的保存记录编号或版本不正确')
       state.rows.splice(state.rows.findIndex(item => item.id === row.id), 1, updated)
+      if (updated.batchVersion !== undefined) state.version = updated.batchVersion
       state.edit = null
       state.success = '明细已保存'
     })
@@ -194,7 +211,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     const invalid = validateImportHeader(state.header)
     if (invalid) { failure(new Error(invalid)); return false }
     const id = state.batchId
-    return write('saving', () => api.saveHeader(id, { ...state.header }, state.rows.map(row => ({ id: row.id, version: row.version }))), response => {
+    return write('saving', () => api.saveHeader(id, { ...state.header }, state.rows.map(row => ({ id: row.id, version: row.version })), state.version), response => {
       const batch = readBatch(response)
       if (batch.batchId !== id || batch.rows.length !== state.rows.length || batch.rows.some(row => !state.rows.some(old => old.id === row.id))) throw new Error('后端返回的基础信息保存结果与当前批次不一致')
       applyBatch(batch)
@@ -209,7 +226,37 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     return write('saving', () => api.deleteRow(state.batchId!, { ...row }), response => {
       if (!record(response) || response.deleted !== true || response.id !== row.id) throw new Error('后端未确认删除成功，请刷新核对')
       state.rows = state.rows.filter(item => item.id !== row.id)
+      if (positiveId(response.batchVersion)) state.version = response.batchVersion
       state.success = '明细已删除'
+    })
+  }
+  async function refreshTasks() {
+    if (!state.batchId || state.edit || state.saving || state.importing || headerDirty()) return false
+    const pending = state.status === 'PARSING'
+    const saved = await loadBatch(state.batchId)
+    if (saved && pending && state.status === 'REVIEW') state.success = `已导入并保存${state.rows.length}条明细，请核对无误`
+    return saved
+  }
+  const retryKeys = new Map<string, string>()
+  async function retryTask(task: ImportTask, sheet: string | null = null) {
+    if (!api.retryTask || busy() || state.edit) return false
+    const signature = JSON.stringify([task.id, sheet])
+    if (!retryKeys.has(signature)) retryKeys.set(signature, newKey())
+    return write('saving', () => api.retryTask!(task.id, retryKeys.get(signature)!, sheet), response => {
+      if (!record(response) || response.id !== task.id || response.status !== 'QUEUED') throw new Error('后端未确认任务重试')
+      const saved = state.tasks.find(item => item.id === task.id)
+      if (!saved) throw new Error('当前批次任务已变化，请重新读取')
+      saved.status = 'QUEUED'; saved.errorCode = null; saved.errorMessage = null
+      state.status = 'PARSING'; retryKeys.delete(signature)
+    })
+  }
+  async function associate(row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED') {
+    if (!api.associate || !state.batchId || busy() || state.edit) return false
+    return write('saving', () => api.associate!(state.batchId!, row, imageId, association), response => {
+      const saved = readRow(response)
+      if (saved.id !== row.id || saved.version <= row.version) throw new Error('后端返回的图片确认版本无效')
+      state.rows.splice(state.rows.findIndex(item => item.id === row.id), 1, saved)
+      if (saved.batchVersion !== undefined) state.version = saved.batchVersion
     })
   }
   function invalidate() {
@@ -217,7 +264,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
+    state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
   }
-  return { state, busy, headerDirty, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, invalidate }
+  return { state, busy, headerDirty, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, invalidate }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

@@ -37,6 +37,52 @@ test('上传成功采用服务器保存后的批次和明细，不生成示例�
   assert.equal(calls[0][2].currency, 'USD')
 })
 
+test('异步上传只接收任务，解析保存成功前不显示已导入', async () => {
+  const pending = { ...batch(), version: 1, status: 'PARSING', rows: [], sources: [], tasks: [{ id: batchId, status: 'QUEUED' }], taskId: batchId }
+  const { page } = setup({ async upload() { return pending }, async load() { return { ...pending, version: 2, status: 'REVIEW', rows: [row()], tasks: [{ id: batchId, status: 'SUCCEEDED' }] } } })
+  assert.equal(await page.importFile(file()), true)
+  assert.equal(page.state.batchId, batchId)
+  assert.equal(page.state.rows.length, 0)
+  assert.equal(page.state.success, '')
+  assert.equal(page.state.status, 'PARSING')
+  assert.equal(await page.refreshTasks(), true)
+  assert.equal(page.state.rows.length, 1)
+  assert.match(page.state.success, /保存1条/)
+})
+
+test('解析失败可恢复任务原因，多工作表需明确选择后重试', async () => {
+  const failed = { ...batch(), version: 1, status: 'FAILED', rows: [], sources: [], tasks: [{ id: batchId, status: 'FAILED', errorCode: 'SHEET_SELECTION_REQUIRED', errorMessage: '请选择工作表', result: { sheets: ['采购A', '采购B'] } }] }
+  let command
+  const { page } = setup({ async load() { return failed }, async retryTask(...args) { command = args; return { id: batchId, status: 'QUEUED' } } })
+  await page.loadBatch(batchId)
+  assert.equal(page.state.tasks[0].errorCode, 'SHEET_SELECTION_REQUIRED')
+  assert.equal(await page.retryTask(page.state.tasks[0], '采购B'), true)
+  assert.equal(command[0], batchId)
+  assert.equal(command[2], '采购B')
+  assert.equal(page.state.tasks[0].status, 'QUEUED')
+})
+
+test('解析任务刷新失败保留原批次，不以空结果吞掉故障', async () => {
+  let fail = false
+  const pending = { ...batch(), version: 1, status: 'PARSING', tasks: [{ id: batchId, status: 'RUNNING' }] }
+  const { page } = setup({ async load() { if (fail) throw new Error('读取超时'); return pending } })
+  await page.loadBatch(batchId)
+  fail = true
+  assert.equal(await page.refreshTasks(), false)
+  assert.equal(page.state.rows.length, 1)
+  assert.match(page.state.error, /超时/)
+})
+
+test('人工确认图片后保留其他规格行并采用新的行与批次版本', async () => {
+  const image = { id: 8, sha256: 'a'.repeat(64), status: 'UNCONFIRMED' }
+  const { page } = setup({ async load() { return { ...batch(), version: 3, rows: [{ ...row(), images: [image] }, row(2)] } }, async associate(_batch, current, imageId, status) { return { ...current, version: 2, batchVersion: 4, images: [{ ...image, id: imageId, status }] } } })
+  await page.loadBatch(batchId)
+  assert.equal(await page.associate(page.state.rows[0], 8, 'CONFIRMED'), true)
+  assert.equal(page.state.rows[0].images[0].status, 'CONFIRMED')
+  assert.equal(page.state.rows[1].productSpec, 'S')
+  assert.equal(page.state.version, 4)
+})
+
 test('缺少基础信息以及非XLSX或空文件不会触发上传', async () => {
   const { page, calls } = setup()
   page.state.header.bookId = null

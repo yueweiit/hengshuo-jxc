@@ -38,6 +38,7 @@ async function render(state) {
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
   app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
   app.component('PurchaseImportTable', { render: () => null })
+  app.component('PurchaseImportSources', { render: () => null })
   return renderToString(app)
 }
 
@@ -76,6 +77,25 @@ test('用户取消删除不会请求删除接口', async () => {
   await state.remove(state.state.rows[0])
   assert.equal(removed.length, 0)
   assert.equal(state.state.rows.length, 1)
+})
+
+test('真实来源组件呈现解析失败、工作表选择和逐规格原图确认', async () => {
+  const { state } = workspace()
+  const page = state.page
+  Object.assign(page.state, { batchId, tasks: [{ id: batchId, status: 'FAILED', errorCode: 'SHEET_SELECTION_REQUIRED', errorMessage: '请选择采购表', result: { sheets: ['采购A', '采购B'] } }], sources: [{ id: 8, fileName: '采购.xlsx', fileSha256: 'a'.repeat(64), status: 'FAILED' }], rows: [{ ...row, sourceSheet: '采购A', sourceRow: 2, images: [{ id: 9, sha256: 'b'.repeat(64), status: 'UNCONFIRMED' }] }] })
+  const source = new URL('../src/modules/purchase/PurchaseImportSources.vue', import.meta.url)
+  const bindings = loadVueScript(source, { ref, watch, onBeforeUnmount() {}, defineProps: () => ({ page }), http: {} }, ['sheets', 'imageUrls', 'imageErrors', 'downloading', 'download', 'view', 'retry'])
+  const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+  const app = createSSRApp({ setup: () => ({ ...bindings, page }), render: compile(template) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
+  for (const name of ['ElSelect', 'ElOption', 'ElCollapse', 'ElCollapseItem', 'ElButton', 'ElImage']) app.component(name, slot)
+  const html = await renderToString(app)
+  assert.match(html, /请选择采购表/)
+  assert.match(html, /采购工作表/)
+  assert.match(html, /下载原文件/)
+  assert.match(html, /原第2行/)
+  assert.match(html, /归属待核实/)
+  assert.match(html, /确认属于本行/)
 })
 
 test('接口适配器发送真实multipart和带版本的保存删除约定', async () => {

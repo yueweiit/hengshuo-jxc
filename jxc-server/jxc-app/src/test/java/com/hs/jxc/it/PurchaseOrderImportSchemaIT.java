@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
 class PurchaseOrderImportSchemaIT extends BasePgIT {
     private UUID batch;
 
-    @BeforeEach void fixture() { InventoryIT.seedBase(); batch = UUID.randomUUID(); }
+    @BeforeEach void fixture() { InventoryIT.seedBase(); batch = UUID.randomUUID();
+        inCountry(101,()->jdbc.update("INSERT INTO pur_order_import_batch(country_id,batch_id,header,created_by) VALUES(101,?,'{\"bookId\":991}',201)",batch));
+    }
 
     private long insert(int line, String spec) {
         return inCountry(101, () -> jdbc.queryForObject("""
@@ -32,7 +34,7 @@ class PurchaseOrderImportSchemaIT extends BasePgIT {
         assertThat(stored.get("freight")).isNull();
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import", Integer.class)).isEqualTo(2);
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order", Integer.class)).isEqualTo(orders);
-        assertThat(owner.queryForObject("SELECT count(*) FROM pg_constraint WHERE conrelid='pur_order_import'::regclass AND contype='f'", Integer.class)).isZero();
+        assertThat(owner.queryForObject("SELECT count(*) FROM pg_constraint WHERE conrelid='pur_order_import'::regclass AND contype='f' AND confrelid NOT IN ('pur_order_import_batch'::regclass,'pur_order_import_source'::regclass)", Integer.class)).isZero();
     }
 
     @Test void invalidNumbersAndDuplicateSourceRowsAreRejectedByTheDatabase() {

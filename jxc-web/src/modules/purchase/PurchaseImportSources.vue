@@ -1,0 +1,81 @@
+<script setup lang="ts">
+import { onBeforeUnmount, ref, watch } from 'vue'
+import { http } from '@/api/http'
+import type { PurchaseImportModel, ImportTask, ImportRow } from './purchaseImportModel'
+
+const props = defineProps<{ page: PurchaseImportModel }>()
+const sheets = ref<Record<string, string>>({}), imageUrls = ref<Record<string, string>>({}), imageErrors = ref<Record<string, string>>({})
+const downloading = ref<number | null>(null)
+let epoch = 0
+function clean() { ++epoch; Object.values(imageUrls.value).forEach(url => URL.revokeObjectURL(url)); imageUrls.value = {}; imageErrors.value = {} }
+function path(kind: 'sources' | 'images', id: number) { return `/api/v1/pur/order-imports/${props.page.state.batchId}/${kind}/${id}/content` }
+async function download(id: number, name: string) {
+  if (downloading.value !== null) return
+  const context = epoch; downloading.value = id
+  try {
+    const blob = await http.attachmentBlob(path('sources', id), { silent: true, timeout: 120000 })
+    if (context !== epoch) return
+    const url = URL.createObjectURL(blob), link = document.createElement('a')
+    link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url)
+  } catch (error) { if (context === epoch) props.page.failure(error) }
+  finally { if (context === epoch) downloading.value = null }
+}
+async function view(row: ImportRow, id: number) {
+  const key = String(id), context = epoch
+  if (imageUrls.value[key]) return
+  try {
+    const blob = await http.attachmentBlob(path('images', id), { silent: true })
+    if (context !== epoch || !props.page.state.rows.some(item => item.id === row.id)) return
+    if (!blob.type.startsWith('image/')) throw new Error('原图响应格式不正确')
+    imageUrls.value[key] = URL.createObjectURL(blob); delete imageErrors.value[key]
+  } catch (error) { if (context === epoch) imageErrors.value[key] = error instanceof Error ? error.message : '原图读取失败，请重试' }
+}
+function retry(task: ImportTask) { return props.page.retryTask(task, sheets.value[task.id] || null) }
+watch(() => props.page.state.batchId, () => { clean(); downloading.value = null })
+onBeforeUnmount(clean)
+</script>
+
+<template>
+  <div v-if="page.state.batchId" class="source-panel">
+    <div v-for="task in page.state.tasks" :key="task.id" class="source-task" role="status">
+      <span v-if="['QUEUED', 'RUNNING'].includes(task.status)">文件已接收，{{ task.status === 'QUEUED' ? '等待解析' : '正在解析与保存' }}。可离开页面，返回此批次继续核对。</span>
+      <template v-else-if="['FAILED', 'NEEDS_REAUTH', 'STALE'].includes(task.status)">
+        <span class="source-error">{{ task.errorMessage || '任务未完成，请重新读取原因' }}</span>
+        <el-select v-if="task.errorCode === 'SHEET_SELECTION_REQUIRED'" v-model="sheets[task.id]" placeholder="请选择采购工作表" aria-label="采购工作表"><el-option v-for="sheet in task.result?.sheets" :key="sheet" :value="sheet" :label="sheet" /></el-select>
+        <el-button :disabled="page.busy() || !!page.state.edit || (task.errorCode === 'SHEET_SELECTION_REQUIRED' && !sheets[task.id])" @click="retry(task)">重试解析</el-button>
+      </template>
+    </div>
+    <div v-for="source in page.state.sources" :key="source.id" class="source-file">
+      <div><strong>{{ source.fileName }}</strong><small>原文件 SHA256：{{ source.fileSha256 }}</small></div>
+      <el-button link type="primary" :loading="downloading === source.id" @click="download(source.id, source.fileName)">下载原文件</el-button>
+      <p v-for="(warning, index) in source.warnings" :key="index" class="source-warning">{{ warning.sourceRow ? `原第${warning.sourceRow}行：` : '' }}{{ warning.message }}</p>
+    </div>
+    <el-collapse v-if="page.state.rows.some(row => row.images?.length)">
+      <el-collapse-item title="原图与来源位置 · 请逐行确认归属" name="images">
+        <div v-for="row in page.state.rows.filter(item => item.images?.length)" :key="row.id" class="source-row">
+          <div class="source-position">第{{ row.rowNo }}行 · {{ row.productSpec || '规格待核实' }}<small>{{ row.sourceSheet }} · 原第{{ row.sourceRow }}行</small></div>
+          <div v-for="image in row.images" :key="image.id" class="source-image">
+            <el-image v-if="imageUrls[String(image.id)]" :src="imageUrls[String(image.id)]" :preview-src-list="[String(imageUrls[String(image.id)])]" fit="contain" class="original-image" :alt="`原第${row.sourceRow}行商品照片`" />
+            <el-button v-else size="small" @click="view(row, image.id)">查看原图</el-button>
+            <span v-if="imageErrors[String(image.id)]" class="source-error">{{ imageErrors[String(image.id)] }}</span>
+            <span>{{ image.status === 'CONFIRMED' ? '归属已确认' : image.status === 'REJECTED' ? '已排除' : '归属待核实' }}</span>
+            <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'CONFIRMED'" @click="page.associate(row, image.id, 'CONFIRMED')">确认属于本行</el-button>
+            <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'REJECTED'" @click="page.associate(row, image.id, 'REJECTED')">排除</el-button>
+          </div>
+        </div>
+      </el-collapse-item>
+    </el-collapse>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.source-panel { margin: 12px 0; font-size: 13px; }
+.source-task { display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: var(--el-fill-color-light); border-left: 3px solid var(--el-color-primary); .el-select { width: 200px; } }
+.source-file { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; small { display: block; color: var(--el-text-color-secondary); overflow-wrap: anywhere; margin-top: 4px; } }
+.source-warning { width: 100%; margin: 0; color: var(--el-color-warning-dark-2); }
+.source-error { color: var(--el-color-danger); }
+.source-row { display: flex; gap: 16px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--el-border-color-lighter); }
+.source-position { min-width: 150px; small { display: block; color: var(--el-text-color-secondary); } }
+.source-image { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.original-image { width: 90px; height: 90px; background: var(--el-fill-color-light); }
+</style>

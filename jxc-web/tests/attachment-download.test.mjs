@@ -22,3 +22,10 @@ test('JSON error envelopes inside a failed blob response keep the original busin
   assert.equal(await readBlobError(new Blob(['not JSON'])), undefined)
   assert.equal(await readBlobError(new Blob(['{"file":"a user JSON file"}'])), undefined)
 })
+test('采购来源下载只接受当前站点固定批次原文件和原图路径', async () => {
+  const { attachmentDownloadTarget } = await helper()
+  const path = '/api/v1/pur/order-imports/11111111-2222-4333-8444-555555555555/images/123/content'
+  assert.deepEqual(attachmentDownloadTarget(path, 'https://jxc.test'), { kind: 'proxy', url: path })
+  assert.throws(() => attachmentDownloadTarget('https://other.test' + path, 'https://jxc.test'))
+  assert.throws(() => attachmentDownloadTarget(path.replace('images/123', 'tasks/123'), 'https://jxc.test'))
+})
