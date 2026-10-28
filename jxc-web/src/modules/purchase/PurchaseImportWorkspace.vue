@@ -10,6 +10,7 @@ import { todayIn } from '@/utils/format'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
 import PurchaseImportGallery from './PurchaseImportGallery.vue'
+import PurchaseImportFeeTodos from './PurchaseImportFeeTodos.vue'
 import PurchaseImportDraftPreview from './PurchaseImportDraftPreview.vue'
 import PurchaseImportProductReview from './PurchaseImportProductReview.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
@@ -151,6 +152,7 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <PurchaseImportTable :page="page" :disabled="disabled" @remove="remove" />
       <PurchaseImportProductReview :page="page" />
       <PurchaseImportDraftPreview :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" />
+      <PurchaseImportFeeTodos :page="page" :currencies="currencies" />
     </section>
 
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">

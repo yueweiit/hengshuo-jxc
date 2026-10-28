@@ -53,7 +53,7 @@ onBeforeUnmount(clean)
         <el-button :disabled="page.busy() || !!page.state.edit || (task.errorCode === 'SHEET_SELECTION_REQUIRED' && !sheets[task.id])" @click="retry(task)">重试解析</el-button>
       </template>
     </div>
-    <div v-for="source in page.state.sources" :key="source.id" class="source-file">
+    <div v-for="source in page.state.sources" :id="`import-source-${source.id}`" :key="source.id" class="source-file">
       <div><strong>{{ source.fileName }}</strong><small>原文件 SHA256：{{ source.fileSha256 }}</small></div>
       <el-button link type="primary" :loading="downloading === source.id" @click="download(source.id, source.fileName)">下载原文件</el-button>
       <p v-for="(warning, index) in source.warnings" :key="index" class="source-warning">{{ warning.sourceRow ? `原第${warning.sourceRow}行：` : '' }}{{ warning.message }}</p>

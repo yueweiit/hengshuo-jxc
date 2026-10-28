@@ -42,6 +42,7 @@ async function render(state) {
   app.component('PurchaseImportSources', { render: () => null })
   app.component('PurchaseImportProductReview', { render: () => null })
   app.component('PurchaseImportDraftPreview', { render: () => null })
+  app.component('PurchaseImportFeeTodos', { render: () => null })
   return renderToString(app)
 }
 
@@ -211,4 +212,23 @@ test('候选卡显示规格冲突和原始分数，选择后仍需人工确认�
   for (const name of ['ElSelect', 'ElOption', 'ElButton', 'ElInput', 'ElRadioGroup', 'ElRadioButton', 'ElForm', 'ElFormItem', 'ElAlert', 'RouterLink']) app.component(name, slot)
   const html = await renderToString(app)
   assert.match(html, /0.9870/); assert.match(html, /非正确概率/); assert.match(html, /规格不同/); assert.match(html, /解释服务不可用/)
+})
+
+
+test('费用待办区分未知与零，展示来源且保存失败保留编辑', async () => {
+  const { state } = workspace(); state.page.headerDirty = () => false
+  const g = { id: 8, version: 4, feeTodosVersion: 1, sourceOrderNo: 'PO', feeTodos: [{ todoId: batchId, sourceRowIds: [10], sourceRows: [{ rowId: 10, sourceId: 7, sourceSheet: '采购', sourceRow: 2, rowNo: 1 }], amount: null, currency: null, scope: null, reason: '运费归属待核实', status: 'PENDING', reviewStatus: 'UNRESOLVED', targetOrderId: null }], sourceEvidence: [{ rowId: 10, rowNo: 1, sourceId: 7, sourceSheet: '采购', sourceRow: 2, fileName: '采购.xlsx', fileSha256: 'a'.repeat(64), currentValues: { ...row, freight: '0.0000000000' }, originalValues: { H: '0' }, formulaProvenance: { formulas: { I: 'G2+H2' } } }] }
+  state.page.state.groups = [g]; state.page.state.batchId = batchId
+  state.page.saveFeeTodos = async () => false
+  const source = new URL('../src/modules/purchase/PurchaseImportFeeTodos.vue', import.meta.url)
+  const props = { page: state.page, currencies: [{ code: 'USD' }] }
+  const bindings = loadVueScript(source, { ref, computed, defineProps: () => props }, ['editor', 'locked', 'open', 'add', 'remove', 'save', 'reviewLabel', 'scopeLabel', 'valueText'])
+  bindings.open(g); await bindings.save(); assert.equal(bindings.editor.value.group.id, 8)
+  bindings.editor.value = null
+  const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+  const app = createSSRApp({ setup: () => ({ ...bindings, ...props }), render: compile(template) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
+  for (const name of ['ElButton', 'ElInput', 'ElSelect', 'ElOption', 'ElCheckbox', 'RouterLink']) app.component(name, slot)
+  const html = await renderToString(app)
+  assert.match(html, /待核实/); assert.match(html, /待登记/); assert.match(html, /0.0000000000/); assert.match(html, /G2\+H2/); assert.match(html, /import-source-7/)
 })

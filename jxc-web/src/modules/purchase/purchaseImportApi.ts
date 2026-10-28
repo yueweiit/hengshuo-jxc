@@ -28,5 +28,6 @@ export const purchaseImportApi: PurchaseImportApi = {
   previews: (id, batchVersion) => http.post(`${batchPath(id)}/previews`, { batchVersion }, { silent: true }),
   saveGroup: (id, group, header, splitRowIds) => http.put(`${batchPath(id)}/groups/${group.id}`, { groupVersion: group.version, header, splitRowIds }, { silent: true }),
   createDraft: (id, group, request, key) => http.post(`${batchPath(id)}/groups/${group.id}/drafts`, request, { headers: { 'Idempotency-Key': key }, silent: true }),
+  saveFeeTodos: (id, group, items) => http.put(`${batchPath(id)}/groups/${group.id}/fee-todos`, { version: group.feeTodosVersion, sourceBasisHash: group.sourceBasisHash, items }, { silent: true }),
   creation: (id, group) => http.get(`${batchPath(id)}/groups/${group.id}/creation`, undefined, { silent: true }),
 }

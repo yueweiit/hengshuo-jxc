@@ -32,7 +32,11 @@ export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: 
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number } }
 export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; warnings?: { sourceRow?: number; message: string }[] }
-export interface ImportDraftGroup { id: number; version: number; sourceOrderNo: string; header: ImportHeader & { taxRate?: string | null; priceTaxBasis?: string | null }; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number; sourceSheet?: string; sourceRow?: number; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
+export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE' | null; amount: string | null; currency: string | null; reason: string; confirm: boolean }
+export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
+export interface FeeTodo extends Omit<FeeReviewInput, 'confirm'> { format: 'FeeTodoV1'; todoId: string; sourceRows: ImportSourceRef[]; status: 'PENDING'; reviewStatus: 'UNRESOLVED' | 'CONFIRMED' | 'STALE'; registeredReference: null; targetOrderId: number | null; targetDocNo: string | null; targetReferenceStatus: string }
+export interface ImportSourceEvidence extends ImportSourceRef { currentValues: ImportValues; originalValues: Record<string, unknown> | null; formulaProvenance: Record<string, unknown> | null; targetOrderLineId: number | null }
+export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: number; sourceBasisHash?: string; sourceEvidence?: ImportSourceEvidence[]; id: number; version: number; sourceOrderNo: string; header: ImportHeader & { taxRate?: string | null; priceTaxBasis?: string | null }; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number; sourceSheet?: string; sourceRow?: number; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
@@ -53,6 +57,7 @@ export interface PurchaseImportApi {
   previews?(batchId: string, batchVersion: number): Promise<unknown>
   saveGroup?(batchId: string, group: ImportDraftGroup, header: Record<string, unknown>, splitRowIds?: number[]): Promise<unknown>
   createDraft?(batchId: string, group: ImportDraftGroup, request: Record<string, unknown>, key: string): Promise<unknown>
+  saveFeeTodos?(batchId: string, group: ImportDraftGroup, items: FeeReviewInput[]): Promise<unknown>
   creation?(batchId: string, group: ImportDraftGroup): Promise<unknown>
 }
 export const isBatchId = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)
@@ -106,6 +111,7 @@ function readGroup(value: unknown): ImportDraftGroup {
   if (value.createStatus === 'CREATED' && !positiveId(value.orderId)) throw new Error('已创建结果缺少真实采购单编号，请查询原请求')
   if (value.preview !== null && (!record(value.preview) || !Array.isArray(value.preview.lines) || !value.preview.lines.length)) throw new Error('采购预览明细不完整')
   if (value.createIntent != null && (!record(value.createIntent) || !isBatchId(value.createIntent.key) || !record(value.createIntent.request))) throw new Error('原创建请求信息不完整')
+  if (value.feeTodos !== undefined && (!positiveId(value.feeTodosVersion) || typeof value.sourceBasisHash !== 'string' || !/^[a-f0-9]{64}$/.test(value.sourceBasisHash) || !Array.isArray(value.feeTodos) || value.feeTodos.some(todo => !record(todo) || todo.format !== 'FeeTodoV1' || !isBatchId(todo.todoId) || todo.status !== 'PENDING' || todo.registeredReference !== null || !['UNRESOLVED', 'CONFIRMED', 'STALE'].includes(String(todo.reviewStatus)) || !Array.isArray(todo.sourceRowIds) || todo.sourceRowIds.some(id => !positiveId(id)) || !Array.isArray(todo.sourceRows) || todo.sourceRows.some(ref => !record(ref) || !positiveId(ref.rowId)) || todo.amount !== null && (typeof todo.amount !== 'string' || !decimalValid(todo.amount)) || todo.currency !== null && (typeof todo.currency !== 'string' || !/^[A-Z]{3}$/.test(todo.currency)) || todo.scope !== null && !['ORDER', 'LINE'].includes(String(todo.scope))) || !Array.isArray(value.sourceEvidence) || value.sourceEvidence.some(ref => !record(ref) || !positiveId(ref.rowId) || !record(ref.currentValues)))) throw new Error('后端返回的费用待办或来源依据不完整')
   return value as unknown as ImportDraftGroup
 }
 function readBatch(value: unknown): ImportBatch {
@@ -407,6 +413,16 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!api.creation || !state.batchId || busy() || state.edit) return false
     return write('saving', () => api.creation!(state.batchId!, group), response => applyCreation(group, response))
   }
+  async function saveFeeTodos(group: ImportDraftGroup, items: FeeReviewInput[]) {
+    if (!api.saveFeeTodos || !state.batchId || busy() || state.edit || headerDirty()) return false
+    return write('saving', () => api.saveFeeTodos!(state.batchId!, group, JSON.parse(JSON.stringify(items))), response => {
+      const saved = readGroup(response)
+      if (saved.id !== group.id || saved.version < group.version || !positiveId(saved.feeTodosVersion) || !positiveId(group.feeTodosVersion) || saved.feeTodosVersion <= group.feeTodosVersion) throw new Error('后端未确认费用核对版本，请刷新核对')
+      const index = state.groups.findIndex(item => item.id === group.id)
+      if (index < 0) throw new Error('当前分组已变化，请刷新核对')
+      state.groups.splice(index, 1, saved); state.success = '费用核对已保存，仍待在原业务页面登记'
+    })
+  }
   function invalidate() {
     ++epoch; ++readSequence
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
@@ -415,6 +431,6 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
     state.groups = []; creationIntents.clear(); photoKeys.clear(); matchKeys.clear(); rebuildKey = ''; ++gallerySequence; state.gallery = null; state.galleryError = ''; state.galleryLoading = false
   }
-  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, saveMatchInputs, startMatches, explainMatch, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, invalidate }
+  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, saveMatchInputs, startMatches, explainMatch, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, saveFeeTodos, invalidate }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>
