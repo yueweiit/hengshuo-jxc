@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.SQLException;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DataAccessException;
 
 /** Tests database protections through the real, non-owner runtime identity. */
@@ -132,6 +135,164 @@ class SchemaIT extends BasePgIT {
         assertSqlState("23503", () -> inCountry(102, () -> jdbc.update("INSERT INTO sys_attachment_link(country_id,attachment_id,biz_type,biz_id,linked_by) VALUES (102,801,'ENTITY',302,201)")));
         inCountry(101, () -> jdbc.update("INSERT INTO sys_attachment_link(country_id,attachment_id,biz_type,biz_id,linked_by) VALUES (101,801,'ENTITY',301,201)"));
         inCountry(101, () -> jdbc.update("UPDATE sys_attachment SET object_status='MISSING',version=version+1 WHERE id=801"));
+    }
+
+    @Test
+    void productCanExistWithoutAnyPhotoOrFeature() {
+        seedProductImageFixtures();
+        assertThat(jdbc.queryForObject("SELECT name FROM md_product WHERE id=1501", String.class)).isEqualTo("图片商品A");
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM md_product_image", Integer.class))).isZero();
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM image_feature", Integer.class))).isZero();
+    }
+
+    @Test
+    void productPhotosCanShareOneFileAndHaveNoFeatures() {
+        seedProductImageFixtures();
+        insertProductPhoto(101, 1501, 1801, false);
+        insertProductPhoto(101, 1502, 1801, false);
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM md_product_image", Integer.class))).isEqualTo(2);
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM image_feature", Integer.class))).isZero();
+        assertThat(owner.queryForObject("SELECT count(*) FROM sys_attachment_link", Integer.class)).isZero();
+    }
+
+    @Test
+    void productPhotoUniquenessAllowsSeveralPhotosAndReplacingAnArchivedPrimary() {
+        seedProductImageFixtures();
+        insertProductPhoto(101, 1501, 1801, true);
+        insertProductPhoto(101, 1501, 1802, false);
+        assertSqlState("23505", () -> insertProductPhoto(101, 1501, 1801, false));
+        assertSqlState("23505", () -> inCountry(101, () -> jdbc.update("UPDATE md_product_image SET is_primary=true WHERE attachment_id=1802")));
+        inCountry(101, () -> jdbc.update("UPDATE md_product_image SET status='DELETED' WHERE attachment_id=1801"));
+        insertProductPhoto(101, 1501, 1801, true);
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM md_product_image WHERE status='ACTIVE' AND is_primary", Integer.class))).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "INSERT INTO md_product_image(country_id,product_id,attachment_id,created_by) VALUES(101,9999,1801,201)",
+        "INSERT INTO md_product_image(country_id,product_id,attachment_id,created_by) VALUES(101,1501,9999,201)",
+        "INSERT INTO md_product_image(country_id,product_id,attachment_id,created_by) VALUES(101,1501,1803,201)",
+        "INSERT INTO image_feature(country_id,attachment_id,model_name,model_version,preprocess_version,created_by) VALUES(101,9999,'dinov2_vits14','weights-1','rgb-1',201)",
+        "INSERT INTO image_feature(country_id,attachment_id,model_name,model_version,preprocess_version,created_by) VALUES(101,1803,'dinov2_vits14','weights-1','rgb-1',201)"
+    })
+    void productImageReferencesRejectMissingOrForeignCountryParents(String sql) {
+        seedProductImageFixtures();
+        assertSqlState("23503", () -> inCountry(101, () -> jdbc.update(sql)));
+    }
+
+    @Test
+    void imageFeatureVersionsCoexistButTheSameVersionCannotBeDuplicated() {
+        seedProductImageFixtures();
+        insertImageFeature(101, 1801, "weights-1", "rgb-1");
+        insertImageFeature(101, 1801, "weights-2", "rgb-1");
+        insertImageFeature(101, 1801, "weights-1", "rgb-2");
+        assertSqlState("23505", () -> insertImageFeature(101, 1801, "weights-1", "rgb-1"));
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM image_feature", Integer.class))).isEqualTo(3);
+    }
+
+    @Test
+    void imageFeatureCanWaitFailRetryAndBecomeIndexedWithoutBlockingItsPhoto() {
+        seedProductImageFixtures();
+        insertProductPhoto(101, 1501, 1801, true);
+        long feature = insertImageFeature(101, 1801, "weights-1", "rgb-1");
+        assertThat(inCountry(101, () -> jdbc.queryForMap("SELECT feature_status,index_status,feature_data FROM image_feature WHERE id=?", feature)))
+            .containsEntry("feature_status", "PENDING").containsEntry("index_status", "PENDING").containsEntry("feature_data", null);
+        inCountry(101, () -> jdbc.update("UPDATE image_feature SET feature_status='FAILED',error_message='模型暂不可用' WHERE id=?", feature));
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM md_product_image WHERE status='ACTIVE'", Integer.class))).isEqualTo(1);
+        inCountry(101, () -> jdbc.update("UPDATE image_feature SET feature_status='READY',dimension=2,feature_data=decode('0000803f00000000','hex'),error_message=NULL WHERE id=?", feature));
+        inCountry(101, () -> jdbc.update("UPDATE image_feature SET index_status='FAILED',error_message='索引写入失败' WHERE id=?", feature));
+        inCountry(101, () -> jdbc.update("UPDATE image_feature SET index_status='READY',error_message=NULL WHERE id=?", feature));
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT octet_length(feature_data) FROM image_feature WHERE id=? AND feature_status='READY' AND index_status='READY'", Integer.class, feature))).isEqualTo(8);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "feature_status='READY'",
+        "feature_status='READY',dimension=2,feature_data=decode('0000803f','hex')",
+        "feature_status='READY',dimension=0,feature_data=decode('','hex')",
+        "feature_status='READY',feature_data=decode('0000803f','hex')",
+        "dimension=1,feature_data=decode('0000803f','hex')",
+        "feature_status='FAILED'",
+        "feature_status='FAILED',error_message=' '",
+        "index_status='READY'",
+        "index_status='FAILED',error_message='索引失败'",
+        "feature_status='READY',dimension=2,feature_data=decode('0000803f00000000','hex'),index_status='FAILED'",
+        "feature_status='READY',dimension=2,feature_data=decode('0000803f00000000','hex'),error_message='过期错误'",
+        "model_name=' '",
+        "model_version=' '",
+        "preprocess_version=' '"
+    })
+    void imageFeatureRejectsInvalidDataAndContradictoryStates(String assignment) {
+        seedProductImageFixtures();
+        long feature = insertImageFeature(101, 1801, "weights-1", "rgb-1");
+        assertSqlState("23514", () -> inCountry(101, () -> jdbc.update("UPDATE image_feature SET " + assignment + " WHERE id=?", feature)));
+    }
+
+    @Test
+    void productImagesAndFeaturesUseRuntimeCountryIsolation() {
+        seedProductImageFixtures();
+        insertProductPhoto(101, 1501, 1801, true);
+        insertProductPhoto(102, 1501, 1803, true);
+        insertImageFeature(101, 1801, "weights-1", "rgb-1");
+        insertImageFeature(102, 1803, "weights-1", "rgb-1");
+        for (String table : new String[]{"md_product_image", "image_feature"}) {
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM " + table, Integer.class)).isZero();
+            assertThat(inCountry(101, () -> jdbc.queryForList("SELECT country_id FROM " + table, Long.class))).containsExactly(101L);
+            assertThat(inCountry(102, () -> jdbc.queryForList("SELECT country_id FROM " + table, Long.class))).containsExactly(102L);
+            assertSqlState("42501", () -> inCountry(101, () -> jdbc.update("UPDATE " + table + " SET country_id=102")));
+        }
+        assertSqlState("42501", () -> inCountry(101, () -> jdbc.update("INSERT INTO md_product_image(country_id,product_id,attachment_id,created_by) VALUES(102,1502,1803,201)")));
+        assertSqlState("42501", () -> inCountry(101, () -> jdbc.update("INSERT INTO image_feature(country_id,attachment_id,model_name,model_version,preprocess_version,created_by) VALUES(102,1803,'dinov2_vits14','weights-2','rgb-1',201)")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"md_product_image", "image_feature"})
+    void productImageTablesRespectDisabledCountryWriteProtection(String table) {
+        seedProductImageFixtures();
+        insertProductPhoto(101, 1501, 1801, true);
+        insertImageFeature(101, 1801, "weights-1", "rgb-1");
+        owner.update("UPDATE sys_country SET status='DISABLED' WHERE id=101");
+        assertThatThrownBy(() -> inCountry(101, () -> jdbc.update("UPDATE " + table + " SET version=version+1")))
+            .isInstanceOf(DataAccessException.class).hasMessageContaining("SYS_COUNTRY_DISABLED");
+        assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM " + table, Integer.class))).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"md_product_image", "image_feature"})
+    void productImageTablesRespectOperationalFreezeWithoutBlockingReads(String table) {
+        seedProductImageFixtures();
+        insertProductPhoto(101, 1501, 1801, true);
+        insertImageFeature(101, 1801, "weights-1", "rgb-1");
+        setImageTestWriteMode("FROZEN");
+        try {
+            assertThatThrownBy(() -> inCountry(101, () -> jdbc.update("UPDATE " + table + " SET version=version+1")))
+                .isInstanceOf(DataAccessException.class).hasMessageContaining("SYS_WRITES_FROZEN");
+            assertThat(inCountry(101, () -> jdbc.queryForObject("SELECT count(*) FROM " + table, Integer.class))).isEqualTo(1);
+        } finally {
+            setImageTestWriteMode("OPEN");
+        }
+    }
+
+    private void seedProductImageFixtures() {
+        owner.update("INSERT INTO md_product(id,product_code,name) VALUES(1501,'PIC-A','图片商品A'),(1502,'PIC-B','图片商品B')");
+        // Only database metadata is exercised here; no fixture claims a real MinIO upload.
+        owner.update("INSERT INTO sys_attachment(id,country_id,category,file_name,content_type,size,storage_key,sha256,uploaded_by) VALUES"
+            + "(1801,101,'PRODUCT_PHOTO','a.png','image/png',8,'schema/photo-a',repeat('a',64),201),"
+            + "(1802,101,'PRODUCT_PHOTO','b.png','image/png',8,'schema/photo-b',repeat('b',64),201),"
+            + "(1803,102,'PRODUCT_PHOTO','c.png','image/png',8,'schema/photo-c',repeat('c',64),201)");
+    }
+
+    private int insertProductPhoto(long country, long product, long attachment, boolean primary) {
+        return inCountry(country, () -> jdbc.update("INSERT INTO md_product_image(country_id,product_id,attachment_id,is_primary,created_by) VALUES(?,?,?,?,201)", country, product, attachment, primary));
+    }
+
+    private long insertImageFeature(long country, long attachment, String modelVersion, String preprocessVersion) {
+        return inCountry(country, () -> jdbc.queryForObject("INSERT INTO image_feature(country_id,attachment_id,model_name,model_version,preprocess_version,created_by) VALUES(?,?,'dinov2_vits14',?,?,201) RETURNING id", Long.class, country, attachment, modelVersion, preprocessVersion));
+    }
+
+    private void setImageTestWriteMode(String mode) {
+        long epoch = owner.queryForObject("SELECT epoch FROM sys_write_control", Long.class);
+        owner.queryForObject("SELECT jxc_set_write_mode(?, ?, ?::uuid, '商品图片建表测试', '隔离数据库维护门禁验证')::text", String.class, mode, epoch, UUID.randomUUID().toString());
     }
 
     private int insertEvent(String date, int sequence) {
