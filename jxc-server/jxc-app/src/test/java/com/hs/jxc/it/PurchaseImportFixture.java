@@ -56,4 +56,8 @@ abstract class PurchaseImportFixture extends BasePgIT {
         doReturn(document()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());
         tasks.execute(101,task(b));
     }
+    org.testcontainers.containers.GenericContainer<?> featureContainer(String image,boolean drafts){return new org.testcontainers.containers.GenericContainer<>(org.testcontainers.utility.DockerImageName.parse(image))
+        .withEnv("JXC_DB_URL","jdbc:postgresql://host.docker.internal:"+PgDatabase.PG.getMappedPort(5432)+"/"+PgDatabase.PG.getDatabaseName()).withEnv("JXC_DB_USER","jxc_app").withEnv("JXC_DB_PASSWORD",PgDatabase.PASSWORD).withEnv("JXC_BIND_ADDRESS","0.0.0.0").withEnv("JXC_STORAGE_ENDPOINT","http://host.docker.internal:"+MinioTestStorage.MINIO.getMappedPort(9000)).withEnv("JXC_STORAGE_ACCESS_KEY",MinioTestStorage.ACCESS).withEnv("JXC_STORAGE_SECRET_KEY",MinioTestStorage.SECRET).withEnv("JXC_STORAGE_BUCKET",MinioTestStorage.BUCKET).withEnv("JXC_PURCHASE_IMPORT_WORKER_ENABLED","true").withEnv("JXC_PURCHASE_IMPORT_DRAFT_CREATION_ENABLED",String.valueOf(drafts))
+        .withExposedPorts(8080).withCreateContainerCmdModifier(c->c.withEntrypoint("java")).withCommand("-Xmx384m","-Dfile.encoding=UTF-8","-jar","/app/app.jar","--spring.flyway.enabled=false","--jxc.jobs.enabled=false").waitingFor(org.testcontainers.containers.wait.strategy.Wait.forHttp("/actuator/health").forPort(8080).withStartupTimeout(java.time.Duration.ofSeconds(90)));}
+
 }

@@ -8,6 +8,8 @@ public interface MasterProductApi {
  /** Historical source labels only, including disabled SKUs. Never records unit usage. */
  Product reference(long countryId,long productId);
  Product requireEnabled(long countryId,long productId,String unit);
+ /** 采购输入准备使用共享行锁，保持商品、本国状态及单位换算到事务结束。 */
+ Product requireEnabledLocked(long countryId,long productId,String unit);
  /** Same authoritative conversion and precision checks, without recording business usage. */
  BigDecimal previewToBase(Product product,BigDecimal qty);
  BigDecimal toBase(Product product,BigDecimal qty);

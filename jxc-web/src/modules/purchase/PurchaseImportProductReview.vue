@@ -12,7 +12,8 @@ const fresh = ref({ productCode: '', name: '', baseUnit: '', spec: '' }), choice
 const row = computed(() => props.page.state.rows.find(item => item.id === selectedRow.value))
 const selectedProduct = computed(() => products.value.find(item => item.id === productId.value))
 const readyCount = computed(() => props.page.state.rows.filter(item => item.readiness === 'READY').length)
-const locked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.headerDirty())
+const pickerLocked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.headerDirty())
+const locked = computed(() => pickerLocked.value || !!row.value && props.page.rowLocked(row.value))
 let epoch = 0, active = true
 function syncRow(value?: ImportRow) {
   productId.value = value?.matchedProductId ?? null; unit.value = value?.purchaseUnit ?? ''; mode.value = 'existing'
@@ -59,7 +60,7 @@ onBeforeUnmount(() => { active = false; ++epoch })
 <template>
   <div v-if="page.state.rows.length" class="product-review">
     <div class="review-heading"><h3>商品与单位确认</h3><span>已确认 {{ readyCount }} / {{ page.state.rows.length }} 行</span></div>
-    <div class="review-picker"><el-select v-model="selectedRow" filterable aria-label="选择待核对采购行" :disabled="locked"><el-option v-for="item in page.state.rows" :key="item.id" :value="item.id" :label="`第${item.rowNo}行 · ${item.sourceOrderNo} · ${item.productSpec || '规格待核实'} · ${item.readiness === 'READY' ? '已确认' : item.readiness === 'NEEDS_SETUP' ? '待设置' : '待确认'}`" /></el-select></div>
+    <div class="review-picker"><el-select v-model="selectedRow" filterable aria-label="选择待核对采购行" :disabled="pickerLocked"><el-option v-for="item in page.state.rows" :key="item.id" :value="item.id" :label="`第${item.rowNo}行 · ${item.sourceOrderNo} · ${item.productSpec || '规格待核实'} · ${item.readiness === 'READY' ? '已确认' : item.readiness === 'NEEDS_SETUP' ? '待设置' : '待确认'}`" /></el-select></div>
     <template v-if="row">
       <div class="review-status"><strong>{{ row.readiness === 'READY' ? '商品和单位已确认' : row.readiness === 'NEEDS_SETUP' ? '商品已选定，仍需配置' : '等待人工确认' }}</strong><span v-if="row.matchedProductId">商品 ID：{{ row.matchedProductId }}</span><span v-if="row.purchaseUnit">采购单位：{{ row.purchaseUnit }}</span></div>
       <p v-for="reason in row.setupReasons" :key="reason" class="review-warning">{{ reason }}</p>

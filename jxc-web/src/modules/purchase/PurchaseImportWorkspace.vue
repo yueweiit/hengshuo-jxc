@@ -9,6 +9,7 @@ import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
+import PurchaseImportDraftPreview from './PurchaseImportDraftPreview.vue'
 import PurchaseImportProductReview from './PurchaseImportProductReview.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
@@ -24,6 +25,7 @@ const currencies = ref<{ code: string }[]>([])
 const refsLoading = ref(false), refsError = ref(''), dialogVisible = ref(false), selected = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement>()
 const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value)
+const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 let active = true, refsSequence = 0
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleTasks() {
@@ -116,9 +118,9 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
 <template>
   <main class="purchase-import-workspace" :aria-busy="page.busy() || refsLoading">
     <section class="import-section" aria-labelledby="import-header-title">
-      <div class="section-heading"><h2 id="import-header-title">基础信息</h2><el-button v-if="state.batchId" :disabled="disabled || !!state.edit || !page.headerDirty()" :loading="state.saving && !state.edit" @click="saveHeader">保存基础信息</el-button></div>
+      <div class="section-heading"><h2 id="import-header-title">基础信息</h2><el-button v-if="state.batchId" :disabled="disabled || !!state.edit || headerLocked || !page.headerDirty()" :loading="state.saving && !state.edit" @click="saveHeader">保存基础信息</el-button></div>
       <el-alert v-if="refsError" type="error" :closable="false" show-icon class="import-alert"><template #title>基础数据读取失败：{{ refsError }}</template><el-button link type="primary" @click="loadReferences">重新读取</el-button></el-alert>
-      <el-form :model="state.header" :disabled="disabled || !!state.edit" label-width="90px" class="import-header-form" @submit.prevent>
+      <el-form :model="state.header" :disabled="disabled || !!state.edit || headerLocked" label-width="90px" class="import-header-form" @submit.prevent>
         <div class="header-grid">
           <el-form-item label="账套" required><el-select v-model="state.header.bookId" filterable placeholder="请选择账套" aria-label="账套"><el-option v-for="book in books" :key="book.id" :value="book.id" :label="`${book.name} · ${book.baseCurrency}`" /></el-select></el-form-item>
           <el-form-item label="供应商" required><el-select v-model="state.header.supplierId" filterable placeholder="请选择供应商" aria-label="供应商" @change="supplierChanged"><el-option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id" :label="supplier.name" /></el-select></el-form-item>
@@ -146,6 +148,7 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
       <PurchaseImportTable :page="page" :disabled="disabled" @remove="remove" />
       <PurchaseImportProductReview :page="page" />
+      <PurchaseImportDraftPreview :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" />
     </section>
 
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">

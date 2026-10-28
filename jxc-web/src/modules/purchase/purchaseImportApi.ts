@@ -20,4 +20,8 @@ export const purchaseImportApi: PurchaseImportApi = {
   associate: (id, row, imageId, association) => http.put(`${batchPath(id)}/rows/${row.id}/images/${imageId}/association`, { version: row.version, association }, { silent: true }),
   decide: (id, row, input) => http.put(`${batchPath(id)}/rows/${row.id}/decision`, { ...input, version: row.version }, { silent: true }),
   createProduct: (id, row, input, key) => http.post(`${batchPath(id)}/rows/${row.id}/products`, input, { headers: { 'Idempotency-Key': key }, silent: true }),
+  previews: (id, batchVersion) => http.post(`${batchPath(id)}/previews`, { batchVersion }, { silent: true }),
+  saveGroup: (id, group, header, splitRowIds) => http.put(`${batchPath(id)}/groups/${group.id}`, { groupVersion: group.version, header, splitRowIds }, { silent: true }),
+  createDraft: (id, group, request, key) => http.post(`${batchPath(id)}/groups/${group.id}/drafts`, request, { headers: { 'Idempotency-Key': key }, silent: true }),
+  creation: (id, group) => http.get(`${batchPath(id)}/groups/${group.id}/creation`, undefined, { silent: true }),
 }

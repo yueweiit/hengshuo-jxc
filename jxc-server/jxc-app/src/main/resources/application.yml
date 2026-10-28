@@ -28,6 +28,8 @@ spring:
       file-size-threshold: 0
 jxc:
   purchase-import:
+    draft-creation:
+      enabled: ${JXC_PURCHASE_IMPORT_DRAFT_CREATION_ENABLED:false}
     worker-enabled: ${JXC_PURCHASE_IMPORT_WORKER_ENABLED:false}
     worker-url: ${JXC_PURCHASE_IMPORT_WORKER_URL:}
     worker-key: ${JXC_PURCHASE_IMPORT_WORKER_KEY:}

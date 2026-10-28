@@ -48,7 +48,7 @@ function imageUrl(value: string | null) {
           type="button"
           class="import-cell"
           :class="{ 'import-cell-number': column.numeric, 'import-cell-photo': column.key === 'photo' }"
-          :disabled="disabled || !!page.state.edit"
+          :disabled="disabled || !!page.state.edit || page.rowLocked(row)"
           :aria-label="`编辑第${row.rowNo}行${column.label}`"
           @click="begin(row, column.key)"
         >
@@ -70,8 +70,8 @@ function imageUrl(value: string | null) {
             <el-tooltip content="取消" placement="top"><el-button link :disabled="page.state.saving" :aria-label="`取消编辑第${row.rowNo}行`" @mousedown.prevent @click="page.cancelEdit()"><el-icon><Close /></el-icon></el-button></el-tooltip>
           </template>
           <template v-else>
-            <el-tooltip content="编辑整行" placement="top"><el-button type="primary" link :disabled="disabled || !!page.state.edit" :aria-label="`编辑第${row.rowNo}行`" @click="begin(row, null)"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
-            <el-tooltip content="删除" placement="top"><el-button type="danger" link :disabled="disabled || !!page.state.edit" :loading="page.state.deletingId === row.id" :aria-label="`删除第${row.rowNo}行`" @click="emit('remove', row)"><el-icon><Delete /></el-icon></el-button></el-tooltip>
+            <el-tooltip content="编辑整行" placement="top"><el-button type="primary" link :disabled="disabled || !!page.state.edit || page.rowLocked(row)" :aria-label="`编辑第${row.rowNo}行`" @click="begin(row, null)"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
+            <el-tooltip content="删除" placement="top"><el-button type="danger" link :disabled="disabled || !!page.state.edit || page.rowLocked(row)" :loading="page.state.deletingId === row.id" :aria-label="`删除第${row.rowNo}行`" @click="emit('remove', row)"><el-icon><Delete /></el-icon></el-button></el-tooltip>
           </template>
         </div>
       </template>

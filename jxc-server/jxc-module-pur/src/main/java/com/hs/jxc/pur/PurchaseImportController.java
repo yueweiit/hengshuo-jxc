@@ -11,8 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/pur/order-imports")
 public class PurchaseImportController {
-    private final PurchaseImportProductService products;private final PurchaseImportService imports;private final PurchaseImportTaskService tasks;private final JsonCodec json;
-    public PurchaseImportController(PurchaseImportService imports,PurchaseImportTaskService tasks,JsonCodec json,PurchaseImportProductService products){this.products=products;this.imports=imports;this.tasks=tasks;this.json=json;}
+    private final PurchaseImportDraftService drafts;private final PurchaseImportProductService products;private final PurchaseImportService imports;private final PurchaseImportTaskService tasks;private final JsonCodec json;
+    public PurchaseImportController(PurchaseImportService imports,PurchaseImportTaskService tasks,JsonCodec json,PurchaseImportProductService products,PurchaseImportDraftService drafts){this.drafts=drafts;this.products=products;this.imports=imports;this.tasks=tasks;this.json=json;}
     private RequestContext ctx(){return RequestContextHolder.require();}
     private ApiEnvelope ok(Object data){return ApiEnvelope.ok(data,ctx().traceId());}
     @GetMapping("/capabilities") public ApiEnvelope capabilities(){return ok(imports.capabilities(ctx()));}
@@ -30,6 +30,10 @@ public class PurchaseImportController {
     @PutMapping("/{batchId}/rows/{rowId}/images/{imageId}/association") public ApiEnvelope association(@PathVariable UUID batchId,@PathVariable long rowId,@PathVariable long imageId,@RequestBody Map<String,Object> body){return ok(imports.associate(ctx(),batchId,Inputs.id(rowId),Inputs.id(imageId),body));}
     @PutMapping("/{batchId}/rows/{rowId}/decision") public ApiEnvelope decision(@PathVariable UUID batchId,@PathVariable long rowId,@RequestBody Map<String,Object> body){return ok(products.decide(ctx(),batchId,Inputs.id(rowId),body));}
     @PostMapping("/{batchId}/rows/{rowId}/products") public ApiEnvelope product(@PathVariable UUID batchId,@PathVariable long rowId,@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key")String key){return ok(products.createProduct(ctx(),batchId,Inputs.id(rowId),body,key));}
+    @PostMapping("/{batchId}/previews") public ApiEnvelope previews(@PathVariable UUID batchId,@RequestBody Map<String,Object> body){return ok(drafts.previews(ctx(),batchId,body));}
+    @PutMapping("/{batchId}/groups/{groupId}") public ApiEnvelope group(@PathVariable UUID batchId,@PathVariable long groupId,@RequestBody Map<String,Object> body){return ok(drafts.saveGroup(ctx(),batchId,Inputs.id(groupId),body));}
+    @PostMapping("/{batchId}/groups/{groupId}/drafts") public ApiEnvelope draft(@PathVariable UUID batchId,@PathVariable long groupId,@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key")String key){return ok(drafts.create(ctx(),batchId,Inputs.id(groupId),body,key));}
+    @GetMapping("/{batchId}/groups/{groupId}/creation") public ApiEnvelope creation(@PathVariable UUID batchId,@PathVariable long groupId){return ok(drafts.creation(ctx(),batchId,Inputs.id(groupId)));}
     @GetMapping("/tasks/{taskId}") public ApiEnvelope task(@PathVariable UUID taskId){return ok(tasks.get(ctx(),taskId));}
     @PostMapping("/tasks/{taskId}/retry") public ApiEnvelope retry(@PathVariable UUID taskId,@RequestHeader("Idempotency-Key")String key,@RequestBody(required=false) Map<String,Object> body){return ok(tasks.retry(ctx(),taskId,key,body==null?null:Inputs.text(body,"sheet",null)));}
     static ResponseEntity<byte[]> binary(AttachmentService.Download file){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header("X-Content-Type-Options","nosniff").header(HttpHeaders.CONTENT_DISPOSITION,ContentDisposition.attachment().filename(file.fileName(),java.nio.charset.StandardCharsets.UTF_8).build().toString()).contentType(MediaType.parseMediaType(file.contentType())).body(file.bytes());}

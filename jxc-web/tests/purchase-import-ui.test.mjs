@@ -25,7 +25,7 @@ function workspace(confirm = async () => {}) {
       async upload(selected, fields) { requests.push([selected, fields]); return { batchId, header: { ...header }, rows: [{ ...row }] } },
       async deleteRow(_batch, selected) { removed.push(selected.id); return { deleted: true, id: selected.id } },
     },
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'route', 'loadReferences', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'headerLocked', 'route', 'loadReferences', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit'])
   return { state, navigations, requests, removed }
 }
 
@@ -40,6 +40,7 @@ async function render(state) {
   app.component('PurchaseImportTable', { render: () => null })
   app.component('PurchaseImportSources', { render: () => null })
   app.component('PurchaseImportProductReview', { render: () => null })
+  app.component('PurchaseImportDraftPreview', { render: () => null })
   return renderToString(app)
 }
 
@@ -103,7 +104,7 @@ test('商品确认界面按真实目录状态显示，取消新品确认不创�
   const { state } = workspace()
   Object.assign(state.page.state, { batchId, status: 'REVIEW', rows: [{ ...row, readiness: 'NEEDS_SETUP', matchedProductId: 501, setupReasons: ['商品尚未在本国启用'] }] })
   const source = new URL('../src/modules/purchase/PurchaseImportProductReview.vue', import.meta.url)
-  const bindings = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => ({ page: state.page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: { async get() { throw new Error('目录连接失败') } } }, ['selectedRow', 'keyword', 'products', 'productId', 'unit', 'catalogLoading', 'catalogError', 'catalogLoaded', 'mode', 'fresh', 'choices', 'row', 'selectedProduct', 'readyCount', 'locked', 'search', 'confirmExisting', 'createNew'])
+  const bindings = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => ({ page: state.page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: { async get() { throw new Error('目录连接失败') } } }, ['selectedRow', 'keyword', 'products', 'productId', 'unit', 'catalogLoading', 'catalogError', 'catalogLoaded', 'mode', 'fresh', 'choices', 'row', 'selectedProduct', 'readyCount', 'pickerLocked', 'locked', 'search', 'confirmExisting', 'createNew'])
   bindings.selectedRow.value = row.id
   bindings.products.value = [{ id: 501, productCode: 'SKU', name: '真实商品', spec: 'S', status: 'ENABLED', units: [{ unit: 'PCS' }] }]
   await bindings.search()
@@ -143,4 +144,26 @@ test('接口适配器发送真实multipart和带版本的保存删除约定', as
   assert.deepEqual(calls[3][2].versions, [{ id: 10, version: 1 }])
   assert.equal(calls[4][1], `/pur/order-imports/${batchId}/rows/10`)
   assert.equal(calls[4][2].headers['If-Match'], '1')
+})
+
+test('完整预览显示原价、舍入差额和已建结果，取消确认不建单', async () => {
+  const { state } = workspace()
+  let creates = 0
+  const group = { id: 8, version: 2, sourceOrderNo: 'PO', header, createStatus: 'READY', verifyStatus: 'NOT_CHECKED', previewToken: batchId, orderId: null, errors: [], preview: { totalAmount: '531.2350', taxAmount: '69.0606', lines: [{ lineNo: 1, productId: 501, productSpec: 'S', qty: '10', unit: 'PCS', sourceUnitPrice: '53.1234567890', unitPrice: '53.1235', unitPriceDifference: '0.0000432110', taxRate: '0.13', amount: '531.2350' }] } }
+  Object.assign(state.page.state, { batchId, groups: [group], rows: [row] })
+  state.page.createDraft = async () => { creates++; return true }
+  const source = new URL('../src/modules/purchase/PurchaseImportDraftPreview.vue', import.meta.url)
+  const props = { page: state.page, books: [{ id: 1, name: '账套' }], suppliers: [{ id: 2, name: '供应商' }], currencies: [{ code: 'USD' }] }
+  const bindings = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => props, ElMessageBox: { async confirm() { throw 'cancel' } }, http: { async get() { return { draftCreationEnabled: true } } } }, ['editing', 'header', 'split', 'enabled', 'capabilityError', 'capabilityLoading', 'locked', 'edit', 'save', 'groupRows', 'status', 'create'])
+  bindings.enabled.value = true
+  await bindings.create(group)
+  assert.equal(creates, 0)
+  group.createStatus = 'CREATED'; group.orderId = 909; group.docNo = 'PO-909'; group.verifyStatus = 'READ_FAILED'; group.errorMessage = '读取权限不足'
+  const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+  const app = createSSRApp({ setup: () => ({ ...bindings, ...props }), render: compile(template) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
+  for (const name of ['ElButton', 'ElAlert', 'RouterLink', 'ElForm', 'ElFormItem', 'ElSelect', 'ElOption', 'ElDatePicker', 'ElInput', 'ElInputNumber']) app.component(name, slot)
+  const html = await renderToString(app)
+  assert.match(html, /53.1234567890/); assert.match(html, /53.1235/); assert.match(html, /0.0000432110/)
+  assert.match(html, /PO-909/); assert.match(html, /已保存，读回待核实/); assert.match(html, /查询原创建结果/)
 })
