@@ -23,9 +23,9 @@ public class PurchaseOrderImportTemplate {
         var access = authorization.authorize(context);
         access.requireCountry();
         access.require("pur:order:create");
-        try (var input = new ClassPathResource("templates/purchase-order-import-template.csv").getInputStream()) {
-            return Map.of("fileName", "采购单导入模板.csv",
-                "contentType", "text/csv;charset=utf-8",
+        try (var input = new ClassPathResource("templates/purchase-order-import-template.xlsx").getInputStream()) {
+            return Map.of("fileName", "采购单导入模板.xlsx",
+                "contentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "contentBase64", Base64.getEncoder().encodeToString(input.readAllBytes()));
         } catch (IOException error) {
             throw new ApiException(500, "PUR_IMPORT_TEMPLATE_UNAVAILABLE", "采购单模板读取失败，请联系管理员检查模板文件");

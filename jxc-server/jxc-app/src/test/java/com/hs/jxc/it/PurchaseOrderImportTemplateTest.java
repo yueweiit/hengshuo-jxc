@@ -15,12 +15,15 @@ import com.hs.jxc.pur.PurchaseService;
 import com.hs.jxc.sys.api.Access;
 import com.hs.jxc.sys.api.DataScope;
 import com.hs.jxc.sys.service.AuthorizationService;
-import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.zip.ZipInputStream;
+import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -44,10 +47,10 @@ class PurchaseOrderImportTemplateTest {
         RequestContextHolder.set(context);
         mvc.perform(get("/api/v1/pur/orders/import-template"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.code").value("OK"))
-            .andExpect(jsonPath("$.data.fileName").value("采购单导入模板.csv"))
-            .andExpect(jsonPath("$.data.contentType").value("text/csv;charset=utf-8"));
+            .andExpect(jsonPath("$.data.fileName").value("采购单导入模板.xlsx"))
+            .andExpect(jsonPath("$.data.contentType").value("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         var downloaded = Base64.getDecoder().decode(template.download(context).get("contentBase64"));
-        try (var original = getClass().getResourceAsStream("/templates/purchase-order-import-template.csv")) {
+        try (var original = getClass().getResourceAsStream("/templates/purchase-order-import-template.xlsx")) {
             assertArrayEquals(original.readAllBytes(), downloaded);
         }
         verifyNoInteractions(purchases);
@@ -80,20 +83,47 @@ class PurchaseOrderImportTemplateTest {
         verifyNoInteractions(authorization);
     }
 
-    @Test void csvContainsOnlyTheRequestedHeaderWithNoStyledWorkbookOrInventedData() throws Exception {
-        byte[] bytes;
-        try (var resource = getClass().getResourceAsStream("/templates/purchase-order-import-template.csv")) {
-            assertNotNull(resource, "采购模板必须作为CSV纯文本资源随应用打包");
-            bytes = resource.readAllBytes();
+    @Test void xlsxContainsOnlyGenericHeadersWithDefaultCellStylesAndNoInventedData() throws Exception {
+        var parts = new HashMap<String, byte[]>();
+        try (var resource = getClass().getResourceAsStream("/templates/purchase-order-import-template.xlsx")) {
+            assertNotNull(resource, "采购模板必须为真正的XLSX文件");
+            try (var zip = new ZipInputStream(resource)) {
+                for (var entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) parts.put(entry.getName(), zip.readAllBytes());
+            }
         }
-        assertArrayEquals(new byte[]{(byte) 0xef, (byte) 0xbb, (byte) 0xbf}, java.util.Arrays.copyOf(bytes, 3), "Excel中文读取兼容标记必须保留");
-        String text = new String(bytes, StandardCharsets.UTF_8);
-        var rows = text.substring(1).lines().toList();
-        assertEquals(1, rows.size(), "CSV只提供表头，不填示例、金额或公式");
-        var headers = List.of(rows.getFirst().split(",", -1));
-        assertEquals(List.of("采购单号", "商品照片", "尺码／规格配比", "采购数量", "单件售价", "售价合计",
-            "供应商单价（采购单价）", "运费", "到货单位成本", "美元单位成本", "美元成本合计"), headers);
-        assertTrue(text.endsWith("\n"), "CSV表头须有换行结束，兼容仓库的LF或CRLF换行规则");
-        assertNull(getClass().getResource("/templates/purchase-order-import-template.xlsx"), "被替代的带样式Excel模板不能继续打包");
+        assertTrue(parts.containsKey("[Content_Types].xml"));
+        var sheet = xml(parts.get("xl/worksheets/sheet1.xml"));
+        assertEquals(1, sheet.getElementsByTagNameNS("*", "row").getLength(), "只提供表头，不填示例、金额或公式");
+        var cells = sheet.getElementsByTagNameNS("*", "c");
+        var expected = List.of("采购单号", "商品照片", "商品规格", "采购数量", "单件售价", "售价合计",
+            "供应商单价（采购单价）", "运费", "到货单位成本", "美元单位成本", "美元成本合计");
+        assertEquals(expected.size(), cells.getLength());
+        for (int i = 0; i < cells.getLength(); i++) {
+            var cell = (org.w3c.dom.Element) cells.item(i);
+            assertEquals("str", cell.getAttribute("t"));
+            assertEquals(expected.get(i), cell.getElementsByTagNameNS("*", "v").item(0).getTextContent());
+            assertTrue(!cell.hasAttribute("s") || cell.getAttribute("s").equals("0"), "不得设置表头或单元格样式");
+        }
+        var styles = xml(parts.get("xl/styles.xml"));
+        var formats = (org.w3c.dom.Element) styles.getElementsByTagNameNS("*", "cellXfs").item(0);
+        assertEquals("1", formats.getAttribute("count"));
+        var format = (org.w3c.dom.Element) formats.getElementsByTagNameNS("*", "xf").item(0);
+        for (var key : List.of("numFmtId", "fontId", "fillId", "borderId")) assertEquals("0", format.getAttribute(key));
+        assertEquals("1", ((org.w3c.dom.Element) styles.getElementsByTagNameNS("*", "fonts").item(0)).getAttribute("count"));
+        assertEquals(0, styles.getElementsByTagNameNS("*", "b").getLength(), "默认字体不能加粗");
+        assertEquals("2", ((org.w3c.dom.Element) styles.getElementsByTagNameNS("*", "fills").item(0)).getAttribute("count"));
+        assertEquals("1", ((org.w3c.dom.Element) styles.getElementsByTagNameNS("*", "borders").item(0)).getAttribute("count"));
+        assertEquals(0, sheet.getElementsByTagNameNS("*", "tableParts").getLength());
+        assertEquals(0, sheet.getElementsByTagNameNS("*", "conditionalFormatting").getLength());
+        assertEquals(0, sheet.getElementsByTagNameNS("*", "f").getLength());
+        assertNull(getClass().getResource("/templates/purchase-order-import-template.csv"), "被替代的CSV资源不能继续打包");
+    }
+
+    private org.w3c.dom.Document xml(byte[] bytes) throws Exception {
+        assertNotNull(bytes, "XLSX缺少必要组成部分");
+        var factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        return factory.newDocumentBuilder().parse(new ByteArrayInputStream(bytes));
     }
 }
