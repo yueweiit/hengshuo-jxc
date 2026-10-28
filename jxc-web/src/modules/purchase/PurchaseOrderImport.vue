@@ -21,11 +21,12 @@ async function downloadTemplate() {
     if (!active) return
     let bytes: Uint8Array<ArrayBuffer>
     try {
-      if (!file || file.fileName !== '采购单导入模板.xlsx'
-        || file.contentType !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      if (!file || file.fileName !== '采购单导入模板.csv'
+        || file.contentType !== 'text/csv;charset=utf-8'
         || typeof file.contentBase64 !== 'string') throw new Error('模板格式不正确')
       bytes = Uint8Array.from(atob(file.contentBase64), char => char.charCodeAt(0))
-      if (bytes[0] !== 80 || bytes[1] !== 75 || bytes[2] !== 3 || bytes[3] !== 4) throw new Error('模板格式不正确')
+      const csv = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+      if (!csv.trim() || csv.trimStart().startsWith('<')) throw new Error('模板格式不正确')
     } catch {
       const error = new Error('模板文件内容不完整，请重试下载')
       reportError(error)

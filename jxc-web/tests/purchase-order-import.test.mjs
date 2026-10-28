@@ -16,20 +16,22 @@ function setup(get) {
     ref,
     onBeforeUnmount: callback => { unmount = callback },
     http: { get: path => { requests.push(path); return get() } },
-    Blob, Uint8Array, atob,
+    Blob, Uint8Array, TextDecoder, atob,
     URL: { createObjectURL(blob) { downloads.push({ blob }); return 'blob:template' }, revokeObjectURL(url) { released.push(url) } },
     document: { createElement() { return { click() { downloads.at(-1).name = this.download; downloads.at(-1).href = this.href }, remove() {} } }, body: { appendChild() {} } },
   }, ['downloading', 'downloadTemplate'])
   return { state, downloads, released, requests, unmount }
 }
-const content = { fileName: '采购单导入模板.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', contentBase64: 'UEsDBA==' }
+const csv = '\uFEFF采购单号,商品照片,尺码／规格配比,采购数量,单件售价,售价合计,供应商单价（采购单价）,运费,到货单位成本,美元单位成本,美元成本合计\r\n'
+const content = { fileName: '采购单导入模板.csv', contentType: 'text/csv;charset=utf-8', contentBase64: Buffer.from(csv, 'utf8').toString('base64') }
 
 test('template download uses the authorized purchase endpoint and releases the downloaded file URL', async () => {
   const p = setup(async () => content)
   await p.state.downloadTemplate()
   assert.deepEqual(p.requests, ['/pur/orders/import-template'])
-  assert.equal(p.downloads[0].name, '采购单导入模板.xlsx')
-  assert.deepEqual([...new Uint8Array(await p.downloads[0].blob.arrayBuffer())], [80, 75, 3, 4])
+  assert.equal(p.downloads[0].name, '采购单导入模板.csv')
+  assert.equal(p.downloads[0].blob.type, 'text/csv;charset=utf-8')
+  assert.equal(Buffer.from(await p.downloads[0].blob.arrayBuffer()).toString('utf8'), csv)
   assert.deepEqual(p.released, ['blob:template'])
   assert.equal(p.state.downloading.value, false)
 })
@@ -130,10 +132,17 @@ test('download failure is propagated without saving a fake file and allows a ret
   assert.equal(p.downloads.length, 1)
 })
 
-test('malformed file content reports failure instead of downloading an empty or HTML workbook', async () => {
+test('malformed file content reports failure instead of downloading an HTML page as CSV', async () => {
   const p = setup(async () => ({ ...content, contentBase64: 'PGh0bWw+' }))
   await assert.rejects(p.state.downloadTemplate(), /模板文件/)
   assert.match(feedbackText(), /模板文件/)
+  assert.equal(p.downloads.length, 0)
+  assert.equal(p.state.downloading.value, false)
+})
+
+test('an old Excel response is rejected instead of downloading the wrong template format', async () => {
+  const p = setup(async () => ({ fileName: '采购单导入模板.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', contentBase64: 'UEsDBA==' }))
+  await assert.rejects(p.state.downloadTemplate(), /模板文件/)
   assert.equal(p.downloads.length, 0)
   assert.equal(p.state.downloading.value, false)
 })
