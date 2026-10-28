@@ -51,6 +51,7 @@ const esMX: DeepPartial<typeof zhCN> = {
       settings: 'Configuración',
     },
     workbench: 'Inicio',
+    purchaseOrderImport: 'Importar archivo',
     salesOrders: 'Pedidos de venta',
     stocks: 'Existencias',
     customers: 'Clientes',

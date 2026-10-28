@@ -10,7 +10,6 @@ import { PO_STATUS, PRODUCT_SOURCE, SUPPLIER_SOURCE } from '@/modules/shared/biz
 import { confirmAction } from '@/utils/action'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
 import PurchaseOrderAudit from './PurchaseOrderAudit.vue'
-import PurchaseOrderImportDialog from './PurchaseOrderImportDialog.vue'
 import { auditDocumentContext } from '@/components/auditPresentation'
 import './purchase-order.scss'
 
@@ -37,7 +36,6 @@ const router = useRouter()
 const user = useUserStore()
 const page = ref<CrudPageExpose>()
 const form = ref<InstanceType<typeof PurchaseOrderForm>>()
-const importDialog = ref<InstanceType<typeof PurchaseOrderImportDialog>>()
 const auditVisible = ref(false)
 const auditOrder = ref<Order>()
 const auditContext = computed(() => auditOrder.value ? auditDocumentContext({ ...auditOrder.value }, '采购单') : { title: '采购单', identifier: '尚未选择记录' })
@@ -98,7 +96,7 @@ function onSaved(o: { id: number }) {
       <el-button v-if="user.hasPerm('pur:order:create')" type="primary" @click="form?.open()">
         <el-icon><Plus /></el-icon>新建采购单
       </el-button>
-      <el-button v-if="user.hasPerm('pur:order:create')" @click="importDialog?.open()">
+      <el-button v-if="user.hasPerm('pur:order:create')" @click="router.push('/purchase/orders/import')">
         <el-icon><Upload /></el-icon>导入文件
       </el-button>
     </template>
@@ -126,7 +124,6 @@ function onSaved(o: { id: number }) {
     </template>
   </CrudPage>
   <PurchaseOrderForm ref="form" @saved="onSaved" />
-  <PurchaseOrderImportDialog ref="importDialog" />
   <PurchaseOrderAudit v-if="auditOrder && auditVisible" :key="auditOrder.id" v-model="auditVisible" :resource-id="auditOrder.id" :context="auditContext" />
 </template>
 

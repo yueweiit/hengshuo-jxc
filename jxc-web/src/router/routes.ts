@@ -53,6 +53,7 @@ export const menuGroups: MenuGroup[] = [
     module: 'pur',
     children: [
       page('/purchase/orders', () => import('@/modules/purchase/PurchaseOrderList.vue'), { title: 'menu.purchaseOrders', perm: 'pur:order:view' }),
+      page('/purchase/orders/import', () => import('@/modules/purchase/PurchaseOrderImport.vue'), { title: 'menu.purchaseOrderImport', perm: 'pur:order:create', hidden: true, activeMenu: '/purchase/orders' }),
       page('/purchase/orders/:id', () => import('@/modules/purchase/PurchaseOrderDetail.vue'), { title: 'menu.purchaseOrderDetail', perm: 'pur:order:view', hidden: true, activeMenu: '/purchase/orders' }),
       page('/purchase/domestic-receipts', () => import('@/modules/purchase/DomesticReceiptList.vue'), { title: 'menu.domesticReceipts', perm: ['pur:receipt:create', 'pur:receipt:confirm'], mobile: true }),
       page('/purchase/export-nodes', () => import('@/modules/purchase/ExportNodeList.vue'), { title: 'menu.exportNodes', perm: ['pur:export:create', 'pur:export:confirm'] }),

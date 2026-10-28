@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { http } from '@/api/http'
 import { reportError } from '@/api/error-feedback'
 
@@ -9,22 +9,16 @@ interface TemplateFile {
   contentBase64: string
 }
 
-const visible = ref(false)
 const downloading = ref(false)
-let requestVersion = 0
-
-function open() { visible.value = true }
-function invalidateDownload() { requestVersion++; downloading.value = false }
-watch(visible, value => { if (!value) invalidateDownload() }, { flush: 'sync' })
-onBeforeUnmount(invalidateDownload)
+let active = true
+onBeforeUnmount(() => { active = false })
 
 async function downloadTemplate() {
-  if (downloading.value || !visible.value) return
-  const version = ++requestVersion
+  if (downloading.value || !active) return
   downloading.value = true
   try {
     const file = await http.get<TemplateFile>('/pur/orders/import-template')
-    if (version !== requestVersion || !visible.value) return
+    if (!active) return
     let bytes: Uint8Array<ArrayBuffer>
     try {
       if (!file || file.fileName !== '采购单导入模板.xlsx'
@@ -49,27 +43,16 @@ async function downloadTemplate() {
       URL.revokeObjectURL(url)
     }
   } finally {
-    if (version === requestVersion) downloading.value = false
+    downloading.value = false
   }
 }
 
-defineExpose({ open })
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="导入文件" width="min(480px, 96vw)">
-    <div class="purchase-import-actions">
-      <el-button type="primary" :loading="downloading" @click="downloadTemplate">
-        <el-icon><Download /></el-icon>下载模板
-      </el-button>
-    </div>
-  </el-dialog>
+  <div class="page">
+    <el-button type="primary" :loading="downloading" @click="downloadTemplate">
+      <el-icon><Download /></el-icon>下载模板
+    </el-button>
+  </div>
 </template>
-
-<style scoped>
-.purchase-import-actions {
-  display: flex;
-  justify-content: center;
-  padding: 24px 0;
-}
-</style>

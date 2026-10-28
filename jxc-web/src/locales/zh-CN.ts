@@ -66,6 +66,7 @@ export default {
     notifications: '通知中心',
     jobs: '导出任务',
     purchaseOrders: '采购单',
+    purchaseOrderImport: '导入文件',
     domesticReceipts: '国内收货登记',
     exportNodes: '出口节点',
     shipments: '运输批次',
