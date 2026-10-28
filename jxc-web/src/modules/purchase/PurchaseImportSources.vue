@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { http } from '@/api/http'
 import type { PurchaseImportModel, ImportTask, ImportRow } from './purchaseImportModel'
 
@@ -30,6 +31,13 @@ async function view(row: ImportRow, id: number) {
     imageUrls.value[key] = URL.createObjectURL(blob); delete imageErrors.value[key]
   } catch (error) { if (context === epoch) imageErrors.value[key] = error instanceof Error ? error.message : '原图读取失败，请重试' }
 }
+async function publish(row: ImportRow, imageId: number) {
+  const context = epoch, product = row.matchedProductId
+  if (!product || props.page.busy()) return
+  try { await ElMessageBox.confirm(`确认将此原图关联到已选商品 ${product}？请核对规格和照片归属。`, '确认商品照片', { confirmButtonText: '确认关联', cancelButtonText: '返回核对', type: 'warning' }) }
+  catch (error) { if (error !== 'cancel' && error !== 'close') props.page.failure(error); return }
+  if (context === epoch && row.matchedProductId === product) await props.page.publishPhotos(row, [imageId])
+}
 function retry(task: ImportTask) { return props.page.retryTask(task, sheets.value[task.id] || null) }
 watch(() => props.page.state.batchId, () => { clean(); downloading.value = null })
 onBeforeUnmount(clean)
@@ -37,7 +45,7 @@ onBeforeUnmount(clean)
 
 <template>
   <div v-if="page.state.batchId" class="source-panel">
-    <div v-for="task in page.state.tasks" :key="task.id" class="source-task" role="status">
+    <div v-for="task in page.state.tasks.filter(item => !item.kind || item.kind === 'PARSE')" :key="task.id" class="source-task" role="status">
       <span v-if="['QUEUED', 'RUNNING'].includes(task.status)">文件已接收，{{ task.status === 'QUEUED' ? '等待解析' : '正在解析与保存' }}。可离开页面，返回此批次继续核对。</span>
       <template v-else-if="['FAILED', 'NEEDS_REAUTH', 'STALE'].includes(task.status)">
         <span class="source-error">{{ task.errorMessage || '任务未完成，请重新读取原因' }}</span>
@@ -59,8 +67,10 @@ onBeforeUnmount(clean)
             <el-button v-else size="small" @click="view(row, image.id)">查看原图</el-button>
             <span v-if="imageErrors[String(image.id)]" class="source-error">{{ imageErrors[String(image.id)] }}</span>
             <span>{{ image.status === 'CONFIRMED' ? '归属已确认' : image.status === 'REJECTED' ? '已排除' : '归属待核实' }}</span>
-            <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'CONFIRMED'" @click="page.associate(row, image.id, 'CONFIRMED')">确认属于本行</el-button>
-            <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'REJECTED'" @click="page.associate(row, image.id, 'REJECTED')">排除</el-button>
+            <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'CONFIRMED' || page.rowLocked(row) || image.publishStatus === 'READY'" @click="page.associate(row, image.id, 'CONFIRMED')">确认属于本行</el-button>
+            <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'REJECTED' || page.rowLocked(row) || image.publishStatus === 'READY'" @click="page.associate(row, image.id, 'REJECTED')">排除</el-button>
+            <span v-if="image.publishStatus === 'READY' && image.publishedProductId === row.matchedProductId">已关联商品照片</span>
+            <el-button v-else-if="image.status === 'CONFIRMED' && row.matchedProductId" size="small" type="primary" :disabled="page.busy() || !!page.state.edit || page.headerDirty()" @click="publish(row, image.id)">关联到已确认商品</el-button>
           </div>
         </div>
       </el-collapse-item>

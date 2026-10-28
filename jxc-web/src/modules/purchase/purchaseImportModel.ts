@@ -25,9 +25,9 @@ export const importColumns = [
 ] as const
 export type ImportField = typeof importColumns[number]['key']
 export type ImportValues = Record<ImportField, string | null>
-export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED' | 'CONFIRMED' | 'REJECTED' }
+export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED' | 'CONFIRMED' | 'REJECTED'; publishStatus?: string; publishedProductId?: number | null; productImageId?: number | null }
 export type ImportRow = ImportValues & { id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
-export interface ImportTask { id: string; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[] } }
+export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[] } }
 export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; warnings?: { sourceRow?: number; message: string }[] }
 export interface ImportDraftGroup { id: number; version: number; sourceOrderNo: string; header: ImportHeader & { taxRate?: string | null; priceTaxBasis?: string | null }; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number; sourceSheet?: string; sourceRow?: number; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
@@ -42,6 +42,9 @@ export interface PurchaseImportApi {
   associate?(batchId: string, row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED'): Promise<unknown>
   decide?(batchId: string, row: ImportRow, input: Record<string, unknown>): Promise<unknown>
   createProduct?(batchId: string, row: ImportRow, input: Record<string, unknown>, key: string): Promise<unknown>
+  publishPhotos?(batchId: string, row: ImportRow, imageIds: number[], key: string): Promise<unknown>
+  gallery?(): Promise<unknown>
+  rebuildGallery?(batchId: string, key: string): Promise<unknown>
   previews?(batchId: string, batchVersion: number): Promise<unknown>
   saveGroup?(batchId: string, group: ImportDraftGroup, header: Record<string, unknown>, splitRowIds?: number[]): Promise<unknown>
   createDraft?(batchId: string, group: ImportDraftGroup, request: Record<string, unknown>, key: string): Promise<unknown>
@@ -121,6 +124,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
     partialResult: null as Record<string, unknown> | null,
     groups: [] as ImportDraftGroup[],
+    gallery: null as { status: string; coverage: { photos: number; eligiblePhotos?: number; readyPhotos: number; features: number }; lastError?: string | null } | null,
+    galleryError: '', galleryLoading: false,
   })
   let epoch = 0, readSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
   const busy = () => state.loading || state.importing || state.saving || state.status === 'PARSING'
@@ -277,7 +282,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       const saved = state.tasks.find(item => item.id === task.id)
       if (!saved) throw new Error('当前批次任务已变化，请重新读取')
       saved.status = 'QUEUED'; saved.errorCode = null; saved.errorMessage = null
-      state.status = 'PARSING'; retryKeys.delete(signature)
+      if (!task.kind || task.kind === 'PARSE') state.status = 'PARSING'
+      retryKeys.delete(signature)
     })
   }
   async function associate(row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED') {
@@ -304,6 +310,38 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!api.createProduct || !state.batchId || busy() || state.edit || rowLocked(row)) return false
     const request = JSON.parse(JSON.stringify(input)) as Record<string, unknown>
     return write('saving', () => api.createProduct!(state.batchId!, { ...row }, request, key), response => applyReview(row, response))
+  }
+  const photoKeys = new Map<string, string>()
+  async function publishPhotos(row: ImportRow, imageIds: number[]) {
+    if (!api.publishPhotos || !state.batchId || busy() || state.edit || headerDirty()) return false
+    if (!row.matchedProductId || imageIds.length === 0 || imageIds.some(id => !row.images?.some(image => image.id === id && image.status === 'CONFIRMED'))) { failure(new Error('请先确认真实商品和所选原图归属')); return false }
+    const signature = JSON.stringify([state.batchId, row.id, row.version, imageIds])
+    if (!photoKeys.has(signature)) photoKeys.set(signature, newKey())
+    return write('saving', () => api.publishPhotos!(state.batchId!, row, imageIds, photoKeys.get(signature)!), response => { applyBatch(readBatch(response)); photoKeys.delete(signature); state.success = '商品照片已关联，特征和索引在后台处理' })
+  }
+  let gallerySequence = 0, rebuildKey = ''
+  async function loadGallery() {
+    if (!api.gallery || !state.batchId) return false
+    const context = epoch, sequence = ++gallerySequence
+    state.galleryLoading = true; state.galleryError = ''
+    try {
+      const result = await api.gallery()
+      if (context !== epoch || sequence !== gallerySequence) return false
+      if (!record(result) || !['EMPTY', 'NOT_READY', 'READY', 'PARTIAL', 'FAILED'].includes(String(result.status)) || !record(result.coverage)) throw new Error('图库状态或覆盖统计返回格式不正确')
+      const coverage = result.coverage as Record<string, unknown>
+      if (['photos', 'readyPhotos', 'features'].some(field => !Number.isSafeInteger(coverage[field]) || Number(coverage[field]) < 0)) throw new Error('图库覆盖统计无效')
+      state.gallery = result as unknown as NonNullable<typeof state.gallery>
+      return true
+    } catch (error) { if (context === epoch && sequence === gallerySequence) state.galleryError = error instanceof Error ? error.message : '图库状态读取失败'; return false }
+    finally { if (context === epoch && sequence === gallerySequence) state.galleryLoading = false }
+  }
+  async function rebuildGallery() {
+    if (!api.rebuildGallery || !state.batchId || busy() || state.edit) return false
+    if (!rebuildKey) rebuildKey = newKey()
+    return write('saving', () => api.rebuildGallery!(state.batchId!, rebuildKey), response => {
+      if (!record(response) || !isBatchId(response.id) || response.status !== 'QUEUED') throw new Error('后端未确认图库重建任务')
+      state.tasks.push({ id: response.id, kind: 'GALLERY_REBUILD', phase: 'INDEX', status: 'QUEUED' }); rebuildKey = ''
+    })
   }
   async function previewDrafts() {
     if (!api.previews || !state.batchId || busy() || state.edit || headerDirty()) return false
@@ -339,8 +377,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
-    state.groups = []; creationIntents.clear()
+    state.groups = []; creationIntents.clear(); photoKeys.clear(); rebuildKey = ''; ++gallerySequence; state.gallery = null; state.galleryError = ''; state.galleryLoading = false
   }
-  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, previewDrafts, saveGroup, createDraft, refreshCreation, invalidate }
+  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, invalidate }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

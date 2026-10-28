@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AttachmentAssetService {
     public enum Policy {
-        PURCHASE_SOURCE(100*1024*1024,"PURCHASE_IMPORT_SOURCE"), PURCHASE_IMAGE(10*1024*1024,"PURCHASE_IMPORT_IMAGE");
+        PURCHASE_SOURCE(100*1024*1024,"PURCHASE_IMPORT_SOURCE"), PURCHASE_IMAGE(10*1024*1024,"PURCHASE_IMPORT_IMAGE"), PRODUCT_INDEX(256*1024*1024,"PRODUCT_IMAGE_INDEX");
         public final int maxBytes; final String category;
         Policy(int maxBytes,String category){this.maxBytes=maxBytes;this.category=category;}
     }

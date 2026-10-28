@@ -9,6 +9,7 @@ import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
+import PurchaseImportGallery from './PurchaseImportGallery.vue'
 import PurchaseImportDraftPreview from './PurchaseImportDraftPreview.vue'
 import PurchaseImportProductReview from './PurchaseImportProductReview.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
@@ -30,9 +31,9 @@ let active = true, refsSequence = 0
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleTasks() {
   clearTimeout(taskTimer)
-  if (active && state.status === 'PARSING' && state.batchId) taskTimer = setTimeout(async () => { if (await page.refreshTasks()) scheduleTasks() }, 2000)
+  if (active && (state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) && state.batchId) taskTimer = setTimeout(async () => { if (await page.refreshTasks()) scheduleTasks() }, 2000)
 }
-watch(() => [state.batchId, state.status], scheduleTasks)
+watch(() => [state.batchId, state.status, state.tasks.map(task => `${task.id}:${task.status}`).join(',')], scheduleTasks)
 
 async function loadReferences() {
   const request = ++refsSequence
@@ -145,6 +146,7 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />
       <PurchaseImportSources :page="page" />
+      <PurchaseImportGallery :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
       <PurchaseImportTable :page="page" :disabled="disabled" @remove="remove" />
       <PurchaseImportProductReview :page="page" />

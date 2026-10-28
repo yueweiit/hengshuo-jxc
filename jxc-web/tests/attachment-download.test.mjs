@@ -13,6 +13,8 @@ test('attachment authorization is sent only to the same-origin content proxy; Mo
   assert.deepEqual(attachmentDownloadTarget('/api/v1/sys/attachments/123/content?bizType=ENTITY&bizId=1&category=IMPORT_FILE&linkVersion=1&sha256=abc', 'https://jxc.test'), { kind: 'proxy', url: '/api/v1/sys/attachments/123/content?bizType=ENTITY&bizId=1&category=IMPORT_FILE&linkVersion=1&sha256=abc' })
   assert.throws(() => attachmentDownloadTarget('https://other.test/api/v1/sys/attachments/123/content', 'https://jxc.test'))
   assert.throws(() => attachmentDownloadTarget('/api/v1/auth/logout', 'https://jxc.test'))
+  assert.deepEqual(attachmentDownloadTarget('/api/v1/md/product-images/123/content', 'https://jxc.test'), { kind: 'proxy', url: '/api/v1/md/product-images/123/content' })
+  assert.throws(() => attachmentDownloadTarget('https://other.test/api/v1/md/product-images/123/content', 'https://jxc.test'))
   assert.throws(() => attachmentDownloadTarget('blob:https://jxc.test/abc', 'https://jxc.test'))
   assert.deepEqual(attachmentDownloadTarget('blob:https://jxc.test/abc', 'https://jxc.test', true), { kind: 'mock-blob', url: 'blob:https://jxc.test/abc' })
 })

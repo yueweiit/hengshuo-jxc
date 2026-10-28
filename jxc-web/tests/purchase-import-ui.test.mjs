@@ -38,6 +38,7 @@ async function render(state) {
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
   app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
   app.component('PurchaseImportTable', { render: () => null })
+  app.component('PurchaseImportGallery', { render: () => null })
   app.component('PurchaseImportSources', { render: () => null })
   app.component('PurchaseImportProductReview', { render: () => null })
   app.component('PurchaseImportDraftPreview', { render: () => null })
@@ -86,7 +87,12 @@ test('真实来源组件呈现解析失败、工作表选择和逐规格原图�
   const page = state.page
   Object.assign(page.state, { batchId, tasks: [{ id: batchId, status: 'FAILED', errorCode: 'SHEET_SELECTION_REQUIRED', errorMessage: '请选择采购表', result: { sheets: ['采购A', '采购B'] } }], sources: [{ id: 8, fileName: '采购.xlsx', fileSha256: 'a'.repeat(64), status: 'FAILED' }], rows: [{ ...row, sourceSheet: '采购A', sourceRow: 2, images: [{ id: 9, sha256: 'b'.repeat(64), status: 'UNCONFIRMED' }] }] })
   const source = new URL('../src/modules/purchase/PurchaseImportSources.vue', import.meta.url)
-  const bindings = loadVueScript(source, { ref, watch, onBeforeUnmount() {}, defineProps: () => ({ page }), http: {} }, ['sheets', 'imageUrls', 'imageErrors', 'downloading', 'download', 'view', 'retry'])
+  const bindings = loadVueScript(source, { ref, watch, onBeforeUnmount() {}, defineProps: () => ({ page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: {} }, ['sheets', 'imageUrls', 'imageErrors', 'downloading', 'download', 'view', 'retry', 'publish'])
+  let publications = 0
+  page.publishPhotos = async () => { publications++; return true }
+  page.state.rows[0].matchedProductId = 501
+  await bindings.publish(page.state.rows[0], 9)
+  assert.equal(publications, 0)
   const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
   const app = createSSRApp({ setup: () => ({ ...bindings, page }), render: compile(template) })
   const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
@@ -166,4 +172,21 @@ test('完整预览显示原价、舍入差额和已建结果，取消确认不�
   const html = await renderToString(app)
   assert.match(html, /53.1234567890/); assert.match(html, /53.1235/); assert.match(html, /0.0000432110/)
   assert.match(html, /PO-909/); assert.match(html, /已保存，读回待核实/); assert.match(html, /查询原创建结果/)
+})
+
+
+test('图库组件保留索引失败原因和独立重试，取消重建不发请求', async () => {
+  const { state } = workspace()
+  let rebuilds = 0
+  Object.assign(state.page.state, { batchId, gallery: { status: 'FAILED', coverage: { photos: 1, readyPhotos: 1, features: 1 }, lastError: '索引服务不可用' }, tasks: [{ id: batchId, kind: 'IMAGE_PUBLISH', phase: 'INDEX', status: 'FAILED', errorMessage: '索引构建失败' }] })
+  state.page.rebuildGallery = async () => { rebuilds++; return true }
+  const source = new URL('../src/modules/purchase/PurchaseImportGallery.vue', import.meta.url)
+  const bindings = loadVueScript(source, { watch() {}, onBeforeUnmount() {}, defineProps: () => ({ page: state.page }), ElMessageBox: { async confirm() { throw 'cancel' } } }, ['phase', 'status', 'rebuild'])
+  await bindings.rebuild(); assert.equal(rebuilds, 0)
+  const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
+  const app = createSSRApp({ setup: () => ({ ...bindings, page: state.page }), render: compile(template) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
+  for (const name of ['ElButton', 'ElAlert']) app.component(name, slot)
+  const html = await renderToString(app)
+  assert.match(html, /最近一次图库构建失败/); assert.match(html, /索引构建失败/); assert.match(html, /继续原照片／索引任务/); assert.match(html, /仍可人工确认商品并创建采购草稿/)
 })
