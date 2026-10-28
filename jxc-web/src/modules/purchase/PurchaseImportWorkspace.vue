@@ -26,6 +26,7 @@ const suppliers = ref<{ id: number; name: string; settleCurrency?: string; payme
 const currencies = ref<{ code: string }[]>([])
 const refsLoading = ref(false), refsError = ref(''), dialogVisible = ref(false), selected = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement>()
+const importDisabled = computed(() => page.busy() || !!state.edit)
 const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value)
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 let active = true, refsSequence = 0
@@ -73,7 +74,7 @@ function selectFile(event: Event) {
   page.clearFeedback()
 }
 async function submitImport() {
-  if (disabled.value || !selectedRefsValid()) return
+  if (importDisabled.value) return
   if (!selected.value) { page.failure(new Error('请先选择.xlsx文件')); return }
   const saved = await page.importFile(selected.value)
   if (saved) {
@@ -85,7 +86,7 @@ async function submitImport() {
 }
 async function saveHeader() { if (!disabled.value && selectedRefsValid()) await page.saveHeader() }
 async function remove(row: ImportRow) {
-  if (disabled.value || state.edit) return
+  if (importDisabled.value) return
   const context = JSON.stringify([country.currentId, country.epoch, user.token, state.batchId])
   try {
     await ElMessageBox.confirm(`确定删除第${row.rowNo}行采购明细？`, '删除明细', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' })
@@ -93,7 +94,7 @@ async function remove(row: ImportRow) {
     if (error !== 'cancel' && error !== 'close') page.failure(error)
     return
   }
-  if (active && !disabled.value && context === JSON.stringify([country.currentId, country.epoch, user.token, state.batchId])) await page.removeRow(row)
+  if (active && !importDisabled.value && context === JSON.stringify([country.currentId, country.epoch, user.token, state.batchId])) await page.removeRow(row)
 }
 function errorLabel(field?: string) { return importColumns.find(column => column.key === field)?.label ?? field }
 async function loadRouteBatch() {
@@ -137,19 +138,19 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
     </section>
 
     <section class="import-section import-command" aria-label="文件导入">
-      <div><h2>导入采购明细</h2><p>使用采购模板填写，每个商品规格单独一行。</p></div>
-      <el-button type="primary" :disabled="disabled || !!state.edit" @click="dialogVisible = true"><el-icon><Upload /></el-icon>导入文件</el-button>
+      <div><h2>导入采购明细</h2><p>使用采购模板填写，每个商品规格单独一行；可先导入，再补充基础信息。</p></div>
+      <el-button type="primary" :disabled="importDisabled" @click="dialogVisible = true"><el-icon><Upload /></el-icon>导入文件</el-button>
     </section>
 
     <section class="import-section import-details" aria-labelledby="import-details-title">
       <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
-      <el-alert v-if="page.headerDirty()" type="warning" title="基础信息已修改，请先保存后再编辑明细。" :closable="false" show-icon class="import-alert" />
+      <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细可先暂存，创建采购草稿前请补齐并保存。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />
       <PurchaseImportSources :page="page" />
       <PurchaseImportGallery :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
-      <PurchaseImportTable :page="page" :disabled="disabled" @remove="remove" />
+      <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" />
       <PurchaseImportProductReview :page="page" />
       <PurchaseImportDraftPreview :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" />
       <PurchaseImportFeeTodos :page="page" :currencies="currencies" />
@@ -157,12 +158,12 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
 
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
-      <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>解析保存完成后请逐项核对，原图位置需要人工确认。</li></ol>
+      <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>导入后先暂存明细；基础信息在保存或创建草稿时核验，原图归属需人工确认。</li></ol>
       <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="state.importing" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
       <el-alert v-if="downloadError" :title="downloadError" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <ul v-if="state.errors.length" class="import-error-list" aria-label="文件错误明细"><li v-for="(error, index) in state.errors" :key="index"><span v-if="error.rowNo">第{{ error.rowNo }}行：</span><span v-if="error.field">{{ errorLabel(error.field) }}，</span>{{ error.message }}</li></ul>
-      <template #footer><el-button :disabled="state.importing" @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="state.importing" :disabled="disabled || !selected" @click="submitImport">导入并保存</el-button></template>
+      <template #footer><el-button :disabled="state.importing" @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="state.importing" :disabled="importDisabled || !selected" @click="submitImport">导入数据</el-button></template>
     </el-dialog>
   </main>
 </template>

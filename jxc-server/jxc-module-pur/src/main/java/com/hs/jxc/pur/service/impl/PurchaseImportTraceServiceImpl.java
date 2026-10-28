@@ -48,7 +48,7 @@ public class PurchaseImportTraceServiceImpl implements PurchaseImportTraceServic
     }
     public Map<String,Object> save(RequestContext ctx,UUID batch,long groupId,Map<String,Object> body){return imports.tx.execute(s->{
         var a=imports.access(ctx,true);imports.batch(a,batch,true);
-        var found=mapper.selectGroupForUpdate(a.requireCountry(),batch,groupId);if(found.size()!=1)throw ApiException.notFound();var g=found.getFirst();if(!a.canBook(Inputs.id(imports.map(g.get("effective_header")).get("bookId"))))throw ApiException.notFound();
+        var found=mapper.selectGroupForUpdate(a.requireCountry(),batch,groupId);if(found.size()!=1)throw ApiException.notFound();var g=found.getFirst();imports.requireHeaderAccess(a,imports.map(g.get("effective_header")));
         if(!body.keySet().equals(Set.of("version","items","sourceBasisHash")))throw Inputs.bad("只允许保存费用核对清单");if(number(g,"fee_todos_version")!=Inputs.version(body))throw Inputs.conflict();var supplied=list(body.get("items"));var rows=rows(imports,g);if(supplied.size()>rows.size())throw Inputs.bad("费用来源数量超出本采购组");String hash=basis(imports,g,rows);if(!hash.equals(Inputs.required(body,"sourceBasisHash")))throw new ApiException(409,"PUR_IMPORT_SOURCE_CHANGED","费用来源已变化，请读取最新值后重新核对");var byId=new HashMap<Long,Map<String,Object>>();rows.forEach(row->byId.put(number(row,"id"),row));var covered=new HashSet<Long>();var todos=new ArrayList<Map<String,Object>>();
         for(var item:supplied){
             if(!item.keySet().equals(Set.of("sourceRowIds","scope","amount","currency","reason","confirm"))||!(item.get("sourceRowIds") instanceof List<?> ids)||ids.isEmpty()||!(item.get("confirm") instanceof Boolean))throw Inputs.bad("费用核对字段不完整或包含正式登记字段");

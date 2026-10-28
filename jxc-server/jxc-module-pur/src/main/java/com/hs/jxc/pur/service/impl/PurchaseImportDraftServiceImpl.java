@@ -21,7 +21,7 @@ public class PurchaseImportDraftServiceImpl implements PurchaseImportDraftServic
     private final PurchaseImportServiceImpl imports;private final PurchaseServiceImpl purchases;private final MasterProductMaintenanceApi master;private final IdempotencyExecutor commands;
     @Value("${jxc.purchase-import.draft-creation.enabled:false}") private boolean creationEnabled;
     public PurchaseImportDraftServiceImpl(PurchaseImportServiceImpl imports,PurchaseServiceImpl purchases,MasterProductMaintenanceApi master,IdempotencyExecutor commands,PurchaseImportDraftMapper mapper){this.mapper=mapper;this.imports=imports;this.purchases=purchases;this.master=master;this.commands=commands;}
-    private Map<String,Object> group(Access a,UUID batch,long id,boolean lock){var rows=mapper.selectGroup(a.requireCountry(),batch,id,lock);if(rows.size()!=1)throw ApiException.notFound();var row=rows.getFirst();if(!a.canBook(Inputs.id(imports.map(row.get("effective_header")).get("bookId"))))throw ApiException.notFound();return row;}
+    private Map<String,Object> group(Access a,UUID batch,long id,boolean lock){var rows=mapper.selectGroup(a.requireCountry(),batch,id,lock);if(rows.size()!=1)throw ApiException.notFound();var row=rows.getFirst();imports.requireHeaderAccess(a,imports.map(row.get("effective_header")));return row;}
     private List<Map<String,Object>> sourceRows(Access a,UUID batch,long group){return mapper.selectSourceRows(a.requireCountry(),batch,group);}
     private void synchronizeGroups(Access a,UUID batch,Map<String,Object> header){
         var rows=mapper.selectRowsWithGroups(a.requireCountry(),batch);

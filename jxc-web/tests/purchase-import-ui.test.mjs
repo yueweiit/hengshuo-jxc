@@ -25,7 +25,7 @@ function workspace(confirm = async () => {}, timerDependencies = {}) {
       async upload(selected, fields) { requests.push([selected, fields]); return { batchId, header: { ...header }, rows: [{ ...row }] } },
       async deleteRow(_batch, selected) { removed.push(selected.id); return { deleted: true, id: selected.id } },
     },
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'headerLocked', 'route', 'loadReferences', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks'])
   return { state, navigations, requests, removed }
 }
 
@@ -33,10 +33,10 @@ async function render(state) {
   const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
   const app = createSSRApp({ setup: () => ({ ...state, downloading: false, downloadError: '' }), render: compile(template) })
   // 测试真实工作区模板与操作；Element控件外观和明细表内部行为由构建及模型测试分别覆盖。
-  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', [ctx.slots.default?.(), ctx.slots.footer?.()]) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) })
   for (const name of ['ElForm', 'ElFormItem', 'ElSelect', 'ElOption', 'ElDatePicker', 'ElInput', 'ElInputNumber', 'ElIcon', 'ElAlert', 'Upload', 'Download', 'Refresh']) app.component(name, slot)
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
-  app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
+  app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
   app.component('PurchaseImportTable', { render: () => null })
   app.component('PurchaseImportGallery', { render: () => null })
   app.component('PurchaseImportSources', { render: () => null })
@@ -45,6 +45,22 @@ async function render(state) {
   app.component('PurchaseImportFeeTodos', { render: () => null })
   return renderToString(app)
 }
+
+test('基础选项读取失败不阻止导入文件和来源编辑，基础信息保存仍需有效选项', async () => {
+  const { state, requests, removed } = workspace()
+  state.refsError.value = '基础选项读取失败'
+  state.selected.value = new File(['xlsx'], '采购.xlsx')
+  assert.equal(state.state.header.bookId, null)
+  await state.submitImport()
+  assert.equal(requests.length, 1)
+  assert.equal(state.state.rows.length, 1)
+  const output = await render(state)
+  assert.match(output, /基础选项读取失败/)
+  assert.equal(state.page.startEdit(state.state.rows[0], 'productSpec'), true)
+  state.page.cancelEdit()
+  await state.remove(state.state.rows[0])
+  assert.deepEqual(removed, [10])
+})
 
 test('工作区实际呈现三块区域，导入弹窗包含模板下载和三条注意事项', async () => {
   const { state } = workspace()
@@ -136,11 +152,12 @@ test('接口适配器发送真实multipart和带版本的保存删除约定', as
   const cache = new Map([[httpUrl.href, { http: Object.fromEntries(['get', 'post', 'put', 'delete'].map(method => [method, async (...args) => { calls.push([method, ...args]); return { accepted: true } }])) }]])
   const { purchaseImportApi: api } = loadTsModule(new URL('../src/modules/purchase/purchaseImportApi.ts', import.meta.url), cache)
   const selected = new File(['xlsx'], '采购.xlsx')
-  await api.upload(selected, header, batchId, 'intent-123')
+  await api.upload(selected, batchId, 'intent-123')
   assert.equal(calls[0][1], '/pur/order-imports')
   assert.ok(calls[0][2] instanceof FormData)
   assert.equal(calls[0][2].get('file').name, '采购.xlsx')
-  assert.equal(JSON.parse(calls[0][2].get('header')).currency, 'USD')
+  assert.equal(calls[0][2].has('header'), false)
+  assert.equal(calls[0][2].get('batchId'), batchId)
   assert.equal(calls[0][3].headers['Idempotency-Key'], 'intent-123')
   await api.load(batchId)
   await api.saveRow(batchId, row, { ...row, purchaseQty: '12' })

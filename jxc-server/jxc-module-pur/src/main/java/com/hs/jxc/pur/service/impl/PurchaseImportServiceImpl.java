@@ -39,19 +39,31 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
     Map<String,Object> batch(Access a,UUID batch,boolean lock){
         var rows=mapper.selectBatch(a.requireCountry(),batch,lock);
         if(rows.size()!=1)throw ApiException.notFound();var b=rows.getFirst();
-        if(number(b,"created_by")!=a.userId()||!a.canBook(Inputs.id(map(b.get("header")).get("bookId"))))throw ApiException.notFound();
-        for(var group:mapper.selectGroupHeaders(a.requireCountry(),batch))if(!a.canBook(Inputs.id(map(group.get("effective_header")).get("bookId"))))throw ApiException.notFound();
+        if(number(b,"created_by")!=a.userId())throw ApiException.notFound();
+        requireHeaderAccess(a,map(b.get("header")));
+        for(var group:mapper.selectGroupHeaders(a.requireCountry(),batch))requireHeaderAccess(a,map(group.get("effective_header")));
         return b;
     }
-    Map<String,Object> header(Access a,Map<String,Object> input){
-        Map<String,Object> h=new LinkedHashMap<>();long book=Inputs.id(input.get("bookId")),supplier=Inputs.id(input.get("supplierId"));
-        if(!a.canBook(book)||PurchaseRows.one(mapper.countActiveBook(a.requireCountry(),book))!=1)throw ApiException.notFound();
-        if(PurchaseRows.one(mapper.countEnabledSupplier(a.requireCountry(),supplier))!=1)throw Inputs.bad("供应商不存在或未启用");
-        String currency=Inputs.required(input,"currency");if(!currency.matches("[A-Z]{3}")||PurchaseRows.one(mapper.countEnabledCurrency(currency))!=1)throw Inputs.bad("币种不存在或未启用");
-        h.put("bookId",book);h.put("supplierId",supplier);h.put("currency",currency);h.put("orderDate",date(input.get("orderDate"),false));h.put("expectedDate",date(input.get("expectedDate"),true));
+    Long bookId(Map<String,Object> header){Object value=header.get("bookId");return value==null?null:Inputs.id(value);}
+    void requireHeaderAccess(Access a,Map<String,Object> header){Long book=bookId(header);if(book!=null&&!a.canBook(book))throw ApiException.notFound();}
+    /** 暂存只规范已提供值；缺失业务信息保持未知，实际选项在业务保存时核验。 */
+    private Map<String,Object> stagingHeader(Map<String,Object> input){
+        var h=new LinkedHashMap<String,Object>();
+        for(String field:List.of("bookId","supplierId"))h.put(field,input.get(field)==null?null:Inputs.id(input.get(field)));
+        String currency=Inputs.text(input,"currency",null);if(currency!=null&&currency.isBlank())currency=null;
+        if(currency!=null&&!currency.matches("[A-Z]{3}"))throw Inputs.bad("币种格式不正确");h.put("currency",currency);
+        h.put("orderDate",date(input.get("orderDate"),true));h.put("expectedDate",date(input.get("expectedDate"),true));
         String terms=Inputs.text(input,"paymentTerms","");if(terms.length()>200)throw Inputs.bad("付款条件最多200字");h.put("paymentTerms",terms);
         BigDecimal ratio=decimal(input.get("prepayRatio"),6,1,false);if(ratio!=null&&ratio.compareTo(BigDecimal.ONE)>0)throw Inputs.bad("预付比例须为0至1");h.put("prepayRatio",ratio==null?null:ratio.stripTrailingZeros().toPlainString());
         Object days=input.get("termDays");if(days!=null&&(!(days instanceof Number)||new BigDecimal(days.toString()).scale()>0||((Number)days).longValue()<0||((Number)days).longValue()>Integer.MAX_VALUE))throw Inputs.bad("账期天数须为非负整数");h.put("termDays",days==null?null:((Number)days).intValue());return h;
+    }
+    Map<String,Object> header(Access a,Map<String,Object> input){
+        var h=stagingHeader(input);if(h.get("bookId")==null)throw Inputs.bad("请选择当前可用账套");if(h.get("supplierId")==null)throw Inputs.bad("请选择当前可用供应商");
+        long book=Inputs.id(h.get("bookId")),supplier=Inputs.id(h.get("supplierId"));
+        if(!a.canBook(book)||PurchaseRows.one(mapper.countActiveBook(a.requireCountry(),book))!=1)throw ApiException.notFound();
+        if(PurchaseRows.one(mapper.countEnabledSupplier(a.requireCountry(),supplier))!=1)throw Inputs.bad("供应商不存在或未启用");
+        if(h.get("currency")==null||PurchaseRows.one(mapper.countEnabledCurrency(h.get("currency")))!=1)throw Inputs.bad("币种不存在或未启用");
+        date(h.get("orderDate"),false);return h;
     }
     static String date(Object value,boolean optional){if(optional&&(value==null||"".equals(value)))return null;if(!(value instanceof String text)||!text.matches("\\d{4}-\\d{2}-\\d{2}"))throw Inputs.bad("日期格式不正确");try{return LocalDate.parse(text).toString();}catch(java.time.DateTimeException e){throw Inputs.bad("日期无效");}}
     static BigDecimal decimal(Object value,int scale,int digits,boolean positive){
@@ -67,10 +79,10 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
     public Map<String,Object> upload(RequestContext ctx,String name,byte[] bytes,Map<String,Object> input,UUID existing,String key){
         if(!workerEnabled)throw new ApiException(503,"PARSER_DISABLED","采购解析后台尚未启用，文件未导入；请联系管理员完成受限桥接配置");
         if(name==null||!name.toLowerCase(Locale.ROOT).endsWith(".xlsx"))throw Inputs.bad("请上传.xlsx采购模板");
-        var h=tx.execute(s->{Access a=access(ctx,true);if(existing!=null){var b=batch(a,existing,false);if(!sameHeader(map(b.get("header")),header(a,input)))throw Inputs.conflict();}return header(a,input);});
+        var h=tx.execute(s->{Access a=access(ctx,true);if(existing!=null){var current=map(batch(a,existing,false).get("header"));if(!input.isEmpty()&&!sameHeader(current,stagingHeader(input)))throw Inputs.conflict();return current;}return stagingHeader(input);});
         var prepared=assets.prepare(ctx,AttachmentAssetService.Policy.PURCHASE_SOURCE,name,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",bytes);
-        return tx.execute(s->{Access a=access(ctx,true);var checked=header(a,h);var intent=new LinkedHashMap<String,Object>();intent.put("header",checked);intent.put("fileSha256",prepared.sha256());intent.put("fileName",name);intent.put("batchId",existing==null?null:existing.toString());
-            return commands.execute(ctx,"POST",BASE,key,intent,Inputs.id(h.get("bookId")),()->{
+        return tx.execute(s->{Access a=access(ctx,true);var checked=stagingHeader(h);requireHeaderAccess(a,checked);var intent=new LinkedHashMap<String,Object>();if(!input.isEmpty())intent.put("header",checked);intent.put("fileSha256",prepared.sha256());intent.put("fileName",name);intent.put("batchId",existing==null?null:existing.toString());
+            return commands.execute(ctx,"POST",BASE,key,intent,input.isEmpty()?null:bookId(h),()->{
                 UUID id=existing==null?UUID.randomUUID():existing;
                 if(existing==null)mapper.insertBatch(a.requireCountry(),id,json.write(checked),a.userId());
                 var b=batch(a,id,true);if(existing!=null&&!sameHeader(map(b.get("header")),checked))throw Inputs.conflict();

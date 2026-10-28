@@ -9,6 +9,7 @@ const header = () => ({ bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2
 const row = (id = 1) => ({ id, version: 1, rowNo: id, sourceOrderNo: 'NY-051', photo: null, productSpec: 'S', purchaseQty: '10', saleUnitPrice: '82.15', saleTotal: '821.5', purchaseUnitPrice: '53', freight: null, landedUnitCost: null, usdUnitCost: null, usdTotal: null })
 const batch = () => ({ batchId, header: header(), rows: [row()] })
 const file = () => new File(['xlsx-bytes'], '采购.xlsx')
+const unconfiguredHeader = () => ({ bookId: null, supplierId: null, currency: null, orderDate: null, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null })
 function setup(overrides = {}) {
   assert.ok(existsSync(modelUrl), '缺少采购导入工作区模型')
   const { createPurchaseImportModel } = loadTsModule(modelUrl)
@@ -27,6 +28,40 @@ function setup(overrides = {}) {
   return { page, calls }
 }
 
+test('未填写业务表头也能导入暂存，上传请求不携带页面基础信息', async () => {
+  const { page, calls } = setup({ async upload(...args) { calls.push(['upload', ...args]); return { ...batch(), header: unconfiguredHeader() } } })
+  Object.assign(page.state.header, unconfiguredHeader())
+  assert.equal(await page.importFile(file()), true)
+  assert.equal(calls[0].length, 4)
+  assert.equal(calls[0][2], null)
+  assert.equal(page.state.rows.length, 1)
+  assert.equal(page.state.header.bookId, null)
+  assert.equal(page.headerDirty(), false)
+})
+
+test('导入及解析轮询保留未保存表头草稿，缺项只在保存时拦截', async () => {
+  const pending = { ...batch(), header: unconfiguredHeader(), rows: [], status: 'PARSING', version: 1, tasks: [{ id: batchId, status: 'QUEUED' }] }
+  const { page, calls } = setup({ async upload() { return pending }, async load() { return { ...pending, rows: [row()], status: 'REVIEW', version: 2, tasks: [{ id: batchId, status: 'SUCCEEDED' }] } } })
+  Object.assign(page.state.header, unconfiguredHeader(), { paymentTerms: '待业务保存时核对', orderDate: '2026-02-30' })
+  assert.equal(await page.importFile(file()), true)
+  assert.equal(await page.refreshTasks(), true)
+  assert.equal(page.state.rows.length, 1)
+  assert.equal(page.state.header.paymentTerms, '待业务保存时核对')
+  assert.equal(page.state.header.orderDate, '2026-02-30')
+  assert.equal(await page.saveHeader(), false)
+  assert.match(page.state.error, /账套/)
+  assert.equal(calls.length, 0)
+})
+
+test('无表头的暂存数据可以刷新和编辑来源明细', async () => {
+  const { page } = setup({ async load() { return { ...batch(), header: unconfiguredHeader() } } })
+  assert.equal(await page.loadBatch(batchId), true)
+  assert.equal(page.startEdit(page.state.rows[0], 'purchaseQty'), true)
+  page.state.edit.values.purchaseQty = '11'
+  assert.equal(await page.saveEdit(), true)
+  assert.equal(page.state.rows[0].purchaseQty, '11')
+})
+
 test('上传成功采用服务器保存后的批次和明细，不生成示例行', async () => {
   const { page, calls } = setup()
   assert.equal(page.state.rows.length, 0)
@@ -34,7 +69,8 @@ test('上传成功采用服务器保存后的批次和明细，不生成示例�
   assert.equal(page.state.batchId, batchId)
   assert.equal(page.state.rows[0].purchaseUnitPrice, '53')
   assert.equal(page.state.rows[0].freight, null)
-  assert.equal(calls[0][2].currency, 'USD')
+  assert.equal(calls[0][2], null)
+  assert.equal(calls[0].length, 4)
 })
 
 test('异步上传只接收任务，解析保存成功前不显示已导入', async () => {
@@ -47,7 +83,7 @@ test('异步上传只接收任务，解析保存成功前不显示已导入', as
   assert.equal(page.state.status, 'PARSING')
   assert.equal(await page.refreshTasks(), true)
   assert.equal(page.state.rows.length, 1)
-  assert.match(page.state.success, /保存1条/)
+  assert.match(page.state.success, /暂存1条/)
 })
 
 test('解析失败可恢复任务原因，多工作表需明确选择后重试', async () => {
@@ -83,12 +119,8 @@ test('人工确认图片后保留其他规格行并采用新的行与批次版�
   assert.equal(page.state.version, 4)
 })
 
-test('缺少基础信息以及非XLSX或空文件不会触发上传', async () => {
+test('非XLSX或空文件仍不会触发上传', async () => {
   const { page, calls } = setup()
-  page.state.header.bookId = null
-  assert.equal(await page.importFile(file()), false)
-  assert.match(page.state.error, /账套/)
-  page.state.header.bookId = 1
   for (const bad of [new File(['text'], '单据.csv'), new File([], '单据.xlsx')]) {
     assert.equal(await page.importFile(bad), false)
     assert.ok(page.state.error)
@@ -116,15 +148,16 @@ test('空成功响应与重复记录编号被当作响应错误，不替换既�
   }
 })
 
-test('同一次上传失败重试沿用幂等键，基础信息变化时更换', async () => {
+test('文件上传重试不受未保存表头变化影响，并明确提示网络中断', async () => {
   const keys = []
-  const { page } = setup({ async upload(_file, _header, _batch, key) { keys.push(key); throw new Error('超时') } })
+  const { page } = setup({ async upload(_file, _batch, key) { keys.push(key); throw new Error('Network Error') } })
   const selected = file()
   await page.importFile(selected)
   await page.importFile(selected)
   page.state.header.paymentTerms = '30天'
   await page.importFile(selected)
-  assert.deepEqual(keys, ['intent-1', 'intent-1', 'intent-2'])
+  assert.deepEqual(keys, ['intent-1', 'intent-1', 'intent-1'])
+  assert.match(page.state.error, /连接中断.*未确认/)
 })
 
 test('单元格编辑保存精确数值及版本，取消不改变正式值', async () => {
@@ -222,12 +255,13 @@ test('保存基础信息携带全部行版本，成功前保留服务器快照',
 
 test('基础信息合法性包括真实日期和非负整数账期', async () => {
   const { page, calls } = setup()
+  await page.loadBatch(batchId)
   for (const [field, value] of [['orderDate', '2026-02-30'], ['prepayRatio', '1.01'], ['termDays', -1], ['termDays', 1.5]]) {
     Object.assign(page.state.header, header(), { [field]: value })
-    assert.equal(await page.importFile(file()), false)
+    assert.equal(await page.saveHeader(), false)
     assert.ok(page.state.error)
   }
-  assert.equal(calls.length, 0)
+  assert.equal(calls.filter(call => call[0] === 'header').length, 0)
 })
 
 test('离开或切换上下文后，旧上传回调不能写回新页面', async () => {

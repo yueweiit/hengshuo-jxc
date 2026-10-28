@@ -5,10 +5,9 @@ import type { PurchaseImportApi } from './purchaseImportModel'
 const base = '/pur/order-imports'
 const batchPath = (id: string) => `${base}/${encodeURIComponent(id)}`
 export const purchaseImportApi: PurchaseImportApi = {
-  upload(file, header, batchId, key) {
+  upload(file, batchId, key) {
     const data = new FormData()
     data.append('file', file)
-    data.append('header', JSON.stringify(header))
     if (batchId) data.append('batchId', batchId)
     return http.post(base, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true })
   },

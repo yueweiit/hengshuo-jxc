@@ -3,8 +3,8 @@ import { reactive } from 'vue'
 export interface ImportHeader {
   bookId: number | null
   supplierId: number | null
-  currency: string
-  orderDate: string
+  currency: string | null
+  orderDate: string | null
   expectedDate: string | null
   paymentTerms: string
   prepayRatio: string | null
@@ -40,7 +40,7 @@ export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: numb
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
-  upload(file: File, header: ImportHeader, batchId: string | null, key: string): Promise<unknown>
+  upload(file: File, batchId: string | null, key: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
   saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
   saveRow(batchId: string, row: ImportRow, values: ImportValues, matchInputs?: MatchInputs): Promise<unknown>
@@ -66,11 +66,11 @@ const positiveId = (value: unknown): value is number => Number.isSafeInteger(val
 const dateValid = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 const decimalValid = (value: string, quantity = false) => (quantity ? /^\d{1,16}(\.\d{1,4})?$/ : /^\d{1,20}(\.\d{1,10})?$/).test(value)
 
-export function validateImportHeader(header: ImportHeader): string {
-  if (!positiveId(header.bookId)) return '请选择有效账套'
-  if (!positiveId(header.supplierId)) return '请选择有效供应商'
-  if (!/^[A-Z]{3}$/.test(header.currency)) return '请选择有效币种'
-  if (!dateValid(header.orderDate)) return '请填写有效下单日期'
+export function validateImportHeader(header: ImportHeader, complete = true): string {
+  if ((complete || header.bookId !== null) && !positiveId(header.bookId)) return '请选择有效账套'
+  if ((complete || header.supplierId !== null) && !positiveId(header.supplierId)) return '请选择有效供应商'
+  if ((complete || header.currency !== null) && (typeof header.currency !== 'string' || !/^[A-Z]{3}$/.test(header.currency))) return '请选择有效币种'
+  if ((complete || header.orderDate !== null) && !dateValid(header.orderDate)) return '请填写有效下单日期'
   if (header.expectedDate !== null && header.expectedDate !== '' && !dateValid(header.expectedDate)) return '预计交货日期格式不正确'
   if (typeof header.paymentTerms !== 'string' || header.paymentTerms.length > 200) return '付款条件最多200个字符'
   if (header.prepayRatio !== null && header.prepayRatio !== '' && (!/^\d(\.\d{1,6})?$/.test(header.prepayRatio) || Number(header.prepayRatio) > 1)) return '预付比例应为0至1，最多6位小数'
@@ -117,7 +117,7 @@ function readGroup(value: unknown): ImportDraftGroup {
 function readBatch(value: unknown): ImportBatch {
   if (!record(value) || !isBatchId(value.batchId) || !record(value.header) || !Array.isArray(value.rows)) throw new Error('后端返回的导入批次不完整，请检查接口')
   const header = value.header as unknown as ImportHeader
-  const message = validateImportHeader(header)
+  const message = validateImportHeader(header, false)
   if (message) throw new Error(`后端返回的基础信息不完整：${message}`)
   if (Array.isArray(value.groups)) value.groups = value.groups.map(readGroup)
   const rows = value.rows.map(readRow)
@@ -131,7 +131,7 @@ function readBatch(value: unknown): ImportBatch {
 
 /** 页面只有一个编辑草稿；网络、解析、持久化错误始终保留为明确错误状态。 */
 export function createPurchaseImportModel(api: PurchaseImportApi, today: string, newKey = () => crypto.randomUUID()) {
-  const emptyHeader = (): ImportHeader => ({ bookId: null, supplierId: null, currency: '', orderDate: today, expectedDate: null, paymentTerms: '', prepayRatio: '0', termDays: null })
+  const emptyHeader = (): ImportHeader => ({ bookId: null, supplierId: null, currency: '', orderDate: today, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null })
   const state = reactive({
     header: emptyHeader(), batchId: null as string | null, rows: [] as ImportRow[],
     edit: null as { id: number; field: ImportField | null; values: ImportValues } | null,
@@ -149,6 +149,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   function failure(error: unknown) {
     state.success = ''
     state.error = error instanceof Error ? error.message : '操作失败，未收到有效响应，请重试'
+    if (state.error === 'Network Error') state.error = '连接中断，未确认操作结果；请检查本地服务连接后使用原请求重试'
     state.errorCode = record(error) && typeof error.code === 'string' ? error.code : ''
     state.errors = []
     if (record(error) && record(error.data) && Array.isArray(error.data.errors)) {
@@ -164,9 +165,11 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     }
   }
   function clearFeedback() { state.error = ''; state.errorCode = ''; state.errors = []; state.success = ''; state.partialResult = null }
-  function applyBatch(batch: ImportBatch) {
+  function applyBatch(batch: ImportBatch, preserveDraft = false) {
+    const draft = preserveDraft && (state.batchId === null || headerDirty()) ? state.header : null
+    savedHeader = JSON.stringify(batch.header)
     state.batchId = batch.batchId
-    state.header = batch.header
+    state.header = draft ?? batch.header
     state.rows = batch.rows
     // 兼容旧header/rows响应；仅缺少新增元数据时采用历史REVIEW语义。
     state.version = batch.version === undefined ? 1 : batch.version
@@ -175,7 +178,6 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.tasks = batch.tasks === undefined ? [] : batch.tasks
     state.groups = batch.groups === undefined ? [] : batch.groups
     state.edit = null
-    savedHeader = JSON.stringify(state.header)
   }
   async function write(flag: 'importing' | 'saving', request: () => Promise<unknown>, apply: (response: unknown) => void) {
     if (busy()) return false
@@ -194,7 +196,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       if (context === epoch) { state[flag] = false; state.deletingId = null }
     }
   }
-  async function loadBatch(id: string) {
+  async function loadBatch(id: string, preserveDraft = false) {
     if (state.importing || state.saving || state.edit) return false
     const context = epoch, sequence = ++readSequence
     clearFeedback()
@@ -205,7 +207,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       if (context !== epoch || sequence !== readSequence) return false
       const batch = readBatch(response)
       if (batch.batchId !== id) throw new Error('后端返回的批次编号与请求不一致')
-      applyBatch(batch)
+      if (preserveDraft && headerDirty() && savedHeader !== JSON.stringify(batch.header)) throw new Error('基础信息已被其他操作修改，请重新打开批次后核对；当前草稿已保留')
+      applyBatch(batch, preserveDraft)
       return true
     } catch (error) {
       if (context === epoch && sequence === readSequence) failure(error)
@@ -217,26 +220,23 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   async function importFile(file: File) {
     if (busy()) return false
     if (state.edit) { failure(new Error('请先保存或取消正在编辑的明细')); return false }
-    const invalid = validateImportHeader(state.header)
-    if (invalid) { failure(new Error(invalid)); return false }
     if (!/\.xlsx$/i.test(file.name) || !file.size) { failure(new Error('请选择非空的.xlsx模板文件')); return false }
-    const header = { ...state.header }
-    const signature = JSON.stringify([state.batchId, header])
+    if (file.size > 100 * 1024 * 1024) { failure(new Error('采购文件不能超过100MiB')); return false }
+    const signature = JSON.stringify([state.batchId])
     if (selectedFile !== file || signature !== intentSignature) { intentKey = newKey(); selectedFile = file; intentSignature = signature }
-    return write('importing', () => api.upload(file, header, state.batchId, intentKey), response => {
+    return write('importing', () => api.upload(file, state.batchId, intentKey), response => {
       const batch = readBatch(response)
       if (batch.rows.length === 0 && !(batch.status === 'PARSING' && batch.tasks?.some(task => ['QUEUED', 'RUNNING'].includes(task.status)))) throw new Error('后端返回的导入结果没有明细或有效解析任务，请核对文件')
       if (state.batchId !== null && batch.batchId !== state.batchId) throw new Error('后端返回的导入批次与当前批次不一致')
-      applyBatch(batch)
+      applyBatch(batch, true)
       selectedFile = null; intentKey = ''; intentSignature = ''
-      if (batch.status !== 'PARSING') state.success = `已导入并保存${batch.rows.length}条明细，请核对无误`
+      if (batch.status !== 'PARSING') state.success = `已导入暂存${batch.rows.length}条明细，请核对无误`
     })
   }
   function rowLocked(row: ImportRow) { return !!row.targetOrderLineId || state.groups.some(group => group.id === row.groupId && ['CREATING', 'UNKNOWN'].includes(group.createStatus)) }
   function startEdit(row: ImportRow, field: ImportField | null) {
     if (rowLocked(row)) { failure(new Error('本行已建单或创建结果待核实，不能修改来源')); return false }
     if (busy() || state.edit || !state.rows.some(item => item.id === row.id)) return false
-    if (headerDirty()) { failure(new Error('请先保存基础信息')); return false }
     clearFeedback()
     state.edit = { id: row.id, field, values: Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues }
     return true
@@ -272,7 +272,6 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   async function removeRow(row: ImportRow) {
     if (busy() || state.edit || !state.batchId || rowLocked(row)) return false
     if (!state.rows.some(item => item.id === row.id && item.version === row.version)) { failure(new Error('删除目标已变化，请刷新核对')); return false }
-    if (headerDirty()) { failure(new Error('请先保存基础信息')); return false }
     state.deletingId = row.id
     return write('saving', () => api.deleteRow(state.batchId!, { ...row }), response => {
       if (!record(response) || response.deleted !== true || response.id !== row.id) throw new Error('后端未确认删除成功，请刷新核对')
@@ -282,10 +281,10 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function refreshTasks() {
-    if (!state.batchId || state.edit || state.saving || state.importing || headerDirty()) return false
+    if (!state.batchId || state.edit || state.saving || state.importing) return false
     const pending = state.status === 'PARSING'
-    const saved = await loadBatch(state.batchId)
-    if (saved && pending && state.status === 'REVIEW') state.success = `已导入并保存${state.rows.length}条明细，请核对无误`
+    const saved = await loadBatch(state.batchId, true)
+    if (saved && pending && state.status === 'REVIEW') state.success = `已导入暂存${state.rows.length}条明细，请核对无误`
     return saved
   }
   const retryKeys = new Map<string, string>()

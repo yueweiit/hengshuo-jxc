@@ -18,9 +18,9 @@ public class PurchaseImportController {
     private ApiEnvelope ok(Object data){return ApiEnvelope.ok(data,ctx().traceId());}
     @GetMapping("/capabilities") public ApiEnvelope capabilities(){return ok(imports.capabilities(ctx()));}
     @PostMapping(consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiEnvelope> upload(@RequestPart MultipartFile file,@RequestParam String header,@RequestParam(required=false)UUID batchId,@RequestHeader("Idempotency-Key")String key)throws java.io.IOException{
+    public ResponseEntity<ApiEnvelope> upload(@RequestPart MultipartFile file,@RequestParam(required=false) String header,@RequestParam(required=false)UUID batchId,@RequestHeader("Idempotency-Key")String key)throws java.io.IOException{
         if(file.getSize()>100L*1024*1024)throw new ApiException(413,"PUR_IMPORT_ASSET_LIMIT","采购文件不能超过100MiB");
-        return ResponseEntity.accepted().body(ok(imports.upload(ctx(),file.getOriginalFilename(),file.getBytes(),json.readMap(header),batchId,key)));
+        return ResponseEntity.accepted().body(ok(imports.upload(ctx(),file.getOriginalFilename(),file.getBytes(),header==null?Map.of():json.readMap(header),batchId,key)));
     }
     @GetMapping("/{batchId}") public ApiEnvelope get(@PathVariable UUID batchId){return ok(imports.get(ctx(),batchId));}
     @PutMapping("/{batchId}") public ApiEnvelope header(@PathVariable UUID batchId,@RequestBody Map<String,Object> body){return ok(imports.saveHeader(ctx(),batchId,body));}
