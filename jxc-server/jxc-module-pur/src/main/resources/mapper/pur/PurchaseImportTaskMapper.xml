@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportTaskMapper">
+
+  <select id="selectClaimableTask" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id} AND (status='QUEUED' OR status='RUNNING' AND lease_until&lt;clock_timestamp())
+  </select>
+
+  <select id="lockBatch" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT batch_id FROM pur_order_import_batch WHERE country_id=#{countryId} AND batch_id=#{batchId} FOR UPDATE
+  </select>
+
+  <select id="selectClaimableTaskForUpdate" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id} AND (status='QUEUED' OR status='RUNNING' AND lease_until&lt;clock_timestamp()) FOR UPDATE SKIP LOCKED
+  </select>
+
+  <update id="markNeedsReauth">
+    UPDATE pur_order_import_task SET status='NEEDS_REAUTH',error_code=#{errorCode},error_message=#{errorMessage},credential_hash=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="markStale">
+    UPDATE pur_order_import_task SET status='STALE',error_code='INPUT_CHANGED',error_message='批次内容已变化，请确认后重试',credential_hash=NULL WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="claimTask">
+    UPDATE pur_order_import_task SET status='RUNNING',attempt_count=attempt_count+1,lease_owner=#{leaseOwner},lease_until=clock_timestamp()+interval '15 minutes',expires_at=clock_timestamp()+interval '15 minutes',credential_hash=#{credentialHash},error_code=NULL,error_message=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="markSourceParsing">
+    UPDATE pur_order_import_source SET status='PARSING',error_code=NULL,error_message=NULL WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectParseOptions" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT parse_options FROM pur_order_import_source WHERE country_id=#{countryId} AND id=#{id}
+  </select>
+
+  <select id="insertImage" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_order_import_image(country_id,source_id,attachment_id,image_sha256,media_part,mime_type,width,height) VALUES(#{countryId},#{sourceId},#{attachmentId},#{imageSha256},#{mediaPart},#{mimeType},#{width},#{height}) RETURNING id
+  </select>
+
+  <select id="insertSourceRow" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_order_import(country_id,batch_id,row_no,book_id,supplier_id,currency,order_date,expected_date,payment_terms,prepay_ratio,term_days,source_order_no,photo,product_spec,purchase_qty,sale_unit_price,sale_total,purchase_unit_price,freight,landed_unit_cost,usd_unit_cost,usd_total,created_by,source_id,source_sheet,source_row,original_values,formula_provenance,field_origins) VALUES(#{countryId},#{batchId},#{rowNo},#{bookId},#{supplierId},#{currency},#{orderDate}::date,#{expectedDate}::date,#{paymentTerms},#{prepayRatio}::numeric,#{termDays},#{sourceOrderNo},#{photo},#{productSpec},#{purchaseQty},#{saleUnitPrice},#{saleTotal},#{purchaseUnitPrice},#{freight},#{landedUnitCost},#{usdUnitCost},#{usdTotal},#{createdBy},#{sourceId},#{sourceSheet},#{sourceRow},#{originalValues}::jsonb,#{formulaProvenance}::jsonb,#{fieldOrigins}::jsonb) RETURNING id
+  </select>
+
+  <insert id="upsertRowImage">
+    INSERT INTO pur_order_import_row_image(country_id,row_id,image_id,anchor) VALUES(#{countryId},#{rowId},#{imageId},#{anchor}::jsonb) ON CONFLICT(country_id,row_id,image_id) DO UPDATE SET anchor=pur_order_import_row_image.anchor||excluded.anchor
+  </insert>
+
+  <update id="completeSource">
+    UPDATE pur_order_import_source SET status='READY',parser_version=#{parserVersion},sheets=#{sheets}::jsonb,warnings=#{warnings}::jsonb,associations=#{associations}::jsonb,error_code=NULL,error_message=NULL WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="completeBatch">
+    UPDATE pur_order_import_batch SET status='REVIEW',next_row_no=#{nextRowNo},version=version+1,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </update>
+
+  <update id="completeParseTask">
+    UPDATE pur_order_import_task SET status='SUCCEEDED',result=#{result}::jsonb,credential_hash=NULL,lease_owner=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="failOwnedTask">
+    UPDATE pur_order_import_task SET status=#{status},error_code=#{errorCode},error_message=#{errorMessage},result=coalesce(#{result}::jsonb,result),credential_hash=NULL,lease_until=NULL,lease_owner=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id} AND lease_owner=#{leaseOwner} AND status='RUNNING'
+  </update>
+
+  <update id="failSource">
+    UPDATE pur_order_import_source SET status=#{status},error_code=#{errorCode},error_message=#{errorMessage} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="failBatch">
+    UPDATE pur_order_import_batch SET status='FAILED' WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </update>
+
+  <select id="selectActiveTaskForUpdate" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id} AND lease_owner=#{leaseOwner} AND status='RUNNING' AND lease_until&gt;clock_timestamp() FOR UPDATE
+  </select>
+
+  <update id="renewOwnedLease">
+    UPDATE pur_order_import_task SET lease_until=clock_timestamp()+interval '15 minutes',expires_at=clock_timestamp()+interval '15 minutes' WHERE country_id=#{countryId} AND id=#{id} AND lease_owner=#{leaseOwner} AND status='RUNNING'
+  </update>
+
+  <select id="selectTask" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id}
+  </select>
+
+  <select id="selectTaskForUpdate" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id} FOR UPDATE
+  </select>
+
+  <update id="requeueTask">
+    UPDATE pur_order_import_task SET status='QUEUED',input_revision=#{inputRevision},authorization_basis=#{authorizationBasis}::jsonb,requested_by=#{requestedBy},error_code=NULL,error_message=NULL,result=CASE WHEN kind='PARSE' THEN NULL ELSE result END,callback_hash=NULL,callback_credential_hash=NULL,credential_hash=NULL,expires_at=clock_timestamp()+interval '1 hour',updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="requeueSource">
+    UPDATE pur_order_import_source SET status='PENDING',parse_options=#{parseOptions}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="markBatchQueued">
+    UPDATE pur_order_import_batch SET status='PARSING' WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </update>
+
+  <select id="selectRecoverableIds" resultType="java.util.UUID" useCache="false">
+    SELECT id FROM pur_order_import_task WHERE country_id=#{countryId} AND (status='QUEUED' OR status='RUNNING' AND lease_until&lt;clock_timestamp()) ORDER BY created_at LIMIT #{leaseUntil}
+  </select>
+
+  <select id="selectUnexpiredTask" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id} AND expires_at&gt;clock_timestamp()
+  </select>
+
+  <select id="selectLeaseValid" resultType="java.lang.Boolean" useCache="false">
+    SELECT lease_until&gt;clock_timestamp() FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id}
+  </select>
+
+  <update id="renewCredentialLease">
+    UPDATE pur_order_import_task SET lease_until=clock_timestamp()+interval '15 minutes',expires_at=clock_timestamp()+interval '15 minutes' WHERE country_id=#{countryId} AND id=#{id} AND status='RUNNING' AND credential_hash=#{credentialHash} AND lease_until&gt;clock_timestamp()
+  </update>
+
+  <update id="completeTask">
+    UPDATE pur_order_import_task SET status='SUCCEEDED',phase='DONE',result=#{result}::jsonb,error_code=NULL,error_message=NULL,credential_hash=NULL,lease_owner=NULL,lease_until=NULL WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+</mapper>

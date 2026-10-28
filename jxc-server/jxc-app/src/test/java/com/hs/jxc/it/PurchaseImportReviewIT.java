@@ -2,13 +2,13 @@ package com.hs.jxc.it;
 
 import static org.assertj.core.api.Assertions.*;
 import com.hs.jxc.common.api.ApiException;
-import com.hs.jxc.pur.PurchaseImportProductService;
+import com.hs.jxc.pur.service.impl.PurchaseImportProductServiceImpl;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 class PurchaseImportReviewIT extends PurchaseImportFixture {
-    @Autowired PurchaseImportProductService review;
+    @Autowired PurchaseImportProductServiceImpl review;
     @BeforeEach void productPermissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\",\"md:product:edit\"]'::jsonb WHERE id=801");}
     Map<String,Object> prepared(){var b=upload(UUID.randomUUID().toString());parse(b);return imports.get(actor,id(b));}
     long rowId(Map<String,Object>b){return ((Number)rows(b).getFirst().get("id")).longValue();}

@@ -2,7 +2,7 @@ package com.hs.jxc.it;
 
 import static org.assertj.core.api.Assertions.*;
 import com.hs.jxc.common.api.*;
-import com.hs.jxc.pur.PurchaseImportRecognitionClient;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;

@@ -3,7 +3,8 @@ package com.hs.jxc.it;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
-import com.hs.jxc.pur.*;
+import com.hs.jxc.pur.service.impl.*;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import com.hs.jxc.common.api.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
@@ -12,9 +13,10 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 class PurchaseImportMatchIT extends PurchaseImportFixture {
-    @Autowired PurchaseImportMatchService matches;
-    @Autowired PurchaseImportProductService review;
-    @Autowired PurchaseImportPhotoService photos;
+    @org.springframework.beans.factory.annotation.Autowired com.hs.jxc.pur.mapper.PurchaseImportMatchMapper matchMapper;
+    @Autowired PurchaseImportMatchServiceImpl matches;
+    @Autowired PurchaseImportProductServiceImpl review;
+    @Autowired PurchaseImportPhotoServiceImpl photos;
     @DynamicPropertySource static void recognition(DynamicPropertyRegistry r){r.add("jxc.purchase-import.recognition.enabled",()->true);}
     @BeforeEach void matchPermissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\"]'::jsonb WHERE id=801");doThrow(new ApiException(503,"N8N_UNAVAILABLE","受限识别工作流不可用")).when(parser).recognize(any(),anyString(),anyMap());}
     Map<String,Object> source(String code){var b=upload(UUID.randomUUID().toString());parse(b);if(code!=null)imports.saveRow(actor,id(b),rowId(b),Map.of("version",1,"values",values(),"matchInputs",Map.of("suppliedProductCode",code,"suppliedProductName","","supplierProductCode","")));return imports.get(actor,id(b));}
@@ -46,5 +48,5 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
 
     @Test void oneFailedImageRetainsOtherRealHitsAndMarksPartialInsteadOfOk(){var b=photoBatch(true);owner.update("INSERT INTO pur_order_import_image(country_id,source_id,attachment_id,image_sha256,media_part,mime_type,width,height) SELECT country_id,source_id,attachment_id,repeat('a',64),'xl/media/second.png',mime_type,width,height FROM pur_order_import_image");long second=owner.queryForObject("SELECT max(id) FROM pur_order_import_image",Long.class);owner.update("INSERT INTO pur_order_import_row_image(country_id,row_id,image_id,anchor,association_status) VALUES(101,?,?,'{\"anchors\":[]}'::jsonb,'CONFIRMED')",rowId(b),second);long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);doAnswer(call->{var request=map(call.getArgument(2));if(((Number)request.get("queryAssetId")).longValue()==second)throw new ApiException(503,"SEARCH_UNAVAILABLE","第二张原图提取失败");return Map.of("hits",List.of(Map.of("featureId",feature,"score",0.9)));}).when(parser).search(any(),anyString(),anyMap());tasks.execute(101,start(b));assertThat(matched(b)).containsEntry("status","PARTIAL");assertThat(map(matched(b).get("image")).get("errors")).asList().hasSize(1);assertThat(matched(b).get("candidates")).asList().hasSize(1);}
 
-    @Test void catalogDatabaseCallFailureIsExplicitAndCannotBecomeSuccessfulNoMatch(){var b=source("SKU");UUID task=start(b);var unavailable=mock(com.hs.jxc.md.api.MasterProductMaintenanceApi.class);doThrow(new org.springframework.dao.DataAccessResourceFailureException("fixture database unavailable")).when(unavailable).queryProductCandidates(any(),anyString(),anyBoolean(),anyInt());var tool=new PurchaseImportMatchService(imports,tasks,parser,unavailable,mock(com.hs.jxc.md.api.ProductImageApi.class),mock(com.hs.jxc.common.idempotency.IdempotencyExecutor.class),mock(com.hs.jxc.common.audit.AuditWriter.class));doAnswer(call->{tool.catalogSearch(task,call.getArgument(1),Map.of("operation","TEXT"));return Map.of("taskId",task.toString());}).when(parser).recognize(any(),anyString(),anyMap());tasks.execute(101,task);assertThat(tasks.get(actor,task)).containsEntry("status","FAILED").containsEntry("errorCode","TASK_FAILED");assertThat(matched(b)).isNull();assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_candidate",Integer.class)).isZero();}
+    @Test void catalogDatabaseCallFailureIsExplicitAndCannotBecomeSuccessfulNoMatch(){var b=source("SKU");UUID task=start(b);var unavailable=mock(com.hs.jxc.md.api.MasterProductMaintenanceApi.class);doThrow(new org.springframework.dao.DataAccessResourceFailureException("fixture database unavailable")).when(unavailable).queryProductCandidates(any(),anyString(),anyBoolean(),anyInt());var tool=new PurchaseImportMatchServiceImpl(imports,tasks,parser,unavailable,mock(com.hs.jxc.md.api.ProductImageApi.class),mock(com.hs.jxc.common.idempotency.IdempotencyExecutor.class),mock(com.hs.jxc.common.audit.AuditWriter.class),matchMapper);doAnswer(call->{tool.catalogSearch(task,call.getArgument(1),Map.of("operation","TEXT"));return Map.of("taskId",task.toString());}).when(parser).recognize(any(),anyString(),anyMap());tasks.execute(101,task);assertThat(tasks.get(actor,task)).containsEntry("status","FAILED").containsEntry("errorCode","TASK_FAILED");assertThat(matched(b)).isNull();assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_candidate",Integer.class)).isZero();}
 }

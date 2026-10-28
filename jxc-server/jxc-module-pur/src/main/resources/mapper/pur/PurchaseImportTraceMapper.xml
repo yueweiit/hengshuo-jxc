@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportTraceMapper">
+
+  <select id="selectSourceEvidence" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT r.*,s.file_name,s.file_sha256 FROM pur_order_import r LEFT JOIN pur_order_import_source s ON s.country_id=r.country_id AND s.id=r.source_id WHERE r.country_id=#{countryId} AND r.batch_id=#{batchId} AND r.group_id=#{groupId} ORDER BY r.row_no
+  </select>
+
+  <select id="selectTargetOrder" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT id,doc_no FROM pur_order WHERE country_id=#{countryId} AND id=#{id} AND book_id=#{bookId}
+  </select>
+
+  <select id="selectTargetLines" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT id FROM pur_order_line WHERE country_id=#{countryId} AND order_id=#{orderId}
+  </select>
+
+  <select id="selectGroupForUpdate" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId} AND id=#{id} FOR UPDATE
+  </select>
+
+
+  <update id="saveFeeTodos">
+    UPDATE pur_order_import_group SET fee_todos=#{feeTodos}::jsonb,fee_todos_version=fee_todos_version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+</mapper>

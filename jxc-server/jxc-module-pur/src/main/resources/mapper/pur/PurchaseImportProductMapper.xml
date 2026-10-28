@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportProductMapper">
+
+  <update id="resetDecision">
+    UPDATE pur_order_import SET decision=#{decision},readiness='UNRESOLVED',product_snapshot=NULL,confirmed_by=NULL,confirmed_at=NULL,setup_reasons='[]',version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectTaskResult" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT result FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id}
+  </select>
+
+  <update id="saveDecision">
+    UPDATE pur_order_import SET matched_product_id=#{matchedProductId},purchase_unit=#{purchaseUnit},decision=#{decision},readiness=#{readiness},product_snapshot=#{productSnapshot}::jsonb,setup_reasons=#{setupReasons}::jsonb,confirmed_by=#{confirmedBy},confirmed_at=CASE WHEN #{confirmedAt} THEN clock_timestamp() ELSE NULL END,version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+
+  <select id="countProductCode" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM md_product WHERE lower(btrim(product_code))=lower(#{code})
+  </select>
+
+  <select id="countRequestedCode" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId} AND id&lt;&gt;#{rowId} AND lower(btrim(supplied_product_code))=lower(#{code}) AND decision='NEW_REQUESTED'
+  </select>
+
+  <update id="saveCreatedProduct">
+    UPDATE pur_order_import SET matched_product_id=#{matchedProductId},purchase_unit=#{purchaseUnit},supplied_product_code=#{suppliedProductCode},supplied_product_name=#{suppliedProductName},decision='NEW_REQUESTED',readiness='NEEDS_SETUP',product_snapshot=#{productSnapshot}::jsonb,product_operation=#{productOperation}::jsonb,setup_reasons='["全局商品已保存，等待本国启用"]',confirmed_by=NULL,confirmed_at=NULL,version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="saveProductOperation">
+    UPDATE pur_order_import SET product_operation=#{productOperation}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+</mapper>

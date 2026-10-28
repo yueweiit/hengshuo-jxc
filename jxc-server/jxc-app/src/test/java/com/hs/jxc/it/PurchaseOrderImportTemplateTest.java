@@ -9,9 +9,9 @@ import com.hs.jxc.common.api.ApiException;
 import com.hs.jxc.common.api.ApiExceptionAdvice;
 import com.hs.jxc.common.context.RequestContext;
 import com.hs.jxc.common.context.RequestContextHolder;
-import com.hs.jxc.pur.PurchaseController;
-import com.hs.jxc.pur.PurchaseOrderImportTemplate;
-import com.hs.jxc.pur.PurchaseService;
+import com.hs.jxc.pur.controller.PurchaseController;
+import com.hs.jxc.pur.service.impl.PurchaseOrderImportTemplateImpl;
+import com.hs.jxc.pur.service.impl.PurchaseServiceImpl;
 import com.hs.jxc.sys.api.Access;
 import com.hs.jxc.sys.api.DataScope;
 import com.hs.jxc.sys.service.AuthorizationService;
@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class PurchaseOrderImportTemplateTest {
     private final AuthorizationService authorization = mock(AuthorizationService.class);
-    private final PurchaseOrderImportTemplate template = new PurchaseOrderImportTemplate(authorization);
+    private final PurchaseOrderImportTemplateImpl template = new PurchaseOrderImportTemplateImpl(authorization);
     private final RequestContext context = new RequestContext(7, 1L, "template-test", null);
 
     @AfterEach void clearContext() { RequestContextHolder.clear(); }
@@ -41,7 +41,7 @@ class PurchaseOrderImportTemplateTest {
 
     @Test void authorizedDownloadUsesTheTemplateRouteRatherThanParsingItAsAnOrderId() throws Exception {
         when(authorization.authorize(context)).thenReturn(access(1L, Set.of("pur:order:create")));
-        var purchases = mock(PurchaseService.class);
+        var purchases = mock(PurchaseServiceImpl.class);
         var mvc = MockMvcBuilders.standaloneSetup(new PurchaseController(purchases, template))
             .setControllerAdvice(new ApiExceptionAdvice()).build();
         RequestContextHolder.set(context);
@@ -49,7 +49,7 @@ class PurchaseOrderImportTemplateTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.code").value("OK"))
             .andExpect(jsonPath("$.data.fileName").value("采购单导入模板.xlsx"))
             .andExpect(jsonPath("$.data.contentType").value("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        var downloaded = Base64.getDecoder().decode(template.download(context).get("contentBase64"));
+        var downloaded = Base64.getDecoder().decode(template.download(context).contentBase64());
         try (var original = getClass().getResourceAsStream("/templates/purchase-order-import-template.xlsx")) {
             assertArrayEquals(original.readAllBytes(), downloaded);
         }
@@ -76,7 +76,7 @@ class PurchaseOrderImportTemplateTest {
     }
 
     @Test void templateEndpointWithoutLoginReturnsAnAuthenticationFailure() throws Exception {
-        var mvc = MockMvcBuilders.standaloneSetup(new PurchaseController(mock(PurchaseService.class), template))
+        var mvc = MockMvcBuilders.standaloneSetup(new PurchaseController(mock(PurchaseServiceImpl.class), template))
             .setControllerAdvice(new ApiExceptionAdvice()).build();
         mvc.perform(get("/api/v1/pur/orders/import-template"))
             .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTH_REQUIRED"));

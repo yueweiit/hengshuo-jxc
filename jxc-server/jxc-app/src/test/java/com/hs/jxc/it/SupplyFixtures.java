@@ -1,9 +1,9 @@
 package com.hs.jxc.it;
 import static org.assertj.core.api.Assertions.*;
-import com.hs.jxc.common.context.RequestContext;import com.hs.jxc.pur.PurchaseService;import com.hs.jxc.lgs.LogisticsService;import java.math.BigDecimal;import java.util.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;
+import com.hs.jxc.common.context.RequestContext;import com.hs.jxc.pur.service.impl.PurchaseServiceImpl;import com.hs.jxc.lgs.LogisticsService;import java.math.BigDecimal;import java.util.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;
 /** Shared fixture and API orchestration only; no business algorithm or tests. */
 abstract class SupplyFixtures extends BasePgIT {
- @Autowired PurchaseService pur;@Autowired LogisticsService lgs;
+ @Autowired PurchaseServiceImpl pur;@Autowired LogisticsService lgs;
  static final String HASH=com.hs.jxc.sys.service.SessionService.digest("supply-fixture");
  RequestContext c(){return new RequestContext(201,101L,"supply-it",HASH);}String key(){return UUID.randomUUID().toString();}long id(Map<String,Object>r){return ((Number)r.get("id")).longValue();}
  @SuppressWarnings("unchecked")Map<String,Object> first(Map<String,Object>r){return ((List<Map<String,Object>>)r.get("lines")).getFirst();}

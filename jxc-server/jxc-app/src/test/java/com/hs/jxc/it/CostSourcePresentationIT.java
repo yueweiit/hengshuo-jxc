@@ -80,7 +80,7 @@ class CostSourcePresentationIT extends SupplyFixtures {
         var evidence = new LinkedHashMap<String,Object>();
         evidence.put("method",test.getTestMethod().orElseThrow().getName());
         evidence.put("sourceSha",System.getProperty("jxc.ai05.sourceSha","UNSPECIFIED"));
-        evidence.put("creation","PurchaseService and LogisticsService native commands; configuration only is seeded");
+        evidence.put("creation","PurchaseServiceImpl and LogisticsService native commands; configuration only is seeded");
         for (String table : List.of("pur_order","pur_order_line","pur_domestic_receipt","pur_export_node","lgs_shipment","lgs_delivery","lgs_receipt","lgs_receipt_line","inv_batch","inv_stock_txn","cst_inbound_cost"))
             evidence.put(table,owner.queryForList("SELECT * FROM "+table+" ORDER BY id"));
         Files.createDirectories(Path.of(directory));

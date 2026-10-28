@@ -1,6 +1,6 @@
 package com.hs.jxc.it;
 import static org.assertj.core.api.Assertions.*;
-import com.hs.jxc.common.api.ApiException;import com.hs.jxc.common.context.RequestContext;import com.hs.jxc.pur.PurchaseService;import com.hs.jxc.lgs.LogisticsService;import java.math.BigDecimal;import java.util.*;import java.util.concurrent.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;
+import com.hs.jxc.common.api.ApiException;import com.hs.jxc.common.context.RequestContext;import com.hs.jxc.pur.service.impl.PurchaseServiceImpl;import com.hs.jxc.lgs.LogisticsService;import java.math.BigDecimal;import java.util.*;import java.util.concurrent.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;
 /** Real PostgreSQL business acceptance: source quotas, atomic receipt, periods and FX recovery. */
 class SupplyLogisticsIT extends SupplyFixtures {
  @Test void unknownPurchasePricesRejectCreationAtomicallyAndAllowTheSameIntentAfterCorrection(){

@@ -5,7 +5,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import com.hs.jxc.common.api.ApiException;
 import com.hs.jxc.common.context.RequestContext;
-import com.hs.jxc.pur.*;
+import com.hs.jxc.pur.service.impl.*;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import com.hs.jxc.sys.service.SessionService;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
@@ -17,8 +18,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /** 采购导入各模块共用隔离数据库、MinIO及来源夹具；不包含测试用例。 */
 abstract class PurchaseImportFixture extends BasePgIT {
-    @Autowired PurchaseImportService imports;
-    @Autowired PurchaseImportTaskService tasks;
+    @Autowired PurchaseImportServiceImpl imports;
+    @Autowired PurchaseImportTaskServiceImpl tasks;
     @Autowired com.hs.jxc.common.api.JsonCodec codec;
     @org.springframework.beans.factory.annotation.Value("${local.server.port}") int port;
     @MockitoBean PurchaseImportRecognitionClient parser;
@@ -32,13 +33,14 @@ abstract class PurchaseImportFixture extends BasePgIT {
         r.add("jxc.storage.secret-key",()->MinioTestStorage.SECRET);
         r.add("jxc.storage.bucket",()->MinioTestStorage.BUCKET);
     }
+    // 隔离容器曾出现毫秒级时钟回拨；初始授权明确提前生效，时效边界由专门用例覆盖。
     @BeforeEach void fixture() {
         InventoryIT.seedBase();
         owner.update("INSERT INTO sys_authz_epoch(country_id) VALUES(101)");
         owner.update("INSERT INTO sys_session(token_hash,user_id,expires_at) VALUES(?,201,clock_timestamp()+interval '1 hour')",tokenHash);
         owner.update("INSERT INTO sys_role(id,country_id,code,name,permissions,field_policies) VALUES(801,101,'IMPORT','Import','[\"pur:order:*\"]','{\"COST\":\"WRITE\",\"CUSTOMER_PRICE\":\"WRITE\",\"ORDER_TOTAL\":\"WRITE\"}')");
         owner.update("INSERT INTO sys_user_role(country_id,user_id,role_id) VALUES(101,201,801)");
-        owner.update("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,book_id,granted_by) VALUES(101,201,'BOOK',601,201)");
+        owner.update("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,book_id,granted_by,effective_from) VALUES(101,201,'BOOK',601,201,clock_timestamp()-interval '1 day')");
         owner.update("INSERT INTO md_currency(code,name) VALUES('USD','美元')");
         owner.update("INSERT INTO md_supplier(id,country_id,code,name,settle_currency) VALUES(901,101,'S','Supplier','USD')");
     }

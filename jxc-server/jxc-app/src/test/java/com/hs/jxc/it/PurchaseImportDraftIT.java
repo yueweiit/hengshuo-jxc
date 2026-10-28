@@ -2,7 +2,8 @@ package com.hs.jxc.it;
 
 import static org.assertj.core.api.Assertions.*;
 import com.hs.jxc.common.api.ApiException;
-import com.hs.jxc.pur.*;
+import com.hs.jxc.pur.service.impl.*;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +11,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 class PurchaseImportDraftIT extends PurchaseImportFixture {
-    @Autowired PurchaseImportProductService review;
-    @Autowired PurchaseImportDraftService drafts;
+    @Autowired PurchaseImportProductServiceImpl review;
+    @Autowired PurchaseImportDraftServiceImpl drafts;
     @DynamicPropertySource static void draftConfig(DynamicPropertyRegistry r){r.add("jxc.purchase-import.draft-creation.enabled",()->true);}
     @BeforeEach void permissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\"]'::jsonb WHERE id=801");}
     @Override Map<String,Object> header(){var h=super.header();h.put("termDays",0);return h;}

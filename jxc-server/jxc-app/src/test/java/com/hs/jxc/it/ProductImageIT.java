@@ -3,7 +3,8 @@ package com.hs.jxc.it;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
-import com.hs.jxc.pur.*;
+import com.hs.jxc.pur.service.impl.*;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import com.hs.jxc.md.api.ProductImageApi;
 import com.hs.jxc.common.api.*;
 import java.util.*;
@@ -11,9 +12,9 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 class ProductImageIT extends PurchaseImportFixture {
-    @Autowired PurchaseImportPhotoService photos;
+    @Autowired PurchaseImportPhotoServiceImpl photos;
     @Autowired ProductImageApi images;
-    @Autowired PurchaseImportProductService review;
+    @Autowired PurchaseImportProductServiceImpl review;
     @BeforeEach void imagePermissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\",\"md:product:edit\"]'::jsonb WHERE id=801");}
     Map<String,Object> withPhoto(){return withPhoto(photoDocument());}
     Map<String,Object> withPhoto(Map<String,Object> doc){

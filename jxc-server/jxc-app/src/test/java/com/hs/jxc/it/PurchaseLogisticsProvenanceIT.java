@@ -113,7 +113,7 @@ class PurchaseLogisticsProvenanceIT extends SupplyFixtures {
         var snapshot = new LinkedHashMap<String,Object>();
         snapshot.put("scenario", name);
         snapshot.put("uiAction", uiAction);
-        snapshot.put("creationPath", "PurchaseService -> LogisticsService -> InventoryApi native inbound");
+        snapshot.put("creationPath", "PurchaseServiceImpl -> LogisticsService -> InventoryApi native inbound");
         for (String table : List.of("pur_order", "pur_order_line", "pur_domestic_receipt", "pur_domestic_receipt_line",
             "pur_inspect_convert", "pur_export_node", "pur_export_node_line", "lgs_shipment", "lgs_shipment_line",
             "lgs_delivery", "lgs_delivery_line", "lgs_receipt", "lgs_receipt_line", "lgs_discrepancy",

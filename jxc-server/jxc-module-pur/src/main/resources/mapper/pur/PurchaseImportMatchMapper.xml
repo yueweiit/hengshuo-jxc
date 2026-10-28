@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportMatchMapper">
+
+  <select id="selectTask" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_task WHERE country_id=#{countryId} AND id=#{id}<if test="lock"> FOR UPDATE</if>
+  </select>
+
+  <update id="assignMatchTask">
+    UPDATE pur_order_import SET match_task_id=#{matchTaskId} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <insert id="insertTask">
+    INSERT INTO pur_order_import_task(id,country_id,batch_id,source_id,kind,input_revision,input_hash,requested_by,authorization_basis,input_data,phase,result) VALUES(#{id},#{countryId},#{batchId},#{sourceId},#{kind},#{inputRevision},#{inputHash},#{requestedBy},#{authorizationBasis}::jsonb,#{inputData}::jsonb,'TEXT',#{result}::jsonb)
+  </insert>
+
+  <update id="saveTextResult">
+    UPDATE pur_order_import_task SET result=#{result}::jsonb,phase='IMAGE' WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectConfirmedImages" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT i.id,i.image_sha256 FROM pur_order_import_row_image r JOIN pur_order_import_image i ON i.country_id=r.country_id AND i.id=r.image_id JOIN pur_order_import_source s ON s.country_id=i.country_id AND s.id=i.source_id WHERE r.country_id=#{countryId} AND r.row_id=#{rowId} AND s.batch_id=#{batchId} AND r.association_status='CONFIRMED' ORDER BY i.id
+  </select>
+
+  <update id="saveInput">
+    UPDATE pur_order_import_task SET input_data=#{inputData}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="saveEvidence">
+    UPDATE pur_order_import_task SET result=#{result}::jsonb,phase='EXPLAIN' WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="markInputStale">
+    UPDATE pur_order_import_task SET status='STALE',error_code='INPUT_CHANGED',error_message=#{errorMessage},credential_hash=NULL,lease_owner=NULL,lease_until=NULL WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <insert id="insertCandidate">
+    INSERT INTO pur_order_import_candidate(country_id,row_id,run_id,product_id,evidence) VALUES(#{countryId},#{rowId},#{runId},#{productId},#{evidence}::jsonb)
+  </insert>
+
+  <update id="saveMatchResult">
+    UPDATE pur_order_import SET match_result=#{matchResult}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="completeCallback">
+    UPDATE pur_order_import_task SET status=#{status},phase='DONE',result=#{result}::jsonb,callback_hash=#{callbackHash},callback_credential_hash=credential_hash,credential_hash=NULL,lease_owner=NULL,lease_until=NULL,error_code=#{errorCode},error_message=#{errorMessage} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+</mapper>

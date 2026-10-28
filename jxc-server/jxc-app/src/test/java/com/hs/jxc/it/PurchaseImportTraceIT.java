@@ -3,7 +3,8 @@ package com.hs.jxc.it;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
-import com.hs.jxc.pur.*;
+import com.hs.jxc.pur.service.impl.*;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import com.hs.jxc.common.api.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
@@ -12,9 +13,9 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 class PurchaseImportTraceIT extends PurchaseImportFixture {
-    @Autowired PurchaseImportTraceService trace;
-    @Autowired PurchaseImportDraftService drafts;
-    @Autowired PurchaseImportProductService review;
+    @Autowired PurchaseImportTraceServiceImpl trace;
+    @Autowired PurchaseImportDraftServiceImpl drafts;
+    @Autowired PurchaseImportProductServiceImpl review;
     @DynamicPropertySource static void draftConfig(DynamicPropertyRegistry r){r.add("jxc.purchase-import.draft-creation.enabled",()->true);}
     @BeforeEach void permissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\"]'::jsonb WHERE id=801");}
     @SuppressWarnings("unchecked") Map<String,Object> map(Object value){return (Map<String,Object>)value;}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseFinancialSourceMapper">
+
+  <select id="selectAccountingDocument" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM <choose><when test="table == 'pur_order'">pur_order</when><when test="table == 'pur_domestic_receipt'">pur_domestic_receipt</when><when test="table == 'pur_export_node'">pur_export_node</when><otherwise><bind name="invalidIdentifier" value="@com.hs.jxc.pur.mapper.PurchaseSqlGuard@reject()" /></otherwise></choose> WHERE country_id=#{countryId} AND id=#{id}
+  </select>
+</mapper>

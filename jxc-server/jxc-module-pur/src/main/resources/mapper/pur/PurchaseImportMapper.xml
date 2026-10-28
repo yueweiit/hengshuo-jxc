@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportMapper">
+
+  <select id="selectBatch" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_batch WHERE country_id=#{countryId} AND batch_id=#{batchId}<if test="lock"> FOR UPDATE</if>
+  </select>
+
+  <select id="selectGroupHeaders" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT effective_header FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </select>
+
+  <select id="countActiveBook" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM fin_book WHERE country_id=#{countryId} AND id=#{id} AND status='ACTIVE'
+  </select>
+
+  <select id="countEnabledSupplier" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM md_supplier WHERE country_id=#{countryId} AND id=#{id} AND status='ENABLED'
+  </select>
+
+  <select id="countEnabledCurrency" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM md_currency WHERE code=#{code} AND status='ENABLED'
+  </select>
+
+  <insert id="insertBatch">
+    INSERT INTO pur_order_import_batch(country_id,batch_id,header,status,created_by) VALUES(#{countryId},#{batchId},#{header}::jsonb,'PARSING',#{createdBy})
+  </insert>
+
+  <select id="insertSource" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_order_import_source(country_id,batch_id,attachment_id,file_name,file_sha256) VALUES(#{countryId},#{batchId},#{attachmentId},#{fileName},#{fileSha256}) RETURNING id
+  </select>
+
+  <insert id="insertParseTask">
+    INSERT INTO pur_order_import_task(id,country_id,batch_id,source_id,input_revision,input_hash,requested_by,authorization_basis) VALUES(#{id},#{countryId},#{batchId},#{sourceId},#{inputRevision},#{inputHash},#{requestedBy},#{authorizationBasis}::jsonb)
+  </insert>
+
+  <update id="markBatchParsing">
+    UPDATE pur_order_import_batch SET status='PARSING',updated_at=clock_timestamp() WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </update>
+
+  <select id="selectRows" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY row_no
+  </select>
+
+  <select id="selectGroups" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id
+  </select>
+
+  <select id="selectSources" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT id,file_name,file_sha256,parser_version,status,sheets,warnings,associations,error_code,error_message FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id
+  </select>
+
+  <select id="selectTasks" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT id,kind,phase,status,attempt_count,error_code,error_message,result FROM pur_order_import_task WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY created_at
+  </select>
+
+  <select id="selectRowImages" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT i.id,i.image_sha256,r.association_status,r.anchor,r.publish_status,r.product_image_id,r.publish_product_id,r.publish_error FROM pur_order_import_row_image r JOIN pur_order_import_image i ON i.country_id=r.country_id AND i.id=r.image_id WHERE r.country_id=#{countryId} AND r.row_id=#{rowId} ORDER BY i.id
+  </select>
+
+  <select id="selectRowForUpdate" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId} AND id=#{id} FOR UPDATE
+  </select>
+
+  <update id="updateRowValues">
+    UPDATE pur_order_import SET source_order_no=#{sourceOrderNo},photo=#{photo},product_spec=#{productSpec},purchase_qty=#{purchaseQty},sale_unit_price=#{saleUnitPrice},sale_total=#{saleTotal},purchase_unit_price=#{purchaseUnitPrice},freight=#{freight},landed_unit_cost=#{landedUnitCost},usd_unit_cost=#{usdUnitCost},usd_total=#{usdTotal},field_origins=#{fieldOrigins}::jsonb,decision='UNRESOLVED',readiness='UNRESOLVED',confirmed_by=NULL,confirmed_at=NULL,product_snapshot=NULL,version=version+1,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="updateMatchInputs">
+    UPDATE pur_order_import SET supplied_product_code=#{suppliedProductCode},supplied_product_name=#{suppliedProductName},supplier_product_code=#{supplierProductCode},field_origins=#{fieldOrigins}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="countCreatedRows" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId} AND target_order_line_id IS NOT NULL
+  </select>
+
+  <select id="selectRowVersionsForUpdate" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT id,version FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id FOR UPDATE
+  </select>
+
+  <update id="updateBatchHeader">
+    UPDATE pur_order_import_batch SET header=#{header}::jsonb WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </update>
+
+  <update id="updateRowsHeader">
+    UPDATE pur_order_import SET book_id=#{bookId},supplier_id=#{supplierId},currency=#{currency},order_date=#{orderDate}::date,expected_date=#{expectedDate}::date,payment_terms=#{paymentTerms},prepay_ratio=#{prepayRatio}::numeric,term_days=#{termDays},version=version+1,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </update>
+
+  <update id="updateInheritedGroupHeaders">
+    UPDATE pur_order_import_group SET effective_header=#{effectiveHeader}::jsonb WHERE country_id=#{countryId} AND batch_id=#{batchId} AND header_override=false AND target_order_id IS NULL
+  </update>
+
+  <delete id="deleteRow">
+    DELETE FROM pur_order_import WHERE country_id=#{countryId} AND id=#{id}
+  </delete>
+
+  <select id="countUnresolvedBatchGroups" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId} AND create_status IN ('UNKNOWN','CREATING')
+  </select>
+
+  <select id="countUnresolvedGroup" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM pur_order_import_group WHERE country_id=#{countryId} AND id=#{id} AND create_status IN ('UNKNOWN','CREATING')
+  </select>
+
+  <update id="invalidatePreviews">
+    UPDATE pur_order_import_group SET preview_token=NULL,preview_snapshot=NULL,create_status='DRAFT',version=version+1 WHERE country_id=#{countryId} AND batch_id=#{batchId} AND target_order_id IS NULL AND create_status NOT IN ('CREATING','UNKNOWN')
+  </update>
+
+  <update id="incrementBatchVersion">
+    UPDATE pur_order_import_batch SET version=version+1,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </update>
+
+  <select id="selectAsset" resultType="java.util.LinkedHashMap" useCache="false">
+    <choose><when test="image">SELECT a.* FROM pur_order_import_image i JOIN pur_order_import_source s ON s.country_id=i.country_id AND s.id=i.source_id JOIN sys_attachment a ON a.country_id=i.country_id AND a.id=i.attachment_id WHERE i.country_id=#{countryId} AND s.batch_id=#{batchId} AND i.id=#{assetId} AND a.status='VALID' AND a.object_status='AVAILABLE'</when><otherwise>SELECT a.* FROM pur_order_import_source s JOIN sys_attachment a ON a.country_id=s.country_id AND a.id=s.attachment_id WHERE s.country_id=#{countryId} AND s.batch_id=#{batchId} AND s.id=#{assetId} AND a.status='VALID' AND a.object_status='AVAILABLE'</otherwise></choose>
+  </select>
+
+  <select id="countPublishedImage" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM pur_order_import_row_image WHERE country_id=#{countryId} AND row_id=#{rowId} AND image_id=#{imageId} AND product_image_id IS NOT NULL
+  </select>
+
+  <update id="updateImageAssociation">
+    UPDATE pur_order_import_row_image SET association_status=#{associationStatus},confirmed_by=#{confirmedBy},confirmed_at=clock_timestamp() WHERE country_id=#{countryId} AND row_id=#{rowId} AND image_id=#{imageId}
+  </update>
+
+  <update id="incrementRowVersion">
+    UPDATE pur_order_import SET version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectBatchVersion" resultType="java.lang.Integer" useCache="false">
+    SELECT version FROM pur_order_import_batch WHERE country_id=#{countryId} AND batch_id=#{batchId}
+  </select>
+</mapper>

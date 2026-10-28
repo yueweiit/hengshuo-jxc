@@ -3,7 +3,8 @@ package com.hs.jxc.it;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
-import com.hs.jxc.pur.*;
+import com.hs.jxc.pur.service.impl.*;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import com.hs.jxc.common.api.*;
 import java.nio.file.*;
 import java.util.*;
@@ -14,9 +15,9 @@ import org.springframework.test.context.DynamicPropertySource;
 
 /** 真实源文件的技术链条验收；商品/单位/税率是隔离夹具，不是实单业务判断。 */
 class PurchaseImportAcceptanceIT extends PurchaseImportFixture {
-    @Autowired PurchaseImportProductService review;
-    @Autowired PurchaseImportDraftService drafts;
-    @Autowired PurchaseImportMatchService matches;
+    @Autowired PurchaseImportProductServiceImpl review;
+    @Autowired PurchaseImportDraftServiceImpl drafts;
+    @Autowired PurchaseImportMatchServiceImpl matches;
     @DynamicPropertySource static void enabled(DynamicPropertyRegistry r){r.add("jxc.purchase-import.recognition.enabled",()->true);r.add("jxc.purchase-import.draft-creation.enabled",()->true);}
     @SuppressWarnings("unchecked") Map<String,Object> map(Object value){return (Map<String,Object>)value;}
 
