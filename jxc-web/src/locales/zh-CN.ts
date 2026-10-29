@@ -46,6 +46,7 @@ export default {
     planned: '计划功能',
   },
   menu: {
+    externalServices: '外部服务配置',
     login: '登录',
     forbidden: '无权访问',
     notFound: '页面不存在',

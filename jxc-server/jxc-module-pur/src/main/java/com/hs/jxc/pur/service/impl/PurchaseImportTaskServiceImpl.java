@@ -22,10 +22,10 @@ public class PurchaseImportTaskServiceImpl implements PurchaseImportTaskService 
     private static final org.slf4j.Logger LOG=org.slf4j.LoggerFactory.getLogger(PurchaseImportTaskServiceImpl.class);
     private final PurchaseImportServiceImpl imports;private final PurchaseImportRecognitionClient parser;
     private final org.springframework.beans.factory.ObjectProvider<PurchaseImportTaskHandler> handlers;
-    private final PurchaseImportProgressService progress;
+    private final PurchaseImportProgressService progress;private final PurchaseImportConnections connections;
     private final AttachmentAssetService assets;private final PurchaseImportTaskMapper mapper;private final DbContext db;private final IdempotencyExecutor commands;
     record Lease(UUID id,long country,UUID batch,long source,int revision,UUID owner,RequestContext actor,String token,String sha,String sheet,String kind,Map<String,Object> input){}
-    public PurchaseImportTaskServiceImpl(PurchaseImportServiceImpl imports,PurchaseImportRecognitionClient parser,AttachmentAssetService assets,PurchaseImportTaskMapper mapper,DbContext db,IdempotencyExecutor commands,org.springframework.beans.factory.ObjectProvider<PurchaseImportTaskHandler> handlers,PurchaseImportProgressService progress){this.progress=progress;this.handlers=handlers;this.imports=imports;this.parser=parser;this.assets=assets;this.mapper=mapper;this.db=db;this.commands=commands;}
+    public PurchaseImportTaskServiceImpl(PurchaseImportServiceImpl imports,PurchaseImportRecognitionClient parser,AttachmentAssetService assets,PurchaseImportTaskMapper mapper,DbContext db,IdempotencyExecutor commands,org.springframework.beans.factory.ObjectProvider<PurchaseImportTaskHandler> handlers,PurchaseImportProgressService progress,PurchaseImportConnections connections){this.connections=connections;this.progress=progress;this.handlers=handlers;this.imports=imports;this.parser=parser;this.assets=assets;this.mapper=mapper;this.db=db;this.commands=commands;}
     private void gates(long country){db.apply(null);imports.auth.gate(0,false);db.apply(country);imports.auth.gate(country,false);}
     RequestContext actor(Map<String,Object> t){var basis=imports.map(t.get("authorization_basis"));return new RequestContext(number(t,"requested_by"),number(t,"country_id"),"purchase-task-"+t.get("id"),basis.get("tokenHash").toString());}
     private Lease claim(long country,UUID id){return imports.tx.execute(s->{
@@ -36,7 +36,7 @@ public class PurchaseImportTaskServiceImpl implements PurchaseImportTaskService 
         try{a=imports.access(ctx,true);imports.batch(a,(UUID)task.get("batch_id"),false);}catch(ApiException e){mapper.markNeedsReauth(e.getCode(),"请求者授权已失效，请重新登录后重试",country,id);return null;}
         UUID batch=(UUID)task.get("batch_id");var b=imports.batch(a,batch,true);if("PARSE".equals(task.get("kind"))&&number(b,"version")!=number(task,"input_revision")){mapper.markStale(country,id);return null;}
         String token=country+":"+UUID.randomUUID()+UUID.randomUUID().toString();UUID lease=UUID.randomUUID();
-        mapper.claimTask(lease,hash(token),country,id);
+        connections.pin(country,id);mapper.claimTask(lease,hash(token),country,id);
         if("PARSE".equals(task.get("kind"))){mapper.markSourceParsing(country,task.get("source_id"));progress.start(country,id,lease,((Number)task.get("attempt_count")).intValue()+1);}
         var options=imports.map(PurchaseRows.one(mapper.selectParseOptions(country,task.get("source_id"))) .get("parse_options"));
         return new Lease(id,country,batch,number(task,"source_id"),(int)number(task,"input_revision"),lease,ctx,token,task.get("input_hash").toString(),(String)options.get("sheet"),task.get("kind").toString(),"PARSE".equals(task.get("kind"))?options:imports.map(task.get("input_data")));

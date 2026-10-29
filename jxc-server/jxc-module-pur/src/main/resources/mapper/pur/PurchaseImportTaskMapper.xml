@@ -23,7 +23,7 @@
   </update>
 
   <update id="claimTask">
-    UPDATE pur_order_import_task SET status='RUNNING',attempt_count=attempt_count+1,lease_owner=#{leaseOwner},lease_until=clock_timestamp()+interval '15 minutes',expires_at=clock_timestamp()+interval '15 minutes',credential_hash=#{credentialHash},error_code=NULL,error_message=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+    UPDATE pur_order_import_task SET status='RUNNING',attempt_count=attempt_count+1,integration_model_calls=0,lease_owner=#{leaseOwner},lease_until=clock_timestamp()+interval '15 minutes',expires_at=clock_timestamp()+interval '15 minutes',credential_hash=#{credentialHash},error_code=NULL,error_message=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
   </update>
 
   <update id="markSourceParsing">
@@ -87,7 +87,7 @@
   </select>
 
   <update id="requeueTask">
-    UPDATE pur_order_import_task SET status='QUEUED',input_revision=#{inputRevision},authorization_basis=#{authorizationBasis}::jsonb,requested_by=#{requestedBy},error_code=NULL,error_message=NULL,result=CASE WHEN kind='PARSE' THEN NULL ELSE result END,callback_hash=NULL,callback_credential_hash=NULL,credential_hash=NULL,expires_at=clock_timestamp()+interval '1 hour',updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+    UPDATE pur_order_import_task SET status='QUEUED',service_config_version=NULL,input_revision=#{inputRevision},authorization_basis=#{authorizationBasis}::jsonb,requested_by=#{requestedBy},error_code=NULL,error_message=NULL,result=CASE WHEN kind='PARSE' THEN NULL ELSE result END,callback_hash=NULL,callback_credential_hash=NULL,credential_hash=NULL,expires_at=clock_timestamp()+interval '1 hour',updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
   </update>
 
   <update id="requeueSource">

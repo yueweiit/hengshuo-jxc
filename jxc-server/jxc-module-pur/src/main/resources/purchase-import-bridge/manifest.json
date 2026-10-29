@@ -1,11 +1,11 @@
 {
-  "workbench/jxc_bridge.py": "3ca163618b202a6dccf92a019a2706a79a04bb4748961f3738b2d195730fc9a3",
-  "workbench/jxc_supplier.py": "f62cc5ed608f9bf5b3581c8e36ac216268de4499aa57e95a2e86a21abd07a865",
-  "workbench/tests/test_jxc_supplier.py": "2ff786be9c8d4cf4fab3fed515e8ccbdbaf1d3c6631d844081fb8da8bf578b5f",
-  "n8n/jxc-purchase-fields.json": "be2da6681972f26ef367c45aa870cc354bf670bf39370291696a603efaee0e00",
-  "n8n/jxc-purchase-fields.test.mjs": "fdc65cd3a4fdb96f5621910da2c3ccbad7ad67e0a6de34158867576065941892",
+  "workbench/jxc_bridge.py": "d01e7ec9f697204e4cb33088734e96191b1ce3b4dd721a5da23837d44cf54623",
+  "workbench/jxc_supplier.py": "eb4f066739b7680d453977c43b856b0d234ffe86bb6a4d5ac6d1508c20b97647",
+  "workbench/tests/test_jxc_supplier.py": "88d8ce65e75101d7e553891463806f6fbdf3d3a57fa67ac4ccfae81d8b7ce8fd",
+  "n8n/jxc-purchase-fields.json": "4ea588db4d570dcb4f81b45a37019cf7a150a6b4d88b50d16c2091b36c767b41",
+  "n8n/jxc-purchase-fields.test.mjs": "e3519ec0600497c0047f6dfeab58d8e776bd43db5a370b52b07d043bba5caf9d",
   "workbench/vision.py": "7e1761c85e51bdf303d301df0e7b3498422aa1e3e18053341503cb4e992f8bc0",
   "workbench/tests/test_jxc_gallery.py": "efe522edae30663f6cee15c7d64e6dc58d32aebc53bafc18bf1a2438dbf78700",
-  "n8n/jxc-purchase-recognition.json": "cf4ad89af18acf0c9c7fda25eb281a5d4a4836046c9a469ae5c4fb3a3aa195b3",
-  "n8n/jxc-purchase-recognition.test.mjs": "c1a17505c60e98a22bb5330d526cd7e1a9298636e0883686aa4f1e7f4f945c50"
+  "n8n/jxc-purchase-recognition.json": "ec67597c53b596d96126a24db2772326589160a99088cd38434531e31ef2e610",
+  "n8n/jxc-purchase-recognition.test.mjs": "e92d022af37c2fc6c211e89b12665ab5f5a1452f65ba94b3ba36b569e33769f9"
 }

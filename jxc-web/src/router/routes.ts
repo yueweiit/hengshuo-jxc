@@ -177,6 +177,7 @@ export const menuGroups: MenuGroup[] = [
     title: 'menu.group.settings',
     icon: 'Setting',
     children: [
+      { path: '/settings/external-services', component: () => import('@/modules/settings/integrations/ExternalServiceSettings.vue'), meta: { title: 'menu.externalServices', perm: 'sys:integration:config' } },
       { path: '/settings/countries', component: () => import('@/modules/settings/country/CountryList.vue'), meta: { title: 'menu.countries', perm: 'sys:country:view' } },
       { path: '/settings/countries/clone', component: () => import('@/modules/settings/country/CountryCloneWizard.vue'), meta: { title: 'menu.countryClone', perm: 'sys:country:create', hidden: true } },
       { path: '/settings/countries/:id', component: () => import('@/modules/settings/country/CountryDetail.vue'), meta: { title: 'menu.countryDetail', perm: 'sys:country:view', hidden: true } },
