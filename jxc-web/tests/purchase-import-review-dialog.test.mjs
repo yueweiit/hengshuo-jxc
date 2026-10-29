@@ -30,8 +30,8 @@ function dialog(rows = [row(1)], options = {}) {
     useCountryStore: () => ({ current: { name: '测试国家' } }),
     createPurchaseImportCatalogImages,
     ...naming,
-    http: { async get() { return { recognitionEnabled: true } } }, ElMessageBox: { async confirm() {} },
-  }, ['activeTab', 'selectedRow', 'row', 'todoItems', 'todoRowCount', 'openTodo', 'readyCount', 'needsProductSetup', 'needsCountrySetup', 'matchInputs', 'fresh', 'mode', 'chooseCandidate', 'productId', 'unit', 'confirmExisting', 'choices', 'products', 'manualSelection', 'productOptions', 'saveInputs', 'candidateGroups', 'showCached', 'cachedCandidates', 'candidateScore', 'percent', 'locked', 'inputsDirty', 'matchEnabled', 'capabilityError', 'currentMatch', 'routeLabel', 'catalogImages', 'imageUrls', 'imageErrors', 'imageLoading', 'candidateCheck', 'imageCheckLabel', 'specCheckLabel'])
+    http: options.http ?? { async get() { return { recognitionEnabled: true } } }, ElMessageBox: { async confirm() {} },
+  }, ['catalogError', 'search', 'activeTab', 'selectedRow', 'row', 'todoItems', 'todoRowCount', 'openTodo', 'readyCount', 'needsProductSetup', 'needsCountrySetup', 'matchInputs', 'fresh', 'mode', 'chooseCandidate', 'productId', 'unit', 'confirmExisting', 'choices', 'products', 'manualSelection', 'productOptions', 'saveInputs', 'candidateGroups', 'showCached', 'cachedCandidates', 'candidateScore', 'percent', 'locked', 'inputsDirty', 'matchEnabled', 'capabilityError', 'currentMatch', 'routeLabel', 'catalogImages', 'imageUrls', 'imageErrors', 'imageLoading', 'candidateCheck', 'imageCheckLabel', 'specCheckLabel'])
   return { ...state, page, props, calls }
 }
 
@@ -41,6 +41,21 @@ function rankedRow(recommendedIds = []) {
   const fields = [{field:'productCode',label:'商品编号',weight:40,source:null,target:'SKU',score:null},{field:'spec',label:'规格',weight:40,source:'S',target:spec,score:textScore},{field:'name',label:'商品名',weight:20,source:null,target:'测试商品',score:null}]
   return row(1, {productSpec:'S',matchTaskId:'test-run',matchResult:{format:'MatchRunV1',runId:'test-run',inputRevision:1,status:'OK',text:{status:'NO_INPUT',reason:'没有文字查询'},image:{status:'FOUND',reason:'照片候选'},explanation:{status:'NOT_REQUESTED',message:'缓存重算'},candidates:[candidate],ranking:{format:'CandidateRankingV1',policyVersion:'photo-first-text-40-40-20-v1',completePhotoGroup:true,status:approved?'RECOMMENDED':'NEEDS_REVIEW',reason:approved?'达到推荐门槛':'保留候选待人工核对',photoThreshold:0.8,textThreshold:0.8,weights:{productCode:40,spec:40,name:20},recommendedIds,highestPhotoIds:[501],scores:[{productId:501,photoScore:1,textScore,fields,reason:approved?'达到推荐门槛':'文字不足80%'}]}}})
 }
+
+test('目录查到多个商品自动取第一条，单位由原保存服务确定',async()=>{
+  const records=[{id:20,productCode:'A',name:'首条',spec:'M',baseUnit:'PCS',units:[{unit:'PCS'}]},{id:1,productCode:'B',name:'次条',spec:'S',baseUnit:'PCS',units:[{unit:'PCS'}]}]
+  const d=dialog([row(1)],{http:{async get(path){return path==='/md/products'?{records}:{recognitionEnabled:true}}}})
+  await d.search()
+  assert.deepEqual(d.calls.filter(c=>c[0]==='decide'),[['decide',1,{decision:'EXISTING',productId:20}]])
+})
+
+test('目录查询无结果和调用失败均不自动选择或创建商品，失败保留原因',async()=>{
+  for(const fail of [false,true]){
+    const d=dialog([row(1)],{http:{async get(path){if(path!=='/md/products')return {recognitionEnabled:true};if(fail)throw new Error('目录查询超时');return {records:[]}}}})
+    await d.search();assert.equal(d.calls.some(c=>c[0]==='decide'),false)
+    if(fail)assert.match(d.catalogError.value,/目录查询超时/)
+  }
+})
 
 test('缓存中的低文字候选不进入推荐下拉且不能作为推荐快捷选择', () => {
   const source = rankedRow(), d = dialog([source])

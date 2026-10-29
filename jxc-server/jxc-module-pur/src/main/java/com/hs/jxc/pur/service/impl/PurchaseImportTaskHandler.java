@@ -9,6 +9,7 @@ import java.util.*;
 interface PurchaseImportTaskHandler {
     Set<String> kinds();
     void execute(PurchaseImportTaskServiceImpl.Lease lease,PurchaseImportTaskServiceImpl runtime);
+    default void executeBatch(long country,List<UUID> ids,PurchaseImportTaskServiceImpl runtime){ids.forEach(id->runtime.execute(country,id));}
     void validate(RequestContext ctx,Map<String,Object> task);
     default void retry(RequestContext ctx,Map<String,Object> task){validate(ctx,task);}
     AttachmentService.Download asset(RequestContext ctx,Map<String,Object> task,long assetId);

@@ -30,6 +30,21 @@ function setup(overrides = {}) {
   return { page, calls }
 }
 
+test('基础税务字段保存及本地草稿恢复保留明确值，未知保持为空且非法值不能保存', async () => {
+  const { validateImportHeader } = loadTsModule(modelUrl)
+  for (const value of [null, '', '0', '0.13', '1', '0.123456']) assert.equal(validateImportHeader({ ...header(), taxRate: value, priceTaxBasis: 'EXCLUSIVE' }), '')
+  for (const value of ['-0.01', '1.01', '0.1234567', 'abc']) assert.match(validateImportHeader({ ...header(), taxRate: value }), /税率/)
+  assert.match(validateImportHeader({ ...header(), priceTaxBasis: 'INCLUSIVE' }), /单价口径/)
+  const { page, calls } = setup(); await page.loadBatch(batchId)
+  Object.assign(page.state.header, { taxRate: '0.13', priceTaxBasis: 'EXCLUSIVE' })
+  assert.equal(await page.saveHeader(), true)
+  assert.equal(calls.find(call => call[0] === 'header')[2].taxRate, '0.13')
+  const restored = setup().page; restored.restoreLocalDraft(page.exportLocalDraft())
+  assert.equal(restored.state.header.taxRate, '0.13'); assert.equal(restored.state.header.priceTaxBasis, 'EXCLUSIVE')
+  page.state.header.taxRate = null; assert.equal(await page.saveHeader(), true)
+  assert.equal(page.state.header.taxRate, null)
+})
+
 test('未填写业务表头也能导入暂存，上传请求不携带页面基础信息', async () => {
   const { page, calls } = setup({ async upload(...args) { calls.push(['upload', ...args]); return { ...batch(), header: unconfiguredHeader() } } })
   Object.assign(page.state.header, unconfiguredHeader())

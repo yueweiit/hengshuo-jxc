@@ -29,7 +29,7 @@ public interface PurchaseImportTaskMapper {
     int requeueTask(@Param("inputRevision") Object inputRevision, @Param("authorizationBasis") Object authorizationBasis, @Param("requestedBy") Object requestedBy, @Param("countryId") Object countryId, @Param("id") Object id);
     int requeueSource(@Param("parseOptions") Object parseOptions, @Param("countryId") Object countryId, @Param("id") Object id);
     int markBatchQueued(@Param("countryId") Object countryId, @Param("batchId") Object batchId);
-    List<UUID> selectRecoverableIds(@Param("countryId") Object countryId, @Param("leaseUntil") Object leaseUntil);
+    List<Map<String,Object>> selectRecoverableTasks(@Param("countryId") Object countryId, @Param("leaseUntil") Object leaseUntil);
     List<Map<String,Object>> selectUnexpiredTask(@Param("countryId") Object countryId, @Param("id") Object id);
     List<Boolean> selectLeaseValid(@Param("countryId") Object countryId, @Param("id") Object id);
     int renewCredentialLease(@Param("countryId") Object countryId, @Param("id") Object id, @Param("credentialHash") Object credentialHash);

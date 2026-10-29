@@ -108,6 +108,14 @@ test('核对进度区分成功失败缺图与排队，失败不声称明细未�
   const failed=view(page.state);assert.equal(failed.complete,false);assert.equal(failed.failed,true)
   assert.match(failed.message,/已暂存/);assert.doesNotMatch(failed.message,/未保存明细/)
 })
+
+test('解析完成等待登记时保持操作锁，内部仍能登记核对任务', async()=>{
+  const run='33333333-2222-4333-8444-555555555555',model=loadTsModule(path),values=Object.fromEntries(model.importColumns.map(c=>[c.key,null]))
+  const data={batchId,header,version:1,status:'REVIEW',rows:[{...values,id:1,rowNo:1,version:1,sourceId:8,readiness:'UNRESOLVED'}],tasks:[task('SUCCEEDED')]}
+  const page=model.createPurchaseImportModel({async load(){return structuredClone(data)},async startMatches(){return {...structuredClone(data),rows:data.rows.map(r=>({...r,matchTaskId:run})),tasks:[...data.tasks,{id:run,kind:'MATCH',status:'QUEUED',result:{rowId:1}}],taskIds:[run]}}},'2026-10-30')
+  await page.loadBatch(batchId);assert.equal(page.busy(),true);assert.equal(page.grid.edit(1,'productSpec','M'),false)
+  assert.equal(await page.startImageReview(),true);assert.equal(page.state.rows[0].matchTaskId,run);assert.equal(page.busy(),true)
+})
 async function renderProgress(page) {
   const source=new URL('../src/modules/purchase/PurchaseImportProgress.vue',import.meta.url)
   const {importProgressView}=loadTsModule(new URL('../src/modules/purchase/purchaseImportProgress.ts',import.meta.url))

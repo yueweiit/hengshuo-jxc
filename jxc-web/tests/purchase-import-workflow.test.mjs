@@ -20,6 +20,16 @@ function scoredRun(textScore = 0.8) {
   return {format:'MatchRunV1',runId:batchId,inputRevision:1,status:'OK',text:{status:'NO_INPUT',reason:'缓存'},image:{status:'FOUND',reason:'照片候选'},candidates:[candidate],explanation:{status:'NOT_REQUESTED',message:'缓存重算'},ranking:{format:'CandidateRankingV1',policyVersion:'photo-first-text-40-40-20-v1',completePhotoGroup:true,status:'RECOMMENDED',reason:'通过门槛',photoThreshold:0.8,textThreshold:0.8,weights:{productCode:40,spec:40,name:20},highestPhotoIds:[501],recommendedIds:[501],scores:[{productId:501,photoScore:1,textScore,fields,reason:'通过门槛'}]}}
 }
 
+test('保存缺项只汇总同类税率错误，保留整单提示和服务端逐行错误且不调用建单', async () => {
+  let created=0
+  const errors=[{field:'priceTaxBasis',message:'请确认未含税单价'},...Array.from({length:60},(_,n)=>({rowId:n+1,field:'taxRate',message:'本行税率待核实，请明确填写'}))]
+  const invalid={...group,createStatus:'DRAFT',previewToken:null,preview:null,errors}
+  const page=await setup({previews:async()=>({batchId,header,rows:[row],groups:[invalid]}),createDraft:async()=>{created++},creation:async()=>{}},{groups:[]})
+  assert.equal(await page.saveOrders(),false)
+  assert.equal(page.state.error,'NY-051：请确认未含税单价；本行税率待核实，请明确填写（60行）')
+  assert.equal(page.state.groups[0].errors.length,61);assert.equal(created,0)
+})
+
 test('读取恢复批次保留后台加权分及字段依据，不在前端重新算分', async()=>{
   const page=await setup({}, {rows:[{...row,matchTaskId:batchId,matchResult:scoredRun()}]})
   assert.equal(page.state.error,'');assert.equal(page.state.rows[0].matchResult.ranking.scores[0].textScore,0.8)
@@ -31,6 +41,29 @@ test('后台把不足门槛或照片组不完整的候选标成推荐时拒绝�
     const page=await setup({}, {rows:[{...row,matchResult:run}]})
     assert.match(page.state.error,/加权评分/);assert.equal(page.state.rows.length,0)
   }
+})
+
+test('图片自动选择采用新规则，低文字分不阻止就绪并保留匹配来源',async()=>{
+  const run=scoredRun(0)
+  run.ranking.policyVersion='photo-best-or-first-text-v2';run.ranking.textThreshold=null;run.ranking.completePhotoGroup=false
+  const page=await setup({}, {rows:[{...row,readiness:'READY',decision:'EXISTING',matchedProductId:501,purchaseUnit:'PCS',matchTaskId:batchId,matchResult:run}]})
+  assert.equal(page.state.error,'');assert.equal(page.state.rows[0].readiness,'READY')
+  assert.deepEqual(page.state.rows[0].matchResult.ranking.recommendedIds,[501])
+})
+
+test('新图片选择规则拒绝恰好80%的自动推荐',async()=>{
+  const run=scoredRun(0)
+  run.ranking.policyVersion='photo-best-or-first-text-v2';run.ranking.textThreshold=null
+  run.candidates[0].visualScore=0.8;run.ranking.scores[0].photoScore=0.8
+  const page=await setup({}, {rows:[{...row,matchResult:run}]})
+  assert.match(page.state.error,/评分/);assert.equal(page.state.rows.length,0)
+})
+
+test('重新进入旧规则待确认批次沿原匹配入口升级，已就绪和新版未命中不重复处理',async()=>{
+  const task='22222222-2222-4333-8444-555555555555';let calls=0
+  const old={...row,matchTaskId:batchId,matchResult:scoredRun()}
+  const page=await setup({async startMatches(_id,_version,ids){calls++;assert.deepEqual(ids,[1]);return {batchId,version:1,status:'REVIEW',header,rows:[{...old,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED'}],taskIds:[task]}}},{rows:[old],tasks:[{id:batchId,kind:'MATCH',status:'SUCCEEDED'}]})
+  assert.equal(await page.startImageReview(),true);assert.equal(calls,1)
 })
 
 test('AI图文核对只登记未确认行且后台运行时重复点击不另建任务',async()=>{
@@ -46,6 +79,21 @@ test('重新打开已有运行任务的批次能恢复按钮进度，不重启�
   const task='22222222-2222-4333-8444-555555555555'
   const page=await setup({}, {rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'RUNNING',result:{rowId:1}}]})
   assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,succeeded:0,failed:0,attention:0,pending:1,running:true});assert.equal(await page.startImageReview(),false)
+})
+
+test('核对排队时锁住编辑照片与确认，但仍能读回后台进度',async()=>{
+  const task='22222222-2222-4333-8444-555555555555';let reads=0,decisions=0
+  const running={batchId,version:1,status:'REVIEW',header,rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:1}}]}
+  const page=await setup({async load(){reads++;return structuredClone(running)},async decide(){decisions++;throw new Error('不应确认')}},running)
+  assert.equal(page.busy(),true)
+  assert.equal(page.startEdit(page.state.rows[0]),false)
+  assert.equal(page.grid.edit(1,'productSpec','M'),false)
+  assert.equal(page.grid.selectPhoto(1,new File(['image'],'照片.png',{type:'image/png'})),false)
+  assert.equal(await page.decideProduct(page.state.rows[0],{decision:'NEW'}),false)
+  assert.equal(decisions,0)
+  assert.equal(await page.refreshTasks(),true);assert.ok(reads>=2)
+  page.state.tasks[0].status='FAILED'
+  assert.equal(page.busy(),false)
 })
 
 test('文件暂存成功后自动核对已保存行，保留未保存的表头草稿',async()=>{

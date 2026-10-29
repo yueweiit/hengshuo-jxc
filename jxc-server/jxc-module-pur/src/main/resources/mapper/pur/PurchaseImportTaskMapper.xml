@@ -98,8 +98,8 @@
     UPDATE pur_order_import_batch SET status='PARSING' WHERE country_id=#{countryId} AND batch_id=#{batchId}
   </update>
 
-  <select id="selectRecoverableIds" resultType="java.util.UUID" useCache="false">
-    SELECT id FROM pur_order_import_task WHERE country_id=#{countryId} AND (status='QUEUED' OR status='RUNNING' AND lease_until&lt;clock_timestamp()) ORDER BY created_at LIMIT #{leaseUntil}
+  <select id="selectRecoverableTasks" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT id,kind,batch_id FROM pur_order_import_task WHERE country_id=#{countryId} AND (status='QUEUED' OR status='RUNNING' AND lease_until&lt;clock_timestamp()) ORDER BY created_at,id LIMIT #{leaseUntil}
   </select>
 
   <select id="selectUnexpiredTask" resultType="java.util.LinkedHashMap" useCache="false">

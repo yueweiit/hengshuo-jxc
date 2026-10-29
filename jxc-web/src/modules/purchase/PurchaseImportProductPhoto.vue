@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { PurchaseImportCatalogImages } from './purchaseImportCatalogImages'
 
-const props = defineProps<{ catalog: PurchaseImportCatalogImages; imageId?: number; productId?: number; label: string; compact?: boolean }>()
+const props = defineProps<{ catalog: PurchaseImportCatalogImages; imageId?: number; productId?: number; label: string; compact?: boolean; disabled?: boolean }>()
 const frame = ref<HTMLElement>(), decodeError = ref(false)
 const { urls, errors, loading } = props.catalog.images
 const entry = computed(() => props.imageId ? undefined : props.catalog.entries.value[props.productId!])
@@ -35,12 +35,12 @@ onBeforeUnmount(() => observer?.disconnect())
 <template>
   <div ref="frame" class="catalog-photo" :class="{ 'is-compact': compact }" :data-image-id="resolvedId" :aria-label="label" :aria-busy="pending" @click.stop>
     <div v-loading="pending" class="catalog-photo-frame">
-      <el-image v-if="url && !decodeError" :key="url" :src="url" fit="contain" :preview-src-list="[url]" preview-teleported :alt="label" @error="decodeError = true" />
+      <el-image v-if="url && !decodeError" :key="url" :src="url" fit="contain" :preview-src-list="disabled ? [] : [url]" preview-teleported :alt="label" @error="decodeError = true" />
       <span v-else-if="failure" class="catalog-photo-error" role="status">{{ failure }}</span>
       <span v-else-if="entry?.status === 'ok' && !resolvedId" class="catalog-photo-empty">暂无商品照片</span>
       <span v-else-if="!pending" class="catalog-photo-empty">照片待加载</span>
     </div>
-    <el-button v-if="failure" link type="primary" size="small" :disabled="pending" @click.stop="load">重试加载商品照片</el-button>
+    <el-button v-if="failure" link type="primary" size="small" :disabled="disabled || pending" @click.stop="load">重试加载商品照片</el-button>
   </div>
 </template>
 
