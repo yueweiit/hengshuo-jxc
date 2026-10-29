@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
 
 export interface ImportHeader {
   bookId: number | null
@@ -25,13 +26,13 @@ export const importColumns = [
 ] as const
 export type ImportField = typeof importColumns[number]['key']
 export type ImportValues = Record<ImportField, string | null>
-export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED' | 'CONFIRMED' | 'REJECTED'; publishStatus?: string; publishedProductId?: number | null; productImageId?: number | null }
+export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED' | 'CONFIRMED' | 'REJECTED'; origin?: 'MANUAL_UPLOAD' | 'XLSX'; publishStatus?: string; publishedProductId?: number | null; productImageId?: number | null }
 export interface MatchInputs { suppliedProductCode: string | null; suppliedProductName: string | null; supplierProductCode: string | null }
 export interface MatchCandidate { productId: number; product: { id: number; productCode: string; name: string; spec: string | null; units: { unit: string }[] }; visualScore: number | null; textEvidence: { reason: string }[]; visualEvidence: unknown[]; conflicts: string[] }
 export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: number; status: string; text: { status: string; reason: string }; image: { status: string; reason: string; errors?: { reason: string }[] }; candidates: MatchCandidate[]; explanation: { status: string; message: string; candidateNotes?: { productId: number; message: string }[] } }
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number } }
-export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; warnings?: { sourceRow?: number; message: string }[] }
+export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; origin?: 'MANUAL_UPLOAD' | 'XLSX'; warnings?: { sourceRow?: number; message: string }[] }
 export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE' | null; amount: string | null; currency: string | null; reason: string; confirm: boolean }
 export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
 export interface FeeTodo extends Omit<FeeReviewInput, 'confirm'> { format: 'FeeTodoV1'; todoId: string; sourceRows: ImportSourceRef[]; status: 'PENDING'; reviewStatus: 'UNRESOLVED' | 'CONFIRMED' | 'STALE'; registeredReference: null; targetOrderId: number | null; targetDocNo: string | null; targetReferenceStatus: string }
@@ -44,6 +45,8 @@ export interface PurchaseImportApi {
   load(batchId: string): Promise<unknown>
   saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
   saveRow(batchId: string, row: ImportRow, values: ImportValues, matchInputs?: MatchInputs): Promise<unknown>
+  uploadPhoto?(batchId: string, row: ImportRow, file: File, values: ImportValues, key: string): Promise<unknown>
+  readImage?(batchId: string, imageId: number, signal: AbortSignal): Promise<Blob>
   deleteRow(batchId: string, row: ImportRow): Promise<unknown>
   retryTask?(taskId: string, key: string, sheet: string | null): Promise<unknown>
   associate?(batchId: string, row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED'): Promise<unknown>
@@ -134,7 +137,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   const emptyHeader = (): ImportHeader => ({ bookId: null, supplierId: null, currency: '', orderDate: today, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null })
   const state = reactive({
     header: emptyHeader(), batchId: null as string | null, rows: [] as ImportRow[],
-    edit: null as { id: number; field: ImportField | null; values: ImportValues } | null,
+    edit: null as { id: number; field: ImportField | null; values: ImportValues; photoFile: File | null } | null,
     loading: false, importing: false, saving: false, deletingId: null as number | null,
     error: '', errorCode: '', errors: [] as ImportIssue[], success: '',
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
@@ -143,6 +146,11 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     gallery: null as { status: string; coverage: { photos: number; eligiblePhotos?: number; readyPhotos: number; features: number }; lastError?: string | null } | null,
     galleryError: '', galleryLoading: false,
   })
+  const images = createPurchaseImportImages((id, imageId, signal) => {
+    if (!api.readImage) return Promise.reject(new Error('原图读取接口尚未接入'))
+    return api.readImage(id, imageId, signal)
+  }, () => state.batchId)
+  let photoFile: File | null = null, photoSignature = '', photoKey = ''
   let epoch = 0, readSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
   const busy = () => state.loading || state.importing || state.saving || state.status === 'PARSING'
   const headerDirty = () => state.batchId !== null && JSON.stringify(state.header) !== savedHeader
@@ -168,6 +176,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   function applyBatch(batch: ImportBatch, preserveDraft = false) {
     const draft = preserveDraft && (state.batchId === null || headerDirty()) ? state.header : null
     savedHeader = JSON.stringify(batch.header)
+    if (state.batchId !== batch.batchId) images.reset()
     state.batchId = batch.batchId
     state.header = draft ?? batch.header
     state.rows = batch.rows
@@ -238,16 +247,37 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (rowLocked(row)) { failure(new Error('本行已建单或创建结果待核实，不能修改来源')); return false }
     if (busy() || state.edit || !state.rows.some(item => item.id === row.id)) return false
     clearFeedback()
-    state.edit = { id: row.id, field, values: Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues }
+    state.edit = { id: row.id, field, values: Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues, photoFile: null }
     return true
   }
-  function cancelEdit() { if (!state.saving) { state.edit = null; clearFeedback() } }
+  function selectPhoto(file: File) {
+    if (busy() || !state.edit || state.edit.field !== null && state.edit.field !== 'photo') return false
+    if (!file.size || file.size > 10 * 1024 * 1024) { failure(new Error('照片不能为空且不能超过10MiB')); return false }
+    if (!/\.(png|jpe?g|gif)$/i.test(file.name) || !['image/png', 'image/jpeg', 'image/gif'].includes(file.type)) { failure(new Error('请选择PNG、JPG或GIF照片')); return false }
+    clearFeedback(); state.edit.photoFile = file
+    return true
+  }
+  function cancelEdit() { if (!state.saving) { state.edit = null; photoFile = null; photoKey = ''; photoSignature = ''; clearFeedback() } }
   async function saveEdit() {
     if (busy() || !state.edit || !state.batchId) return false
     const row = state.rows.find(item => item.id === state.edit!.id)
     if (!row) { failure(new Error('待保存的记录已不存在，请刷新')); return false }
     let values: ImportValues
     try { values = normalizeValues(state.edit.values) } catch (error) { failure(error); return false }
+    const file = state.edit.photoFile, id = state.batchId
+    if (file) {
+      if (!api.uploadPhoto) { failure(new Error('照片上传接口尚未接入')); return false }
+      const signature = JSON.stringify([id, row.id, row.version, values])
+      if (photoFile !== file || photoSignature !== signature) { photoFile = file; photoSignature = signature; photoKey = newKey() }
+      return write('saving', () => api.uploadPhoto!(id, { ...row }, file, values, photoKey), response => {
+        const batch = readBatch(response), updated = batch.rows.find(item => item.id === row.id)
+        if (batch.batchId !== id || !updated || updated.rowNo !== row.rowNo || updated.version <= row.version || !updated.images?.some(image => image.status === 'CONFIRMED' && image.origin === 'MANUAL_UPLOAD' && !row.images?.some(old => old.id === image.id))) throw new Error('后端返回的照片保存结果与当前记录不一致')
+        applyBatch(batch, true)
+        photoFile = null; photoKey = ''; photoSignature = ''
+        state.success = '照片和明细已保存'
+      })
+    }
+    if (state.edit.field === 'photo') { failure(new Error('请先选择要上传的照片，或取消编辑')); return false }
     return write('saving', () => api.saveRow(state.batchId!, { ...row }, values), response => {
       const updated = readRow(response)
       if (updated.id !== row.id || updated.rowNo !== row.rowNo || updated.version <= row.version) throw new Error('后端返回的保存记录编号或版本不正确')
@@ -424,12 +454,13 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   function invalidate() {
     ++epoch; ++readSequence
+    images.reset(); photoFile = null; photoKey = ''; photoSignature = ''
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
     state.groups = []; creationIntents.clear(); photoKeys.clear(); matchKeys.clear(); rebuildKey = ''; ++gallerySequence; state.gallery = null; state.galleryError = ''; state.galleryLoading = false
   }
-  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, saveMatchInputs, startMatches, explainMatch, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, saveFeeTodos, invalidate }
+  return { state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, saveMatchInputs, startMatches, explainMatch, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, saveFeeTodos, invalidate }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

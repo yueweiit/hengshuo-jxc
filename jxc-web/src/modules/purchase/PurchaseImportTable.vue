@@ -3,6 +3,8 @@ import { nextTick, ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import type { InputInstance } from 'element-plus'
 import { importColumns, type ImportField, type ImportRow, type PurchaseImportModel } from './purchaseImportModel'
+import { formatImportDecimal } from './purchaseImportDisplay'
+import PurchaseImportPhoto from './PurchaseImportPhoto.vue'
 
 const props = defineProps<{ page: PurchaseImportModel; disabled: boolean }>()
 const emit = defineEmits<{ remove: [row: ImportRow] }>()
@@ -21,9 +23,6 @@ function editing(row: ImportRow, field: ImportField) {
   return edit?.id === row.id && (edit.field === null || edit.field === field)
 }
 function saveCell() { if (props.page.state.edit?.field != null) return props.page.saveEdit() }
-function imageUrl(value: string | null) {
-  return value && /^(https?:\/\/|\/(?!\/)|data:image\/(?:png|jpeg|webp);base64,)/i.test(value) ? value : undefined
-}
 </script>
 
 <template>
@@ -31,8 +30,9 @@ function imageUrl(value: string | null) {
     <el-table-column prop="rowNo" label="序号" width="64" fixed="left" align="center" />
     <el-table-column v-for="column in columns" :key="column.key" :prop="column.key" :label="column.label" :min-width="column.width" :align="column.numeric ? 'right' : 'left'">
       <template #default="{ row }">
+        <PurchaseImportPhoto v-if="column.key === 'photo'" :page="page" :row="row" :editing="editing(row, 'photo')" :disabled="disabled || !!page.state.edit || page.rowLocked(row)" @edit="begin(row, 'photo')" />
         <el-input
-          v-if="editing(row, column.key) && page.state.edit"
+          v-else-if="editing(row, column.key) && page.state.edit"
           :ref="(instance: Element | ComponentPublicInstance | null) => setEditor(instance, column.key)"
           v-model="page.state.edit.values[column.key]"
           :aria-label="`第${row.rowNo}行${column.label}`"
@@ -47,18 +47,12 @@ function imageUrl(value: string | null) {
           v-else
           type="button"
           class="import-cell"
-          :class="{ 'import-cell-number': column.numeric, 'import-cell-photo': column.key === 'photo' }"
+          :class="{ 'import-cell-number': column.numeric }"
           :disabled="disabled || !!page.state.edit || page.rowLocked(row)"
           :aria-label="`编辑第${row.rowNo}行${column.label}`"
           @click="begin(row, column.key)"
         >
-          <template v-if="column.key === 'photo'">
-            <el-image v-if="imageUrl(row.photo)" :src="imageUrl(row.photo)" fit="contain" class="import-photo" :alt="`第${row.rowNo}行商品照片`">
-              <template #error><span class="unverified">待核实</span></template>
-            </el-image>
-            <span v-else class="unverified" :title="row.photo || '尚无可用照片'">待核实</span>
-          </template>
-          <span v-else :class="{ unverified: row[column.key] == null }">{{ row[column.key] ?? '待核实' }}</span>
+          <span :class="{ unverified: row[column.key] == null }">{{ column.numeric ? formatImportDecimal(row[column.key]) : row[column.key] ?? '待核实' }}</span>
         </button>
       </template>
     </el-table-column>
@@ -91,8 +85,6 @@ function imageUrl(value: string | null) {
 .import-cell:hover:not(:disabled), .import-cell:focus-visible { border-color: var(--el-color-primary-light-5); outline: none; }
 .import-cell:disabled { cursor: default; }
 .import-cell-number { text-align: right; font-variant-numeric: tabular-nums; }
-.import-cell-photo { text-align: center; }
-.import-photo { display: block; width: 58px; height: 50px; margin: auto; }
 .unverified { color: var(--el-text-color-secondary); font-size: 12px; }
 .import-row-actions { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 30px; .el-button { margin: 0; font-size: 17px; } }
 </style>

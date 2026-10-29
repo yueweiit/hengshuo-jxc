@@ -25,6 +25,11 @@ public class PurchaseImportController {
     @GetMapping("/{batchId}") public ApiEnvelope get(@PathVariable UUID batchId){return ok(imports.get(ctx(),batchId));}
     @PutMapping("/{batchId}") public ApiEnvelope header(@PathVariable UUID batchId,@RequestBody Map<String,Object> body){return ok(imports.saveHeader(ctx(),batchId,body));}
     @PutMapping("/{batchId}/rows/{rowId}") public ApiEnvelope row(@PathVariable UUID batchId,@PathVariable long rowId,@RequestBody Map<String,Object> body){return ok(imports.saveRow(ctx(),batchId,Inputs.id(rowId),body));}
+    @PostMapping(value="/{batchId}/rows/{rowId}/image",consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiEnvelope uploadPhoto(@PathVariable UUID batchId,@PathVariable long rowId,@RequestPart MultipartFile file,@RequestParam long version,@RequestParam String values,@RequestHeader("Idempotency-Key")String key)throws java.io.IOException {
+        if(file.getSize()>10L*1024*1024)throw new ApiException(413,"PUR_IMPORT_ASSET_LIMIT","照片不能超过10MiB");
+        return ok(imports.uploadPhoto(ctx(),batchId,Inputs.id(rowId),file.getOriginalFilename(),file.getContentType(),file.getBytes(),Map.of("version",Inputs.id(version),"values",json.readMap(values)),key));
+    }
     @DeleteMapping("/{batchId}/rows/{rowId}") public ApiEnvelope delete(@PathVariable UUID batchId,@PathVariable long rowId,@RequestHeader("If-Match")long version){return ok(imports.deleteRow(ctx(),batchId,Inputs.id(rowId),Inputs.id(version)));}
     @GetMapping("/{batchId}/sources/{sourceId}/content") public ResponseEntity<byte[]> source(@PathVariable UUID batchId,@PathVariable long sourceId){return binary(imports.content(ctx(),batchId,Inputs.id(sourceId),false));}
     @GetMapping("/{batchId}/images/{imageId}/content") public ResponseEntity<byte[]> image(@PathVariable UUID batchId,@PathVariable long imageId){return binary(imports.content(ctx(),batchId,Inputs.id(imageId),true));}

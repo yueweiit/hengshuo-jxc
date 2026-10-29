@@ -5,10 +5,11 @@ import { http } from '@/api/http'
 import type { PurchaseImportModel, ImportTask, ImportRow } from './purchaseImportModel'
 
 const props = defineProps<{ page: PurchaseImportModel }>()
-const sheets = ref<Record<string, string>>({}), imageUrls = ref<Record<string, string>>({}), imageErrors = ref<Record<string, string>>({})
+const sheets = ref<Record<string, string>>({})
+const { urls: imageUrls, errors: imageErrors } = props.page.images
 const downloading = ref<number | null>(null)
 let epoch = 0
-function clean() { ++epoch; Object.values(imageUrls.value).forEach(url => URL.revokeObjectURL(url)); imageUrls.value = {}; imageErrors.value = {} }
+function clean() { ++epoch }
 function path(kind: 'sources' | 'images', id: number) { return `/api/v1/pur/order-imports/${props.page.state.batchId}/${kind}/${id}/content` }
 async function download(id: number, name: string) {
   if (downloading.value !== null) return
@@ -22,14 +23,7 @@ async function download(id: number, name: string) {
   finally { if (context === epoch) downloading.value = null }
 }
 async function view(row: ImportRow, id: number) {
-  const key = String(id), context = epoch
-  if (imageUrls.value[key]) return
-  try {
-    const blob = await http.attachmentBlob(path('images', id), { silent: true })
-    if (context !== epoch || !props.page.state.rows.some(item => item.id === row.id)) return
-    if (!blob.type.startsWith('image/')) throw new Error('原图响应格式不正确')
-    imageUrls.value[key] = URL.createObjectURL(blob); delete imageErrors.value[key]
-  } catch (error) { if (context === epoch) imageErrors.value[key] = error instanceof Error ? error.message : '原图读取失败，请重试' }
+  if (row.images?.some(image => image.id === id)) return props.page.images.load(id)
 }
 async function publish(row: ImportRow, imageId: number) {
   const context = epoch, product = row.matchedProductId
@@ -54,7 +48,7 @@ onBeforeUnmount(clean)
       </template>
     </div>
     <div v-for="source in page.state.sources" :id="`import-source-${source.id}`" :key="source.id" class="source-file">
-      <div><strong>{{ source.fileName }}</strong><small>原文件 SHA256：{{ source.fileSha256 }}</small></div>
+      <div><strong>{{ source.fileName }}</strong><small>{{ source.origin === 'MANUAL_UPLOAD' ? '手工上传照片' : '原文件' }} SHA256：{{ source.fileSha256 }}</small></div>
       <el-button link type="primary" :loading="downloading === source.id" @click="download(source.id, source.fileName)">下载原文件</el-button>
       <p v-for="(warning, index) in source.warnings" :key="index" class="source-warning">{{ warning.sourceRow ? `原第${warning.sourceRow}行：` : '' }}{{ warning.message }}</p>
     </div>
@@ -63,9 +57,10 @@ onBeforeUnmount(clean)
         <div v-for="row in page.state.rows.filter(item => item.images?.length)" :key="row.id" class="source-row">
           <div class="source-position">第{{ row.rowNo }}行 · {{ row.productSpec || '规格待核实' }}<small>{{ row.sourceSheet }} · 原第{{ row.sourceRow }}行</small></div>
           <div v-for="image in row.images" :key="image.id" class="source-image">
-            <el-image v-if="imageUrls[String(image.id)]" :src="imageUrls[String(image.id)]" :preview-src-list="[String(imageUrls[String(image.id)])]" fit="contain" class="original-image" :alt="`原第${row.sourceRow}行商品照片`" />
+            <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" :preview-src-list="[String(imageUrls[image.id])]" preview-teleported fit="contain" class="original-image" :alt="`第${row.rowNo}行商品照片`" />
             <el-button v-else size="small" @click="view(row, image.id)">查看原图</el-button>
-            <span v-if="imageErrors[String(image.id)]" class="source-error">{{ imageErrors[String(image.id)] }}</span>
+            <span v-if="imageErrors[image.id]" class="source-error">{{ imageErrors[image.id] }}</span>
+            <span v-if="image.origin === 'MANUAL_UPLOAD'">手工上传</span>
             <span>{{ image.status === 'CONFIRMED' ? '归属已确认' : image.status === 'REJECTED' ? '已排除' : '归属待核实' }}</span>
             <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'CONFIRMED' || page.rowLocked(row) || image.publishStatus === 'READY'" @click="page.associate(row, image.id, 'CONFIRMED')">确认属于本行</el-button>
             <el-button size="small" :disabled="page.busy() || !!page.state.edit || image.status === 'REJECTED' || page.rowLocked(row) || image.publishStatus === 'READY'" @click="page.associate(row, image.id, 'REJECTED')">排除</el-button>

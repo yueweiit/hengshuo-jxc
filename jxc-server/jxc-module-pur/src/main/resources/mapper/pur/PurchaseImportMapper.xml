@@ -30,6 +30,11 @@
     INSERT INTO pur_order_import_source(country_id,batch_id,attachment_id,file_name,file_sha256) VALUES(#{countryId},#{batchId},#{attachmentId},#{fileName},#{fileSha256}) RETURNING id
   </select>
 
+  <select id="insertManualImageSource" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_order_import_source(country_id,batch_id,attachment_id,file_name,file_sha256,status,parser_version,parse_options)
+    VALUES(#{countryId},#{batchId},#{attachmentId},#{fileName},#{fileSha256},'READY','manual-upload/v1','{"origin":"MANUAL_UPLOAD"}') RETURNING id
+  </select>
+
   <insert id="insertParseTask">
     INSERT INTO pur_order_import_task(id,country_id,batch_id,source_id,input_revision,input_hash,requested_by,authorization_basis) VALUES(#{id},#{countryId},#{batchId},#{sourceId},#{inputRevision},#{inputHash},#{requestedBy},#{authorizationBasis}::jsonb)
   </insert>
@@ -47,7 +52,7 @@
   </select>
 
   <select id="selectSources" resultType="java.util.LinkedHashMap" useCache="false">
-    SELECT id,file_name,file_sha256,parser_version,status,sheets,warnings,associations,error_code,error_message FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id
+    SELECT id,file_name,file_sha256,parser_version,status,sheets,warnings,associations,error_code,error_message,coalesce(parse_options-&gt;&gt;'origin','XLSX') AS origin FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id
   </select>
 
   <select id="selectTasks" resultType="java.util.LinkedHashMap" useCache="false">
@@ -55,7 +60,7 @@
   </select>
 
   <select id="selectRowImages" resultType="java.util.LinkedHashMap" useCache="false">
-    SELECT i.id,i.image_sha256,r.association_status,r.anchor,r.publish_status,r.product_image_id,r.publish_product_id,r.publish_error FROM pur_order_import_row_image r JOIN pur_order_import_image i ON i.country_id=r.country_id AND i.id=r.image_id WHERE r.country_id=#{countryId} AND r.row_id=#{rowId} ORDER BY i.id
+    SELECT i.id,i.image_sha256,r.association_status,r.anchor,r.publish_status,r.product_image_id,r.publish_product_id,r.publish_error,coalesce(s.parse_options-&gt;&gt;'origin','XLSX') AS origin FROM pur_order_import_row_image r JOIN pur_order_import_image i ON i.country_id=r.country_id AND i.id=r.image_id JOIN pur_order_import_source s ON s.country_id=i.country_id AND s.id=i.source_id WHERE r.country_id=#{countryId} AND r.row_id=#{rowId} ORDER BY i.id
   </select>
 
   <select id="selectRowForUpdate" resultType="java.util.LinkedHashMap" useCache="false">

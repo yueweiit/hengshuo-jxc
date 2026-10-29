@@ -14,6 +14,14 @@ export const purchaseImportApi: PurchaseImportApi = {
   load: id => http.get(batchPath(id), undefined, { silent: true }),
   saveHeader: (id, header, versions, batchVersion) => http.put(batchPath(id), { header, versions, batchVersion }, { silent: true }),
   saveRow: (id, row, values, matchInputs) => http.put(`${batchPath(id)}/rows/${row.id}`, { version: row.version, values, ...(matchInputs ? { matchInputs } : {}) }, { silent: true }),
+  uploadPhoto(id, row, file, values, key) {
+    const data = new FormData()
+    data.append('file', file)
+    data.append('version', String(row.version))
+    data.append('values', JSON.stringify(values))
+    return http.post(`${batchPath(id)}/rows/${row.id}/image`, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true })
+  },
+  readImage: (id, imageId, signal) => http.attachmentBlob(`/api/v1${batchPath(id)}/images/${imageId}/content`, { signal, silent: true }),
   deleteRow: (id, row) => http.delete(`${batchPath(id)}/rows/${row.id}`, { headers: { 'If-Match': String(row.version) }, silent: true }),
   retryTask: (id, key, sheet) => http.post(`${base}/tasks/${encodeURIComponent(id)}/retry`, { sheet }, { headers: { 'Idempotency-Key': key }, silent: true }),
   associate: (id, row, imageId, association) => http.put(`${batchPath(id)}/rows/${row.id}/images/${imageId}/association`, { version: row.version, association }, { silent: true }),

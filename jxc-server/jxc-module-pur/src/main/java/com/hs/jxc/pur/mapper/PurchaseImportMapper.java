@@ -12,6 +12,7 @@ public interface PurchaseImportMapper {
     List<Integer> countEnabledCurrency(@Param("code") Object code);
     int insertBatch(@Param("countryId") Object countryId, @Param("batchId") Object batchId, @Param("header") Object header, @Param("createdBy") Object createdBy);
     List<Long> insertSource(@Param("countryId") Object countryId, @Param("batchId") Object batchId, @Param("attachmentId") Object attachmentId, @Param("fileName") Object fileName, @Param("fileSha256") Object fileSha256);
+    List<Long> insertManualImageSource(@Param("countryId") Object countryId, @Param("batchId") Object batchId, @Param("attachmentId") Object attachmentId, @Param("fileName") Object fileName, @Param("fileSha256") Object fileSha256);
     int insertParseTask(@Param("id") Object id, @Param("countryId") Object countryId, @Param("batchId") Object batchId, @Param("sourceId") Object sourceId, @Param("inputRevision") Object inputRevision, @Param("inputHash") Object inputHash, @Param("requestedBy") Object requestedBy, @Param("authorizationBasis") Object authorizationBasis);
     int markBatchParsing(@Param("countryId") Object countryId, @Param("batchId") Object batchId);
     List<Map<String,Object>> selectRows(@Param("countryId") Object countryId, @Param("batchId") Object batchId);
