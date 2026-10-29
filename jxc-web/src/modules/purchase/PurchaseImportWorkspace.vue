@@ -224,16 +224,11 @@ onBeforeUnmount(() => { active = false; ++refsSequence; ++creationSequence; clea
       <PurchaseImportSources :page="page" />
       <PurchaseImportProgress v-if="!dialogVisible" :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
-      <div v-if="state.rows.length" class="workflow-actions"><el-button :disabled="importDisabled || page.headerDirty()" @click="page.startMatches(state.rows.filter(row => !page.rowLocked(row)).map(row => row.id))">识别商品</el-button><el-button :disabled="importDisabled" @click="review()">核对商品</el-button><el-button :disabled="importDisabled || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>
+      <div v-if="state.rows.length" class="workflow-actions"><el-button :disabled="importDisabled || page.headerDirty()" @click="page.startMatches(state.rows.filter(row => !page.rowLocked(row)).map(row => row.id))">识别商品</el-button><el-button :disabled="importDisabled" @click="review()">核对商品</el-button><PurchaseImportReviewAssistant :page="page" @products="review()" @preview="preview" /><el-button :disabled="importDisabled || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>
       <p v-if="state.rows.length" class="table-hint">保存后生成对应采购单草稿及明细，并保留商品、原文件和费用来源关联。资料待核对时会提示具体原因。</p>
       <el-alert v-if="creationError" type="error" :closable="false" class="import-alert"><template #title>采购单保存暂不可用：{{ creationError }}</template><el-button link @click="loadCreationCapability">重新读取保存能力</el-button></el-alert>
       <p v-else-if="state.batchId && !creationEnabled && !creationLoading" class="table-hint">当前环境尚未启用保存采购单，可先完成资料核对。</p>
-      <div class="import-review-layout">
-        <div class="import-table-region">
       <PurchaseImportEditor :page="page" :disabled="page.busy()" @remove="remove" @review="review" />
-        </div>
-        <PurchaseImportReviewAssistant v-if="state.rows.length" :page="page" @products="review()" @preview="preview" />
-      </div>
       <section v-if="state.groups.length" class="saved-orders" aria-label="采购单保存结果"><h3>采购单保存结果</h3><div v-for="group in state.groups" :key="group.id"><strong>{{ group.sourceOrderNo }}</strong><router-link v-if="group.orderId" :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || `采购单 ${group.orderId}` }}</router-link><span>{{ purchaseOrderSaveStatus(group) }}</span><el-button v-if="group.orderId || group.createIntent" link :disabled="page.busy()" @click="page.refreshCreation(group)">查询原保存结果</el-button><span v-if="group.errorMessage">{{ group.errorMessage }}</span></div></section>
     </section>
 
@@ -263,7 +258,6 @@ h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 24px; }
 .field-hint, .table-hint { color: var(--el-text-color-secondary); font-size: 12px; line-height: 20px; }
 .import-command { display: flex; justify-content: space-between; align-items: center; gap: 20px; p { margin: 5px 0 0; color: var(--el-text-color-secondary); font-size: 13px; } }
 .workflow-actions { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0; }
-.import-review-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,360px);gap:16px;align-items:start; }.import-table-region { min-width:0; }@media(max-width:1100px){.import-review-layout{grid-template-columns:minmax(0,1fr)}}
 .save-orders-button { margin-left:auto; }
 .saved-orders { margin-top:14px;border-top:1px solid var(--el-border-color-light);padding-top:12px;font-size:13px; }
 .saved-orders h3 { margin:0 0 8px;font-size:14px; }
