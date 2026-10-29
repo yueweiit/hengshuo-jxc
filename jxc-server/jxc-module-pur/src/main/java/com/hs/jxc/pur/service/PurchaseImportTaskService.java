@@ -11,4 +11,5 @@ public interface PurchaseImportTaskService {
     Map<String,Object> retry(RequestContext ctx,UUID id,String key,String sheet);
     int recover(long country,int limit);
     AttachmentService.Download taskAsset(UUID taskId,long sourceId,String token);
+    void reportProgress(UUID taskId,String token,Map<String,Object> input);
 }

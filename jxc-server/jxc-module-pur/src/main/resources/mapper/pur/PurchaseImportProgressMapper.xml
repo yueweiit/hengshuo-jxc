@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportProgressMapper">
+ <delete id="clear">DELETE FROM pur_order_import_task_progress WHERE country_id=#{country} AND task_id=#{task}</delete>
+ <insert id="start">
+  INSERT INTO pur_order_import_task_progress(country_id,task_id,lease_owner,attempt_count,phase_order,snapshot)
+  VALUES(#{country},#{task},#{lease},#{attempt},0,'{"phase":"READING","processedRows":0,"totalRows":null,"processedImages":0,"totalImages":null,"sourceSheet":null,"sourceRow":null}')
+  ON CONFLICT(country_id,task_id) DO UPDATE SET lease_owner=excluded.lease_owner,attempt_count=excluded.attempt_count,phase_order=0,snapshot=excluded.snapshot,updated_at=clock_timestamp()
+ </insert>
+ <select id="active" resultType="java.util.LinkedHashMap" useCache="false">
+  SELECT * FROM pur_order_import_task WHERE country_id=#{country} AND id=#{task} AND lease_owner=#{lease} AND status='RUNNING' AND lease_until&gt;clock_timestamp()
+ </select>
+ <update id="publish">
+  UPDATE pur_order_import_task_progress p SET snapshot=jsonb_set(#{snapshot}::jsonb,'{sourceTotalRows}',coalesce(nullif(#{snapshot}::jsonb-&gt;'sourceTotalRows','null'::jsonb),p.snapshot-&gt;'sourceTotalRows','null'::jsonb)),phase_order=#{order},updated_at=clock_timestamp()
+  WHERE p.country_id=#{country} AND p.task_id=#{task} AND p.lease_owner=#{lease} AND p.phase_order&lt;=#{order}
+  AND (p.phase_order&lt;#{order} OR (
+    (p.snapshot-&gt;&gt;'processedRows')::integer&lt;=(#{snapshot}::jsonb-&gt;&gt;'processedRows')::integer
+    AND (p.snapshot-&gt;&gt;'processedImages')::integer&lt;=(#{snapshot}::jsonb-&gt;&gt;'processedImages')::integer
+    AND (p.snapshot-&gt;&gt;'totalRows' IS NULL OR p.snapshot-&gt;&gt;'totalRows' = #{snapshot}::jsonb-&gt;&gt;'totalRows')
+    AND (p.snapshot-&gt;&gt;'totalImages' IS NULL OR p.snapshot-&gt;&gt;'totalImages' = #{snapshot}::jsonb-&gt;&gt;'totalImages')))
+  AND EXISTS(SELECT 1 FROM pur_order_import_task t WHERE t.country_id=p.country_id AND t.id=p.task_id AND t.status='RUNNING' AND t.lease_owner=p.lease_owner AND t.attempt_count=p.attempt_count AND t.lease_until&gt;clock_timestamp())
+  AND (p.snapshot-&gt;&gt;'sourceTotalRows' IS NULL OR #{snapshot}::jsonb-&gt;&gt;'sourceTotalRows' IS NULL OR p.snapshot-&gt;&gt;'sourceTotalRows' = #{snapshot}::jsonb-&gt;&gt;'sourceTotalRows')
+ </update>
+</mapper>

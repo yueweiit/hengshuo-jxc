@@ -9,6 +9,7 @@ import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
+import PurchaseImportProgress from './PurchaseImportProgress.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 
@@ -29,9 +30,9 @@ let active = true, refsSequence = 0
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleTasks() {
   clearTimeout(taskTimer)
-  if (active && (state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) && state.batchId) taskTimer = setTimeout(async () => { if (await page.refreshTasks() || state.edit || state.loading || state.saving || state.importing || page.headerDirty()) scheduleTasks() }, 2000)
+  if (active && (state.status === 'PARSING' || state.progressReloadNeeded || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) && state.batchId) taskTimer = setTimeout(async () => { await page.refreshTasks(); if (active) scheduleTasks() }, 2000)
 }
-watch(() => [state.batchId, state.status, state.tasks.map(task => `${task.id}:${task.status}`).join(',')], scheduleTasks)
+watch(() => [state.batchId, state.status, state.progressReloadNeeded, state.tasks.map(task => `${task.id}:${task.status}`).join(',')], scheduleTasks)
 
 async function loadReferences() {
   const request = ++refsSequence
@@ -84,10 +85,10 @@ async function submitImport() {
   if (!selected.value) { page.failure(new Error('请先选择.xlsx文件')); return }
   const saved = await page.importFile(selected.value)
   if (saved) {
-    dialogVisible.value = false; selected.value = null
+    selected.value = null
     if (fileInput.value) fileInput.value.value = ''
     try { await router.replace({ query: { ...route.query, batchId: state.batchId! } }) }
-    catch (error) { if (active) page.failure(new Error(`数据已保存，但批次地址更新失败：${error instanceof Error ? error.message : '请重试读取'}`)) }
+    catch (error) { if (active) page.failure(new Error(`文件已接收，但批次地址更新失败：${error instanceof Error ? error.message : '请重试读取'}`)) }
   }
 }
 async function saveHeader() { if (!disabled.value && selectedRefsValid()) await page.saveHeader() }
@@ -156,6 +157,7 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />
       <PurchaseImportSources :page="page" />
+      <PurchaseImportProgress v-if="!dialogVisible" :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
       <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" />
     </section>
@@ -163,11 +165,12 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
       <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>导入后先暂存明细；基础信息在保存时核验，原图归属需人工确认。</li></ol>
-      <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="state.importing" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
+      <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="importDisabled || state.upload?.status === 'UNKNOWN'" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
+      <PurchaseImportProgress :page="page" />
       <el-alert v-if="downloadError" :title="downloadError" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <ul v-if="state.errors.length" class="import-error-list" aria-label="文件错误明细"><li v-for="(error, index) in state.errors" :key="index"><span v-if="error.rowNo">第{{ error.rowNo }}行：</span><span v-if="error.field">{{ errorLabel(error.field) }}，</span>{{ error.message }}</li></ul>
-      <template #footer><el-button :disabled="state.importing" @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="state.importing" :disabled="importDisabled || !selected" @click="submitImport">导入数据</el-button></template>
+      <template #footer><el-button :disabled="state.importing" @click="dialogVisible = false">{{ state.activeTaskId ? state.status === 'PARSING' ? '收起进度' : '关闭' : '取消' }}</el-button><el-button type="primary" :loading="state.importing" :disabled="importDisabled || !selected" @click="submitImport">{{ state.upload?.status === 'UNKNOWN' ? '重试原请求' : '导入数据' }}</el-button></template>
     </el-dialog>
   </main>
 </template>

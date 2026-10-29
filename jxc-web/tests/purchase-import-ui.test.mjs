@@ -44,6 +44,7 @@ async function render(state) {
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
   app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
   app.component('PurchaseImportTable', { render: () => null })
+  app.component('PurchaseImportProgress', { render: () => null })
   app.component('PurchaseImportSources', { render: () => null })
   return renderToString(app)
 }
@@ -199,7 +200,7 @@ test('工作区实际呈现三块区域，导入弹窗包含模板下载和三�
   assert.match(opened, /accept="\.xlsx/)
 })
 
-test('选择文件和点击导入走真实状态模型，回填后关闭弹窗并保留刷新批次地址', async () => {
+test('选择文件和点击导入走真实状态模型，保留弹窗核对进度及刷新批次地址', async () => {
   const { state, navigations, requests } = workspace()
   await state.loadReferences()
   Object.assign(state.state.header, header)
@@ -209,7 +210,7 @@ test('选择文件和点击导入走真实状态模型，回填后关闭弹窗�
   await state.submitImport()
   assert.equal(requests[0][0], selected)
   assert.equal(state.state.rows[0].id, 10)
-  assert.equal(state.dialogVisible.value, false)
+  assert.equal(state.dialogVisible.value, true)
   assert.deepEqual(navigations, [{ query: { from: 'test', batchId } }])
 })
 
@@ -281,5 +282,5 @@ test('本地编辑使任务读取暂缓时仍会接续轮询，网络错误明�
   state.page.state.edit = null
   state.page.refreshTasks = async () => { state.page.failure(new Error('网络读取失败')); return false }
   await timers.shift()()
-  assert.equal(timers.length, 0); assert.match(state.page.state.error, /网络读取失败/)
+  assert.equal(timers.length, 1); assert.match(state.page.state.error, /网络读取失败/)
 })

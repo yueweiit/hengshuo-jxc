@@ -5,12 +5,13 @@ import type { PurchaseImportApi } from './purchaseImportModel'
 const base = '/pur/order-imports'
 const batchPath = (id: string) => `${base}/${encodeURIComponent(id)}`
 export const purchaseImportApi: PurchaseImportApi = {
-  upload(file, batchId, key) {
+  upload(file, batchId, key, progress) {
     const data = new FormData()
     data.append('file', file)
     if (batchId) data.append('batchId', batchId)
-    return http.post(base, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true })
+    return http.post(base, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true, onUploadProgress: event => progress?.(event.loaded, event.total && event.total > 0 ? event.total : null) })
   },
+  readTask: id => http.get(`${base}/tasks/${encodeURIComponent(id)}`, undefined, { silent: true }),
   load: id => http.get(batchPath(id), undefined, { silent: true }),
   saveHeader: (id, header, versions, batchVersion) => http.put(batchPath(id), { header, versions, batchVersion }, { silent: true }),
   saveRow: (id, row, values) => http.put(`${batchPath(id)}/rows/${row.id}`, { version: row.version, values }, { silent: true }),

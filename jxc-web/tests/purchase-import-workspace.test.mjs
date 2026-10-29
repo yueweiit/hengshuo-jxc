@@ -33,7 +33,8 @@ test('未填写业务表头也能导入暂存，上传请求不携带页面基�
   const { page, calls } = setup({ async upload(...args) { calls.push(['upload', ...args]); return { ...batch(), header: unconfiguredHeader() } } })
   Object.assign(page.state.header, unconfiguredHeader())
   assert.equal(await page.importFile(file()), true)
-  assert.equal(calls[0].length, 4)
+  assert.equal(calls[0].length, 5)
+  assert.equal(typeof calls[0][4], 'function')
   assert.equal(calls[0][2], null)
   assert.equal(page.state.rows.length, 1)
   assert.equal(page.state.header.bookId, null)
@@ -71,7 +72,7 @@ test('上传成功采用服务器保存后的批次和明细，不生成示例�
   assert.equal(page.state.rows[0].purchaseUnitPrice, '53')
   assert.equal(page.state.rows[0].freight, null)
   assert.equal(calls[0][2], null)
-  assert.equal(calls[0].length, 4)
+  assert.equal(calls[0].length, 5)
 })
 
 test('异步上传只接收任务，解析保存成功前不显示已导入', async () => {
@@ -84,7 +85,7 @@ test('异步上传只接收任务，解析保存成功前不显示已导入', as
   assert.equal(page.state.status, 'PARSING')
   assert.equal(await page.refreshTasks(), true)
   assert.equal(page.state.rows.length, 1)
-  assert.match(page.state.success, /暂存1条/)
+  assert.match(page.state.success, /已暂存/)
 })
 
 test('解析失败可恢复任务原因，多工作表需明确选择后重试', async () => {

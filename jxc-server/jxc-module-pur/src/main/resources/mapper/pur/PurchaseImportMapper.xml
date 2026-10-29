@@ -56,7 +56,7 @@
   </select>
 
   <select id="selectTasks" resultType="java.util.LinkedHashMap" useCache="false">
-    SELECT id,kind,phase,status,attempt_count,error_code,error_message,result FROM pur_order_import_task WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY created_at
+    SELECT t.id,t.kind,t.phase,t.status,t.attempt_count,t.error_code,t.error_message,t.result,t.source_id,s.file_name,p.snapshot||jsonb_build_object('attemptCount',p.attempt_count,'updatedAt',p.updated_at) AS progress_snapshot FROM pur_order_import_task t LEFT JOIN pur_order_import_source s ON s.country_id=t.country_id AND s.id=t.source_id LEFT JOIN pur_order_import_task_progress p ON p.country_id=t.country_id AND p.task_id=t.id AND p.attempt_count=t.attempt_count WHERE t.country_id=#{countryId} AND t.batch_id=#{batchId} ORDER BY t.created_at
   </select>
 
   <select id="selectRowImages" resultType="java.util.LinkedHashMap" useCache="false">
