@@ -1,3 +1,4 @@
+import { shallowRef, type ShallowRef } from 'vue'
 import type { ImportRow, ImportValues, MatchInputs, ImportDraftGroup, FeeReviewInput, PurchaseImportApi } from '@/modules/purchase/purchaseImportModel'
 import { importColumns, isBatchId, importRecord as record, importPositiveId as positiveId } from '@/modules/purchase/purchaseImportModel'
 interface Dependencies {
@@ -96,15 +97,15 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     })
   }
 
-  let saveRun: object | null = null
+  const saveRun: ShallowRef<object | null> = shallowRef(null)
   async function saveOrders() {
-    if (saveRun || busy()) return false
+    if (saveRun.value || busy()) return false
     if (!state.batchId || !state.rows.length) { failure(new Error('请先导入并核对采购明细')); return false }
     if (state.edit) { failure(new Error('请先保存或取消正在编辑的明细，再保存采购单')); return false }
     if (!api.previews || !api.createDraft || !api.creation) { failure(new Error('采购单保存或结果查询接口尚未接入')); return false }
     const batch = state.batchId, run = {}
-    saveRun = run
-    const current = () => saveRun === run && state.batchId === batch
+    saveRun.value = run
+    const current = () => saveRun.value === run && state.batchId === batch
     const unassigned = () => state.rows.some(row => !row.groupId && !row.targetOrderLineId)
     const originalIntent = (group: ImportDraftGroup) => !!group.createIntent || creationIntents.has(group.id)
     const stop = (message: string) => { if (current()) failure(new Error(message)); return false }
@@ -151,9 +152,9 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
       if (unassigned()) return stop('仍有未归入采购单的明细，请核对来源分组')
       state.success = `已保存 ${state.groups.length} 张采购单草稿，已读回核对一致`
       return true
-    } finally { if (saveRun === run) saveRun = null }
+    } finally { if (saveRun.value === run) saveRun.value = null }
   }
 
-  function reset() { saveRun = null; creationIntents.clear(); matchKeys.clear() }
-  return { decideProduct,createProduct,saveMatchInputs,startMatches,explainMatch,previewDrafts,saveGroup,createDraft,refreshCreation,saveFeeTodos,saveOrders,reset }
+  function reset() { saveRun.value = null; creationIntents.clear(); matchKeys.clear() }
+  return { decideProduct,createProduct,saveMatchInputs,startMatches,explainMatch,previewDrafts,saveGroup,createDraft,refreshCreation,saveFeeTodos,saveOrders,saveOrdersPending: () => saveRun.value !== null,reset }
 }

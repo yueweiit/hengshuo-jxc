@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { http } from '@/api/http'
 import { allRecords } from '@/api/pagination'
 import { useCountryStore } from '@/stores/country'
@@ -24,6 +24,11 @@ const clearContext = () => JSON.stringify([country.currentId, country.epoch, use
 const clearedOnEntry = consumeImportClearNavigation(clearContext())
 const page = createPurchaseImportModel(purchaseImportApi, todayIn(country.timezone), undefined, clearedOnEntry)
 const state = page.state
+watch(() => [state.success, page.saveOrdersPending()] as const, ([message, pending]) => {
+  if (!message || pending) return
+  state.success = ''
+  ElMessage.success({ message, duration: 3000 })
+}, { flush: 'sync' })
 const books = ref<{ id: number; name: string; baseCurrency: string; status: string }[]>([])
 const suppliers = ref<{ id: number; name: string; settleCurrency?: string; paymentTerms?: string }[]>([])
 const currencies = ref<{ code: string; name: string }[]>([])
@@ -216,7 +221,6 @@ onBeforeUnmount(() => { active = false; ++refsSequence; ++creationSequence; clea
       <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || state.clearing || state.clearPending || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
       <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细已独立暂存，请补齐后保存基础信息。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
-      <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />
       <PurchaseImportSources :page="page" />
       <PurchaseImportProgress v-if="!dialogVisible" :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>

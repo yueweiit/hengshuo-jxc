@@ -467,13 +467,14 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     } finally { if (context === epoch) state.clearing = false }
   }
   function invalidate() {
+    clearFeedback()
     workflow.reset()
     ++epoch; ++readSequence; ++progressSequence
     images.reset(); photoFile = null; photoKey = ''; photoSignature = ''
     state.activeTaskId = null; state.upload = null; state.progressError = ''; state.progressReading = false; state.progressReloadNeeded = false
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
-    selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
+    selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
     state.groups = []; photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null

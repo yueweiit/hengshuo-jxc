@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { watch } from 'vue'
 import assert from 'node:assert/strict'
 import { loadTsModule } from './contracts/load-ts-module.mjs'
 const { createPurchaseImportModel } = loadTsModule(new URL('../src/modules/purchase/purchaseImportModel.ts', import.meta.url))
@@ -81,6 +82,26 @@ test('主保存先保存已修改表头，再生成采购单并读回单号',asy
   assert.equal(await page.saveOrders(),true)
   assert.deepEqual(calls.map(c=>c[0]),['header','preview','create','load','read'])
   assert.equal(page.state.groups[0].docNo,'PO-SAVE-8');assert.match(page.state.success,/已保存.*1.*采购单/)
+})
+test('统一保存的处理中状态覆盖表头保存和建单，结束时只有最终成功反馈', async () => {
+  const { page } = await saveScenario(); page.state.header.paymentTerms = '本轮核实账期'
+  const notifications = [], intermediate = []
+  const stop = watch(() => [page.state.success, page.saveOrdersPending()], ([message, pending]) => {
+    if (message && pending) intermediate.push(message)
+    if (message && !pending) notifications.push(message)
+  }, { flush: 'sync' })
+  assert.equal(await page.saveOrders(), true); stop()
+  assert.ok(intermediate.includes('基础信息已保存')); assert.deepEqual(notifications, ['已保存 1 张采购单草稿，已读回核对一致'])
+  assert.equal(page.saveOrdersPending(), false)
+})
+test('切换上下文取消统一保存时不会发布已暂存表头的旧成功反馈', async () => {
+  const { page } = await saveScenario(); page.state.header.paymentTerms = '本轮核实账期'
+  let cancelled = false; const notifications = []
+  const stop = watch(() => [page.state.success, page.saveOrdersPending()], ([message, pending]) => {
+    if (message && !pending) notifications.push(message)
+    if (message === '基础信息已保存' && pending && !cancelled) { cancelled = true; page.invalidate() }
+  }, { flush: 'sync' })
+  assert.equal(await page.saveOrders(), false); stop(); assert.equal(cancelled, true); assert.deepEqual(notifications, [])
 })
 test('多采购分组保存后分别显示原订单，再次保存只读回不重建',async()=>{
   const {page,calls}=await saveScenario([group,{...group,id:9,sourceOrderNo:'NY-052'}])

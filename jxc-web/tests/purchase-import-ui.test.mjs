@@ -13,7 +13,7 @@ const batchId = '11111111-2222-4333-8444-555555555555'
 const header = { bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2026-10-28', expectedDate: null, paymentTerms: '', prepayRatio: '0', termDays: null }
 const row = { id: 10, version: 1, rowNo: 1, sourceOrderNo: 'NY-051', photo: null, productSpec: 'S', purchaseQty: '10', saleUnitPrice: null, saleTotal: null, purchaseUnitPrice: '53', freight: null, landedUnitCost: null, usdUnitCost: null, usdTotal: null }
 function workspace(confirm = async () => {}, dependencies = {}) {
-  const navigations = [], requests = [], removed = [], savedHeaders = []
+  const navigations = [], requests = [], removed = [], savedHeaders = [], messages = []
   const country = reactive({ timezone: 'Asia/Shanghai', currentId: 101, epoch: 0, currency: 'MXN' })
   const user = reactive({ token: 'test' })
   const route = reactive({ query: { from: 'test' } })
@@ -23,6 +23,7 @@ function workspace(confirm = async () => {}, dependencies = {}) {
     useRoute: () => route, useRouter: () => ({ async replace(target) { navigations.push(target) } }),
     todayIn: () => '2026-10-28', ...model, purchaseOrderSaveStatus,
     ElMessageBox: { confirm },
+    ElMessage: { success(value) { messages.push(value) } },
     http: { async get(path) { if(path==='/pur/order-imports/capabilities')return {draftCreationEnabled:true};assert.equal(path, '/org/books'); return [{ id: 5, name: '未启用账套', baseCurrency: 'MXN', status: 'DRAFT' }, { id: 1, name: '账套', baseCurrency: 'MXN', status: 'ACTIVE' }, { id: 3, name: '另一账套', baseCurrency: 'MXN', status: 'ACTIVE' }] } },
     allRecords: async path => path === '/md/partners' ? [{ id: 2, name: '供应商', settleCurrency: 'USD', paymentTerms: '月结' }, { id: 4, name: '另一供应商', settleCurrency: 'MXN', paymentTerms: '现结' }] : [{ code: 'MXN', name: '墨西哥比索', status: 'ENABLED' }, { code: 'USD', name: '美元', status: 'ENABLED' }],
     purchaseImportApi: {
@@ -32,7 +33,7 @@ function workspace(confirm = async () => {}, dependencies = {}) {
     },
     ...dependencies,
   }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming'])
-  return { state, navigations, requests, removed, savedHeaders, country, user }
+  return { state, navigations, requests, removed, savedHeaders, country, user, messages }
 }
 
 async function render(state) {
@@ -55,6 +56,24 @@ test('主页面提供保存入口并直接展示已生成采购单号与读回�
   Object.assign(state.page.state,{batchId,rows:[row],groups:[{id:8,sourceOrderNo:'NY-051',createStatus:'CREATED',orderId:708,docNo:'PO-SAVE-8',verifyStatus:'VERIFIED',errors:[]}]})
   const html=await render(state)
   assert.match(html,/>保存<\/button>/);assert.match(html,/PO-SAVE-8/);assert.match(html,/读回核对一致/)
+})
+
+test('成功反馈以全局消息展示三秒并消费，不再渲染明细区成功绿条', async () => {
+  const { state, messages } = workspace()
+  state.state.success = '明细已保存'
+  await nextTick()
+  assert.deepEqual(messages, [{ message: '明细已保存', duration: 3000 }])
+  assert.equal(state.state.success, '')
+  assert.doesNotMatch(await render(state), /明细已保存/)
+})
+
+test('相同操作再次成功仍提示一次，保存失败不弹成功消息', async () => {
+  let fail = false
+  const { state, messages } = workspace(undefined, { purchaseImportApi: { async saveHeader(_id, value) { if (fail) throw new Error('保存失败'); return { batchId, header: { ...value }, rows: [{ ...row }] } } } })
+  await state.loadReferences(); Object.assign(state.state, { batchId, header: { ...header }, rows: [{ ...row }] })
+  await state.saveHeader(); await state.saveHeader(); fail = true; await state.saveHeader()
+  assert.deepEqual(messages.map(item => item.message), ['基础信息已保存', '基础信息已保存'])
+  assert.equal(state.state.error, '保存失败')
 })
 test('保存能力读取失败保留原因且不建单，重试成功后主按钮调用统一保存',async()=>{
   let unavailable=true,calls=0
@@ -115,12 +134,13 @@ test('已保存批次确认清空后移除地址参数并关闭预览和旧保�
 })
 
 test('清空移除批次地址导致工作区重新挂载时仍保持所有输入空白', async () => {
-  let mounted
-  const { state } = workspace(undefined, { useRouter: () => ({ async replace() { mounted = workspace().state; await mounted.loadReferences() } }), purchaseImportApi: {
+  let mounted, mountedMessages
+  const { state, messages } = workspace(undefined, { useRouter: () => ({ async replace() { const next = workspace(); mounted = next.state; mountedMessages = next.messages; await mounted.loadReferences() } }), purchaseImportApi: {
     async clearBatch(id, version, key) { return { cleared: true, batchId: id, version, requestKey: key, cleanupPending: false, pendingFiles: 0, counts: { rows: 1, sources: 1, images: 1, tasks: 1, groups: 0, progress: 1 } } },
   } })
   Object.assign(state.state, { batchId, version: 2, header: { ...header }, rows: [{ ...row }] }); state.route.query.batchId = batchId
   await state.clearAll()
+  assert.deepEqual(messages.map(item => item.message), ['当前导入数据和独占文件已清空']); assert.deepEqual(mountedMessages, [])
   assert.ok(mounted); assert.equal(mounted.state.header.orderDate, null); assert.equal(mounted.state.header.bookId, null); assert.equal(mounted.state.header.supplierId, null); assert.equal(mounted.state.header.currency, '')
   const fresh = workspace().state; await fresh.loadReferences(); assert.equal(fresh.state.header.orderDate, '2026-10-28'); assert.equal(fresh.state.header.bookId, 1)
 })
