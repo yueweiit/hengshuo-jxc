@@ -67,6 +67,24 @@ test('自动核对仅提交没有当前任务的行，失败行保留原任务�
   assert.equal(await page.startImageReview(),false);assert.equal(calls.length,1)
 })
 
+test('人工补规格保存后沿原自动入口重算候选，不预确认照片',async()=>{
+  const calls=[],next='33333333-2222-4333-8444-555555555555',run=scoredRun()
+  run.ranking.status='NEEDS_REVIEW';run.ranking.recommendedIds=[];run.ranking.scores[0].textScore=null
+  for(const field of run.ranking.scores[0].fields){field.source=null;field.score=null}
+  let saved={batchId,version:1,status:'REVIEW',header,groups:[],sources:[{id:7,fileName:'原表.xlsx',fileSha256:'a'.repeat(64),status:'READY'}],rows:[{...row,productSpec:null,sourceId:7,sourceItemKey:'B3',matchTaskId:batchId,matchResult:run,images:[{id:8,status:'UNCONFIRMED',sha256:'b'.repeat(64)}]}],tasks:[{id:batchId,kind:'MATCH',status:'SUCCEEDED'}]}
+  const page=await setup({async confirmReview(_id,body){calls.push('review');saved={...saved,version:2,rows:saved.rows.map(r=>({...r,version:2,productSpec:body.changes[0].values.productSpec}))};return structuredClone(saved)},async startMatches(_id,version,ids){calls.push('match');assert.equal(version,2);assert.deepEqual(ids,[1]);return {...saved,rows:saved.rows.map(r=>({...r,matchTaskId:next})),tasks:[...saved.tasks,{id:next,kind:'MATCH',status:'QUEUED'}],taskIds:[next]}}},saved)
+  const review=loadTsModule(new URL('../src/modules/purchase/purchaseImportReview.ts',import.meta.url)),question=review.reviewQuestions(page.state.rows,page.state.sources).find(q=>q.field==='productSpec')
+  assert.ok(question,page.state.error);assert.equal(await page.confirmReview(review.reviewProposal(batchId,1,question,{B:'S'})),true)
+  assert.deepEqual(calls,['review','match']);assert.equal(page.state.rows[0].images[0].status,'UNCONFIRMED')
+})
+
+test('确认照片归属后沿原自动入口重算当前行，保留最终商品未确认',async()=>{
+  const calls=[],next='33333333-2222-4333-8444-555555555555'
+  let saved={batchId,version:1,status:'REVIEW',header,rows:[{...row,sourceId:7,matchTaskId:batchId,matchResult:scoredRun(),images:[{id:8,status:'UNCONFIRMED',sha256:'b'.repeat(64)}]}],tasks:[{id:batchId,kind:'MATCH',status:'SUCCEEDED'}]}
+  const page=await setup({async associate(_id,r,imageId,association){calls.push('associate');assert.equal(imageId,8);saved={...saved,version:2,rows:[{...r,version:2,images:[{...r.images[0],status:association}]}]};return {...saved.rows[0],batchVersion:2}},async startMatches(_id,version,ids){calls.push('match');assert.equal(version,2);assert.deepEqual(ids,[1]);return {...saved,rows:saved.rows.map(r=>({...r,matchTaskId:next})),tasks:[...saved.tasks,{id:next,kind:'MATCH',status:'QUEUED'}],taskIds:[next]}}},saved)
+  assert.equal(await page.associate(page.state.rows[0],8,'CONFIRMED'),true);assert.deepEqual(calls,['associate','match']);assert.equal(page.state.rows[0].readiness,'UNRESOLVED')
+})
+
 test('自动核对请求失败保留已暂存行及明确错误，不显示导入失败',async()=>{
   const page=await setup({async upload(){return {batchId,version:1,status:'REVIEW',header,rows:[row]}},async startMatches(){throw new Error('核对服务不可用')}})
   assert.equal(await page.importFile(new File(['xlsx'],'采购.xlsx')),true)

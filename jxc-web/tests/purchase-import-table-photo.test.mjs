@@ -234,6 +234,25 @@ test('来源名称为空时显示已核对商品名和来源，编辑仍为空�
   }
 })
 
+test('当前唯一推荐可先显示AI待确认名称，保留空来源、图片归属和最终商品选择', async () => {
+  const page = setup(); await page.loadBatch(batchId)
+  Object.assign(page.state.rows[0], { suppliedProductName: null, decision: 'UNRESOLVED', matchedProductId: null, matchTaskId: batchId,
+    matchResult: { runId: batchId, inputRevision: 1, ranking: { status: 'RECOMMENDED', recommendedIds: [501] }, candidates: [{ productId: 501, product: { id: 501, name: '推荐商品甲' } }] } })
+  const before = JSON.stringify(page.state.rows[0]), html = await renderImportTable(page)
+  assert.match(html, /推荐商品甲/); assert.match(html, /AI推荐、待确认/)
+  assert.equal(JSON.stringify(page.state.rows[0]), before); assert.equal(page.grid.hasChanges(), false)
+  page.startEdit(page.state.rows[0], 'suppliedProductName'); assert.equal(page.state.edit.values.suppliedProductName, null)
+})
+
+test('过期、歧义、缺失与未达标推荐不显示为AI商品名', async () => {
+  const page = setup(); await page.loadBatch(batchId)
+  const current = { runId: batchId, inputRevision: 1, ranking: { status: 'RECOMMENDED', recommendedIds: [501] }, candidates: [{ productId: 501, product: { id: 501, name: '推荐商品甲' } }] }
+  for (const result of [{ ...current, inputRevision: 2 }, { ...current, runId: 'other' }, { ...current, ranking: { status: 'NEEDS_REVIEW', recommendedIds: [] } }, { ...current, ranking: { status: 'RECOMMENDED', recommendedIds: [501,502] } }, { ...current, candidates: [] }]) {
+    Object.assign(page.state.rows[0], { suppliedProductName: null, matchTaskId: batchId, matchResult: result })
+    assert.doesNotMatch(await renderImportTable(page), /推荐商品甲|AI推荐、待确认/)
+  }
+})
+
 test('来源名称优先，未确认、错绑与不完整快照不能冒充已核对商品名', async () => {
   const page = setup(); await page.loadBatch(batchId)
   const base = { suppliedProductName: null, matchedProductId: 501, decision: 'EXISTING', readiness: 'READY', productSnapshot: { id: 501, name: '库存商品甲' } }

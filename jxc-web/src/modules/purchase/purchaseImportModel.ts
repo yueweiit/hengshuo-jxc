@@ -257,9 +257,11 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     } catch (error) { failure(error); return false }
     const { batchId, ...input } = proposal, signature = JSON.stringify(proposal)
     if (!reviewKeys.has(signature)) reviewKeys.set(signature, newKey())
-    return write('saving', () => api.confirmReview!(batchId, input, reviewKeys.get(signature)!), response => {
+    const saved = await write('saving', () => api.confirmReview!(batchId, input, reviewKeys.get(signature)!), response => {
       applyBatch(readBatch(response), true); reviewKeys.delete(signature); state.success = proposal.interpretation ? `已保存原文含义确认${proposal.changes.length ? `并补充 ${proposal.changes.length} 条空白单号` : ''}，请继续核对剩余事项` : `已补充 ${proposal.changes.length} 条明细，请继续核对剩余事项`
     })
+    if (saved) await workflow.startImageReview()
+    return saved
   }
   async function loadBatch(id: string, preserveDraft = false) {
     if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，重新读取会覆盖编辑草稿')); return false }
@@ -425,12 +427,14 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   async function associate(row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED') {
     if (!api.associate || !state.batchId || busy() || state.edit) return false
-    return write('saving', () => api.associate!(state.batchId!, row, imageId, association), response => {
+    const saved = await write('saving', () => api.associate!(state.batchId!, row, imageId, association), response => {
       const saved = readRow(response)
       if (saved.id !== row.id || saved.version <= row.version) throw new Error('后端返回的图片确认版本无效')
       state.rows.splice(state.rows.findIndex(item => item.id === row.id), 1, saved)
       if (saved.batchVersion !== undefined) state.version = saved.batchVersion
     })
+    if (saved) await workflow.startImageReview()
+    return saved
   }
   const photoKeys = new Map<string, string>()
   async function publishPhotos(row: ImportRow, imageIds: number[]) {

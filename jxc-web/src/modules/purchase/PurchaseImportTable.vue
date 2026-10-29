@@ -3,7 +3,7 @@ import { nextTick, ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import type { InputInstance } from 'element-plus'
 import { importTableColumns, type ImportEditField, type ImportRow, type PurchaseImportModel } from './purchaseImportModel'
-import { confirmedProductName, formatImportDecimal } from './purchaseImportDisplay'
+import { importProductNameDisplay, formatImportDecimal } from './purchaseImportDisplay'
 import PurchaseImportPhoto from './PurchaseImportPhoto.vue'
 
 const props = defineProps<{ page: PurchaseImportModel; disabled: boolean }>()
@@ -53,7 +53,7 @@ function saveCell() { if (props.page.state.edit?.field != null) return props.pag
           :aria-label="`编辑第${row.rowNo}行${column.label}`"
           @click="begin(row, column.key)"
         >
-          <span v-if="column.key === 'suppliedProductName' && confirmedProductName(row)" title="来自已核对商品，原表名称未填写">{{ confirmedProductName(row) }}<small class="confirmed-name-source">已核对商品</small></span>
+          <span v-if="column.key === 'suppliedProductName' && importProductNameDisplay(row)" :title="importProductNameDisplay(row)?.title">{{ importProductNameDisplay(row)?.text }}<small class="product-name-source">{{ importProductNameDisplay(row)?.label }}</small></span>
           <span v-else :class="{ unverified: row[column.key] == null }">{{ column.numeric ? displayNumber(row[column.key]) : row[column.key] ?? '待核实' }}</span>
         </button>
       </template>
@@ -89,6 +89,6 @@ function saveCell() { if (props.page.state.edit?.field != null) return props.pag
 .import-cell:disabled { cursor: default; }
 .import-cell-number { text-align: right; font-variant-numeric: tabular-nums; }
 .unverified { color: var(--el-text-color-secondary); font-size: 12px; }
-.confirmed-name-source { display: block; color: var(--el-text-color-secondary); font-size: 11px; }
+.product-name-source { display: block; color: var(--el-text-color-secondary); font-size: 11px; }
 .import-row-actions { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 30px; .el-button { margin: 0; font-size: 17px; } }
 </style>

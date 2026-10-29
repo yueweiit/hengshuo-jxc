@@ -18,8 +18,8 @@
     UPDATE pur_order_import_task SET result=#{result}::jsonb,phase='IMAGE' WHERE country_id=#{countryId} AND id=#{id}
   </update>
 
-  <select id="selectConfirmedImages" resultType="java.util.LinkedHashMap" useCache="false">
-    SELECT i.id,i.image_sha256 FROM pur_order_import_row_image r JOIN pur_order_import_image i ON i.country_id=r.country_id AND i.id=r.image_id JOIN pur_order_import_source s ON s.country_id=i.country_id AND s.id=i.source_id WHERE r.country_id=#{countryId} AND r.row_id=#{rowId} AND s.batch_id=#{batchId} AND r.association_status='CONFIRMED' ORDER BY i.id
+  <select id="selectMatchingImages" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT i.id,i.image_sha256,r.association_status FROM pur_order_import_row_image r JOIN pur_order_import_image i ON i.country_id=r.country_id AND i.id=r.image_id JOIN pur_order_import_source s ON s.country_id=i.country_id AND s.id=i.source_id WHERE r.country_id=#{countryId} AND r.row_id=#{rowId} AND s.batch_id=#{batchId} AND r.association_status IN ('UNCONFIRMED','CONFIRMED') ORDER BY i.id
   </select>
 
   <update id="saveInput">

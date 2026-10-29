@@ -17,7 +17,7 @@ for(const width of [1280,390])test(`自动逐行核对与单一人工入口，${
     page.on('pageerror',error=>errors.push(error.message))
     const batchId='11111111-2222-4333-8444-555555555555',parseId='22222222-2222-4333-8444-555555555555',runIds=['33333333-2222-4333-8444-555555555555','44444444-2222-4333-8444-555555555555']
     const header={bookId:1,supplierId:2,currency:'USD',orderDate:'2026-10-29',expectedDate:null,paymentTerms:'',prepayRatio:null,termDays:null}
-    const rows=[1,2].map(id=>({id,version:1,rowNo:id,sourceId:8,sourceOrderNo:'隔离采购单',sourceSheet:'Sheet1',sourceRow:id+1,photo:null,productSpec:'S',purchaseQty:'1',purchaseUnitPrice:'2',saleUnitPrice:null,saleTotal:null,freight:null,landedUnitCost:null,usdUnitCost:null,usdTotal:null,readiness:'UNRESOLVED',images:[{id:10+id,status:'CONFIRMED',sha256:'a'.repeat(64)}]}))
+    const rows=[1,2].map(id=>({id,version:1,rowNo:id,sourceId:8,sourceOrderNo:'隔离采购单',sourceSheet:'Sheet1',sourceRow:id+1,photo:null,productSpec:'S',purchaseQty:'1',purchaseUnitPrice:'2',saleUnitPrice:null,saleTotal:null,freight:null,landedUnitCost:null,usdUnitCost:null,usdTotal:null,readiness:'UNRESOLVED',images:[{id:10+id,status:'UNCONFIRMED',sha256:'a'.repeat(64)}]}))
     let data={batchId,version:1,status:'PARSING',header,rows:[],sources:[{id:8,fileName:'隔离采购.xlsx',fileSha256:'b'.repeat(64),status:'READY'}],tasks:[{id:parseId,kind:'PARSE',sourceId:8,fileName:'隔离采购.xlsx',status:'RUNNING'}],groups:[]},matchRequests=0,decisions=0
     await page.route('**/api/v1/**',async route=>{
       const request=route.request(),path=new URL(request.url()).pathname.slice('/api/v1'.length),method=request.method(),ok=value=>route.fulfill({json:{code:'OK',data:value}})
@@ -50,6 +50,13 @@ for(const width of [1280,390])test(`自动逐行核对与单一人工入口，${
     await expect(page.locator('.workflow-actions button')).toHaveCount(2)
     data.tasks=data.tasks.map(task=>({...task,status:'SUCCEEDED'}));data.rows=data.rows.map((row,index)=>({...row,matchResult:{format:'MatchRunV1',runId:runIds[index],inputRevision:1,status:'OK',text:{status:'FOUND',reason:'隔离文字候选'},image:{status:'FOUND',reason:'隔离图片候选'},candidates:[{productId:501,product:{id:501,productCode:'TEST-501',name:'隔离候选商品',spec:'S',units:[{unit:'件'}]},visualScore:0.91,textEvidence:[],visualEvidence:[{queryAssetId:row.images[0].id,imageId:701,featureId:801,score:0.91}],conflicts:[]}],ranking:{format:'CandidateRankingV1',policyVersion:'photo-first-text-40-40-20-v1',completePhotoGroup:true,status:'RECOMMENDED',reason:'达到推荐门槛',photoThreshold:0.8,textThreshold:0.8,weights:{productCode:40,spec:40,name:20},highestPhotoIds:[501],recommendedIds:[501],scores:[{productId:501,photoScore:0.91,textScore:1,reason:'达到推荐门槛',fields:[{field:'productCode',label:'商品编号',weight:40,source:null,target:'TEST-501',score:null},{field:'spec',label:'规格',weight:40,source:'S',target:'S',score:1},{field:'name',label:'商品名',weight:20,source:null,target:'隔离候选商品',score:null}]}]},explanation:{status:'NOT_REQUESTED',message:'未调用真实算法'}}}))
     await expect(page.getByRole('region',{name:'采购明细',exact:true}).locator('.import-progress')).toContainText('AI已处理 2 / 2 行')
+    await expect(page.getByRole('button',{name:'编辑第1行商品名',exact:true})).toContainText('隔离候选商品')
+    await expect(page.getByRole('button',{name:'编辑第1行商品名',exact:true})).toContainText('AI推荐、待确认')
+    assert.equal(data.rows[0].suppliedProductName,undefined);assert.equal(data.rows[0].matchedProductId,undefined);assert.equal(data.rows[0].images[0].status,'UNCONFIRMED');assert.equal(decisions,0)
+    await page.getByRole('button',{name:'切换到粘贴模板视图',exact:true}).click()
+    await expect(page.locator('revo-grid').getByText('隔离候选商品',{exact:true}).first()).toBeVisible()
+    await expect(page.locator('revo-grid').getByText('AI推荐、待确认',{exact:true}).first()).toBeVisible()
+    await page.getByRole('button',{name:'完成编辑',exact:true}).click()
     // 暂存保留页面表头草稿；人工确认商品仍遵守原有“先保存基础信息”约束。
     await page.getByRole('combobox',{name:'币种',exact:true}).click();await page.getByRole('option',{name:'USD · 美元',exact:true}).click()
     const saveHeader=page.getByRole('button',{name:'保存基础信息',exact:true})

@@ -26,6 +26,22 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @SuppressWarnings("unchecked") Map<String,Object> matched(Map<String,Object>b){return (Map<String,Object>)rows(imports.get(actor,id(b))).getFirst().get("matchResult");}
     Map<String,Object> photoBatch(boolean published){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:edit\"]'::jsonb WHERE id=801");var b=upload(UUID.randomUUID().toString());doReturn(photoDocument()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));long image=owner.queryForObject("SELECT id FROM pur_order_import_image",Long.class);imports.associate(actor,id(b),rowId(b),image,Map.of("version",1,"association","CONFIRMED"));if(published){review.decide(actor,id(b),rowId(b),Map.of("version",2,"decision","EXISTING","productId",501,"unit","PCS"));var result=photos.publish(actor,id(b),rowId(b),Map.of("version",3,"confirmOwnership",true,"imageIds",List.of(image)),UUID.randomUUID().toString());doReturn(vector()).when(parser).embed(any(),anyString(),anyLong(),anyString());doAnswer(call->indexResult(call.getArgument(2))).when(parser).index(any(),anyString(),anyMap());tasks.execute(101,UUID.fromString(((List<?>)result.get("taskIds")).getFirst().toString()));}return imports.get(actor,id(b));}
     @SuppressWarnings("unchecked") Map<String,Object> map(Object value){return (Map<String,Object>)value;}
+    @Test void freshUnconfirmedPhotoCanRecommendBeforeOwnershipAndConfirmingReusesButRejectingDiscardsCache(){
+        owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=501");
+        photoBatch(true); // Existing formal gallery belongs to the catalog, independently of this fresh source.
+        var b=upload(UUID.randomUUID().toString());doReturn(photoDocument()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));
+        var row=rows(imports.get(actor,id(b))).getFirst();long image=((Number)map(((List<?>)row.get("images")).getFirst()).get("id")).longValue();
+        assertThat(map(((List<?>)row.get("images")).getFirst())).containsEntry("status","UNCONFIRMED");
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",1.0)))).when(parser).search(any(),anyString(),anyMap());
+        tasks.execute(101,start(b));assertThat(map(matched(b).get("image"))).containsEntry("status","FOUND");assertThat(map(matched(b).get("ranking"))).containsEntry("recommendedIds",List.of(501));
+        row=rows(imports.get(actor,id(b))).getFirst();assertThat(row).containsEntry("decision","UNRESOLVED").containsEntry("matchedProductId",null).containsEntry("suppliedProductName",null);
+        assertThat(map(((List<?>)row.get("images")).getFirst())).containsEntry("status","UNCONFIRMED");
+        imports.associate(actor,id(b),rowId(b),image,Map.of("version",row.get("version"),"association","CONFIRMED"));clearInvocations(parser);tasks.execute(101,start(b));
+        assertThat(matched(b)).containsEntry("cacheReused",true);verify(parser,never()).search(any(),anyString(),anyMap());verify(parser,never()).recognize(any(),anyString(),anyMap());
+        row=rows(imports.get(actor,id(b))).getFirst();imports.associate(actor,id(b),rowId(b),image,Map.of("version",row.get("version"),"association","REJECTED"));tasks.execute(101,start(b));
+        assertThat(map(matched(b).get("image"))).containsEntry("status","NO_INPUT");assertThat(matched(b).get("candidates")).asList().isEmpty();
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+    }
     @Test void weightedRankingRejectsTheWrongSizeButRetainsItsCachedEvidenceOnReload(){
         var b=photoBatch(true);owner.update("UPDATE md_product SET spec='M',version=version+1 WHERE id=501");
         long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);

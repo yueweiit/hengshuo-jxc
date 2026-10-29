@@ -9,7 +9,7 @@ public interface PurchaseImportMatchMapper {
     int assignMatchTask(@Param("matchTaskId") Object matchTaskId, @Param("countryId") Object countryId, @Param("id") Object id);
     int insertTask(@Param("id") Object id, @Param("countryId") Object countryId, @Param("batchId") Object batchId, @Param("sourceId") Object sourceId, @Param("kind") Object kind, @Param("inputRevision") Object inputRevision, @Param("inputHash") Object inputHash, @Param("requestedBy") Object requestedBy, @Param("authorizationBasis") Object authorizationBasis, @Param("inputData") Object inputData, @Param("result") Object result);
     int saveTextResult(@Param("result") Object result, @Param("countryId") Object countryId, @Param("id") Object id);
-    List<Map<String,Object>> selectConfirmedImages(@Param("countryId") Object countryId, @Param("rowId") Object rowId, @Param("batchId") Object batchId);
+    List<Map<String,Object>> selectMatchingImages(@Param("countryId") Object countryId, @Param("rowId") Object rowId, @Param("batchId") Object batchId);
     int saveInput(@Param("inputData") Object inputData, @Param("countryId") Object countryId, @Param("id") Object id);
     int saveEvidence(@Param("result") Object result, @Param("countryId") Object countryId, @Param("id") Object id);
     int markInputStale(@Param("errorMessage") Object errorMessage, @Param("countryId") Object countryId, @Param("id") Object id);
