@@ -15,6 +15,25 @@ class ProductImageIT extends PurchaseImportFixture {
     @Autowired PurchaseImportPhotoServiceImpl photos;
     @Autowired ProductImageApi images;
     @Autowired PurchaseImportProductServiceImpl review;
+    @Test void galleryManifestUsesPlainIntegerCanonicalJsonAtTenPhotos() {
+        var b=confirmedPhoto();var queued=publish(b,UUID.randomUUID().toString());
+        doReturn(vector()).when(parser).embed(any(),anyString(),anyLong(),anyString());
+        doAnswer(call->indexResult(call.getArgument(2))).when(parser).index(any(),anyString(),anyMap());
+        tasks.execute(101,UUID.fromString(((List<?>)queued.get("taskIds")).getFirst().toString()));
+        long attachment=owner.queryForObject("SELECT attachment_id FROM md_product_image WHERE product_id=501",Long.class);
+        for(int n=1;n<10;n++) {
+            long product=21000+n;
+            owner.update("INSERT INTO md_product(id,product_code,name,base_unit) VALUES(?,?,?,'PCS')",product,"HASH-"+n,"Manifest fixture "+n);
+            owner.update("INSERT INTO md_country_sku(country_id,product_id,status) VALUES(101,?,'ENABLED')",product);
+            images.link(actor,product,attachment);
+        }
+        var input=images.galleryInput(actor);String generation=UUID.randomUUID().toString().replace("-","");
+        input.put("generation",generation);images.beginGeneration(actor,generation,input);
+        var manifest=images.publishIndex(actor,generation,input,indexResult(input),()->{});
+        String protocol="{\"basisHash\":\"%s\",\"countryId\":101,\"coverage\":{\"eligiblePhotos\":10,\"features\":1,\"photos\":10,\"readyPhotos\":10},\"dimension\":384,\"featureIds\":[%s],\"format\":\"GalleryManifestV1\",\"generation\":\"%s\",\"indexSha256\":\"%s\",\"modelName\":\"%s\",\"modelVersion\":\"%s\",\"preprocessVersion\":\"%s\"}"
+            .formatted(manifest.get("basisHash"),((List<?>)manifest.get("featureIds")).getFirst(),generation,manifest.get("indexSha256"),ProductImageApi.MODEL,ProductImageApi.MODEL_VERSION,ProductImageApi.PREPROCESS);
+        assertThat(manifest.get("manifestSha256")).isEqualTo(Digests.sha256(protocol));
+    }
     @BeforeEach void imagePermissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\",\"md:product:edit\"]'::jsonb WHERE id=801");}
     Map<String,Object> withPhoto(){return withPhoto(photoDocument());}
     Map<String,Object> withPhoto(Map<String,Object> doc){
