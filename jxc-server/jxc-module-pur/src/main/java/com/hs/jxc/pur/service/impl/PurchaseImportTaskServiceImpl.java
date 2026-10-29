@@ -33,6 +33,7 @@ public class PurchaseImportTaskServiceImpl implements PurchaseImportTaskService 
         gates(country);var found=mapper.selectClaimableTask(country,id);if(found.isEmpty())return null;
         // 领取、完成、编辑和重试统一先锁批次，再锁任务，避免恢复竞争时逆序锁定。
         mapper.lockBatch(country,found.getFirst().get("batch_id"));
+        if(imports.mapper.countPendingClear(country,(UUID)found.getFirst().get("batch_id"))>0)return null;
         found=mapper.selectClaimableTaskForUpdate(country,id);if(found.isEmpty())return null;var task=found.getFirst();var ctx=actor(task);Access a;
         try{a=imports.access(ctx,true);imports.batch(a,(UUID)task.get("batch_id"),false);}catch(ApiException e){mapper.markNeedsReauth(e.getCode(),"请求者授权已失效，请重新登录后重试",country,id);return null;}
         UUID batch=(UUID)task.get("batch_id");var b=imports.batch(a,batch,true);if("PARSE".equals(task.get("kind"))&&number(b,"version")!=number(task,"input_revision")){mapper.markStale(country,id);return null;}

@@ -61,11 +61,26 @@ abstract class PurchaseImportFixture extends BasePgIT {
         doReturn(document()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());
         tasks.execute(101,task(b));
     }
+    Map<String,Object> parsedRows(int count){
+        var b=upload(UUID.randomUUID().toString());var doc=document();var source=new ArrayList<Map<String,Object>>();
+        for(int index=0;index<count;index++){var entry=new LinkedHashMap<>(((List<Map<String,Object>>)doc.get("rows")).getFirst());entry.put("sourceRow",index+2);source.add(entry);}
+        doc.put("rows",source);doReturn(doc).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));return imports.get(actor,id(b));
+    }
     Map<String,Object> vector(){byte[] bytes=new byte[384*4];java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN).putFloat(1);return Map.of("modelName",com.hs.jxc.md.api.ProductImageApi.MODEL,"modelVersion",com.hs.jxc.md.api.ProductImageApi.MODEL_VERSION,"preprocessVersion",com.hs.jxc.md.api.ProductImageApi.PREPROCESS,"dimension",384,"data",Base64.getEncoder().encodeToString(bytes));}
     Map<String,Object> indexResult(Map<String,Object> input){byte[] bytes="faiss-protocol-fixture".getBytes(java.nio.charset.StandardCharsets.UTF_8);var result=new LinkedHashMap<String,Object>();for(String field:List.of("countryId","generation","modelName","modelVersion","preprocessVersion","dimension","featureIds"))result.put(field,input.get(field));result.put("indexBase64",Base64.getEncoder().encodeToString(bytes));result.put("indexSha256",com.hs.jxc.attachment.AttachmentObjectStore.sha256(bytes));return result;}
     org.testcontainers.containers.GenericContainer<?> featureContainer(String image,boolean drafts){return new org.testcontainers.containers.GenericContainer<>(org.testcontainers.utility.DockerImageName.parse(image))
         .withEnv("JXC_DB_URL","jdbc:postgresql://host.docker.internal:"+PgDatabase.PG.getMappedPort(5432)+"/"+PgDatabase.PG.getDatabaseName()).withEnv("JXC_DB_USER","jxc_app").withEnv("JXC_DB_PASSWORD",PgDatabase.PASSWORD).withEnv("JXC_BIND_ADDRESS","0.0.0.0").withEnv("JXC_STORAGE_ENDPOINT","http://host.docker.internal:"+MinioTestStorage.MINIO.getMappedPort(9000)).withEnv("JXC_STORAGE_ACCESS_KEY",MinioTestStorage.ACCESS).withEnv("JXC_STORAGE_SECRET_KEY",MinioTestStorage.SECRET).withEnv("JXC_STORAGE_BUCKET",MinioTestStorage.BUCKET).withEnv("JXC_PURCHASE_IMPORT_WORKER_ENABLED","true").withEnv("JXC_PURCHASE_IMPORT_DRAFT_CREATION_ENABLED",String.valueOf(drafts))
         .withExposedPorts(8080).withCreateContainerCmdModifier(c->c.withEntrypoint("java")).withCommand("-Xmx384m","-Dfile.encoding=UTF-8","-jar","/app/app.jar","--spring.flyway.enabled=false","--jxc.jobs.enabled=false").waitingFor(org.testcontainers.containers.wait.strategy.Wait.forHttp("/actuator/health").forPort(8080).withStartupTimeout(java.time.Duration.ofSeconds(90)));}
+
+    java.net.http.HttpResponse<String> httpUpload(String base)throws Exception{return httpUpload(base,null);}
+    java.net.http.HttpResponse<String> httpUpload(String base,UUID batch)throws Exception {
+        String boundary="purchase-source-boundary";
+        String prefix="--"+boundary+"\r\nContent-Disposition: form-data; name=\"header\"\r\n\r\n"+codec.write(header())+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"purchase.xlsx\"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n";
+        var body=java.net.http.HttpRequest.BodyPublishers.concat(java.net.http.HttpRequest.BodyPublishers.ofString(prefix),java.net.http.HttpRequest.BodyPublishers.ofByteArray(file),java.net.http.HttpRequest.BodyPublishers.ofString("\r\n--"+boundary+"--\r\n"));
+        var http=java.net.http.HttpClient.newHttpClient();
+        var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/v1/pur/order-imports"+(batch==null?"":"?batchId="+batch))).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Idempotency-Key",UUID.randomUUID().toString()).header("Content-Type","multipart/form-data; boundary="+boundary).POST(body).build();
+        return http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
 
     record Gateway(org.testcontainers.containers.Network network,org.testcontainers.containers.GenericContainer<?> app,org.testcontainers.containers.GenericContainer<?> web) implements AutoCloseable {
         String base(){return "https://"+web.getHost()+":"+web.getMappedPort(8443);}

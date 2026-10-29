@@ -18,6 +18,24 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /** 仅替换外部解析网络；授权、租约、MinIO、迁移和全部CRUD使用真实实现。 */
 class PurchaseImportSourceIT extends PurchaseImportFixture {
+    long sourceObjectCount()throws Exception {
+        try(var storage=MinioTestStorage.client()){
+            long count=0;for(var item:storage.listObjects(io.minio.ListObjectsArgs.builder().bucket(MinioTestStorage.BUCKET).prefix("country/101/purchase-import/").recursive(true).build())){item.get();count++;}return count;
+        }
+    }
+    @Test void secondExcelIsRejectedWithinTheSameBatchIncludingConcurrentUploads()throws Exception {
+        long before=sourceObjectCount();
+        var b=upload(UUID.randomUUID().toString());
+        assertThatThrownBy(()->imports.upload(actor,"第二份.xlsx",file,header(),id(b),UUID.randomUUID().toString()))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("PUR_IMPORT_SINGLE_FILE");
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source WHERE batch_id=?",Integer.class,id(b))).isEqualTo(1);
+        owner.update("DELETE FROM pur_order_import_task WHERE batch_id=?",id(b));
+        owner.update("UPDATE pur_order_import_source SET parse_options='{\"origin\":\"MANUAL_UPLOAD\"}' WHERE batch_id=?",id(b));
+        assertThat(compete(()->imports.upload(actor,"A.xlsx",file,header(),id(b),UUID.randomUUID().toString()),
+            ()->imports.upload(actor,"B.xlsx",file,header(),id(b),UUID.randomUUID().toString()))).isEqualTo(1);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source WHERE batch_id=? AND coalesce(parse_options->>'origin','XLSX')='XLSX'",Integer.class,id(b))).isEqualTo(1);
+        assertThat(sourceObjectCount()-before).as("被拒绝的上传不遗留无引用原文件").isEqualTo(2);
+    }
     @Test void uploadIsDurableAndOnlySuccessfulParsingProducesRowsWithoutBusinessWrites(){
         var b=upload(UUID.randomUUID().toString());assertThat(rows(b)).isEmpty();assertThat(b.get("status")).isEqualTo("PARSING");parse(b);
         var saved=imports.get(actor,id(b));assertThat(rows(saved)).hasSize(1);assertThat(rows(saved).getFirst()).containsEntry("purchaseUnitPrice","53.1234567890").containsEntry("sourceRow",2);
@@ -79,16 +97,10 @@ class PurchaseImportSourceIT extends PurchaseImportFixture {
         byte[] large=new byte[2*1024*1024];Arrays.fill(large,(byte)'x');var b=imports.upload(actor,"large.xlsx",large,header(),null,UUID.randomUUID().toString());long source=owner.queryForObject("SELECT source_id FROM pur_order_import_task WHERE id=?",Long.class,task(b));assertThat(imports.content(actor,id(b),source,false).bytes()).containsExactly(large);
         owner.update("DELETE FROM sys_user_data_scope WHERE user_id=201");assertThatThrownBy(()->imports.get(actor,id(b))).isInstanceOf(ApiException.class).extracting("status").isEqualTo(404);assertThatThrownBy(()->imports.content(actor,id(b),source,false)).isInstanceOf(ApiException.class).extracting("status").isEqualTo(404);
     }
-    @Test void appendingUsesCurrentHeaderAndAllocatesStableRowsWithoutDuplicateParsing(){
-        var b=upload(UUID.randomUUID().toString());parse(b);owner.update("UPDATE pur_order_import_batch SET header=jsonb_set(header,'{prepayRatio}','\"0.000000\"') WHERE batch_id=?",id(b));var appended=imports.upload(actor,"another.xlsx",file,header(),id(b),UUID.randomUUID().toString());parse(appended);tasks.execute(101,task(appended));var saved=imports.get(actor,id(b));assertThat(rows(saved)).extracting(r->r.get("rowNo")).containsExactly(1,2);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source",Integer.class)).isEqualTo(2);
-    }
-    java.net.http.HttpResponse<String> httpUpload(String base)throws Exception {
-        String boundary="purchase-source-boundary";
-        String prefix="--"+boundary+"\r\nContent-Disposition: form-data; name=\"header\"\r\n\r\n"+codec.write(header())+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"purchase.xlsx\"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n";
-        var body=java.net.http.HttpRequest.BodyPublishers.concat(java.net.http.HttpRequest.BodyPublishers.ofString(prefix),java.net.http.HttpRequest.BodyPublishers.ofByteArray(file),java.net.http.HttpRequest.BodyPublishers.ofString("\r\n--"+boundary+"--\r\n"));
-        var http=java.net.http.HttpClient.newHttpClient();
-        var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/v1/pur/order-imports")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Idempotency-Key",UUID.randomUUID().toString()).header("Content-Type","multipart/form-data; boundary="+boundary).POST(body).build();
-        return http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString());
+    @Test void replayingOriginalUploadUsesExistingSourceWithoutDuplicateParsing(){
+        String key=UUID.randomUUID().toString();var b=upload(key);parse(b);owner.update("UPDATE pur_order_import_batch SET header=jsonb_set(header,'{prepayRatio}','\"0.000000\"') WHERE batch_id=?",id(b));
+        var replay=upload(key);tasks.execute(101,task(b));assertThat(replay.get("batchId")).isEqualTo(b.get("batchId"));
+        assertThat(rows(imports.get(actor,id(b)))).extracting(row->row.get("rowNo")).containsExactly(1);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source",Integer.class)).isEqualTo(1);
     }
     @Test void realHttpUploadIsAcceptedAsTaskAndOtherInternalRoutesRemainProtected()throws Exception {
         String base="http://localhost:"+port;var http=java.net.http.HttpClient.newHttpClient();var response=httpUpload(base);assertThat(response.statusCode()).as(response.body()).isEqualTo(202);assertThat(codec.readMap(response.body()).get("code")).isEqualTo("OK");

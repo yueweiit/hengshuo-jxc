@@ -2,9 +2,10 @@ import { nextTick, reactive, watch, type WatchStopHandle } from 'vue'
 import type { PurchaseImportModel } from './purchaseImportModel'
 
 type Snapshot = ReturnType<PurchaseImportModel['exportLocalDraft']>
+type StoredDraft = Snapshot | { cleanupJobs: Snapshot['cleanupJobs'] }
 export interface PurchaseImportDraftStore {
   read(key: string): Promise<unknown>
-  write(key: string, value: Snapshot): Promise<void>
+  write(key: string, value: StoredDraft): Promise<void>
 }
 
 /** 同一站点下以稳定账号、国家及入口批次隔离；不把登录令牌落盘。 */
@@ -24,7 +25,7 @@ export function createPurchaseImportDraftStore(factory: IDBFactory | undefined =
       request.onsuccess = () => { if (blocked) request.result.close(); else resolve(request.result) }
     })
   }
-  async function run(key: string, mode: IDBTransactionMode, value?: Snapshot) {
+  async function run(key: string, mode: IDBTransactionMode, value?: StoredDraft) {
     const db = await database()
     return new Promise<unknown>((resolve, reject) => {
       let result: unknown
@@ -45,17 +46,26 @@ export function createPurchaseImportDraftSession(page: PurchaseImportModel, stor
   const view = reactive({ ready: false, saving: false, saved: false, error: '' })
   let key: string | null = null, epoch = 0, revision = 0, stopWatch: WatchStopHandle | undefined
   let queue: Promise<boolean> = Promise.resolve(true)
-  function enqueue(snapshot: Snapshot) {
-    if (!key) return Promise.resolve(false)
-    const target = key, context = epoch, writeRevision = ++revision
+  function related(target: string) {
+    // 自定义内存存储允许简单入口名；正式入口始终是账号、国家、批次组成的JSON键。
+    if (!target.startsWith('[')) return { blank: target, cleanup: null }
+    const parts: unknown = JSON.parse(target)
+    if (!Array.isArray(parts) || parts.length !== 4 || parts[0] !== 'purchase-import-v1') throw new Error('本地草稿入口格式不正确')
+    return { blank: purchaseImportDraftKey(parts[1], parts[2], null), cleanup: JSON.stringify(['purchase-import-cleanup-v1', parts[1], parts[2]]) }
+  }
+  function enqueue(snapshot: Snapshot, destination = key) {
+    if (!destination) return Promise.resolve(false)
+    const target = destination, context = epoch, writeRevision = ++revision
     view.saving = true; view.saved = false
     queue = queue.then(async () => {
       try {
         await store.write(target, snapshot)
+        const recoveryKey = related(target).cleanup
+        if (recoveryKey) await store.write(recoveryKey, { cleanupJobs: snapshot.cleanupJobs })
         if (context === epoch && writeRevision === revision) { view.error = ''; view.saved = true }
         return true
       } catch (error) {
-        if (context === epoch && writeRevision === revision) view.error = `草稿保存失败：${error instanceof Error ? error.message : '本地存储写入失败'}；当前内容仍在页面中，请重试保存`
+        if (context === epoch && writeRevision === revision) view.error = `本地记录保存失败：${error instanceof Error ? error.message : '本地存储写入失败'}；请重试保存，刷新前可能无法恢复最新操作`
         return false
       } finally { if (context === epoch && writeRevision === revision) view.saving = false }
     })
@@ -75,6 +85,15 @@ export function createPurchaseImportDraftSession(page: PurchaseImportModel, stor
       const stored = await store.read(nextKey)
       if (context !== epoch) return false
       if (stored !== undefined) page.restoreLocalDraft(stored)
+      const recoveryKey = related(nextKey).cleanup
+      if (recoveryKey) {
+        const recovery = await store.read(recoveryKey)
+        if (context !== epoch) return false
+        if (recovery !== undefined) {
+          if (!recovery || typeof recovery !== 'object' || !('cleanupJobs' in recovery)) throw new Error('本地清理恢复记录不完整')
+          page.restoreCleanupJobs(recovery.cleanupJobs)
+        }
+      }
       view.ready = true; view.saved = stored !== undefined
       stopWatch = watch(() => page.exportLocalDraft(), snapshot => { void enqueue(snapshot) }, { deep: true, flush: 'post' })
       return stored !== undefined
@@ -88,7 +107,15 @@ export function createPurchaseImportDraftSession(page: PurchaseImportModel, stor
     await nextTick()
     return enqueue(page.exportLocalDraft())
   }
+  async function flushCleared() {
+    if (!view.ready || !key) return false
+    await nextTick()
+    const snapshot = page.exportLocalDraft(), blank = related(key).blank
+    if (!await enqueue(snapshot)) return false
+    return blank === key || await enqueue(snapshot, blank)
+  }
   function stop() { pause(); ++epoch; key = null }
   page.grid.setCheckpoint(flush)
-  return { view, open, flush, pause, stop }
+  page.setCleanupCheckpoint(flush)
+  return { view, open, flush, flushCleared, pause, stop }
 }

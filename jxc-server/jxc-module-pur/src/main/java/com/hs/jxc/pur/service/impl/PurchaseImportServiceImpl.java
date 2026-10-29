@@ -26,8 +26,8 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
     static final List<String> FIELDS=List.of("sourceOrderNo","photo","productSpec","purchaseQty","saleUnitPrice","saleTotal","purchaseUnitPrice","freight","landedUnitCost","usdUnitCost","usdTotal");
     static final List<String> COLUMNS=List.of("source_order_no","photo","product_spec","purchase_qty","sale_unit_price","sale_total","purchase_unit_price","freight","landed_unit_cost","usd_unit_cost","usd_total");
     final PurchaseImportMapper mapper;final PurchaseImportTaskMapper sourceMapper;final PurchaseImportTraceMapper traceMapper;final JsonCodec json;final AuthorizationService auth;final TransactionTemplate tx;
-    private final AttachmentAssetService assets;private final IdempotencyExecutor commands;private final AuditWriter audit;
-    public PurchaseImportServiceImpl(PurchaseImportMapper mapper,JsonCodec json,AuthorizationService auth,AttachmentAssetService assets,IdempotencyExecutor commands,AuditWriter audit,PlatformTransactionManager tm,PurchaseImportTraceMapper traceMapper,PurchaseImportTaskMapper sourceMapper){this.mapper=mapper;this.sourceMapper=sourceMapper;this.traceMapper=traceMapper;this.json=json;this.auth=auth;this.assets=assets;this.commands=commands;this.audit=audit;tx=new TransactionTemplate(tm);}
+    private final AttachmentAssetService assets;private final AttachmentObjectStore objects;private final IdempotencyExecutor commands;private final AuditWriter audit;
+    public PurchaseImportServiceImpl(PurchaseImportMapper mapper,JsonCodec json,AuthorizationService auth,AttachmentAssetService assets,IdempotencyExecutor commands,AuditWriter audit,PlatformTransactionManager tm,PurchaseImportTraceMapper traceMapper,PurchaseImportTaskMapper sourceMapper,AttachmentObjectStore objects){this.objects=objects;this.mapper=mapper;this.sourceMapper=sourceMapper;this.traceMapper=traceMapper;this.json=json;this.auth=auth;this.assets=assets;this.commands=commands;this.audit=audit;tx=new TransactionTemplate(tm);}
     Access access(RequestContext ctx,boolean write){
         Access a=auth.authorize(ctx);a.requireCountry();a.require("pur:order:create");
         for(String group:List.of("COST","CUSTOMER_PRICE","ORDER_TOTAL"))if(FieldPolicyService.rank(a.fieldGroups().get(group))<(write?2:1))throw ApiException.forbidden();
@@ -42,8 +42,10 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
         if(number(b,"created_by")!=a.userId())throw ApiException.notFound();
         requireHeaderAccess(a,map(b.get("header")));
         for(var group:mapper.selectGroupHeaders(a.requireCountry(),batch))requireHeaderAccess(a,map(group.get("effective_header")));
+        if(lock && mapper.countPendingClear(a.requireCountry(),batch)>0)throw new ApiException(409,"PUR_IMPORT_CLEAR_PENDING","本批次已确认清空，不能继续写入");
         return b;
     }
+    private void requireSingleFile(Access a,UUID id){if(mapper.selectSources(a.requireCountry(),id).stream().anyMatch(source->!"MANUAL_UPLOAD".equals(source.get("origin"))))throw new ApiException(409,"PUR_IMPORT_SINGLE_FILE","本次已导入一个文件，请先清空页面再开始下一次导入");}
     Long bookId(Map<String,Object> header){Object value=header.get("bookId");return value==null?null:Inputs.id(value);}
     void requireHeaderAccess(Access a,Map<String,Object> header){Long book=bookId(header);if(book!=null&&!a.canBook(book))throw ApiException.notFound();}
     /** 暂存只规范已提供值；缺失业务信息保持未知，实际选项在业务保存时核验。 */
@@ -84,22 +86,29 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
     private Map<String,Object> upload(RequestContext ctx,String name,byte[] bytes,Map<String,Object> input,UUID existing,String key,Map<String,Object> options){
         if(!workerEnabled)throw new ApiException(503,"PARSER_DISABLED","采购解析后台尚未启用，文件未导入；请联系管理员完成受限桥接配置");
         if(name==null||!name.toLowerCase(Locale.ROOT).endsWith(".xlsx"))throw Inputs.bad("请上传.xlsx采购模板");
-        var h=tx.execute(s->{Access a=access(ctx,true);if(existing!=null){var current=map(batch(a,existing,false).get("header"));if(!input.isEmpty()&&!sameHeader(current,stagingHeader(input)))throw Inputs.conflict();return current;}return stagingHeader(input);});
+        var h=tx.execute(s->{Access a=access(ctx,true);if(existing!=null){var current=map(batch(a,existing,false).get("header"));if(mapper.countUploadReceipt(a.requireCountry(),a.userId(),key)==0)requireSingleFile(a,existing);if(!input.isEmpty()&&!sameHeader(current,stagingHeader(input)))throw Inputs.conflict();return current;}return stagingHeader(input);});
         var prepared=assets.prepare(ctx,AttachmentAssetService.Policy.PURCHASE_SOURCE,name,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",bytes);
-        return tx.execute(s->{Access a=access(ctx,true);var checked=stagingHeader(h);requireHeaderAccess(a,checked);var intent=new LinkedHashMap<String,Object>();if(!input.isEmpty())intent.put("header",checked);intent.put("fileSha256",prepared.sha256());intent.put("fileName",name);intent.put("batchId",existing==null?null:existing.toString());
+        RuntimeException uploadFailure=null;
+        try{return tx.execute(s->{Access a=access(ctx,true);mapper.lockPreparedAsset(prepared.key());var checked=stagingHeader(h);requireHeaderAccess(a,checked);var intent=new LinkedHashMap<String,Object>();if(!input.isEmpty())intent.put("header",checked);intent.put("fileSha256",prepared.sha256());intent.put("fileName",name);intent.put("batchId",existing==null?null:existing.toString());
             if(!options.isEmpty())intent.put("parseOptions",options);
             return commands.execute(ctx,"POST",BASE,key,intent,input.isEmpty()?null:bookId(h),()->{
                 if(options.containsKey("correctedFrom")){var origin=map(options.get("correctedFrom"));var original=batch(a,UUID.fromString(origin.get("batchId").toString()),true);if(number(original,"version")!=Inputs.id(origin.get("batchVersion")))throw Inputs.conflict();}
                 UUID id=existing==null?UUID.randomUUID():existing;
                 if(existing==null)mapper.insertBatch(a.requireCountry(),id,json.write(checked),a.userId());
-                var b=batch(a,id,true);if(existing!=null&&!sameHeader(map(b.get("header")),checked))throw Inputs.conflict();
+                var b=batch(a,id,true);if(existing!=null){if(!sameHeader(map(b.get("header")),checked))throw Inputs.conflict();requireSingleFile(a,id);}
                 long asset=assets.register(ctx,prepared);long source=PurchaseRows.one(mapper.insertSource(a.requireCountry(),id,asset,name,prepared.sha256()));
                 if(!options.isEmpty()&&mapper.setSourceParseOptions(json.write(options),a.requireCountry(),source)!=1)throw Inputs.conflict();
                 UUID task=UUID.randomUUID();mapper.insertParseTask(task,a.requireCountry(),id,source,number(b,"version"),prepared.sha256(),a.userId(),json.write(Map.of("userId",a.userId(),"tokenHash",ctx.tokenHash())));
                 mapper.markBatchParsing(a.requireCountry(),id);
                 audit.append(ctx,"PUR_IMPORT_UPLOAD","PURCHASE_IMPORT",number(b,"id"),null,Map.of("sourceId",source,"sha256",prepared.sha256()));var result=snapshot(a,id);result.put("taskId",task.toString());return result;
             },r->batch(a,UUID.fromString(r.get("batchId").toString()),false));
-        });
+        });}catch(RuntimeException failure){uploadFailure=failure;throw failure;}
+        finally{try{discardUnusedPrepared(ctx,prepared);}catch(RuntimeException cleanupFailure){if(uploadFailure!=null)uploadFailure.addSuppressed(cleanupFailure);else throw cleanupFailure;}}
+    }
+    private void discardUnusedPrepared(RequestContext ctx,AttachmentAssetService.Prepared prepared){
+        // 和注册共用对象键锁，提交结果未知时也不会误删实际上已提交的原文件。
+        boolean unused=tx.execute(s->{Access a=access(ctx,true);mapper.lockPreparedAsset(prepared.key());return mapper.countPreparedAsset(a.requireCountry(),prepared.key())==0;});
+        if(unused)objects.delete(prepared.key());
     }
     public Map<String,Object> get(RequestContext ctx,UUID id){return tx.execute(s->snapshot(access(ctx,false),id));}
     private Map<String,Object> correctionSource(Access a,UUID id,long sourceId){

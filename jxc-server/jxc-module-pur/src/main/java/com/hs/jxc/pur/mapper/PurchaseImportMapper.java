@@ -5,6 +5,13 @@ import org.apache.ibatis.annotations.Param;
 
 /** 采购PurchaseImportMapper：SQL主体位于同名资源XML，参数全部绑定。 */
 public interface PurchaseImportMapper {
+    int countUploadReceipt(@Param("countryId") long country,@Param("userId") long user,@Param("key") String key);
+    int lockPreparedAsset(@Param("key") String key);
+    int countPreparedAsset(@Param("countryId") long country,@Param("key") String key);
+    int countPendingClear(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int countCreationReceipts(@Param("countryId") long country,@Param("userId") long user,@Param("nativeKey") Object nativeKey,@Param("outerKey") Object outerKey);
+    int cancelClearTasks(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int updateClearReceipt(@Param("countryId") long country,@Param("userId") long user,@Param("batchId") UUID batch,@Param("key") String key,@Param("response") String response);
     int setSourceParseOptions(@Param("options") String options,@Param("countryId") long country,@Param("id") long source);
     List<Map<String,Object>> selectClearTasks(@Param("countryId") long country,@Param("batchId") UUID batch);
     List<Long> selectClearAssets(@Param("countryId") long country,@Param("batchId") UUID batch);

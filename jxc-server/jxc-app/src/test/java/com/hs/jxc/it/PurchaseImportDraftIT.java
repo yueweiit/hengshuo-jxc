@@ -13,10 +13,12 @@ import org.springframework.test.context.DynamicPropertySource;
 class PurchaseImportDraftIT extends PurchaseImportFixture {
     @Autowired PurchaseImportProductServiceImpl review;
     @Autowired PurchaseImportDraftServiceImpl drafts;
+    @Autowired PurchaseImportClearService clearing;
     @DynamicPropertySource static void draftConfig(DynamicPropertyRegistry r){r.add("jxc.purchase-import.draft-creation.enabled",()->true);}
     @BeforeEach void permissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\"]'::jsonb WHERE id=801");}
     @Override Map<String,Object> header(){var h=super.header();h.put("termDays",0);return h;}
-    Map<String,Object> prepared(){var b=upload(UUID.randomUUID().toString());parse(b);var saved=imports.get(actor,id(b));long row=((Number)rows(saved).getFirst().get("id")).longValue();review.decide(actor,id(b),row,Map.of("version",1,"decision","EXISTING","productId",501,"unit","PCS"));return imports.get(actor,id(b));}
+    Map<String,Object> prepared(){return prepared(1);}
+    Map<String,Object> prepared(int count){var saved=parsedRows(count);long row=((Number)rows(saved).getFirst().get("id")).longValue();review.decide(actor,id(saved),row,Map.of("version",1,"decision","EXISTING","productId",501,"unit","PCS"));return imports.get(actor,id(saved));}
     Map<String,Object> preview(Map<String,Object>b){return drafts.previews(actor,id(b),Map.of("batchVersion",imports.get(actor,id(b)).get("version")));}
     Map<String,Object> readyGroup(Map<String,Object>b){var initial=groups(preview(b)).getFirst();var h=header();h.put("taxRate","0.13");h.put("priceTaxBasis","EXCLUSIVE");drafts.saveGroup(actor,id(b),((Number)initial.get("id")).longValue(),Map.of("groupVersion",initial.get("version"),"header",h));return groups(preview(b)).getFirst();}
     long groupId(Map<String,Object>g){return ((Number)g.get("id")).longValue();}
@@ -48,7 +50,7 @@ class PurchaseImportDraftIT extends PurchaseImportFixture {
         var b=prepared();var g=readyGroup(b);assertThat(g.get("createStatus")).isEqualTo("READY");var p=(Map<?,?>)g.get("preview");assertThat(p.get("totalAmount")).asString().isEqualTo("531.2350");assertThat(p.get("taxAmount")).asString().isEqualTo("69.0606");assertThat(p.get("lines")).asString().contains("53.1235","53.1234567890");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
     }
     @Test void unresolvedSecondRowBlocksTheWholeSourceOrder(){
-        var b=prepared();var second=imports.upload(actor,"second.xlsx",file,header(),id(b),UUID.randomUUID().toString());parse(second);var group=readyGroup(b);assertThat(group.get("createStatus")).isEqualTo("DRAFT");assertThat(group.get("errors")).asString().contains("未确认");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+        var b=prepared(2);var group=readyGroup(b);assertThat(group.get("createStatus")).isEqualTo("DRAFT");assertThat(group.get("errors")).asString().contains("未确认");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
     }
     @Test void confirmedDraftIsCreatedOnceAndReadBackWithExactSourceMappings(){
         var b=prepared();var g=readyGroup(b);String key=UUID.randomUUID().toString();var first=drafts.create(actor,id(b),groupId(g),confirmation(g),key);var again=drafts.create(actor,id(b),groupId(g),confirmation(g),key);assertThat(first).containsEntry("createStatus","CREATED").containsEntry("verifyStatus","VERIFIED");assertThat(again.get("orderId")).isEqualTo(first.get("orderId"));assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isEqualTo(1);assertThat(owner.queryForObject("SELECT status FROM pur_order",String.class)).isEqualTo("DRAFT");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import WHERE target_order_line_id IS NOT NULL",Integer.class)).isEqualTo(1);assertThat(owner.queryForObject("SELECT count(*) FROM pur_domestic_receipt",Integer.class)).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM ap_bill",Integer.class)).isZero();
@@ -71,11 +73,38 @@ class PurchaseImportDraftIT extends PurchaseImportFixture {
         finally{owner.execute("DROP TRIGGER reject_import_line ON pur_order_line");owner.execute("DROP FUNCTION reject_import_line()");}
         assertThat(drafts.create(actor,id(b),groupId(g),confirmation(g),key)).containsEntry("createStatus","CREATED").containsEntry("verifyStatus","VERIFIED");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isEqualTo(1);
     }
+    @Test void clearingCreatedPurchaseKeepsActualOrderAndSourceBytes(){
+        var b=prepared();var group=readyGroup(b);var created=drafts.create(actor,id(b),groupId(group),confirmation(group),UUID.randomUUID().toString());
+        var order=owner.queryForMap("SELECT * FROM pur_order WHERE id=?",created.get("orderId"));var lines=owner.queryForList("SELECT * FROM pur_order_line WHERE order_id=? ORDER BY id",created.get("orderId"));
+        var current=imports.get(actor,id(b));var result=clearing.clear(actor,id(b),((Number)current.get("version")).longValue(),UUID.randomUUID().toString());
+        assertThat(result).containsEntry("retained",true).containsEntry("cleanupPending",false);
+        assertThat(owner.queryForMap("SELECT * FROM pur_order WHERE id=?",created.get("orderId"))).isEqualTo(order);
+        assertThat(owner.queryForList("SELECT * FROM pur_order_line WHERE order_id=? ORDER BY id",created.get("orderId"))).isEqualTo(lines);
+        long source=owner.queryForObject("SELECT id FROM pur_order_import_source WHERE batch_id=?",Long.class,id(b));assertThat(imports.content(actor,id(b),source,false).bytes()).containsExactly(file);
+    }
+    @Test void clearingPartlyCreatedWorkbookKeepsOnlyTheCreatedGroupAndItsSource(){
+        var b=prepared(2);var last=rows(b).getLast();review.decide(actor,id(b),((Number)last.get("id")).longValue(),Map.of("version",last.get("version"),"decision","EXISTING","productId",501,"unit","PCS"));
+        var g=readyGroup(b);drafts.saveGroup(actor,id(b),groupId(g),Map.of("groupVersion",g.get("version"),"header",g.get("header"),"splitRowIds",List.of(last.get("id"))));
+        var first=groups(preview(b)).getFirst();drafts.create(actor,id(b),groupId(first),confirmation(first),UUID.randomUUID().toString());
+        var current=imports.get(actor,id(b));assertThat(clearing.clear(actor,id(b),((Number)current.get("version")).longValue(),UUID.randomUUID().toString())).containsEntry("retained",true);
+        assertThat(rows(imports.get(actor,id(b)))).hasSize(1);assertThat(groups(imports.get(actor,id(b)))).hasSize(1);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isEqualTo(1);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source WHERE batch_id=?",Integer.class,id(b))).isEqualTo(1);
+    }
+    @Test void clearingUnknownNativeFailureVerifiesRolledBackCommandBeforeDeletion(){
+        var b=prepared();var g=readyGroup(b);
+        owner.execute("CREATE FUNCTION fail_clear_native() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'known rollback'; END $$");
+        owner.execute("CREATE TRIGGER fail_clear_native BEFORE INSERT ON pur_order_line FOR EACH ROW EXECUTE FUNCTION fail_clear_native()");
+        try{assertThatThrownBy(()->drafts.create(actor,id(b),groupId(g),confirmation(g),UUID.randomUUID().toString())).isInstanceOf(RuntimeException.class);}
+        finally{owner.execute("DROP TRIGGER fail_clear_native ON pur_order_line");owner.execute("DROP FUNCTION fail_clear_native()");}
+        var current=imports.get(actor,id(b));assertThat(groups(current).getFirst()).containsEntry("createStatus","UNKNOWN");
+        assertThat(clearing.clear(actor,id(b),((Number)current.get("version")).longValue(),UUID.randomUUID().toString())).containsEntry("cleared",true).containsEntry("cleanupPending",false);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_batch WHERE batch_id=?",Integer.class,id(b))).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+    }
     @Test void laterNativeHeaderChangeIsReportedAsDifferentWithoutCreatingAgain(){
         var b=prepared();var g=readyGroup(b);var created=drafts.create(actor,id(b),groupId(g),confirmation(g),UUID.randomUUID().toString());owner.update("UPDATE pur_order SET term_days=30 WHERE id=?",created.get("orderId"));assertThat(drafts.creation(actor,id(b),groupId(g))).containsEntry("createStatus","CREATED").containsEntry("verifyStatus","DIFFERENT").containsEntry("orderId",created.get("orderId"));assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isEqualTo(1);
     }
     @Test void explicitSplitRetainsSourceNumberAndMapsDuplicateProductLinesBySequence(){
-        var b=prepared();var second=imports.upload(actor,"second.xlsx",file,header(),id(b),UUID.randomUUID().toString());parse(second);var saved=imports.get(actor,id(b));var last=rows(saved).getLast();review.decide(actor,id(b),((Number)last.get("id")).longValue(),Map.of("version",last.get("version"),"decision","EXISTING","productId",501,"unit","PCS"));var g=readyGroup(b);var split=drafts.saveGroup(actor,id(b),groupId(g),Map.of("groupVersion",g.get("version"),"header",g.get("header"),"splitRowIds",List.of(last.get("id"))));assertThat(groups(split)).hasSize(2);for(var group:groups(preview(b))){assertThat(group.get("sourceOrderNo")).isEqualTo("PO-1");assertThat(drafts.create(actor,id(b),groupId(group),confirmation(group),UUID.randomUUID().toString())).containsEntry("verifyStatus","VERIFIED");}assertThat(owner.queryForObject("SELECT count(DISTINCT target_order_line_id) FROM pur_order_import",Integer.class)).isEqualTo(2);
+        var b=prepared(2);var saved=imports.get(actor,id(b));var last=rows(saved).getLast();review.decide(actor,id(b),((Number)last.get("id")).longValue(),Map.of("version",last.get("version"),"decision","EXISTING","productId",501,"unit","PCS"));var g=readyGroup(b);var split=drafts.saveGroup(actor,id(b),groupId(g),Map.of("groupVersion",g.get("version"),"header",g.get("header"),"splitRowIds",List.of(last.get("id"))));assertThat(groups(split)).hasSize(2);for(var group:groups(preview(b))){assertThat(group.get("sourceOrderNo")).isEqualTo("PO-1");assertThat(drafts.create(actor,id(b),groupId(group),confirmation(group),UUID.randomUUID().toString())).containsEntry("verifyStatus","VERIFIED");}assertThat(owner.queryForObject("SELECT count(DISTINCT target_order_line_id) FROM pur_order_import",Integer.class)).isEqualTo(2);
     }
 
     @Test void isolatedFeatureDockerCreatesAndReadsTheOriginalDraftOverHttp()throws Exception{
@@ -88,8 +117,8 @@ class PurchaseImportDraftIT extends PurchaseImportFixture {
         String script=System.getProperty("jxc.test.purchase-save-ui"),appImage=System.getProperty("jxc.test.purchase-image"),webImage=System.getProperty("jxc.test.purchase-web-image"),certs=System.getProperty("jxc.test.photo-certs");
         Assumptions.assumeTrue(script!=null&&appImage!=null&&webImage!=null&&certs!=null,"显式提供页面脚本与本地镜像后运行隔离真实保存验收");
         owner.update("UPDATE sys_role SET permissions='[\"*\"]'::jsonb WHERE id=801");
-        var batch=prepared();
-        if(expectedOrders==2){var second=imports.upload(actor,"second.xlsx",file,header(),id(batch),UUID.randomUUID().toString());parse(second);var last=rows(imports.get(actor,id(batch))).getLast();review.decide(actor,id(batch),((Number)last.get("id")).longValue(),Map.of("version",last.get("version"),"decision","EXISTING","productId",501,"unit","PCS"));}
+        var batch=prepared(expectedOrders);
+        if(expectedOrders==2){var last=rows(imports.get(actor,id(batch))).getLast();review.decide(actor,id(batch),((Number)last.get("id")).longValue(),Map.of("version",last.get("version"),"decision","EXISTING","productId",501,"unit","PCS"));}
         var ready=readyGroup(batch);
         if(expectedOrders==2){var last=rows(imports.get(actor,id(batch))).getLast();drafts.saveGroup(actor,id(batch),groupId(ready),Map.of("groupVersion",ready.get("version"),"header",ready.get("header"),"splitRowIds",List.of(last.get("id"))));}
         try(var gateway=featureGateway(appImage,webImage,certs,true)){

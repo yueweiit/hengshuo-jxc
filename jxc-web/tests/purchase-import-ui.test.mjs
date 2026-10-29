@@ -36,7 +36,7 @@ async function workspace(confirm = async () => {}, dependencies = {}) {
       async saveHeader(_batch, value) { savedHeaders.push(value); return { batchId, header: { ...value }, rows: [{ ...row }] } },
     },
     ...dependencies,
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming', 'localDraft', 'openLocalDraft','reviewVisible','reviewRow','reviewTab','review','pendingProductCount','reviewPreviewRow','preview','correctedBatch'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'fileImportDisabled', 'retryCleanups', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming', 'localDraft', 'openLocalDraft','reviewVisible','reviewRow','reviewTab','review','pendingProductCount','reviewPreviewRow','preview','correctedBatch'])
   const initialDate = state.state.header.orderDate
   await state.localDraft.open(draft.purchaseImportDraftKey(7, 101, null))
   state.state.header.orderDate = initialDate
@@ -111,6 +111,15 @@ test('预览仍有未保存修改时主保存返回核对，不创建使用旧�
   let calls=0;state.page.saveOrders=async()=>{calls++;return true};assert.ok(state.pendingReview,'缺少预览未保存修改的状态')
   state.pendingReview.value=true;assert.equal(await state.saveOrders(),false);assert.equal(calls,0);assert.match(state.page.state.error,/预览.*未保存/)
 })
+test('处理中可打开清空确认，确认期间进度版本变化仍能清空同一页面', async () => {
+  let resolve
+  const { state } = await workspace(() => new Promise(done => resolve = done))
+  Object.assign(state.state, { batchId, status: 'PARSING', saving: true, rows: [{ ...row }] })
+  const clearing = state.clearAll(); assert.equal(typeof resolve, 'function')
+  state.state.version++; resolve(); await clearing
+  assert.equal(state.state.batchId, null); assert.equal(state.state.rows.length, 0); assert.equal(state.clearConfirming.value, false)
+})
+
 test('清空按钮取消或关闭确认框时保留页面数据，异常提示真实错误', async () => {
   for (const reason of ['cancel', 'close', new Error('确认框异常')]) {
     const { state } = await workspace(async () => { throw reason })
@@ -128,6 +137,15 @@ test('确认清空输入后异步选项读取不能重新填充默认值，仍�
   await state.clearAll(); resolve([{ id: 1, status: 'ACTIVE', baseCurrency: 'USD' }]); await reading
   assert.equal(state.state.header.bookId, null); assert.equal(state.state.header.supplierId, null); assert.equal(state.state.header.orderDate, null); assert.equal(state.selected.value, null); assert.equal(state.fileInput.value.value, '')
   state.state.header.supplierId = 2; state.supplierChanged(); assert.equal(state.state.header.currency, 'USD')
+})
+
+test('清空时本地存储失败仍关闭文件选择并明确报错，恢复前不能上传下一份', async () => {
+  let fail = false
+  const { state } = await workspace(undefined, { createPurchaseImportDraftSession: page => draft.createPurchaseImportDraftSession(page, { read: async () => undefined, write: async () => { if (fail) throw new Error('QuotaExceededError') } }) })
+  state.selected.value = new File(['x'], '旧文件.xlsx'); state.dialogVisible.value = true; fail = true
+  await state.clearAll()
+  assert.equal(state.selected.value, null); assert.equal(state.dialogVisible.value, false)
+  assert.equal(state.fileImportDisabled.value, true); assert.match(state.localDraft.view.error, /QuotaExceededError/)
 })
 
 test('确认框等待期间切换国家或文件时不清空新上下文', async () => {
@@ -151,7 +169,7 @@ test('已保存批次确认清空后移除地址参数并关闭预览和旧保�
   state.pendingReview.value = true; state.previewVisible.value = true; state.dialogVisible.value = true
   state.selected.value = new File(['x'], '采购.xlsx'); state.fileInput.value = { value: '采购.xlsx' }
   await state.clearAll()
-  assert.match(message, /已暂存的明细/); assert.match(message, /永久删除/); assert.match(message, /审计记录/)
+  assert.match(message, /未生成采购单/); assert.match(message, /将删除/); assert.match(message, /已生成的采购单及其来源资料会保留/)
   assert.equal(state.state.batchId, null); assert.equal(state.state.rows.length, 0); assert.equal(state.pendingReview.value, false); assert.equal(state.previewVisible.value, false); assert.equal(state.dialogVisible.value, false)
   assert.deepEqual(navigations.at(-1), { query: { from: 'test', batchId: undefined } })
   state.route.query.batchId = undefined; await nextTick(); await new Promise(resolve => setTimeout(resolve, 0)); assert.equal(state.state.header.orderDate, null); assert.equal(state.state.header.bookId, null)
@@ -164,7 +182,7 @@ test('清空移除批次地址导致工作区重新挂载时仍保持所有输�
   } })
   Object.assign(state.state, { batchId, version: 2, header: { ...header }, rows: [{ ...row }] }); state.route.query.batchId = batchId
   await state.clearAll()
-  assert.deepEqual(messages.map(item => item.message), ['当前导入数据和独占文件已清空']); assert.deepEqual(mountedMessages, [])
+  assert.deepEqual(messages.map(item => item.message), ['页面已清空']); assert.deepEqual(mountedMessages, [])
   assert.ok(mounted); assert.equal(mounted.state.header.orderDate, null); assert.equal(mounted.state.header.bookId, null); assert.equal(mounted.state.header.supplierId, null); assert.equal(mounted.state.header.currency, '')
   const fresh = await (await workspace()).state; await fresh.loadReferences(); assert.equal(fresh.state.header.orderDate, '2026-10-28'); assert.equal(fresh.state.header.bookId, 1)
 })

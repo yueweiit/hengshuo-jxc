@@ -30,6 +30,17 @@ function setup(overrides = {}) {
   return { page, calls }
 }
 
+test('一个批次接收首份Excel后拒绝再次上传，人工照片来源仍允许首份Excel', async () => {
+  const source = { id: 1, fileName: 'first.xlsx', fileSha256: 'a'.repeat(64), status: 'READY', origin: 'XLSX' }
+  for (const origin of ['XLSX', 'MANUAL_UPLOAD']) {
+    const { page, calls } = setup({ async load() { return { ...batch(), sources: [{ ...source, origin }] } } })
+    await page.loadBatch(batchId)
+    assert.equal(await page.importFile(file()), origin === 'MANUAL_UPLOAD')
+    assert.equal(calls.filter(call => call[0] === 'upload').length, origin === 'MANUAL_UPLOAD' ? 1 : 0)
+    if (origin === 'XLSX') assert.match(page.state.error, /一个文件|清空/)
+  }
+})
+
 test('基础税务字段保存及本地草稿恢复保留明确值，未知保持为空且非法值不能保存', async () => {
   const { validateImportHeader } = loadTsModule(modelUrl)
   for (const value of [null, '', '0', '0.13', '1', '0.123456']) assert.equal(validateImportHeader({ ...header(), taxRate: value, priceTaxBasis: 'EXCLUSIVE' }), '')

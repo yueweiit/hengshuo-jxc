@@ -6,6 +6,22 @@ const modelModule = () => loadTsModule(new URL('../src/modules/purchase/purchase
 const draftModule = () => loadTsModule(new URL('../src/modules/purchase/purchaseImportDraft.ts', import.meta.url))
 const page = () => modelModule().createPurchaseImportModel({}, '2026-10-29')
 
+test('清空同时覆盖空白入口和旧批次入口，后台清理待办跨页面继续保留', async () => {
+  const { createPurchaseImportDraftSession, purchaseImportDraftKey } = draftModule()
+  const records = new Map(), store = { read: async key => records.get(key), write: async (key, value) => records.set(key, value) }
+  const current = page(), session = createPurchaseImportDraftSession(current, store)
+  const blank = purchaseImportDraftKey(1, 2, null), batch = purchaseImportDraftKey(1, 2, '11111111-2222-4333-8444-555555555555')
+  await session.open(blank); current.state.header.paymentTerms = '旧入口'; await session.flush()
+  await session.open(batch); current.state.header.paymentTerms = '旧批次'; await current.clearAll()
+  current.restoreCleanupJobs([{ id: '11111111-2222-4333-8444-555555555555', version: 1, key: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', status: 'READY', error: '' }])
+  assert.equal(await session.flushCleared(), true); session.stop()
+  for (const entry of [blank, batch]) {
+    const restored = page(), next = createPurchaseImportDraftSession(restored, store); await next.open(entry)
+    assert.equal(restored.state.header.paymentTerms, ''); assert.equal(restored.state.header.orderDate, null)
+    assert.equal(restored.state.cleanupJobs.length, 1); next.stop()
+  }
+})
+
 test('同一浏览器会话恢复文字和图片，账号国家入口批次分别隔离', async () => {
   const { createPurchaseImportDraftSession, purchaseImportDraftKey } = draftModule()
   const records = new Map()

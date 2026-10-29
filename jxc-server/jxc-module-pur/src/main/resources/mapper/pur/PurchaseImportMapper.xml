@@ -8,26 +8,61 @@
     SELECT attachment_id FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId}
     UNION SELECT i.attachment_id FROM pur_order_import_image i JOIN pur_order_import_source s ON s.country_id=i.country_id AND s.id=i.source_id WHERE s.country_id=#{countryId} AND s.batch_id=#{batchId}
   </select>
-  <delete id="clearRows">DELETE FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
-  <delete id="clearProgress">DELETE FROM pur_order_import_task_progress p USING pur_order_import_task t WHERE t.country_id=#{countryId} AND t.batch_id=#{batchId} AND p.country_id=t.country_id AND p.task_id=t.id</delete>
-  <delete id="clearTasks">DELETE FROM pur_order_import_task WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
-  <delete id="clearGroups">DELETE FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
-  <delete id="clearImages">DELETE FROM pur_order_import_image i USING pur_order_import_source s WHERE s.country_id=#{countryId} AND s.batch_id=#{batchId} AND i.country_id=s.country_id AND i.source_id=s.id</delete>
-  <delete id="clearSources">DELETE FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
+  <!-- 清掉未建单行后，以剩余来源和实际图关系判定保留范围。 -->
+  <sql id="protectedSource">
+    EXISTS(SELECT 1 FROM pur_order_import r WHERE r.country_id=s.country_id AND r.batch_id=s.batch_id
+      AND (r.source_id=s.id OR EXISTS(SELECT 1 FROM pur_order_import_row_image ri JOIN pur_order_import_image im ON im.country_id=ri.country_id AND im.id=ri.image_id WHERE ri.country_id=r.country_id AND ri.row_id=r.id AND im.source_id=s.id)))
+  </sql>
+  <sql id="unprotectedTask">
+    NOT EXISTS(SELECT 1 FROM pur_order_import r WHERE r.country_id=t.country_id AND r.batch_id=t.batch_id
+      AND (r.match_task_id=t.id OR r.id::text=t.input_data-&gt;&gt;'rowId' OR r.source_id=t.source_id
+        OR EXISTS(SELECT 1 FROM pur_order_import_row_image ri JOIN pur_order_import_image im ON im.country_id=ri.country_id AND im.id=ri.image_id WHERE ri.country_id=r.country_id AND ri.row_id=r.id AND im.source_id=t.source_id)))
+    AND NOT EXISTS(SELECT 1 FROM pur_order_import_candidate c WHERE c.country_id=t.country_id AND c.run_id=t.id)
+  </sql>
+  <delete id="clearRows">DELETE FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId} AND target_order_line_id IS NULL AND NOT EXISTS(SELECT 1 FROM pur_order_import_group g WHERE g.country_id=pur_order_import.country_id AND g.id=pur_order_import.group_id AND g.target_order_id IS NOT NULL)</delete>
+  <delete id="clearProgress">DELETE FROM pur_order_import_task_progress p USING pur_order_import_task t WHERE t.country_id=#{countryId} AND t.batch_id=#{batchId} AND p.country_id=t.country_id AND p.task_id=t.id AND <include refid="unprotectedTask"/></delete>
+  <delete id="clearTasks">DELETE FROM pur_order_import_task t WHERE t.country_id=#{countryId} AND t.batch_id=#{batchId} AND <include refid="unprotectedTask"/></delete>
+  <delete id="clearGroups">DELETE FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId} AND target_order_id IS NULL</delete>
+  <delete id="clearImages">DELETE FROM pur_order_import_image i USING pur_order_import_source s WHERE s.country_id=#{countryId} AND s.batch_id=#{batchId} AND i.country_id=s.country_id AND i.source_id=s.id AND NOT <include refid="protectedSource"/></delete>
+  <delete id="clearSources">DELETE FROM pur_order_import_source s WHERE s.country_id=#{countryId} AND s.batch_id=#{batchId} AND NOT <include refid="protectedSource"/></delete>
   <delete id="clearBatch">DELETE FROM pur_order_import_batch WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
+  <select id="countPendingClear" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM sys_idempotency WHERE country_id=#{countryId} AND method='DELETE' AND endpoint='/api/v1/pur/order-imports/'||#{batchId}::text
+      AND response-&gt;&gt;'clearRequested'='true' AND response-&gt;&gt;'cleanupState' IN ('WAITING_TASKS','WAITING_RESULT')
+  </select>
+  <select id="countUploadReceipt" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM sys_idempotency WHERE country_id=#{countryId} AND user_id=#{userId} AND method='POST' AND endpoint='/api/v1/pur/order-imports' AND key=lower(#{key})
+  </select>
+  <select id="lockPreparedAsset" resultType="java.lang.Integer" useCache="false">
+    SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(#{key},0))
+  </select>
+  <select id="countPreparedAsset" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM sys_attachment WHERE country_id=#{countryId} AND storage_key=#{key}
+  </select>
+  <select id="countCreationReceipts" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM sys_idempotency WHERE country_id=#{countryId} AND user_id=#{userId} AND key IN (#{nativeKey}::text,#{outerKey}::text)
+  </select>
+  <update id="cancelClearTasks">
+    UPDATE pur_order_import_task SET status='CANCELLED',credential_hash=NULL,lease_owner=NULL,lease_until=NULL,error_code='PUR_IMPORT_CLEAR_PENDING',error_message='本批次已确认清空，未开始或租约过期任务已取消',updated_at=clock_timestamp()
+    WHERE country_id=#{countryId} AND batch_id=#{batchId} AND (status='QUEUED' OR status='RUNNING' AND (lease_until IS NULL OR lease_until&lt;=clock_timestamp()))
+  </update>
+  <update id="updateClearReceipt">
+    UPDATE sys_idempotency SET response=#{response}::jsonb WHERE country_id=#{countryId} AND user_id=#{userId} AND method='DELETE' AND key=#{key} AND endpoint='/api/v1/pur/order-imports/'||#{batchId}::text
+  </update>
   <update id="redactClearedSnapshots">
     UPDATE sys_idempotency SET response=jsonb_build_object('cleared',true,'batchId',#{batchId}),resource_refs='[]'::jsonb
     WHERE country_id=#{countryId} AND user_id=#{userId} AND response IS NOT NULL AND NOT (method='DELETE' AND endpoint=#{endpoint})
       AND (endpoint=#{endpoint} OR endpoint LIKE #{endpoint}||'/%' OR ((endpoint IN ('/api/v1/pur/order-imports','/api/v1/pur/order-imports/grid') OR endpoint LIKE '/api/v1/pur/order-imports?%') AND response->>'batchId'=#{batchId}))
   </update>
   <select id="selectClearReceipt" resultType="java.util.LinkedHashMap" useCache="false">
-    SELECT response FROM sys_idempotency WHERE country_id=#{countryId} AND user_id=#{userId} AND method='DELETE' AND endpoint=#{endpoint} AND response->>'cleared'='true' ORDER BY id DESC LIMIT 1
+    SELECT response FROM sys_idempotency WHERE country_id=#{countryId} AND user_id=#{userId} AND method='DELETE' AND endpoint=#{endpoint} AND (response-&gt;&gt;'cleared'='true' OR response-&gt;&gt;'clearRequested'='true') ORDER BY id DESC LIMIT 1
   </select>
   <select id="selectPendingClearReceipts" resultType="java.util.LinkedHashMap" useCache="false">
     SELECT response FROM sys_idempotency c WHERE c.country_id=#{countryId} AND c.method='DELETE' AND c.endpoint LIKE '/api/v1/pur/order-imports/%'
-      AND c.response->>'cleared'='true' AND jsonb_typeof(c.response->'_assetIds')='array'
-      AND EXISTS(SELECT 1 FROM jsonb_array_elements_text(c.response->'_assetIds') ids(id) JOIN sys_attachment a ON a.id=ids.id::bigint AND a.country_id=c.country_id WHERE a.object_status='QUARANTINED')
-    ORDER BY c.id LIMIT #{limit}
+      AND ((c.response-&gt;&gt;'clearRequested'='true' AND c.response-&gt;&gt;'cleanupState' IN ('WAITING_TASKS','WAITING_RESULT'))
+        OR (c.response-&gt;&gt;'cleared'='true' AND jsonb_typeof(c.response-&gt;'_assetIds')='array'
+          AND EXISTS(SELECT 1 FROM jsonb_array_elements_text(c.response-&gt;'_assetIds') ids(id) JOIN sys_attachment a ON a.id=ids.id::bigint AND a.country_id=c.country_id WHERE a.object_status='QUARANTINED')))
+    ORDER BY CASE WHEN c.response-&gt;&gt;'cleanupState'='WAITING_RESULT' THEN 1 ELSE 0 END,c.id LIMIT #{limit}
   </select>
 
   <select id="selectBatch" resultType="java.util.LinkedHashMap" useCache="false">

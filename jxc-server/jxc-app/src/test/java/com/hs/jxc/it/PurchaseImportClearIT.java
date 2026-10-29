@@ -14,6 +14,30 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 /** 当前批次清空：真实HTTP、隔离PostgreSQL和MinIO，不操作本地业务批次。 */
 class PurchaseImportClearIT extends PurchaseImportFixture {
+    @Test void linkedRowsAndTheirOriginalFilesRemainButUnlinkedStagingIsDeleted()throws Exception {
+        var b=parsed();long linked=((Number)rows(b).getFirst().get("id")).longValue();
+        owner.update("UPDATE pur_order_import SET target_order_line_id=991 WHERE id=?",linked);
+        owner.update("INSERT INTO pur_order_import(country_id,batch_id,row_no,created_by,product_spec,purchase_qty) VALUES(101,?,2,201,'待清',2)",id(b));
+        var files=assets(id(b));var response=clear(b,UUID.randomUUID().toString());
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        assertThat(data(response)).containsEntry("retained",true).containsEntry("cleanupPending",false);
+        assertThat(rows(imports.get(actor,id(b)))).hasSize(1);
+        assertThat(owner.queryForObject("SELECT target_order_line_id FROM pur_order_import WHERE id=?",Long.class,linked)).isEqualTo(991);
+        for(var asset:files)assertThat(store.read(asset.get("storage_key").toString(),100*1024*1024)).isNotEmpty();
+    }
+    @Test void runningClearIsDurableAndRecoveryDeletesOnlyAfterTaskEnds()throws Exception {
+        var b=upload(UUID.randomUUID().toString());
+        owner.update("UPDATE pur_order_import_task SET status='RUNNING',lease_until=clock_timestamp()+interval '1 hour' WHERE batch_id=?",id(b));
+        var response=clear(b,UUID.randomUUID().toString());
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        assertThat(data(response)).containsEntry("cleared",false).containsEntry("cleanupPending",true).containsEntry("cleanupState","WAITING_TASKS");
+        assertThatThrownBy(()->imports.saveHeader(actor,id(b),Map.of("batchVersion",1,"header",header(),"versions",List.of())))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("PUR_IMPORT_CLEAR_PENDING");
+        owner.update("UPDATE pur_order_import_task SET status='FAILED',lease_until=NULL WHERE batch_id=?",id(b));
+        assertThat(clearing.recover(101,20)).isEqualTo(1);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_batch WHERE batch_id=?",Integer.class,id(b))).isZero();
+        assertThat(clearing.status(actor,id(b))).containsEntry("cleared",true).containsEntry("cleanupPending",false);
+    }
     @MockitoSpyBean AttachmentObjectStore store;
     @Autowired com.hs.jxc.attachment.AttachmentAssetService assetService;
     @Autowired com.hs.jxc.pur.service.impl.PurchaseImportClearService clearing;
@@ -90,15 +114,16 @@ class PurchaseImportClearIT extends PurchaseImportFixture {
         owner.update("INSERT INTO pur_order_import_group(country_id,batch_id,group_key,source_order_no,effective_header,create_key) VALUES(101,?,'PO-1','PO-1',?::jsonb,?)",id(b),codec.write(header()),UUID.randomUUID());
         for(String state:List.of("CREATED","CREATING","UNKNOWN")){
             owner.update("UPDATE pur_order_import_group SET create_status=? WHERE batch_id=?",state,id(b));
-            assertThat(clear(b,UUID.randomUUID().toString()).statusCode()).as(state).isEqualTo(409);
+            var response=clear(b,UUID.randomUUID().toString());assertThat(response.statusCode()).as(state).isEqualTo(200);assertThat(data(response)).containsEntry("cleanupState","WAITING_RESULT").containsEntry("cleared",false);
         }
         owner.update("UPDATE pur_order_import_group SET create_status='DRAFT' WHERE batch_id=?",id(b));owner.update("UPDATE pur_order_import SET target_order_line_id=999 WHERE batch_id=?",id(b));
-        assertThat(clear(b,UUID.randomUUID().toString()).statusCode()).isEqualTo(409);assertThat(rows(imports.get(actor,id(b)))).hasSize(1);
+        assertThat(clear(b,UUID.randomUUID().toString()).statusCode()).isEqualTo(200);assertThat(rows(imports.get(actor,id(b)))).hasSize(1);
     }
-    @Test void queuedAndRunningTasksBlockCleanup()throws Exception {
-        var b=upload(UUID.randomUUID().toString());assertThat(clear(b,UUID.randomUUID().toString()).statusCode()).isEqualTo(409);
-        owner.update("UPDATE pur_order_import_task SET status='RUNNING' WHERE batch_id=?",id(b));assertThat(clear(b,UUID.randomUUID().toString()).statusCode()).isEqualTo(409);
-        assertThat(assets(id(b))).hasSize(1);
+    @Test void queuedTasksAreCancelledAndExclusiveFilesAreDeleted()throws Exception {
+        var b=upload(UUID.randomUUID().toString());var files=assets(id(b));
+        assertThat(clear(b,UUID.randomUUID().toString()).statusCode()).isEqualTo(200);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=?",Integer.class,id(b))).isZero();
+        for(var asset:files)assertThatThrownBy(()->store.read(asset.get("storage_key").toString(),100*1024*1024)).isInstanceOf(ApiException.class);
     }
     @Test void currentPermissionsAndOwnershipAreRequiredIncludingReplay()throws Exception {
         var b=parsed();owner.update("INSERT INTO sys_user(id,username,password_hash,display_name) VALUES(202,'other','hash','Other')");owner.update("UPDATE pur_order_import_batch SET created_by=202 WHERE batch_id=?",id(b));assertThat(clear(b,UUID.randomUUID().toString()).statusCode()).isEqualTo(404);
@@ -123,9 +148,18 @@ class PurchaseImportClearIT extends PurchaseImportFixture {
         var trust=java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());trust.load(null,null);try(var input=java.nio.file.Files.newInputStream(java.nio.file.Path.of(certs,"certificate.pem"))){trust.setCertificateEntry("local-test",java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(input));}
         var manager=javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());manager.init(trust);var ssl=javax.net.ssl.SSLContext.getInstance("TLS");ssl.init(null,manager.getTrustManagers(),null);client=HttpClient.newBuilder().sslContext(ssl).build();
         var b=parsed();try(var gateway=featureGateway(image,web,certs,false)){
+            var second=httpUpload("http://"+gateway.app().getHost()+":"+gateway.app().getMappedPort(8080),id(b));
+            assertThat(second.statusCode()).as(second.body()).isEqualTo(409);assertThat(codec.readMap(second.body())).containsEntry("code","PUR_IMPORT_SINGLE_FILE");
+
             var r=clear(gateway.base(),id(b),((Number)b.get("version")).longValue(),UUID.randomUUID().toString());assertThat(r.statusCode()).as(r.body()).isEqualTo(200);assertThat(data(r)).containsEntry("cleanupPending",false);
             var page=client.send(HttpRequest.newBuilder(URI.create(gateway.base()+"/purchase/orders/import")).GET().build(),HttpResponse.BodyHandlers.ofString());assertThat(page.statusCode()).isEqualTo(200);assertThat(page.body()).contains("<div id=\"app\"");
             var root=java.nio.file.Path.of(dist);int checked=0;try(var paths=java.nio.file.Files.walk(root)){for(var path:paths.filter(java.nio.file.Files::isRegularFile).toList()){String relative=root.relativize(path).toString().replace('\\','/');var asset=client.send(HttpRequest.newBuilder(URI.create(gateway.base()+"/"+relative)).GET().build(),HttpResponse.BodyHandlers.ofByteArray());assertThat(asset.statusCode()).as(relative).isEqualTo(200);assertThat(AttachmentObjectStore.sha256(asset.body())).as(relative).isEqualTo(AttachmentObjectStore.sha256(java.nio.file.Files.readAllBytes(path)));checked++;}}
+            var linked=parsed();owner.update("UPDATE pur_order_import SET target_order_line_id=991 WHERE batch_id=?",id(linked));
+            var kept=clear(gateway.base(),id(linked),((Number)linked.get("version")).longValue(),UUID.randomUUID().toString());
+            assertThat(kept.statusCode()).as(kept.body()).isEqualTo(200);assertThat(data(kept)).containsEntry("retained",true);
+            long source=owner.queryForObject("SELECT id FROM pur_order_import_source WHERE batch_id=?",Long.class,id(linked));
+            var original=client.send(HttpRequest.newBuilder(URI.create(gateway.base()+"/api/v1/pur/order-imports/"+id(linked)+"/sources/"+source+"/content")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").GET().build(),HttpResponse.BodyHandlers.ofByteArray());
+            assertThat(original.statusCode()).isEqualTo(200);assertThat(original.body()).containsExactly(file);
             assertThat(checked).isGreaterThan(10);String expected=AttachmentObjectStore.sha256(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("target/jxc-app-0.1.0-SNAPSHOT.jar")));assertThat(gateway.app().execInContainer("sha256sum","/app/app.jar").getStdout()).startsWith(expected+" ");System.out.println("PUR_IMPORT_CLEAR_GATEWAY_VERIFIED staticFiles="+checked);
         }
     }

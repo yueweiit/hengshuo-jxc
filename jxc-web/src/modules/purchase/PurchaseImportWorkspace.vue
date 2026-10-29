@@ -39,6 +39,7 @@ const clearConfirming = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const feeBusy = computed(() => page.fees.view.saving || page.fees.view.preparing)
 const importDisabled = computed(() => page.busy() || feeBusy.value || !!state.edit || page.grid.hasChanges())
+const fileImportDisabled = computed(() => importDisabled.value || !!page.importBlockReason() || !localDraft.view.ready || !!localDraft.view.error)
 const disabled = computed(() => page.busy() || feeBusy.value || refsLoading.value || !!refsError.value || page.grid.hasChanges())
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 const reviewVisible = ref(false), previewVisible = ref(false), reviewRow = ref<number | null>(null)
@@ -126,7 +127,7 @@ function selectFile(event: Event) {
   page.clearFeedback()
 }
 async function submitImport() {
-  if (importDisabled.value) return
+  if (fileImportDisabled.value) return
   if (!selected.value) { page.failure(new Error('请先选择.xlsx文件')); return }
   const saved = await page.importFile(selected.value)
   if (saved) {
@@ -162,31 +163,48 @@ async function remove(row: ImportRow) {
   if (active && !importDisabled.value && context === JSON.stringify([country.currentId, country.epoch, user.token, state.batchId])) await page.removeRow(row)
 }
 function errorLabel(field?: string) { return importColumns.find(column => column.key === field)?.label ?? field }
-async function syncClearedUi(confirmed = false) {
+async function syncClearedUi(confirmed = false, navigate = true) {
   if (!confirmed && !state.clearedBatchId && state.errorCode !== 'PUR_IMPORT_FILES_PENDING') return
   defaultsAllowed = false; selected.value = null; dialogVisible.value = false; reviewVisible.value = false; previewVisible.value = false; reviewRow.value = null
   pendingReview.value = false; ++creationSequence; creationEnabled.value = false; creationLoading.value = false; creationError.value = ''
   if (fileInput.value) fileInput.value.value = ''
-  if (state.clearedBatchId && route.query.batchId !== undefined) {
+  if (navigate && (confirmed || state.clearedBatchId) && route.query.batchId !== undefined) {
     const releaseClear = rememberImportClearNavigation(clearContext())
     try { await router.replace({ query: { ...route.query, batchId: undefined } }); await nextTick() }
-    catch (error) { if (active) page.failure(new Error(`数据已清空，但批次地址移除失败：${error instanceof Error ? error.message : '请重试'}`)) }
+    catch (error) { if (active) page.failure(new Error(`页面已清空，但批次地址移除失败：${error instanceof Error ? error.message : '请重试'}`)) }
     finally { releaseClear() }
   }
 }
 async function clearAll() {
-  if (!page.canClear() || clearConfirming.value) return
-  const context = JSON.stringify([country.currentId, country.epoch, user.token, state.batchId, state.version]), file = selected.value
+  if (clearConfirming.value) return
+  const context = JSON.stringify([country.currentId, country.epoch, user.token, state.batchId, route.query.batchId]), file = selected.value
   clearConfirming.value = true
   try {
-    await ElMessageBox.confirm(state.clearPending ? '继续按原请求清空当前批次，并重试尚未完成的文件清理？' : '确定清空当前导入批次及页面全部数据？当前批次已暂存的明细、来源文件和独占照片将永久删除，未保存的编辑也会丢弃。其他批次、正式采购单和被其他记录引用的照片会保留，必要审计记录也会保留。此操作不可撤销。', '清空当前导入', { type: 'warning', confirmButtonText: state.clearPending ? '重试清空' : '确认清空', cancelButtonText: '取消', distinguishCancelAndClose: true })
-  } catch (error) { if (error !== 'cancel' && error !== 'close') page.failure(error); return }
+    await ElMessageBox.confirm('确定清空当前页面并开始下一次导入吗？未生成采购单的本次暂存资料及独占文件将删除，未保存的编辑将丢弃。已生成的采购单及其来源资料会保留。正在处理的操作会先核实结果，再按上述规则清理。', '清空页面', { type: 'warning', confirmButtonText: '确定清空', cancelButtonText: '取消', distinguishCancelAndClose: true })
+    if (!active) return
+    if (selected.value !== file || context !== JSON.stringify([country.currentId, country.epoch, user.token, state.batchId, route.query.batchId])) {
+      page.failure(new Error('当前导入页面已切换，请重新确认要清空的内容')); return
+    }
+    await page.clearAll(typeof route.query.batchId === 'string' ? route.query.batchId : undefined)
+    const stored = await localDraft.flushCleared()
+    await syncClearedUi(true, stored)
+    if (!stored) return
+    scheduleCleanups()
+  } catch (error) { if (error !== 'cancel' && error !== 'close') page.failure(error) }
   finally { clearConfirming.value = false }
-  if (!active || !page.canClear() || selected.value !== file || context !== JSON.stringify([country.currentId, country.epoch, user.token, state.batchId, state.version])) return
-  const cleared = await page.clearAll()
-  if (cleared && !await localDraft.flush()) return
-  await syncClearedUi(cleared)
 }
+let cleanupTimer: ReturnType<typeof setTimeout> | undefined
+function scheduleCleanups() {
+  clearTimeout(cleanupTimer)
+  if (active && localDraft.view.ready && !localDraft.view.saving && !localDraft.view.error && state.cleanupJobs.some(job => job.status !== 'ERROR')) {
+    cleanupTimer = setTimeout(async () => { await page.processCleanups(false); if (active) { await localDraft.flush(); scheduleCleanups() } }, 5000)
+  }
+}
+async function retryCleanups() {
+  if (!await localDraft.flush()) return
+  await page.processCleanups(); if (active) await localDraft.flush()
+}
+watch(() => [localDraft.view.ready, localDraft.view.saving, localDraft.view.error, state.cleanupJobs.map(job => `${job.key}:${job.status}:${job.error}`).join(',')], scheduleCleanups)
 async function loadRouteBatch() {
   const id = route.query.batchId
   if (typeof id === 'string' && id !== state.batchId) { await page.loadBatch(id); await syncClearedUi() }
@@ -200,7 +218,7 @@ async function openLocalDraft() {
   if (!active || request !== localSequence || !localDraft.view.ready) return
   defaultsAllowed = !restored && !clearedOnEntry
   if (!restored) { state.header.orderDate = clearedOnEntry ? null : todayIn(country.timezone); await loadRouteBatch() }
-  else if (state.batchId && !page.grid.hasChanges() && !state.clearPending) await page.loadBatch(state.batchId)
+  else if (state.batchId && !page.grid.hasChanges()) await page.loadBatch(state.batchId)
   if (active && request === localSequence) {
     await loadReferences()
     if (active && request === localSequence && state.status === 'REVIEW' && !state.imageReviewError) await page.startImageReview()
@@ -219,7 +237,7 @@ watch(() => [country.currentId, country.epoch, user.token, user.user?.id], () =>
   void openLocalDraft()
   if (route.query.batchId !== undefined) void router.replace({ query: { ...route.query, batchId: undefined } }).catch(error => { if (active) page.failure(error) })
 }, { flush: 'sync' })
-onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++creationSequence; ++localSequence; clearTimeout(taskTimer); clearTimeout(feeTimer); page.invalidate() })
+onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++creationSequence; ++localSequence; clearTimeout(taskTimer); clearTimeout(feeTimer); clearTimeout(cleanupTimer); page.invalidate() })
 </script>
 
 <template>
@@ -246,13 +264,18 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
 
     <section class="import-section import-command" aria-label="文件导入">
       <div><h2>导入采购明细</h2><p>支持系统模板与供应商原始Excel；可先导入，再核对字段、商品与基础信息。</p></div>
-      <div class="import-command-actions"><el-button type="primary" :disabled="importDisabled" @click="dialogVisible = true"><el-icon><Upload /></el-icon>导入文件</el-button>
-      <el-button type="danger" plain :title="page.clearBlockReason()" :disabled="!page.canClear() || clearConfirming" :loading="state.clearing" @click="clearAll">{{ state.clearPending ? '重试清空' : '清空' }}</el-button></div>
+      <div class="import-command-actions"><el-button type="primary" :disabled="fileImportDisabled" :title="page.importBlockReason()" @click="dialogVisible = true"><el-icon><Upload /></el-icon>导入文件</el-button>
+      <el-button type="danger" plain :disabled="clearConfirming" @click="clearAll">清空页面</el-button></div>
     </section>
 
+    <section v-if="state.cleanupJobs.length" class="import-section" aria-label="后台清理状态">
+      <div class="section-heading"><h2>上次导入的清理状态</h2><el-button link @click="retryCleanups">重试或查询清理</el-button></div>
+      <p v-for="job in state.cleanupJobs" :key="job.key" class="table-hint" role="status">{{ job.error || '页面已清空，正在登记后台清理。可开始下一次导入。' }}</p>
+    </section>
+    <p v-if="page.importBlockReason()" class="table-hint import-section" role="status">{{ page.importBlockReason() }}</p>
     <section class="import-section import-details" aria-labelledby="import-details-title">
       <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ page.grid.dataRows().length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="importDisabled || page.headerDirty() || page.fees.dirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
-      <el-alert v-if="localDraft.view.error" type="error" :closable="false" :title="localDraft.view.error" class="import-alert"><el-button link @click="localDraft.view.ready ? localDraft.flush() : openLocalDraft()">重试草稿保存与恢复</el-button></el-alert>
+      <el-alert v-if="localDraft.view.error" type="error" :closable="false" :title="localDraft.view.error" class="import-alert"><el-button link @click="localDraft.view.ready ? state.clearedBatchId ? localDraft.flushCleared() : localDraft.flush() : openLocalDraft()">重试草稿保存与恢复</el-button></el-alert>
       <p v-else class="table-hint" role="status">{{ !localDraft.view.ready ? '正在恢复此浏览器的草稿' : localDraft.view.saving ? '正在保存草稿' : localDraft.view.saved ? '草稿已保存在此浏览器' : '编辑内容会自动保存到此浏览器' }}</p>
       <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细已独立暂存，请补齐后保存基础信息。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
@@ -272,12 +295,12 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
       <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件。</li><li>系统模板直接读取；供应商原表识别后如有歧义，请核对原列与规格。</li><li>导入后先暂存明细；基础信息在保存时核验，原图归属需人工确认。</li></ol>
-      <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="importDisabled || state.upload?.status === 'UNKNOWN'" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
+      <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="fileImportDisabled || state.upload?.status === 'UNKNOWN'" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
       <PurchaseImportProgress :page="page" />
       <el-alert v-if="downloadError" :title="downloadError" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <ul v-if="state.errors.length" class="import-error-list" aria-label="文件错误明细"><li v-for="(error, index) in state.errors" :key="index"><span v-if="error.rowNo">第{{ error.rowNo }}行：</span><span v-if="error.field">{{ errorLabel(error.field) }}，</span>{{ error.message }}</li></ul>
-      <template #footer><el-button :disabled="state.importing" @click="dialogVisible = false">{{ state.activeTaskId ? state.status === 'PARSING' ? '收起进度' : '关闭' : '取消' }}</el-button><el-button type="primary" :loading="state.importing" :disabled="importDisabled || !selected" @click="submitImport">{{ state.upload?.status === 'UNKNOWN' ? '重试原请求' : '导入数据' }}</el-button></template>
+      <template #footer><el-button type="danger" plain :disabled="clearConfirming" @click="clearAll">清空页面</el-button><el-button :disabled="state.importing" @click="dialogVisible = false">{{ state.activeTaskId ? state.status === 'PARSING' ? '收起进度' : '关闭' : '取消' }}</el-button><el-button type="primary" :loading="state.importing" :disabled="fileImportDisabled || !selected" @click="submitImport">{{ state.upload?.status === 'UNKNOWN' ? '重试原请求' : '导入数据' }}</el-button></template>
     </el-dialog>
   </main>
 </template>
