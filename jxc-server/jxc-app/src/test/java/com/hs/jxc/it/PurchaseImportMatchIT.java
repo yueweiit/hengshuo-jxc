@@ -17,6 +17,7 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @Autowired PurchaseImportMatchServiceImpl matches;
     @Autowired PurchaseImportProductServiceImpl review;
     @Autowired PurchaseImportPhotoServiceImpl photos;
+    @Autowired com.hs.jxc.md.api.ProductImageApi catalogImages;
     @DynamicPropertySource static void recognition(DynamicPropertyRegistry r){r.add("jxc.purchase-import.recognition.enabled",()->true);}
     @BeforeEach void matchPermissions(){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:view\"]'::jsonb WHERE id=801");doThrow(new ApiException(503,"N8N_UNAVAILABLE","受限识别工作流不可用")).when(parser).recognize(any(),anyString(),anyMap());}
     Map<String,Object> source(String code){var b=upload(UUID.randomUUID().toString());parse(b);if(code!=null)imports.saveRow(actor,id(b),rowId(b),Map.of("version",1,"values",values(),"matchInputs",Map.of("suppliedProductCode",code,"suppliedProductName","","supplierProductCode","")));return imports.get(actor,id(b));}
@@ -25,6 +26,86 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @SuppressWarnings("unchecked") Map<String,Object> matched(Map<String,Object>b){return (Map<String,Object>)rows(imports.get(actor,id(b))).getFirst().get("matchResult");}
     Map<String,Object> photoBatch(boolean published){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:edit\"]'::jsonb WHERE id=801");var b=upload(UUID.randomUUID().toString());doReturn(photoDocument()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));long image=owner.queryForObject("SELECT id FROM pur_order_import_image",Long.class);imports.associate(actor,id(b),rowId(b),image,Map.of("version",1,"association","CONFIRMED"));if(published){review.decide(actor,id(b),rowId(b),Map.of("version",2,"decision","EXISTING","productId",501,"unit","PCS"));var result=photos.publish(actor,id(b),rowId(b),Map.of("version",3,"confirmOwnership",true,"imageIds",List.of(image)),UUID.randomUUID().toString());doReturn(vector()).when(parser).embed(any(),anyString(),anyLong(),anyString());doAnswer(call->indexResult(call.getArgument(2))).when(parser).index(any(),anyString(),anyMap());tasks.execute(101,UUID.fromString(((List<?>)result.get("taskIds")).getFirst().toString()));}return imports.get(actor,id(b));}
     @SuppressWarnings("unchecked") Map<String,Object> map(Object value){return (Map<String,Object>)value;}
+    @Test void weightedRankingRejectsTheWrongSizeButRetainsItsCachedEvidenceOnReload(){
+        var b=photoBatch(true);owner.update("UPDATE md_product SET spec='M',version=version+1 WHERE id=501");
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",0.99)))).when(parser).search(any(),anyString(),anyMap());
+        UUID run=start(b);tasks.execute(101,run);var result=matched(b);
+        assertThat(map(result.get("ranking"))).containsEntry("status","NEEDS_REVIEW").containsEntry("recommendedIds",List.of());
+        assertThat(result.get("candidates")).asList().hasSize(1);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_candidate WHERE run_id=?",Integer.class,run)).isEqualTo(1);
+        assertThat(map(matched(b).get("ranking"))).isEqualTo(map(result.get("ranking")));
+    }
+    @Test void changingOnlyTextReusesPhotosAndRescoresWithoutCallingRecognitionOrSearch(){
+        var b=photoBatch(true);owner.update("UPDATE md_product SET spec='M',version=version+1 WHERE id=501");
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",0.99)))).when(parser).search(any(),anyString(),anyMap());
+        UUID original=start(b);tasks.execute(101,original);
+        var old=matched(b);var row=rows(imports.get(actor,id(b))).getFirst();var changed=values();changed.put("productSpec","M");
+        imports.saveRow(actor,id(b),rowId(b),Map.of("version",row.get("version"),"values",changed));clearInvocations(parser);
+        UUID rerun=start(b);tasks.execute(101,rerun);
+        assertThat(tasks.get(actor,rerun)).containsEntry("status","SUCCEEDED");
+        assertThat(map(matched(b).get("ranking"))).containsEntry("recommendedIds",List.of(501));
+        assertThat(matched(b)).containsEntry("cacheReused",true).containsEntry("runId",rerun.toString());
+        assertThat(map(old.get("ranking"))).containsEntry("recommendedIds",List.of());
+        verify(parser,never()).recognize(any(),anyString(),anyMap());verify(parser,never()).search(any(),anyString(),anyMap());
+    }
+    @Test void emptyPhotoResultsCannotHideANewlySuppliedRealCatalogCode(){
+        var b=photoBatch(true);doReturn(Map.of("hits",List.of())).when(parser).search(any(),anyString(),anyMap());
+        tasks.execute(101,start(b));assertThat(matched(b).get("candidates")).asList().isEmpty();
+        var row=rows(imports.get(actor,id(b))).getFirst();
+        imports.saveRow(actor,id(b),rowId(b),Map.of("version",row.get("version"),"values",values(),"matchInputs",Map.of("suppliedProductCode","SKU","suppliedProductName","","supplierProductCode","")));
+        clearInvocations(parser);tasks.execute(101,start(b));
+        assertThat(map(matched(b).get("text"))).containsEntry("status","FOUND");
+        assertThat(matched(b).get("candidates")).asList().hasSize(1);
+        verify(parser,times(1)).recognize(any(),anyString(),anyMap());
+    }
+    @Test void changedSourcePhotoCannotReuseThePreviousCache(){
+        var b=photoBatch(true);long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",0.99)))).when(parser).search(any(),anyString(),anyMap());
+        tasks.execute(101,start(b));owner.update("UPDATE pur_order_import_image SET image_sha256=repeat('b',64)");clearInvocations(parser);
+        tasks.execute(101,start(b));verify(parser,times(1)).recognize(any(),anyString(),anyMap());verify(parser,times(1)).search(any(),anyString(),anyMap());
+        assertThat(matched(b).get("cacheReused")).isNotEqualTo(true);
+    }
+    @Test void changedGalleryRejectsTheOldRecommendationAndForcesARealPhotoRefresh(){
+        var b=photoBatch(true);long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=501");
+        doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",0.99)))).when(parser).search(any(),anyString(),anyMap());
+        UUID original=start(b);tasks.execute(101,original);var row=rows(imports.get(actor,id(b))).getFirst();
+        assertThat(map(matched(b).get("ranking"))).containsEntry("recommendedIds",List.of(501));
+        var rebuild=photos.rebuild(actor,id(b),UUID.randomUUID().toString());tasks.execute(101,UUID.fromString(rebuild.get("id").toString()));
+        assertThatThrownBy(()->review.decide(actor,id(b),rowId(b),Map.of("version",row.get("version"),"decision","EXISTING","productId",501,"unit","PCS","runId",original.toString())))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("MATCH_CANDIDATE_STALE");
+        clearInvocations(parser);tasks.execute(101,start(b));
+        verify(parser,times(1)).recognize(any(),anyString(),anyMap());verify(parser,times(1)).search(any(),anyString(),anyMap());
+        assertThat(matched(b).get("cacheReused")).isNotEqualTo(true);
+    }
+    @Test void sharedPhotoSizesSurviveTopOneAndChangedCompetingSizeRejectsTheOldShortcut(){
+        var b=photoBatch(true);owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=501");
+        owner.update("INSERT INTO md_product(id,product_code,name,base_unit,spec) VALUES(502,'SKU-M','同照片M码','PCS','M')");
+        owner.update("INSERT INTO md_country_sku(country_id,product_id,status) VALUES(101,502,'ENABLED')");
+        long attachment=owner.queryForObject("SELECT attachment_id FROM md_product_image WHERE product_id=501",Long.class);
+        catalogImages.link(actor,502,attachment);var rebuild=photos.rebuild(actor,id(b),UUID.randomUUID().toString());tasks.execute(101,UUID.fromString(rebuild.get("id").toString()));
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",1.0)))).when(parser).search(any(),anyString(),anyMap());
+        var started=matches.start(actor,id(b),Map.of("batchVersion",imports.get(actor,id(b)).get("version"),"rowIds",List.of(rowId(b)),"topK",1),UUID.randomUUID().toString());
+        UUID run=UUID.fromString(((List<?>)started.get("taskIds")).getFirst().toString());tasks.execute(101,run);
+        assertThat(matched(b).get("candidates")).asList().hasSize(2);
+        assertThat(map(matched(b).get("ranking"))).containsEntry("recommendedIds",List.of(501));
+        owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=502");
+        var row=rows(imports.get(actor,id(b))).getFirst();
+        assertThatThrownBy(()->review.decide(actor,id(b),rowId(b),Map.of("version",row.get("version"),"decision","EXISTING","productId",501,"unit","PCS","runId",run.toString())))
+            .isInstanceOf(ApiException.class).extracting("code").isEqualTo("MATCH_CANDIDATE_STALE");
+    }
+    @Test void unqualifiedCachedCandidateRequiresExplicitManualConfirmation(){
+        var b=photoBatch(true);owner.update("UPDATE md_product SET spec='M',version=version+1 WHERE id=501");
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",0.99)))).when(parser).search(any(),anyString(),anyMap());
+        UUID run=start(b);tasks.execute(101,run);var row=rows(imports.get(actor,id(b))).getFirst();
+        var request=new LinkedHashMap<String,Object>(Map.of("version",row.get("version"),"decision","EXISTING","productId",501,"unit","PCS","runId",run.toString()));
+        assertThatThrownBy(()->review.decide(actor,id(b),rowId(b),request)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("MATCH_MANUAL_CONFIRM_REQUIRED");
+        request.put("confirmCandidate",true);assertThat(review.decide(actor,id(b),rowId(b),request)).containsEntry("readiness","READY");
+    }
     @Test void reviewImagesAreLimitedToFixedHitsAndSamePhotoDoesNotProveTheSize(){
         var b=photoBatch(true);owner.update("UPDATE md_product SET spec='M',version=version+1 WHERE id=501");
         long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);UUID task=start(b);
@@ -82,7 +163,7 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @Test void taskCredentialWorksOnlyForExactPostToolsAndNeverBecomesAnAssetWritePermission(){var b=source("SKU");UUID task=start(b);doAnswer(call->{String credential=call.getArgument(1);var http=java.net.http.HttpClient.newHttpClient();String root="http://127.0.0.1:"+port+"/internal/purchase-import/tasks/"+task;var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(root+"/catalog-search")).header("X-Purchase-Task",credential).header("Content-Type","application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"operation\":\"TEXT\"}")).build();var response=http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(response.statusCode()).as(response.body()).isEqualTo(200);assertThat(response.body()).contains("candidateIds");var wrong=java.net.http.HttpRequest.newBuilder(java.net.URI.create(root+"/assets/1")).header("X-Purchase-Task",credential).POST(java.net.http.HttpRequest.BodyPublishers.noBody()).build();assertThat(http.send(wrong,java.net.http.HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(401);throw new ApiException(503,"N8N_UNAVAILABLE","HTTP边界已验证");}).when(parser).recognize(any(),anyString(),anyMap());tasks.execute(101,task);assertThat(matched(b).get("candidates")).asList().hasSize(1);}
 
     @Test void realPythonFaissSearchResolvesScopedOriginalPhotoToCurrentProductWithoutRealModelInference()throws Exception{String python=System.getProperty("jxc.test.purchase-python");Assumptions.assumeTrue(python!=null,"显式选择解释器才运行真实HTTP/Faiss检索；查询向量是确定性夹具");var b=photoBatch(true);try(var bridge=startBridge(python,"workbench.tests.jxc_search_fixture:app")){doAnswer(call->bridge.client().index(call.getArgument(0),call.getArgument(1),call.getArgument(2))).when(parser).index(any(),anyString(),anyMap());var rebuild=photos.rebuild(actor,id(b),UUID.randomUUID().toString());tasks.execute(101,UUID.fromString(rebuild.get("id").toString()));doAnswer(call->bridge.client().search(call.getArgument(0),call.getArgument(1),call.getArgument(2))).when(parser).search(any(),anyString(),anyMap());UUID task=start(b);tasks.execute(101,task);assertThat(tasks.get(actor,task)).as(tasks.get(actor,task).toString()).containsEntry("status","SUCCEEDED");var result=matched(b);assertThat(map(result.get("image"))).containsEntry("status","FOUND");var candidate=map(((List<?>)result.get("candidates")).getFirst());assertThat(candidate).containsEntry("productId",501);assertThat(((Number)candidate.get("visualScore")).doubleValue()).isCloseTo(1.0,within(0.00001));assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();}}
-    @Test void isolatedFeatureDockerCreatesAndRestoresRealTextCandidatesThroughExistingWorker()throws Exception{String image=System.getProperty("jxc.test.purchase-image");Assumptions.assumeTrue(image!=null,"显式构建M4镜像后运行受限HTTP候选验收");var b=source("SKU");try(var app=featureContainer(image,false).withEnv("JXC_PURCHASE_IMPORT_RECOGNITION_ENABLED","true").withCommand("-Xmx384m","-Dfile.encoding=UTF-8","-jar","/app/app.jar","--spring.flyway.enabled=false","--jxc.jobs.enabled=true","--jxc.jobs.recovery.delay-ms=1000")){app.start();String root="http://"+app.getHost()+":"+app.getMappedPort(8080)+"/api/v1/pur/order-imports/"+id(b);var http=java.net.http.HttpClient.newHttpClient();var body=Map.of("batchVersion",b.get("version"),"rowIds",List.of(rowId(b)),"topK",5);var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(root+"/matches")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Content-Type","application/json").header("Idempotency-Key",UUID.randomUUID().toString()).POST(java.net.http.HttpRequest.BodyPublishers.ofString(codec.write(body))).build();var response=http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(response.statusCode()).as(response.body()).isEqualTo(200);UUID task=UUID.fromString(((List<?>)map(codec.readMap(response.body()).get("data")).get("taskIds")).getFirst().toString());for(int n=0;n<100&&Set.of("QUEUED","RUNNING").contains(tasks.get(actor,task).get("status"));n++)Thread.sleep(300);assertThat(tasks.get(actor,task)).as(app.getLogs()).containsEntry("status","SUCCEEDED");var get=java.net.http.HttpRequest.newBuilder(java.net.URI.create(root)).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").GET().build();var restored=http.send(get,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(restored.statusCode()).isEqualTo(200);assertThat(restored.body()).contains("MatchRunV1","UNAVAILABLE","SKU").doesNotContain("credential_hash","snapshots","tokenHash");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();String expected=com.hs.jxc.attachment.AttachmentObjectStore.sha256(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("target/jxc-app-0.1.0-SNAPSHOT.jar")));assertThat(app.execInContainer("sha256sum","/app/app.jar").getStdout()).startsWith(expected+" ");}}
+    @Test void isolatedFeatureDockerCreatesAndRestoresRealTextCandidatesThroughExistingWorker()throws Exception{String image=System.getProperty("jxc.test.purchase-image");Assumptions.assumeTrue(image!=null,"显式构建M4镜像后运行受限HTTP候选验收");var b=source("SKU");try(var app=featureContainer(image,false).withEnv("JXC_PURCHASE_IMPORT_RECOGNITION_ENABLED","true").withCommand("-Xmx384m","-Dfile.encoding=UTF-8","-jar","/app/app.jar","--spring.flyway.enabled=false","--jxc.jobs.enabled=true","--jxc.jobs.recovery.delay-ms=1000")){app.start();String root="http://"+app.getHost()+":"+app.getMappedPort(8080)+"/api/v1/pur/order-imports/"+id(b);var http=java.net.http.HttpClient.newHttpClient();var body=Map.of("batchVersion",b.get("version"),"rowIds",List.of(rowId(b)),"topK",5);var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(root+"/matches")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Content-Type","application/json").header("Idempotency-Key",UUID.randomUUID().toString()).POST(java.net.http.HttpRequest.BodyPublishers.ofString(codec.write(body))).build();var response=http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(response.statusCode()).as(response.body()).isEqualTo(200);UUID task=UUID.fromString(((List<?>)map(codec.readMap(response.body()).get("data")).get("taskIds")).getFirst().toString());for(int n=0;n<100&&Set.of("QUEUED","RUNNING").contains(tasks.get(actor,task).get("status"));n++)Thread.sleep(300);assertThat(tasks.get(actor,task)).as(app.getLogs()).containsEntry("status","SUCCEEDED");var get=java.net.http.HttpRequest.newBuilder(java.net.URI.create(root)).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").GET().build();var restored=http.send(get,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(restored.statusCode()).isEqualTo(200);assertThat(restored.body()).contains("MatchRunV1","UNAVAILABLE","SKU","CandidateRankingV1","photo-first-text-40-40-20-v1").doesNotContain("credential_hash","snapshots","tokenHash");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();String expected=com.hs.jxc.attachment.AttachmentObjectStore.sha256(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("target/jxc-app-0.1.0-SNAPSHOT.jar")));assertThat(app.execInContainer("sha256sum","/app/app.jar").getStdout()).startsWith(expected+" ");}}
 
     @Test void exactSystemCodeDoesNotDisappearBehindFirstFiftyFuzzyMatches(){for(int n=1;n<=55;n++)owner.update("INSERT INTO md_product(id,product_code,name,base_unit) VALUES(?,?,?,'PCS')",600+n,"PRE-LATE-"+n,"Other");owner.update("INSERT INTO md_product(id,product_code,name,base_unit) VALUES(9999,'LATE','SKU','PCS')");var b=source("LATE");tasks.execute(101,start(b));assertThat(matched(b).get("candidates")).asList().hasSize(1);assertThat(map(((List<?>)matched(b).get("candidates")).getFirst())).containsEntry("productId",9999);}
 

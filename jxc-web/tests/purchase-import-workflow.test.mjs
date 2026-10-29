@@ -13,6 +13,25 @@ async function setup(extra={},source={}){
   await page.loadBatch(batchId);return page
 }
 
+function scoredRun(textScore = 0.8) {
+  const candidate = { productId:501, product:{id:501,productCode:'ABXY',name:'coat',spec:'S',units:[]}, visualScore:1, textEvidence:[],visualEvidence:[],conflicts:[] }
+  const fields = [{field:'productCode',label:'商品编号',weight:40,source:'ABCD',target:'ABXY',score:0.5},{field:'spec',label:'规格',weight:40,source:'S',target:'S',score:1},{field:'name',label:'商品名',weight:20,source:'coat',target:'coat',score:1}]
+  return {format:'MatchRunV1',runId:batchId,inputRevision:1,status:'OK',text:{status:'NO_INPUT',reason:'缓存'},image:{status:'FOUND',reason:'照片候选'},candidates:[candidate],explanation:{status:'NOT_REQUESTED',message:'缓存重算'},ranking:{format:'CandidateRankingV1',policyVersion:'photo-first-text-40-40-20-v1',completePhotoGroup:true,status:'RECOMMENDED',reason:'通过门槛',photoThreshold:0.8,textThreshold:0.8,weights:{productCode:40,spec:40,name:20},highestPhotoIds:[501],recommendedIds:[501],scores:[{productId:501,photoScore:1,textScore,fields,reason:'通过门槛'}]}}
+}
+
+test('读取恢复批次保留后台加权分及字段依据，不在前端重新算分', async()=>{
+  const page=await setup({}, {rows:[{...row,matchTaskId:batchId,matchResult:scoredRun()}]})
+  assert.equal(page.state.error,'');assert.equal(page.state.rows[0].matchResult.ranking.scores[0].textScore,0.8)
+  assert.deepEqual(page.state.rows[0].matchResult.ranking.recommendedIds,[501])
+})
+
+test('后台把不足门槛或照片组不完整的候选标成推荐时拒绝错误响应',async()=>{
+  for(const run of [scoredRun(0.79), {...scoredRun(),ranking:{...scoredRun().ranking,completePhotoGroup:false}}]) {
+    const page=await setup({}, {rows:[{...row,matchResult:run}]})
+    assert.match(page.state.error,/加权评分/);assert.equal(page.state.rows.length,0)
+  }
+})
+
 test('AI图文核对只登记未确认行且后台运行时重复点击不另建任务',async()=>{
   let calls=0
   const task='22222222-2222-4333-8444-555555555555'

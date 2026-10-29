@@ -23,6 +23,7 @@ const catalogImages = createPurchaseImportCatalogImages(
 watch(photoScope, () => catalogImages.reset())
 const activeTab = ref<ReviewTab>('todos'), focusedImage = ref<number | null>(null)
 const matchEnabled = ref(false), capabilityError = ref(''), candidateRun = ref<string | null>(null), candidateProduct = ref<MatchCandidate['product'] | null>(null)
+const manualCandidate = ref(false), showCached = ref(false)
 const matchInputs = ref({ suppliedProductCode: '', suppliedProductName: '', supplierProductCode: '' })
 const selectedRow = ref<number | null>(null), keyword = ref(''), products = ref<Product[]>([]), productId = ref<number | null>(null), unit = ref('')
 const catalogLoading = ref(false), catalogError = ref(''), catalogLoaded = ref(false), mode = ref('existing')
@@ -55,9 +56,18 @@ const locked = computed(() => pickerLocked.value || !!row.value && props.page.ro
 const inputsDirty = computed(() => !!row.value && ['suppliedProductCode', 'suppliedProductName', 'supplierProductCode'].some(key => (matchInputs.value[key as keyof typeof matchInputs.value].trim() || null) !== (row.value![key as keyof ImportRow] || null)))
 function isCurrentMatch(item: ImportRow) { return !!item.matchResult && item.matchResult.inputRevision === item.version && item.matchResult.runId === item.matchTaskId }
 const currentMatch = computed(() => !!row.value && isCurrentMatch(row.value))
+const recommendedCandidates = computed(() => currentMatch.value ? row.value!.matchResult!.candidates.filter(candidate => row.value!.matchResult!.ranking?.recommendedIds.includes(candidate.productId)) : [])
+const cachedCandidates = computed(() => (row.value?.matchResult?.candidates ?? []).filter(candidate => !recommendedCandidates.value.some(item => item.productId === candidate.productId)))
+const candidateGroups = computed(() => [
+  { title: '推荐候选', manual: false, candidates: recommendedCandidates.value },
+  { title: '缓存候选 · 待人工核对', manual: true, candidates: showCached.value ? cachedCandidates.value : [] },
+].filter(group => group.candidates.length))
+const candidateScore = (id: number) => row.value?.matchResult?.ranking?.scores.find(score => score.productId === id)
+const percent = (value: number | null | undefined) => value == null ? '无可比较数据' : `${(value * 100).toFixed(2)}%`
 const productOptions = computed(() => {
-  const options = new Map<number, { product: MatchCandidate['product']; candidate?: MatchCandidate }>()
-  if (currentMatch.value) for (const candidate of row.value!.matchResult!.candidates) options.set(candidate.productId, { product: candidate.product, candidate })
+  const options = new Map<number, { product: MatchCandidate['product']; candidate?: MatchCandidate; manual?: boolean }>()
+  for (const candidate of recommendedCandidates.value) options.set(candidate.productId, { product: candidate.product, candidate })
+  if (manualCandidate.value && candidateProduct.value) options.set(candidateProduct.value.id, { product: candidateProduct.value, candidate: row.value?.matchResult?.candidates.find(item => item.productId === candidateProduct.value!.id), manual: true })
   for (const product of products.value) if (!options.has(product.id)) options.set(product.id, { product })
   return [...options.values()]
 })
@@ -78,7 +88,7 @@ function openTodo(todo: ReviewTodo) {
 }
 function syncRow(value?: ImportRow) {
   if (freshRow !== null) newDrafts.set(freshRow, { values: { ...fresh.value }, source: freshSource })
-  candidateRun.value = null; candidateProduct.value = null
+  candidateRun.value = null; candidateProduct.value = null; manualCandidate.value = false
   matchInputs.value = { suppliedProductCode: value?.suppliedProductCode || '', suppliedProductName: value?.suppliedProductName || '', supplierProductCode: value?.supplierProductCode || '' }
   productId.value = value?.matchedProductId ?? null; unit.value = value?.purchaseUnit ?? ''; mode.value = 'existing'
   const source: NewProduct = { productCode: value?.suppliedProductCode ?? '', name: value?.suppliedProductName ?? '', baseUnit: '', spec: value?.productSpec ?? '' }
@@ -89,7 +99,7 @@ function syncRow(value?: ImportRow) {
   if (value?.productOperation) choices.value[value.id] = { key: value.productOperation.key, request: value.productOperation.request }
 }
 watch(() => row.value?.version, () => syncRow(row.value))
-watch(() => selectedRow.value, () => { props.page.clearFeedback(); syncRow(row.value) })
+watch(() => selectedRow.value, () => { props.page.clearFeedback(); showCached.value = false; syncRow(row.value) })
 watch(() => props.page.state.rows.map(item => item.id).join(','), () => { if (!props.page.state.rows.some(item => item.id === selectedRow.value)) { selectedRow.value = props.page.state.rows[0]?.id ?? null; syncRow(row.value) } }, { immediate: true })
 watch(() => props.page.state.batchId, () => { ++epoch; catalogLoading.value = false; products.value = []; catalogLoaded.value = false; catalogError.value = ''; choices.value = {}; newDrafts.clear(); freshRow = null; syncRow(row.value) })
 watch(() => props.page.state.batchId, async () => {
@@ -97,16 +107,26 @@ watch(() => props.page.state.batchId, async () => {
   try { const result = await http.get<{ recognitionEnabled: boolean }>('/pur/order-imports/capabilities', undefined, { silent: true }); if (active && context === epoch) { if (typeof result.recognitionEnabled !== 'boolean') throw new Error('候选识别开关响应不完整'); matchEnabled.value = result.recognitionEnabled } }
   catch (error) { if (active && context === epoch) capabilityError.value = error instanceof Error ? error.message : '候选识别状态读取失败' }
 }, { immediate: true })
-function chooseCandidate(candidate: MatchCandidate) {
+function chooseCandidate(candidate: MatchCandidate, manual = false) {
   if (!row.value || !currentMatch.value || locked.value) return
+  if (!manual && !recommendedCandidates.value.some(item => item.productId === candidate.productId)) return
+  manualCandidate.value = manual
   candidateProduct.value = candidate.product; productId.value = candidate.productId; candidateRun.value = row.value.matchResult!.runId; activeTab.value = 'product'
 }
 function manualSelection() {
   const candidate = currentMatch.value ? row.value?.matchResult?.candidates.find(item => item.productId === productId.value) : undefined
-  if (candidate) chooseCandidate(candidate)
-  else { candidateRun.value = null; candidateProduct.value = null }
+  if (candidate) chooseCandidate(candidate, !recommendedCandidates.value.some(item => item.productId === candidate.productId))
+  else { candidateRun.value = null; candidateProduct.value = null; manualCandidate.value = false }
 }
-async function saveInputs() { if (row.value && await props.page.saveMatchInputs(row.value, { ...matchInputs.value })) syncRow(row.value) }
+async function saveInputs() {
+  const selected = row.value, batch = props.page.state.batchId
+  if (!selected || !await props.page.saveMatchInputs(selected, { ...matchInputs.value })) return
+  if (batch !== props.page.state.batchId) return
+  if (row.value?.id === selected.id) syncRow(row.value)
+  if (selected.matchResult?.candidates.length && props.page.state.rows.some(item => item.id === selected.id)) {
+    if (!await props.page.startMatches([selected.id])) props.page.failure(new Error('补充文字已保存，候选重算未完成，请重新核对本行'))
+  }
+}
 const imageCheckLabel = (status: string) => ({ SAME: '照片同款', DIFFERENT: '照片不同款', UNCERTAIN: '照片尚不能确定', NO_INPUT: '缺少可用配对图' }[status] || status)
 const specCheckLabel = (status: string) => ({ MATCH: '规格一致', CONFLICT: '规格冲突', MISSING: '规格缺失', NOT_CHECKED: '尚未核对规格' }[status] || status)
 const candidateCheck = (productId: number) => row.value?.matchResult?.explanation.candidateChecks?.find(check => check.productId === productId)
@@ -125,7 +145,7 @@ async function search() {
 async function confirmExisting() {
   if (!row.value || locked.value) return
   if (!productId.value || !unit.value.trim()) { props.page.failure(new Error('请从真实商品目录选择商品并填写采购单位')); return }
-  await props.page.decideProduct(row.value, { decision: 'EXISTING', productId: productId.value, unit: unit.value.trim(), ...(candidateRun.value ? { runId: candidateRun.value } : {}) })
+  await props.page.decideProduct(row.value, { decision: 'EXISTING', productId: productId.value, unit: unit.value.trim(), ...(candidateRun.value ? { runId: candidateRun.value, ...(manualCandidate.value ? { confirmCandidate: true } : {}) } : {}) })
 }
 async function createNew() {
   const selected = row.value
@@ -192,10 +212,11 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
         <el-select v-model="productId" filterable placeholder="从识别候选或查询结果选择商品" aria-label="已有商品" :disabled="locked" @change="manualSelection">
           <el-option v-for="item in productOptions" :key="item.product.id" :value="item.product.id" :label="`${item.product.productCode} · ${item.product.name} · ${item.product.spec || '规格未填写'}`" class="review-product-option">
             <PurchaseImportProductPhoto :catalog="catalogImages" :image-id="item.candidate ? bestVisual(item.candidate)?.imageId : undefined" :product-id="item.product.id" :label="`${item.product.name}照片`" compact />
-            <div class="product-option-text"><strong>{{ item.product.productCode }} · <span>{{ item.product.name }}</span></strong><span>规格：{{ item.product.spec || '规格未填写' }}{{ item.product.status && item.product.status !== 'ENABLED' ? ' · 已停用' : '' }}</span><span>{{ item.candidate ? item.candidate.visualEvidence.length ? '图片匹配' : '文字匹配' : '目录查询' }}<template v-if="item.candidate?.visualScore != null"> · 外观相似度 {{ item.candidate.visualScore.toFixed(4) }}</template></span></div>
+            <div class="product-option-text"><strong>{{ item.product.productCode }} · <span>{{ item.product.name }}</span></strong><span>规格：{{ item.product.spec || '规格未填写' }}{{ item.product.status && item.product.status !== 'ENABLED' ? ' · 已停用' : '' }}</span><span>{{ item.manual ? '人工选择的缓存参考' : item.candidate ? item.candidate.visualEvidence.length ? '图片匹配' : '文字匹配' : '目录查询' }}<template v-if="item.candidate?.visualScore != null"> · 外观相似度 {{ item.candidate.visualScore.toFixed(4) }}</template></span></div>
           </el-option>
         </el-select>
         <el-select v-model="unit" filterable allow-create default-first-option placeholder="选择采购单位，缺少时填写后核对" aria-label="确认采购单位" :disabled="locked"><el-option v-for="item in selectedProduct?.units" :key="item.unit" :value="item.unit" :label="item.unit" /></el-select>
+        <p v-if="manualCandidate" class="review-warning">已人工选择缓存参考候选，请核对照片、商品资料和采购单位后再确认。</p>
         <el-button type="primary" :disabled="locked" @click="confirmExisting">{{ row.readiness === 'NEEDS_SETUP' ? '重新核对商品与单位' : '确认商品与单位' }}</el-button><el-button :disabled="locked" @click="page.decideProduct(row, { decision: 'DEFERRED' })">暂缓本行</el-button>
         <div v-if="selectedProduct" class="selected-product-photo"><PurchaseImportProductPhoto :catalog="catalogImages" :image-id="selectedCandidate ? bestVisual(selectedCandidate)?.imageId : undefined" :product-id="selectedProduct.id" :label="`已选商品${selectedProduct.name}照片`" /><span class="review-hint">{{ selectedCandidate?.visualEvidence.length ? '本次实际命中照片，可与上方原图对照' : '已选商品资料照片' }}</span></div>
       </div>
@@ -243,7 +264,13 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
           <p>文字：{{ routeLabel(row.matchResult.text.status) }} · {{ row.matchResult.text.reason }}</p><p>图片：{{ routeLabel(row.matchResult.image.status) }} · {{ row.matchResult.image.reason }}</p>
           <p v-for="(error, index) in row.matchResult.image.errors" :key="index" class="review-warning">{{ error.reason }}</p>
           <p v-if="!row.matchResult.candidates.length">{{ row.matchResult.status === 'FAILED' ? '候选识别失败，请检查上述原因后重试，或继续人工查找。' : '当前没有可核实候选，请继续人工查找或核对新品。' }}</p>
-          <article v-for="candidate in row.matchResult.candidates" :key="candidate.productId" class="candidate-card">
+          <p v-if="row.matchResult.ranking" :class="{ 'review-warning': !row.matchResult.ranking.recommendedIds.length }">{{ row.matchResult.ranking.reason }}</p>
+          <p v-else class="review-warning">这是旧版缓存，尚无加权评分，请人工核对或重新核对本行。</p>
+          <p class="review-hint">照片至少80%，只取最高分组；文字至少80%，编号40% · 规格40% · 商品名20%。{{ row.matchResult.cacheReused ? '本次已复用照片缓存并重新计算文字分。' : '' }}</p>
+          <el-button v-if="cachedCandidates.length" link type="primary" @click="showCached = !showCached">{{ showCached ? '收起' : '查看' }}缓存候选（{{ cachedCandidates.length }}）</el-button>
+          <section v-for="group in candidateGroups" :key="group.title" class="candidate-group">
+          <h4>{{ group.title }}</h4>
+          <article v-for="candidate in group.candidates" :key="candidate.productId" class="candidate-card">
             <div><strong>{{ candidate.product.productCode }} · {{ candidate.product.name }}</strong><span>规格：{{ candidate.product.spec || '待核实' }}</span></div>
             <div v-for="(evidence, index) in candidate.visualEvidence" :key="`${evidence.queryAssetId}-${evidence.imageId}-${index}`" class="candidate-comparison">
               <figure :data-query-image-id="evidence.queryAssetId"><figcaption>用于识别的导入原图</figcaption><div class="comparison-original">
@@ -255,15 +282,22 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
             <div v-if="!candidate.visualEvidence.length" class="text-candidate-photo"><PurchaseImportProductPhoto :catalog="catalogImages" :product-id="candidate.productId" :label="`${candidate.product.name}资料照片`" /><span class="review-hint">文字匹配 · 商品资料照片</span></div>
             <p v-if="candidate.visualScore !== null">外观相似度 {{ candidate.visualScore.toFixed(4) }}（排序分数，非正确概率）</p><p v-for="(evidence, index) in candidate.textEvidence" :key="index">{{ evidence.reason }}</p>
             <p v-for="conflict in candidate.conflicts" :key="conflict" class="review-warning">{{ conflict }}</p>
+            <template v-if="candidateScore(candidate.productId)">
+              <p><strong>文字综合分 {{ percent(candidateScore(candidate.productId)!.textScore) }}</strong> · {{ candidateScore(candidate.productId)!.reason }}</p>
+              <p v-for="field in candidateScore(candidate.productId)!.fields" :key="field.field" class="review-hint">{{ field.label }}（权重{{ field.weight }}%）：{{ field.source || '来源未提供' }} / {{ field.target || '档案未提供' }} · {{ percent(field.score) }}</p>
+            </template>
+            <details class="review-hint"><summary>AI辅助说明</summary>
             <div v-if="candidateCheck(candidate.productId)" class="candidate-check" :class="{ 'review-warning': candidateCheck(candidate.productId)?.specMatch === 'CONFLICT' || candidateCheck(candidate.productId)?.imageMatch === 'DIFFERENT' }">
               <strong>{{ imageCheckLabel(candidateCheck(candidate.productId)!.imageMatch) }} · {{ specCheckLabel(candidateCheck(candidate.productId)!.specMatch) }}</strong>
               <p>{{ candidateCheck(candidate.productId)!.imageReason }}</p><p>{{ candidateCheck(candidate.productId)!.specReason }}</p>
             </div>
             <p v-else class="review-hint">尚无图片与规格复核结论，请勿仅按外观分数确认。</p>
-            <el-button :disabled="locked || !currentMatch" @click="chooseCandidate(candidate)">选择此候选后核对单位</el-button>
+            </details>
+            <el-button :disabled="locked || !currentMatch" @click="chooseCandidate(candidate, group.manual)">{{ group.manual ? '人工选择此缓存候选' : '选择此候选后核对单位' }}</el-button>
           </article>
-          <p>图文核对状态：{{ row.matchResult.explanation.status }} · {{ row.matchResult.explanation.message }}</p><p v-for="note in row.matchResult.explanation.candidateNotes" :key="note.productId">商品 {{ note.productId }}：{{ note.message }}</p>
-          <el-button :disabled="locked || !matchEnabled || !currentMatch || inputsDirty" @click="page.explainMatch(row)">只重试图文复核</el-button>
+          </section>
+          <p class="review-hint">AI辅助说明：{{ row.matchResult.explanation.status }} · {{ row.matchResult.explanation.message }}。推荐结果以上方评分为准。</p><p v-for="note in row.matchResult.explanation.candidateNotes" :key="note.productId">商品 {{ note.productId }}：{{ note.message }}</p>
+          <el-button :disabled="locked || !matchEnabled || !currentMatch || inputsDirty" @click="page.explainMatch(row)">重试AI辅助说明</el-button>
         </template>
       </div>
           </template>

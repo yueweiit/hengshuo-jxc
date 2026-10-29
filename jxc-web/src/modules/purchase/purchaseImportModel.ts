@@ -37,7 +37,10 @@ export interface MatchInputs { suppliedProductCode: string | null; suppliedProdu
 export interface VisualMatchEvidence { queryAssetId: number; imageId: number; featureId: number; score: number }
 export interface CandidateCheck { productId: number; imageMatch: 'SAME' | 'DIFFERENT' | 'UNCERTAIN' | 'NO_INPUT'; imageReason: string; specMatch: 'MATCH' | 'CONFLICT' | 'MISSING' | 'NOT_CHECKED'; specReason: string }
 export interface MatchCandidate { productId: number; product: { id: number; productCode: string; name: string; spec: string | null; status?: string; units: { unit: string }[] }; visualScore: number | null; textEvidence: { reason: string }[]; visualEvidence: VisualMatchEvidence[]; conflicts: string[] }
-export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: number; status: string; text: { status: string; reason: string }; image: { status: string; reason: string; errors?: { reason: string }[] }; candidates: MatchCandidate[]; explanation: { status: string; message: string; candidateNotes?: { productId: number; message: string }[]; candidateChecks?: CandidateCheck[] } }
+export interface CandidateTextField { field: 'productCode' | 'spec' | 'name'; label: string; weight: number; source: string | null; target: string | null; score: number | null }
+export interface CandidateScore { productId: number; photoScore: number | null; textScore: number | null; fields: CandidateTextField[]; reason: string }
+export interface CandidateRanking { format: 'CandidateRankingV1'; policyVersion: string; status: 'RECOMMENDED' | 'NEEDS_REVIEW'; reason: string; completePhotoGroup: boolean; photoThreshold: number; textThreshold: number; weights: { productCode: number; spec: number; name: number }; highestPhotoIds: number[]; recommendedIds: number[]; scores: CandidateScore[] }
+export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: number; status: string; ranking?: CandidateRanking; cacheReused?: boolean; text: { status: string; reason: string }; image: { status: string; reason: string; errors?: { reason: string }[] }; candidates: MatchCandidate[]; explanation: { status: string; message: string; candidateNotes?: { productId: number; message: string }[]; candidateChecks?: CandidateCheck[] } }
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; sourceItemKey?: string; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface SupplierMapping { format: string; fileSha256: string; sheet: string; needsReview: boolean; reasons: string[]; ignoredRows: { sourceRow:number; reason:string }[]; lines: { sourceRow:number; cells: Record<string,string | string[] | null> }[] }
 export interface MappingOverrides { mapping:SupplierMapping; specLabels:Record<string,string>; confirm:boolean }
@@ -111,6 +114,19 @@ function normalizeValues(values: ImportValues): ImportValues {
   return result
 }
 
+function validRanking(value: unknown, candidates: Record<string, unknown>[]) {
+  if (!record(value)) return false
+  const score = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1
+  const ids = (v: unknown) => Array.isArray(v) && new Set(v).size === v.length && v.every(id => candidates.some(c => c.productId === id))
+  if (value.format !== 'CandidateRankingV1' || value.policyVersion !== 'photo-first-text-40-40-20-v1' || !['RECOMMENDED', 'NEEDS_REVIEW'].includes(String(value.status)) || typeof value.reason !== 'string' || value.photoThreshold !== 0.8 || value.textThreshold !== 0.8 || !record(value.weights) || value.weights.productCode !== 40 || value.weights.spec !== 40 || value.weights.name !== 20 || !ids(value.highestPhotoIds) || !ids(value.recommendedIds) || !Array.isArray(value.scores)) return false
+  const highest = value.highestPhotoIds as number[], recommended = value.recommendedIds as number[], scores = value.scores
+  if (typeof value.completePhotoGroup !== 'boolean' || recommended.length > 1 || recommended.length && !value.completePhotoGroup || (value.status === 'RECOMMENDED') !== (recommended.length === 1) || scores.length !== candidates.length || new Set(scores.map(s => record(s) ? s.productId : null)).size !== candidates.length) return false
+  return scores.every(s => {
+    if (!record(s) || !candidates.some(c => c.productId === s.productId && c.visualScore === s.photoScore) || s.textScore !== null && !score(s.textScore) || typeof s.reason !== 'string' || !Array.isArray(s.fields) || s.fields.length !== 3 || new Set(s.fields.map(f => record(f) ? f.field : null)).size !== 3) return false
+    if (s.fields.some(f => !record(f) || !['productCode', 'spec', 'name'].includes(String(f.field)) || f.weight !== (value.weights as Record<string, unknown>)[String(f.field)] || typeof f.label !== 'string' || f.source !== null && typeof f.source !== 'string' || f.target !== null && typeof f.target !== 'string' || f.score !== null && !score(f.score))) return false
+    return !recommended.includes(s.productId as number) || highest.includes(s.productId as number) && typeof s.photoScore === 'number' && s.photoScore >= 0.8 && typeof s.textScore === 'number' && s.textScore >= 0.8
+  })
+}
 function readRow(value: unknown): ImportRow {
   if (!record(value) || !positiveId(value.id) || !positiveId(value.version) || !positiveId(value.rowNo)) throw new Error('后端返回的明细编号、版本或源行号不完整')
   if (value.images !== undefined && (!Array.isArray(value.images) || value.images.some(image => !record(image) || !positiveId(image.id) || typeof image.sha256 !== 'string' || !['UNCONFIRMED', 'CONFIRMED', 'REJECTED'].includes(String(image.status))))) throw new Error('后端返回的原图关联不完整')
@@ -120,6 +136,7 @@ function readRow(value: unknown): ImportRow {
     const route = (v: unknown) => record(v) && ['FOUND', 'NOT_FOUND', 'NO_INPUT', 'UNAVAILABLE', 'FAILED'].includes(String(v.status)) && typeof v.reason === 'string'
     const visual = (v: unknown) => record(v) && positiveId(v.queryAssetId) && positiveId(v.imageId) && positiveId(v.featureId) && typeof v.score === 'number' && Number.isFinite(v.score) && v.score >= -1.00001 && v.score <= 1.00001
     if (!record(run) || run.format !== 'MatchRunV1' || !isBatchId(run.runId) || !positiveId(run.inputRevision) || !['OK', 'PARTIAL', 'FAILED'].includes(String(run.status)) || !route(run.text) || !route(run.image) || !Array.isArray(run.candidates) || run.candidates.some(c => !record(c) || !positiveId(c.productId) || !record(c.product) || c.product.id !== c.productId || typeof c.product.productCode !== 'string' || typeof c.product.name !== 'string' || !Array.isArray(c.product.units) || !Array.isArray(c.textEvidence) || !Array.isArray(c.visualEvidence) || c.visualEvidence.some(e => !visual(e)) || !Array.isArray(c.conflicts) || c.conflicts.some(v => typeof v !== 'string') || c.visualScore !== null && (typeof c.visualScore !== 'number' || !Number.isFinite(c.visualScore) || c.visualScore < -1.00001 || c.visualScore > 1.00001)) || !record(run.explanation) || !['READY', 'UNAVAILABLE', 'FAILED', 'NOT_REQUESTED'].includes(String(run.explanation.status)) || typeof run.explanation.message !== 'string') throw new Error('后端返回的候选证据不完整，请重新读取')
+    if (run.ranking !== undefined && !validRanking(run.ranking, run.candidates as Record<string, unknown>[])) throw new Error('后端返回的候选加权评分不完整，请重新读取')
     if (run.explanation.candidateChecks !== undefined) {
       const checks = run.explanation.candidateChecks
       const candidates = run.candidates as Record<string, unknown>[]

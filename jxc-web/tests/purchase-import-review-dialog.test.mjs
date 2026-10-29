@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { computed, nextTick, reactive, ref, shallowReactive, watch } from 'vue'
+import { computed, nextTick, reactive, ref, shallowReactive, watch, createSSRApp, defineComponent, h } from 'vue'
+import * as Vue from 'vue'
+import { compileTemplate } from '@vue/compiler-sfc'
+import ts from 'typescript'
+import { readFileSync } from 'node:fs'
+import { renderToString } from '@vue/server-renderer'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 import { loadTsModule } from './contracts/load-ts-module.mjs'
 const { createPurchaseImportCatalogImages } = loadTsModule(new URL('../src/modules/purchase/purchaseImportCatalogImages.ts', import.meta.url))
@@ -24,9 +29,88 @@ function dialog(rows = [row(1)], options = {}) {
     useCountryStore: () => ({ current: { name: '测试国家' } }),
     createPurchaseImportCatalogImages,
     http: { async get() { return { recognitionEnabled: true } } }, ElMessageBox: { async confirm() {} },
-  }, ['activeTab', 'selectedRow', 'row', 'todoItems', 'todoRowCount', 'openTodo', 'readyCount', 'needsProductSetup', 'needsCountrySetup', 'matchInputs', 'fresh', 'mode', 'chooseCandidate', 'productId', 'unit', 'confirmExisting', 'choices', 'products', 'manualSelection'])
+  }, ['activeTab', 'selectedRow', 'row', 'todoItems', 'todoRowCount', 'openTodo', 'readyCount', 'needsProductSetup', 'needsCountrySetup', 'matchInputs', 'fresh', 'mode', 'chooseCandidate', 'productId', 'unit', 'confirmExisting', 'choices', 'products', 'manualSelection', 'productOptions', 'saveInputs', 'candidateGroups', 'showCached', 'cachedCandidates', 'candidateScore', 'percent', 'locked', 'inputsDirty', 'matchEnabled', 'capabilityError', 'currentMatch', 'routeLabel', 'catalogImages', 'imageUrls', 'imageErrors', 'imageLoading', 'candidateCheck', 'imageCheckLabel', 'specCheckLabel'])
   return { ...state, page, props, calls }
 }
+
+function rankedRow(recommendedIds = []) {
+  const approved = recommendedIds.includes(501), spec = approved ? 'S' : 'M', textScore = approved ? 1 : 0
+  const candidate = { productId:501, product:{id:501,productCode:'SKU',name:'测试商品',spec,units:[{unit:'PCS'}]},visualScore:1,visualEvidence:[],textEvidence:[],conflicts:[] }
+  const fields = [{field:'productCode',label:'商品编号',weight:40,source:null,target:'SKU',score:null},{field:'spec',label:'规格',weight:40,source:'S',target:spec,score:textScore},{field:'name',label:'商品名',weight:20,source:null,target:'测试商品',score:null}]
+  return row(1, {productSpec:'S',matchTaskId:'test-run',matchResult:{format:'MatchRunV1',runId:'test-run',inputRevision:1,status:'OK',text:{status:'NO_INPUT',reason:'没有文字查询'},image:{status:'FOUND',reason:'照片候选'},explanation:{status:'NOT_REQUESTED',message:'缓存重算'},candidates:[candidate],ranking:{format:'CandidateRankingV1',policyVersion:'photo-first-text-40-40-20-v1',completePhotoGroup:true,status:approved?'RECOMMENDED':'NEEDS_REVIEW',reason:approved?'达到推荐门槛':'保留候选待人工核对',photoThreshold:0.8,textThreshold:0.8,weights:{productCode:40,spec:40,name:20},recommendedIds,highestPhotoIds:[501],scores:[{productId:501,photoScore:1,textScore,fields,reason:approved?'达到推荐门槛':'文字不足80%'}]}}})
+}
+
+test('缓存中的低文字候选不进入推荐下拉且不能作为推荐快捷选择', () => {
+  const source = rankedRow(), d = dialog([source])
+  assert.equal(d.productOptions.value.length, 0)
+  d.chooseCandidate(source.matchResult.candidates[0])
+  assert.equal(d.productId.value, null)
+  assert.equal(d.row.value.matchResult.candidates.length, 1)
+})
+
+test('人工从缓存选择仍核对单位并向后台明确标记人工确认', async () => {
+  const source = rankedRow(), d = dialog([source])
+  d.chooseCandidate(source.matchResult.candidates[0], true); d.unit.value = 'PCS'
+  assert.equal(d.productOptions.value[0]?.product.name, '测试商品')
+  await d.confirmExisting()
+  assert.deepEqual(d.calls.filter(c => c[0] === 'decide'), [['decide', 1, { decision: 'EXISTING', productId: 501, unit: 'PCS', runId: 'test-run', confirmCandidate: true }]])
+})
+
+test('保存补充文字后沿原任务入口重算已保存候选', async () => {
+  const source = rankedRow(), calls = []
+  const d = dialog([source], { page: {
+    async saveMatchInputs() { calls.push('save'); return true },
+    async startMatches(ids) { calls.push(['rescore', ids]); return true },
+  } })
+  await d.saveInputs()
+  assert.deepEqual(calls, ['save', ['rescore', [1]]])
+})
+
+test('缓存可直接展开但推荐候选仍沿原确认入口且不标记人工覆盖', async () => {
+  const source = rankedRow([501]), cached = { ...source.matchResult.candidates[0], productId: 502, product: { ...source.matchResult.candidates[0].product, id: 502 } }
+  source.matchResult.candidates.push(cached)
+  const d = dialog([source])
+  assert.equal(d.candidateGroups.value.length, 1)
+  assert.equal(d.candidateGroups.value[0].manual, false)
+  d.showCached.value = true
+  assert.equal(d.candidateGroups.value[1].manual, true)
+  assert.deepEqual(d.candidateGroups.value[1].candidates.map(c => c.productId), [502])
+  d.chooseCandidate(source.matchResult.candidates[0]); d.unit.value = 'PCS'; await d.confirmExisting()
+  assert.deepEqual(d.calls.at(-1), ['decide', 1, { decision: 'EXISTING', productId: 501, unit: 'PCS', runId: 'test-run' }])
+})
+
+test('文字保存期间切换批次不会给新批次登记旧行的重算任务', async () => {
+  let finish, rescored = 0
+  const d = dialog([rankedRow()], { page: {
+    saveMatchInputs: () => new Promise(resolve => { finish = resolve }),
+    async startMatches() { rescored++; return true },
+  } })
+  const saving = d.saveInputs()
+  d.page.state.batchId = '22222222-2222-4333-8444-555555555555'
+  finish(true); await saving
+  assert.equal(rescored, 0)
+})
+
+test('真实辅助识别模板把未推荐项保留在可直接展开的缓存区', async () => {
+  const d = dialog([rankedRow()])
+  const template = readFileSync(file, 'utf8').match(/<el-tab-pane label="辅助识别" name="match">([\s\S]*?)<\/el-tab-pane>/)[1]
+  const compiled = compileTemplate({ source:template, filename:'PurchaseImportReviewDialog.vue', id:'ranking-test', compilerOptions:{ expressionPlugins:['typescript'] } })
+  assert.deepEqual(compiled.errors,[])
+  const exports = {}
+  new Function('require','exports',ts.transpileModule(compiled.code,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(name=>{assert.equal(name,'vue');return Vue},exports)
+  async function render() {
+    const app = createSSRApp({ setup: () => ({ ...d }), render: exports.render })
+    const slot = defineComponent({ inheritAttrs:false, setup:(_,ctx)=>()=>h('div',ctx.slots.default?.()) })
+    for (const name of ['ElInput','ElButton','ElImage','PurchaseImportProductPhoto']) app.component(name,slot)
+    return renderToString(app)
+  }
+  const collapsed = await render()
+  assert.match(collapsed,/查看缓存候选（1）/); assert.doesNotMatch(collapsed,/测试商品/)
+  d.showCached.value = true
+  const expanded = await render()
+  assert.match(expanded,/缓存候选 · 待人工核对/); assert.match(expanded,/测试商品/)
+  assert.match(expanded,/文字综合分 0\.00%/); assert.match(expanded,/人工选择此缓存候选/)
+})
 
 test('核对窗口初次打开和重新打开均默认首页，并保留指定采购行', async () => {
   const d = dialog([row(1), row(2)], { props: { rowId: 2 } })
@@ -79,7 +163,7 @@ test('切换标签保留当前行补充文字与新品输入，选择真实候�
   assert.equal(d.matchInputs.value.suppliedProductName, '人工补充'); assert.equal(d.fresh.value.name, '新品草稿'); assert.equal(d.mode.value, 'new')
   const candidate = { productId: 501, product: { id: 501, productCode: 'TEST', name: '测试商品', units: [] } }
   d.page.state.rows[0].matchTaskId = 'test-run'; d.page.state.rows[0].matchResult = { inputRevision: 1, runId: 'test-run', candidates: [candidate] }
-  d.chooseCandidate(candidate)
+  d.chooseCandidate(candidate, true)
   assert.equal(d.activeTab.value, 'product'); assert.equal(d.productId.value, 501)
 })
 
@@ -125,12 +209,12 @@ test('新品人工草稿切行保留，来源更新只刷新未改字段，新�
   assert.equal(d.fresh.value.name, '更新源名称'); assert.equal(d.fresh.value.baseUnit, '')
 })
 
-test('下拉选择有效识别候选仍带runId确认，过期后人工目录选择不冒充识别结果', async () => {
+test('旧版缓存选择须标记人工确认，过期后人工目录选择不冒充识别结果', async () => {
   const candidate = { productId: 501, product: { id: 501, productCode: 'SKU-501', name: '候选商品', spec: '测试规格', units: [{ unit: '件' }] }, visualEvidence: [], textEvidence: [], visualScore: null, conflicts: [] }
   const d = dialog([row(1, { matchTaskId: 'current-run', matchResult: { inputRevision: 1, runId: 'current-run', candidates: [candidate] } })])
   await nextTick(); d.productId.value = 501; d.unit.value = '件'; d.manualSelection()
   await d.confirmExisting()
-  assert.deepEqual(d.calls.at(-1), ['decide', 1, { decision: 'EXISTING', productId: 501, unit: '件', runId: 'current-run' }])
+  assert.deepEqual(d.calls.at(-1), ['decide', 1, { decision: 'EXISTING', productId: 501, unit: '件', runId: 'current-run', confirmCandidate: true }])
   d.page.state.rows[0].version = 2; await nextTick()
   d.productId.value = 501; d.unit.value = '件'; d.manualSelection(); await d.confirmExisting()
   assert.deepEqual(d.calls.at(-1), ['decide', 1, { decision: 'EXISTING', productId: 501, unit: '件' }])
