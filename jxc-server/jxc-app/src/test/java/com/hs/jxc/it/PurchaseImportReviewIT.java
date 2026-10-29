@@ -14,8 +14,10 @@ class PurchaseImportReviewIT extends PurchaseImportFixture {
     long rowId(Map<String,Object>b){return ((Number)rows(b).getFirst().get("id")).longValue();}
     Map<String,Object> product(){return Map.of("productCode","NEW-IMPORT","name","Imported product","baseUnit","PCS","spec","S");}
     Map<String,Object> request(){return Map.of("version",1,"confirmNew",true,"product",product(),"unit","PCS");}
-    @Test void existingProductAndUnitCanBeConfirmedWithoutImagesOrAi(){
+    @Test void existingZeroStockProductAndUnitCanBeConfirmedWithoutImagesOrAi(){
+        assertThat(owner.queryForObject("SELECT count(*) FROM inv_stock_summary WHERE product_id=501",Integer.class)).isZero();
         var b=prepared();var result=review.decide(actor,id(b),rowId(b),Map.of("version",1,"decision","EXISTING","productId",501,"unit","PCS"));assertThat(result).containsEntry("readiness","READY").containsEntry("matchedProductId",501L);assertThat(owner.queryForObject("SELECT count(*) FROM md_product",Integer.class)).isEqualTo(1);assertThat(owner.queryForObject("SELECT count(*) FROM md_product_unit_used",Integer.class)).isZero();
+        assertThat(owner.queryForObject("SELECT count(*) FROM inv_stock_summary WHERE product_id=501",Integer.class)).isZero();
     }
     @Test void disabledCountryAndMissingUnitAreSetupWorkNotNewProducts(){
         var b=prepared();owner.update("UPDATE md_country_sku SET status='DISABLED' WHERE product_id=501");var first=review.decide(actor,id(b),rowId(b),Map.of("version",1,"decision","EXISTING","productId",501,"unit","BOX"));assertThat(first).containsEntry("readiness","NEEDS_SETUP");assertThat(first.get("setupReasons")).asString().contains("本国","单位");assertThat(owner.queryForObject("SELECT count(*) FROM md_product",Integer.class)).isEqualTo(1);

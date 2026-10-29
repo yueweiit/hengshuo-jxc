@@ -37,9 +37,11 @@ class PurchaseImportRoutingIT extends PurchaseImportFixture {
         tasks.execute(101,task(b));assertThat(tasks.get(actor,task(b)).get("result")).isEqualTo(Map.of("mapping",mapping));
         var overrides=Map.<String,Object>of("mapping",mapping,"specLabels",Map.of("B","S"),"confirm",true);
         tasks.retry(actor,task(b),UUID.randomUUID().toString(),null,overrides);
-        doReturn(document()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull(),eq(overrides));
+        var corrected=document();var correctedRow=new LinkedHashMap<>(rows(corrected).getFirst());corrected.put("rows",List.of(correctedRow));correctedRow.put("sourceItemKey","B2");correctedRow.put("sourceCells",Map.of("purchaseQty","B2","manualSpecLabel","S"));
+        doReturn(corrected).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull(),eq(overrides));
         tasks.execute(101,task(b));assertThat(tasks.get(actor,task(b)).get("status")).isEqualTo("SUCCEEDED");
         assertThat(rows(imports.get(actor,id(b)))).hasSize(1);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source",Integer.class)).isEqualTo(1);
+        assertThat(owner.queryForObject("SELECT field_origins->>'productSpec' FROM pur_order_import",String.class)).isEqualTo("MANUAL");
     }
     @Test void legacyPopulatedSourcesMigrateUnderTheRealRestrictedOwnerWithoutUpdatingBusinessValues() throws Exception {
         var b=upload(UUID.randomUUID().toString());parse(b);

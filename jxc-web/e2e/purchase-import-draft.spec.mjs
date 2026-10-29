@@ -60,17 +60,20 @@ async function waitParsed(){
   }throw Error('原文件解析超时，保留原批次')
 }
 async function header(){
+  const existing=latest.header
+  if(existing.bookId===6&&existing.supplierId===211&&existing.currency==='USD'&&existing.orderDate==='2026-10-29'&&existing.prepayRatio!==null&&Number(existing.prepayRatio)===0&&existing.termDays===0)return
   const book=books.find(b=>b.id===6),supplier=suppliers.find(s=>s.id===211);assert.ok(book);assert.ok(supplier)
-  await select(page.getByLabel('账套',{exact:true}),book.name)
-  await select(page.getByLabel('供应商',{exact:true}),supplier.name)
-  await select(page.getByLabel('币种',{exact:true}),/^USD/)
+  await select(page.getByRole('combobox',{name:'账套',exact:true}),book.name)
+  await select(page.getByRole('combobox',{name:'供应商',exact:true}),supplier.name)
+  await select(page.getByRole('combobox',{name:'币种',exact:true}),/^USD/)
+  await page.locator('.import-header-form .el-form-item').filter({has:page.locator('label').filter({hasText:/^下单日期$/})}).locator('input').fill('2026-10-29');await page.locator('.import-header-form .el-form-item').filter({has:page.locator('label').filter({hasText:/^下单日期$/})}).locator('input').press('Tab')
   await page.getByLabel('预付比例',{exact:true}).fill('0');await page.getByLabel('账期天数',{exact:true}).fill('0')
-  const button=page.getByRole('button',{name:'保存基础信息',exact:true});if(await button.isEnabled())await command(`/pur/order-imports/${state[active].batchId}`,()=>button.click())
+  const button=page.getByRole('button',{name:'保存基础信息',exact:true});if(await button.isEnabled())await command(`/pur/order-imports/${state[active].batchId}`,()=>button.click());assert.equal(latest.header.bookId,6);assert.equal(latest.header.supplierId,211);assert.equal(latest.header.currency,'USD');assert.equal(latest.header.orderDate,'2026-10-29')
 }
 async function reviewDialog(rowNo){
   const d=page.getByRole('dialog',{name:'核对商品与原图',exact:true})
   if(!await d.isVisible())await page.getByRole('button',{name:'核对商品',exact:true}).click()
-  await select(d.getByLabel('选择待核对采购行'),new RegExp(`^第${rowNo}行 `));return d
+  await select(d.getByRole('combobox',{name:'选择待核对采购行',exact:true}),new RegExp(`^第${rowNo}行 `));return d
 }
 async function photos(){
   for(const original of [...latest.rows]){
@@ -99,7 +102,7 @@ async function products(){
   for(const original of [...latest.rows]){
     if(original.readiness==='READY')continue
     const d=await reviewDialog(original.rowNo)
-    if(active==='supplier'&&original.rowNo===1){
+    if(active==='supplier'&&original.sourceItemKey==='B3'){
       await d.getByText('确认新品',{exact:true}).click()
       const resume=d.getByRole('button',{name:'继续原新品操作',exact:true})
       if(await resume.isVisible())await command(`/pur/order-imports/${state[active].batchId}/rows/${original.id}/products`,()=>resume.click())
@@ -109,10 +112,12 @@ async function products(){
         await command(`/pur/order-imports/${state[active].batchId}/rows/${original.id}/products`,()=>page.getByRole('button',{name:'确认新增',exact:true}).click())
       }
     }else{
-      const index=Math.floor((original.rowNo-1)/3)+1,code=`NY051-TEST-${String(index).padStart(2,'0')}-${original.productSpec}`
-      await d.getByLabel('检索真实商品').fill(code);await d.getByRole('button',{name:'查询商品',exact:true}).click()
-      await select(d.getByLabel('已有商品',{exact:true}),code)
-      await d.getByLabel('确认采购单位').fill('PCS');await d.getByLabel('确认采购单位').press('Enter')
+      const index=active==='supplier'?original.sourceRow-2:Math.floor((original.sourceRow-2)/3)+1,code=`NY051-TEST-${String(index).padStart(2,'0')}-${original.productSpec}`
+      await d.getByLabel('检索真实商品').fill(code)
+      const catalogRead=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/md/products'&&new URL(r.url()).searchParams.get('keyword')===code)
+      await d.getByRole('button',{name:'查询商品',exact:true}).click();const catalog=(await (await catalogRead).json()).data;assert.ok(catalog.records.some(p=>p.productCode===code))
+      await select(d.getByRole('combobox',{name:'已有商品',exact:true}),new RegExp(`^${code} ·`))
+      await d.getByRole('combobox',{name:'确认采购单位',exact:true}).fill('PCS');await d.getByRole('combobox',{name:'确认采购单位',exact:true}).press('Enter')
       await command(`/pur/order-imports/${state[active].batchId}/rows/${original.id}/decision`,()=>d.getByRole('button',{name:'确认商品与单位',exact:true}).click())
     }
     await d.getByRole('button',{name:'返回明细',exact:true}).click();await refresh()
@@ -133,11 +138,12 @@ async function previewAndDraft(){
   }
   assert.equal(g.preview.lines.length,60);assert.equal(Number(g.preview.totalAmount),25440);assert.equal(Number(g.preview.totalQty),480)
   if(!g.feeTodos.every(t=>t.reviewStatus==='CONFIRMED')){
-    await select(drawer.getByLabel('费用归属',{exact:true}),'整单一次');await select(drawer.getByLabel('费用原币',{exact:true}),/^USD$/)
+    await select(drawer.getByRole('combobox',{name:'费用归属',exact:true}),'整单一次');await select(drawer.getByRole('combobox',{name:'费用原币',exact:true}),/^USD$/)
     await drawer.getByLabel('费用金额',{exact:true}).fill('29.10');await drawer.getByLabel('费用核对原因',{exact:true}).fill('NY051测试口径：整单美元运费29.10一次，原行重复值不累加，后续另行登记')
     await drawer.getByLabel('确认费用来源',{exact:true}).check()
     const saved=await command(`/pur/order-imports/${state[active].batchId}/groups/${g.id}/fee-todos`,()=>drawer.getByRole('button',{name:'保存费用核对',exact:true}).click());assert.equal(saved.feeTodos[0].sourceRowIds.length,60);assert.equal(saved.feeTodos[0].reviewStatus,'CONFIRMED')
   }
+  await expect(drawer.locator('.preview-scroll tbody tr')).toHaveCount(60)
   await page.screenshot({path:dir+`/${active}-preview.png`,fullPage:true})
   if(!state[active].orderId){
     await drawer.getByRole('button',{name:/确认创建采购草稿|继续原创建请求/}).click()
@@ -151,7 +157,7 @@ async function previewAndDraft(){
 }
 try{
   await page.goto(origin+'/login');await page.locator('#login-language').selectOption('zh-CN');await page.locator('#account').fill(account.username);await page.locator('#password').fill(account.password)
-  await page.locator('button[type=submit]').click();await page.waitForURL(url=>url.pathname!=='/login')
+  await page.locator('button[type=submit]').click();await page.waitForURL(url=>url.pathname!=='/login');state.technicalSessionClosed=false;save()
   for(const [label,source] of [['template','D:/downlaoad/NY-051-采购导入.xlsx'],['supplier','C:/Users/JT/Pictures/Screenshots/NY-051.xlsx']]){
     active=label;latest=null
     await page.goto(origin+'/purchase/orders/import'+(state[label].batchId?'?batchId='+state[label].batchId:''))
