@@ -43,7 +43,8 @@ def recognize_fields(compact, sheet, task_context=None):
     try:
         request = Request(endpoint, json.dumps(recognition_request(compact, sheet), ensure_ascii=False).encode('utf-8'),
                           headers, method='POST')
-        with build_opener(NoRedirect).open(request, timeout=300) as response:
+        # 托管请求由Java执行已保存的1～600秒连接超时，桥接不能先在300秒截断。
+        with build_opener(NoRedirect).open(request, timeout=600 if task_context is not None else 300) as response:
             data = response.read(4*1024*1024+1)
         if len(data)>4*1024*1024:
             raise SourceError('SUPPLIER_MAPPING_LIMIT', '字段识别结果超过允许大小')

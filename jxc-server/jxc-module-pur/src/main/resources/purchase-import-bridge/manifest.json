@@ -1,7 +1,7 @@
 {
   "workbench/jxc_bridge.py": "d01e7ec9f697204e4cb33088734e96191b1ce3b4dd721a5da23837d44cf54623",
-  "workbench/jxc_supplier.py": "eb4f066739b7680d453977c43b856b0d234ffe86bb6a4d5ac6d1508c20b97647",
-  "workbench/tests/test_jxc_supplier.py": "88d8ce65e75101d7e553891463806f6fbdf3d3a57fa67ac4ccfae81d8b7ce8fd",
+  "workbench/jxc_supplier.py": "5c8250010a9b8da67dc1e52ba9dfa582c6eaf35c7317c15babeb33c4e0b76347",
+  "workbench/tests/test_jxc_supplier.py": "9c2853541b4277842cfc25196e4ba28684cfd9edac2c050c11b269a098166caf",
   "n8n/jxc-purchase-fields.json": "4ea588db4d570dcb4f81b45a37019cf7a150a6b4d88b50d16c2091b36c767b41",
   "n8n/jxc-purchase-fields.test.mjs": "e3519ec0600497c0047f6dfeab58d8e776bd43db5a370b52b07d043bba5caf9d",
   "workbench/vision.py": "7e1761c85e51bdf303d301df0e7b3498422aa1e3e18053341503cb4e992f8bc0",
