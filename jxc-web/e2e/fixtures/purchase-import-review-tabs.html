@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>采购导入核对隔离夹具</title>
+<div id="app"></div>
+<script type="module">
+import { createApp, h, ref } from 'vue'
+import { createPinia } from 'pinia'
+import { createRouter, createWebHistory } from 'vue-router'
+import ElementPlus, { ElButton } from 'element-plus'
+import 'element-plus/dist/index.css'
+import PurchaseImportReviewDialog from '/src/modules/purchase/PurchaseImportReviewDialog.vue'
+import { createPurchaseImportModel } from '/src/modules/purchase/purchaseImportModel.ts'
+import { useCountryStore } from '/src/stores/country.ts'
+
+const batchId = '11111111-2222-4333-8444-555555555555'
+const image = id => ({ id, status: 'UNCONFIRMED', sha256: 'a'.repeat(64) })
+const row = (id, extra) => ({ id, rowNo: id, version: 1, sourceOrderNo: '隔离测试采购单', sourceSheet: '测试表', sourceRow: id + 1, photo: null, productSpec: '测试规格', purchaseQty: '1', purchaseUnitPrice: '1', saleUnitPrice: null, saleTotal: null, freight: null, landedUnitCost: null, usdUnitCost: null, usdTotal: null, readiness: 'UNRESOLVED', images: [], ...extra })
+const source = { batchId, version: 1, status: 'REVIEW', header: { bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2026-10-29', expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null }, rows: [row(1, { images: [image(11), image(12)] }), row(2, { readiness: 'NEEDS_SETUP', matchedProductId: 502, purchaseUnit: '件', setupReasons: ['商品未配置所选单位换算', '商品尚未在本国启用'] }), row(3, { readiness: 'READY', matchedProductId: 503, purchaseUnit: '件' })], tasks: [], groups: [] }
+let releaseImage, failSecond = true
+const imageGate = new Promise(resolve => { releaseImage = resolve })
+async function testImage() {
+  const canvas = document.createElement('canvas'); canvas.width = 180; canvas.height = 180
+  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#e6f1ff'; ctx.fillRect(0, 0, 180, 180); ctx.fillStyle = '#303133'; ctx.font = '18px sans-serif'; ctx.fillText('隔离测试原图', 30, 95)
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+}
+const page = createPurchaseImportModel({
+  async load() { return structuredClone(source) },
+  async readImage(_batch, id) {
+    if (id === 11) await imageGate
+    if (id === 12 && failSecond) { failSecond = false; throw new Error('隔离夹具：原图读取失败，请重试') }
+    return testImage()
+  },
+  async associate(_batch, current, id, status) { return { ...current, version: current.version + 1, batchVersion: 2, images: current.images.map(item => item.id === id ? { ...item, status } : item) } },
+}, '2026-10-29')
+await page.loadBatch(batchId)
+const visible = ref(true)
+const app = createApp({ setup: () => () => h('main', [h(ElButton, { onClick: () => { visible.value = true } }, () => '打开核对'), h(PurchaseImportReviewDialog, { page, modelValue: visible.value, 'onUpdate:modelValue': value => { visible.value = value } })]) })
+app.use(createPinia()); app.use(ElementPlus)
+const country = useCountryStore(); country.available = [{ id: 101, name: '测试国家' }]; country.currentId = 101
+const router = createRouter({ history: createWebHistory(), routes: [{ path: '/:pathMatch(.*)*', component: { render: () => h('div') } }] })
+app.use(router); await router.isReady(); app.mount('#app')
+window.reviewFixture = { page, releaseImage, visible }
+</script>
+</html>

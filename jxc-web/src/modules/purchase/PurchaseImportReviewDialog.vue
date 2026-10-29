@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import { http } from '@/api/http'
+import { useCountryStore } from '@/stores/country'
 import type { PurchaseImportModel, ImportRow, MatchCandidate } from './purchaseImportModel'
 
 const props = defineProps<{ page: PurchaseImportModel; modelValue: boolean; rowId?: number | null }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 interface Product { id: number; productCode: string; name: string; spec: string; baseUnit: string; status: string; units: { unit: string }[] }
+type ReviewTab = 'todos' | 'product' | 'images' | 'match'
+interface ReviewTodo { key: string; row: ImportRow; reason: string; tab: ReviewTab; imageId?: number }
+const country = useCountryStore()
+const activeTab = ref<ReviewTab>('todos'), focusedImage = ref<number | null>(null)
 const matchEnabled = ref(false), capabilityError = ref(''), candidateRun = ref<string | null>(null), candidateProduct = ref<MatchCandidate['product'] | null>(null)
 const matchInputs = ref({ suppliedProductCode: '', suppliedProductName: '', supplierProductCode: '' })
 const selectedRow = ref<number | null>(null), keyword = ref(''), products = ref<Product[]>([]), productId = ref<number | null>(null), unit = ref('')
@@ -14,17 +20,41 @@ const catalogLoading = ref(false), catalogError = ref(''), catalogLoaded = ref(f
 const fresh = ref({ productCode: '', name: '', baseUnit: '', spec: '' }), choices = ref<Record<number, { key: string; request: Record<string, unknown> }>>({})
 const row = computed(() => props.page.state.rows.find(item => item.id === selectedRow.value))
 const selectedProduct = computed(() => candidateProduct.value?.id === productId.value ? candidateProduct.value : products.value.find(item => item.id === productId.value))
-const { urls:imageUrls, errors:imageErrors } = props.page.images
+const { urls:imageUrls, errors:imageErrors, loading:imageLoading } = props.page.images
 const readyCount = computed(() => props.page.state.rows.filter(item => item.readiness === 'READY').length)
+const todoItems = computed(() => props.page.state.rows.flatMap(item => {
+  const todos: ReviewTodo[] = []
+  if (item.readiness !== 'READY') {
+    const reasons = item.setupReasons?.length ? [...new Set(item.setupReasons)] : [item.readiness === 'NEEDS_SETUP' ? '商品配置待核实，请重新核对' : item.decision === 'DEFERRED' ? '本行已暂缓，商品与采购单位仍待确认' : '商品与采购单位待确认']
+    reasons.forEach((reason, index) => todos.push({ key: `${item.id}-product-${index}`, row: item, reason, tab: 'product' }))
+    if (item.matchResult) {
+      const stale = !isCurrentMatch(item)
+      if (item.matchResult.status === 'FAILED' || stale) todos.push({ key: `${item.id}-match`, row: item, reason: stale ? '候选结果已过期，可重新识别或继续人工核对' : '候选识别失败，可查看原因或继续人工核对', tab: 'match' })
+    }
+  }
+  for (const image of item.images ?? []) if (image.status === 'UNCONFIRMED') todos.push({ key: `${item.id}-image-${image.id}`, row: item, reason: '原图归属待确认', tab: 'images', imageId: image.id })
+  return todos
+}))
+const todoRowCount = computed(() => new Set(todoItems.value.map(item => item.row.id)).size)
+const needsProductSetup = computed(() => row.value?.setupReasons?.some(reason => ['全局商品已停用', '商品未配置所选单位换算'].includes(reason)) === true)
+const needsCountrySetup = computed(() => row.value?.setupReasons?.some(reason => ['商品尚未在本国启用', '全局商品已保存，等待本国启用'].includes(reason)) === true)
 const pickerLocked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.headerDirty())
 const locked = computed(() => pickerLocked.value || !!row.value && props.page.rowLocked(row.value))
 const inputsDirty = computed(() => !!row.value && ['suppliedProductCode', 'suppliedProductName', 'supplierProductCode'].some(key => (matchInputs.value[key as keyof typeof matchInputs.value].trim() || null) !== (row.value![key as keyof ImportRow] || null)))
-const currentMatch = computed(() => !!row.value?.matchResult && row.value.matchResult.inputRevision === row.value.version && row.value.matchResult.runId === row.value.matchTaskId)
+function isCurrentMatch(item: ImportRow) { return !!item.matchResult && item.matchResult.inputRevision === item.version && item.matchResult.runId === item.matchTaskId }
+const currentMatch = computed(() => !!row.value && isCurrentMatch(row.value))
 let epoch = 0, active = true
 watch(() => props.rowId, id => { if (id) selectedRow.value = id })
-watch(() => [props.modelValue,row.value?.id,row.value?.version], () => {
-  if (props.modelValue) for (const image of row.value?.images ?? []) void props.page.images.load(image.id)
+watch(() => props.modelValue, opened => {
+  if (opened) { activeTab.value = 'todos'; focusedImage.value = null; if (props.rowId && props.page.state.rows.some(item => item.id === props.rowId)) selectedRow.value = props.rowId }
+}, { immediate: true })
+watch(() => [props.modelValue,activeTab.value,row.value?.id,row.value?.version], () => {
+  if (props.modelValue && activeTab.value === 'images') for (const image of row.value?.images ?? []) void props.page.images.load(image.id)
 })
+function openTodo(todo: ReviewTodo) {
+  if (pickerLocked.value) return
+  selectedRow.value = todo.row.id; activeTab.value = todo.tab; focusedImage.value = todo.imageId ?? null
+}
 function syncRow(value?: ImportRow) {
   candidateRun.value = null; candidateProduct.value = null
   matchInputs.value = { suppliedProductCode: value?.suppliedProductCode || '', suppliedProductName: value?.suppliedProductName || '', supplierProductCode: value?.supplierProductCode || '' }
@@ -43,7 +73,7 @@ watch(() => props.page.state.batchId, async () => {
 }, { immediate: true })
 function chooseCandidate(candidate: MatchCandidate) {
   if (!row.value || !currentMatch.value || locked.value) return
-  candidateProduct.value = candidate.product; productId.value = candidate.productId; candidateRun.value = row.value.matchResult!.runId
+  candidateProduct.value = candidate.product; productId.value = candidate.productId; candidateRun.value = row.value.matchResult!.runId; activeTab.value = 'product'
 }
 function manualSelection() { candidateRun.value = null; candidateProduct.value = null }
 async function saveInputs() { if (row.value && await props.page.saveMatchInputs(row.value, { ...matchInputs.value })) syncRow(row.value) }
@@ -84,31 +114,86 @@ onBeforeUnmount(() => { active = false; ++epoch })
 
 <template>
   <el-dialog :model-value="modelValue" title="核对商品与原图" width="min(1100px, 94vw)" append-to-body @update:model-value="emit('update:modelValue', $event)">
-  <div v-if="page.state.rows.length" class="product-review">
-    <el-alert v-if="page.state.error" :title="page.state.error" type="error" :closable="false" />
-    <div class="review-heading"><h3>商品与单位确认</h3><span>已确认 {{ readyCount }} / {{ page.state.rows.length }} 行</span></div>
-    <div class="review-picker"><el-select v-model="selectedRow" filterable aria-label="选择待核对采购行" :disabled="pickerLocked"><el-option v-for="item in page.state.rows" :key="item.id" :value="item.id" :label="`第${item.rowNo}行 · ${item.sourceOrderNo} · ${item.productSpec || '规格待核实'} · ${item.readiness === 'READY' ? '已确认' : item.readiness === 'NEEDS_SETUP' ? '待设置' : '待确认'}`" /></el-select></div>
-    <template v-if="row">
-      <p>来源：{{ row.sourceSheet }} 原第{{ row.sourceRow }}行 · 数量格 {{ row.sourceItemKey || '原行' }} · {{ row.purchaseQty }}件 · 原采购单价 {{ row.purchaseUnitPrice }}</p>
-      <div class="review-originals"><div v-for="image in row.images" :key="image.id">
-        <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" fit="contain" :preview-src-list="[imageUrls[image.id]!]" preview-teleported style="width:150px;height:150px" />
-        <p v-if="imageErrors[image.id]">{{ imageErrors[image.id] }}</p>
-        <el-button v-if="image.status !== 'CONFIRMED'" :disabled="locked" @click="page.associate(row,image.id,'CONFIRMED')">确认原图属于本行</el-button><span v-else>原图归属已确认</span>
-      </div></div>
+    <div v-if="page.state.rows.length" class="product-review">
+      <el-alert v-if="page.state.error" :title="page.state.error" type="error" :closable="false" />
+      <div class="review-heading"><h3>导入核对</h3><span>商品与单位已确认 {{ readyCount }} / {{ page.state.rows.length }} 行</span></div>
+      <div v-if="activeTab !== 'todos'" class="review-context">
+        <div class="review-picker"><el-select v-model="selectedRow" filterable aria-label="选择待核对采购行" :disabled="pickerLocked"><el-option v-for="item in page.state.rows" :key="item.id" :value="item.id" :label="`第${item.rowNo}行 · ${item.sourceOrderNo} · ${item.productSpec || '规格待核实'} · ${item.readiness === 'READY' ? '已确认' : item.readiness === 'NEEDS_SETUP' ? '待设置' : '待确认'}`" /></el-select></div>
+        <p v-if="row">来源：{{ row.sourceSheet || '来源表待核实' }} 原第{{ row.sourceRow ?? '待核实' }}行 · 数量格 {{ row.sourceItemKey || '原行' }} · 采购数量 {{ row.purchaseQty }} · 原采购单价 {{ row.purchaseUnitPrice }}</p>
+      </div>
+      <el-tabs v-model="activeTab" class="review-tabs">
+        <el-tab-pane label="待确认事项" name="todos">
+          <div class="todo-summary" role="status">待处理 {{ todoRowCount }} 行，共 {{ todoItems.length }} 项待办</div>
+          <p class="review-hint">按事项进入对应标签页处理，确认成功后这里会更新。原图归属与商品就绪状态分别核对。</p>
+          <el-table v-if="todoItems.length" :data="todoItems" row-key="key" max-height="400" class="review-todos" aria-label="待确认事项列表">
+            <el-table-column label="采购行" min-width="190"><template #default="{ row: item }"><strong>第{{ item.row.rowNo }}行 · {{ item.row.sourceOrderNo }}</strong><div class="review-hint">{{ item.row.productSpec || '规格待核实' }}</div></template></el-table-column>
+            <el-table-column prop="reason" label="待处理事项" min-width="240" />
+            <el-table-column label="操作" width="130"><template #default="{ row: item }"><el-button link type="primary" :disabled="pickerLocked" :aria-label="`处理第${item.row.rowNo}行：${item.reason}`" @click="openTodo(item)">去处理</el-button></template></el-table-column>
+          </el-table>
+          <el-empty v-else description="当前没有待确认事项" :image-size="70" />
+          <div class="todo-shortcuts"><span class="review-hint">也可直接进入：</span><el-button @click="activeTab = 'product'">商品与单位</el-button><el-button @click="activeTab = 'images'">原图核对</el-button><el-button @click="activeTab = 'match'">辅助识别</el-button></div>
+        </el-tab-pane>
+        <el-tab-pane label="商品与单位" name="product">
+          <template v-if="row">
       <div class="review-status"><strong>{{ row.readiness === 'READY' ? '商品和单位已确认' : row.readiness === 'NEEDS_SETUP' ? '商品已选定，仍需配置' : '等待人工确认' }}</strong><span v-if="row.matchedProductId">商品 ID：{{ row.matchedProductId }}</span><span v-if="row.purchaseUnit">采购单位：{{ row.purchaseUnit }}</span></div>
       <p v-for="reason in row.setupReasons" :key="reason" class="review-warning">{{ reason }}</p>
-      <div class="review-links"><router-link to="/master/products">维护商品与单位</router-link><router-link to="/master/country-skus">设置本国经营</router-link></div>
+      <div v-if="needsProductSetup || needsCountrySetup" class="review-links">
+        <router-link v-if="needsProductSetup" to="/master/products" target="_blank" rel="noopener">商品资料与单位换算</router-link>
+        <router-link v-if="needsCountrySetup" to="/master/country-skus" target="_blank" rel="noopener">在{{ country.current?.name || '当前国家' }}启用商品</router-link>
+        <span class="review-hint">配置完成后，返回这里重新核对商品与单位。</span>
+      </div>
+      <el-radio-group v-model="mode" :disabled="locked"><el-radio-button value="existing">选择已有商品</el-radio-button><el-radio-button value="new">确认新品</el-radio-button></el-radio-group>
+      <div v-if="mode === 'existing'" class="existing-review">
+        <div class="catalog-search"><el-input v-model="keyword" placeholder="商品编码或名称" aria-label="检索真实商品" :disabled="locked" @keyup.enter="search" /><el-button :loading="catalogLoading" :disabled="locked" @click="search">查询商品</el-button></div>
+        <el-alert v-if="catalogError" type="error" :closable="false" :title="catalogError" />
+        <p v-if="catalogLoaded && !products.length && !catalogError" class="review-hint">当前检索没有商品，请核对编码、名称和规格。无结果不会自动创建新品。</p>
+        <el-select v-model="productId" filterable placeholder="从查询结果选择真实商品" aria-label="已有商品" :disabled="locked" @change="manualSelection"><el-option v-for="item in products" :key="item.id" :value="item.id" :label="`${item.productCode} · ${item.name} · ${item.spec || '规格未填写'}${item.status === 'ENABLED' ? '' : ' · 已停用'}`" /></el-select>
+        <el-select v-model="unit" filterable allow-create default-first-option placeholder="选择采购单位，缺少时填写后核对" aria-label="确认采购单位" :disabled="locked"><el-option v-for="item in selectedProduct?.units" :key="item.unit" :value="item.unit" :label="item.unit" /></el-select>
+        <el-button type="primary" :disabled="locked" @click="confirmExisting">{{ row.readiness === 'NEEDS_SETUP' ? '重新核对商品与单位' : '确认商品与单位' }}</el-button><el-button :disabled="locked" @click="page.decideProduct(row, { decision: 'DEFERRED' })">暂缓本行</el-button>
+      </div>
+      <div v-else class="new-review">
+        <template v-if="choices[row.id] || row.productOperation"><p class="review-hint">已有新品操作，继续处理原请求。已成功建立的商品将保留。</p><el-button type="primary" :disabled="locked || row.readiness === 'READY'" @click="createNew">继续原新品操作</el-button></template>
+        <el-form v-else :model="fresh" :disabled="locked" label-width="90px" @submit.prevent>
+          <el-form-item label="商品编码" required><el-input v-model="fresh.productCode" /></el-form-item><el-form-item label="商品名称" required><el-input v-model="fresh.name" /></el-form-item><el-form-item label="基础单位" required><el-input v-model="fresh.baseUnit" /></el-form-item><el-form-item label="商品规格"><el-input v-model="fresh.spec" /></el-form-item><el-button type="primary" @click="createNew">核对并确认新增</el-button>
+        </el-form>
+      </div>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane label="原图核对" name="images">
+          <template v-if="row">
+            <p class="review-hint">查看原图后确认它是否属于当前采购行。</p>
+            <div v-if="row.images?.length" class="review-originals">
+              <article v-for="(image, index) in row.images" :key="`${row.id}-${image.id}`" class="review-original" :class="{ 'is-focused': focusedImage === image.id }">
+                <div v-loading="imageLoading[image.id] === true" class="original-image-frame" :aria-busy="imageLoading[image.id] === true" :aria-label="`第${row.rowNo}行原图${index + 1}`" element-loading-text="原图加载中">
+                  <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" fit="contain" :preview-src-list="[imageUrls[image.id]!]" preview-teleported :alt="`第${row.rowNo}行原图${index + 1}`">
+                    <template #placeholder><el-icon class="is-loading" aria-label="原图显示中"><Loading /></el-icon></template>
+                    <template #error><span class="review-warning">原图显示失败，请核对图片文件。</span></template>
+                  </el-image>
+                  <span v-else-if="imageErrors[image.id]" class="review-warning" role="status">{{ imageErrors[image.id] }}</span>
+                </div>
+                <div class="original-actions">
+                  <span class="review-hint">原图 {{ index + 1 }}</span>
+                  <el-button v-if="imageErrors[image.id]" link type="primary" :disabled="imageLoading[image.id]" @click="page.images.load(image.id)">重试加载原图</el-button>
+                  <el-button v-if="image.status !== 'CONFIRMED'" :disabled="locked || !imageUrls[image.id] || imageLoading[image.id]" @click="page.associate(row,image.id,'CONFIRMED')">确认原图属于本行</el-button><span v-else>原图归属已确认</span>
+                </div>
+              </article>
+            </div>
+            <el-empty v-else description="本行没有原图" :image-size="70" />
+          </template>
+        </el-tab-pane>
+        <el-tab-pane label="辅助识别" name="match">
+          <template v-if="row">
       <div class="match-panel">
         <div class="match-title"><strong>图文候选辅助核对</strong><span>候选不会自动确认商品，也不会自动判定新品。</span></div>
         <div class="match-inputs"><el-input v-model="matchInputs.suppliedProductCode" placeholder="系统商品编码（未知留空）" aria-label="补充系统商品编码" :disabled="locked" maxlength="200" /><el-input v-model="matchInputs.suppliedProductName" placeholder="商品名称（未知留空）" aria-label="补充商品名称" :disabled="locked" maxlength="200" /><el-input v-model="matchInputs.supplierProductCode" placeholder="供应商编码（未知留空）" aria-label="补充供应商编码" :disabled="locked" maxlength="200" /></div>
-        <div class="match-actions"><el-button :disabled="locked || !inputsDirty" @click="saveInputs">保存补充文字</el-button><el-button :disabled="locked || !matchEnabled || inputsDirty" @click="page.startMatches([row.id])">识别本行候选</el-button><span v-if="!matchEnabled">当前环境尚未启用候选识别</span><span v-if="inputsDirty">请先保存补充文字</span></div>
+        <div class="match-actions"><el-button :disabled="locked || !inputsDirty" @click="saveInputs">保存补充文字</el-button><el-button :disabled="locked || !matchEnabled || inputsDirty" @click="page.startMatches([row.id])">识别本行候选</el-button><span v-if="!matchEnabled && !capabilityError">当前环境尚未启用候选识别</span><span v-if="inputsDirty">请先保存补充文字</span></div>
         <p v-if="capabilityError" class="review-warning">{{ capabilityError }}</p>
         <div v-for="task in page.state.tasks.filter(item => ['MATCH', 'EXPLAIN'].includes(item.kind || '') && (item.id === row?.matchTaskId || item.result?.rowId === row?.id))" :key="task.id" class="match-task"><span>{{ task.kind === 'EXPLAIN' ? '解释' : '识别' }}任务：{{ task.status }}{{ task.errorMessage ? ` · ${task.errorMessage}` : '' }}</span><el-button v-if="task.kind === 'EXPLAIN' && ['FAILED', 'NEEDS_REAUTH'].includes(task.status)" :disabled="locked" @click="page.retryTask(task)">继续原解释任务</el-button></div>
         <template v-if="row.matchResult">
           <p v-if="!currentMatch" class="review-warning">此候选对应较早的输入或任务，请重新识别后再选择。</p>
           <p>文字：{{ routeLabel(row.matchResult.text.status) }} · {{ row.matchResult.text.reason }}</p><p>图片：{{ routeLabel(row.matchResult.image.status) }} · {{ row.matchResult.image.reason }}</p>
           <p v-for="(error, index) in row.matchResult.image.errors" :key="index" class="review-warning">{{ error.reason }}</p>
-          <p v-if="!row.matchResult.candidates.length">当前没有可核实候选，请继续人工查找或核对新品。</p>
+          <p v-if="!row.matchResult.candidates.length">{{ row.matchResult.status === 'FAILED' ? '候选识别失败，请检查上述原因后重试，或继续人工查找。' : '当前没有可核实候选，请继续人工查找或核对新品。' }}</p>
           <article v-for="candidate in row.matchResult.candidates" :key="candidate.productId" class="candidate-card">
             <div><strong>{{ candidate.product.productCode }} · {{ candidate.product.name }}</strong><span>规格：{{ candidate.product.spec || '待核实' }}</span></div>
             <p v-if="candidate.visualScore !== null">外观相似度 {{ candidate.visualScore.toFixed(4) }}（排序分数，非正确概率）</p><p v-for="(evidence, index) in candidate.textEvidence" :key="index">{{ evidence.reason }}</p>
@@ -119,35 +204,29 @@ onBeforeUnmount(() => { active = false; ++epoch })
           <el-button :disabled="locked || !matchEnabled || !currentMatch || inputsDirty" @click="page.explainMatch(row)">只重试候选解释</el-button>
         </template>
       </div>
-      <el-radio-group v-model="mode" :disabled="locked"><el-radio-button value="existing">选择已有商品</el-radio-button><el-radio-button value="new">确认新品</el-radio-button></el-radio-group>
-      <div v-if="mode === 'existing'" class="existing-review">
-        <div class="catalog-search"><el-input v-model="keyword" placeholder="商品编码或名称" aria-label="检索真实商品" :disabled="locked" @keyup.enter="search" /><el-button :loading="catalogLoading" :disabled="locked" @click="search">查询商品</el-button></div>
-        <el-alert v-if="catalogError" type="error" :closable="false" :title="catalogError" />
-        <p v-if="catalogLoaded && !products.length && !catalogError" class="review-hint">当前检索没有商品，请核对编码、名称和规格。无结果不会自动创建新品。</p>
-        <el-select v-model="productId" filterable placeholder="从查询结果选择真实商品" aria-label="已有商品" :disabled="locked" @change="manualSelection"><el-option v-for="item in products" :key="item.id" :value="item.id" :label="`${item.productCode} · ${item.name} · ${item.spec || '规格未填写'}${item.status === 'ENABLED' ? '' : ' · 已停用'}`" /></el-select>
-        <el-select v-model="unit" filterable allow-create default-first-option placeholder="选择采购单位，缺少时填写后核对" aria-label="确认采购单位" :disabled="locked"><el-option v-for="item in selectedProduct?.units" :key="item.unit" :value="item.unit" :label="item.unit" /></el-select>
-        <el-button type="primary" :disabled="locked" @click="confirmExisting">确认商品与单位</el-button><el-button :disabled="locked" @click="page.decideProduct(row, { decision: 'DEFERRED' })">暂缓本行</el-button>
-      </div>
-      <div v-else class="new-review">
-        <template v-if="choices[row.id] || row.productOperation"><p class="review-hint">已有新品操作，继续处理原请求。已成功建立的商品将保留。</p><el-button type="primary" :disabled="locked || row.readiness === 'READY'" @click="createNew">继续原新品操作</el-button></template>
-        <el-form v-else :model="fresh" :disabled="locked" label-width="90px" @submit.prevent>
-          <el-form-item label="商品编码" required><el-input v-model="fresh.productCode" /></el-form-item><el-form-item label="商品名称" required><el-input v-model="fresh.name" /></el-form-item><el-form-item label="基础单位" required><el-input v-model="fresh.baseUnit" /></el-form-item><el-form-item label="商品规格"><el-input v-model="fresh.spec" /></el-form-item><el-button type="primary" @click="createNew">核对并确认新增</el-button>
-        </el-form>
-      </div>
-    </template>
-  </div>
-  <template #footer><el-button @click="emit('update:modelValue',false)">返回明细</el-button><el-button :disabled="locked || !row || page.state.rows.indexOf(row) === page.state.rows.length-1" @click="selectedRow = page.state.rows[page.state.rows.findIndex(item => item.id === selectedRow)+1]?.id ?? null">下一行</el-button></template>
-</el-dialog>
+          </template>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+    <template #footer><el-button @click="emit('update:modelValue',false)">返回明细</el-button><template v-if="activeTab !== 'todos'"><el-button @click="activeTab = 'todos'">返回待确认事项</el-button><el-button :disabled="locked || !row || page.state.rows.indexOf(row) === page.state.rows.length-1" @click="selectedRow = page.state.rows[page.state.rows.findIndex(item => item.id === selectedRow)+1]?.id ?? null">下一行</el-button></template></template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
 .product-review { font-size:13px; }
-.review-originals { display:flex;gap:16px;margin:12px 0; }
+.review-originals { display:flex; flex-wrap:wrap; gap:24px; margin:16px 0; }
+.review-original { max-width:100%; }
+.original-image-frame { position:relative; display:flex; align-items:center; justify-content:center; width:180px; height:180px; background:var(--el-fill-color-extra-light); border:1px solid var(--el-border-color-light); border-radius:4px; overflow:hidden; .el-image { width:100%; height:100%; } .review-warning { padding:12px; overflow-wrap:anywhere; } }
+.review-original.is-focused .original-image-frame { outline:2px solid var(--el-color-primary); outline-offset:2px; }
+.original-actions { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin-top:12px; }
+.todo-summary { margin:10px 0; font-weight:600; }
+.todo-shortcuts { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:18px; .el-button + .el-button { margin-left:0; } }
+.review-context { margin-bottom:12px; p { color:var(--el-text-color-secondary); overflow-wrap:anywhere; } }
 .review-heading { display: flex; gap: 16px; align-items: baseline; margin-bottom: 14px; h3 { margin: 0; font-size: 15px; } span { color: var(--el-text-color-secondary); font-size: 12px; } }
 .review-picker .el-select { width: 100%; max-width: 760px; }
 .review-status, .review-links { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0; font-size: 13px; }
 .review-warning { color: var(--el-color-warning-dark-2); font-size: 13px; }
-.existing-review { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; align-items: center; > .el-select { width: 380px; } > .el-input { width: 240px; } }
+.existing-review { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; align-items: center; > .el-select { width: min(380px, 100%); } > .el-input { width: 240px; } }
 .catalog-search { width: 100%; display: flex; gap: 12px; .el-input { max-width: 420px; } }
 .review-hint { color: var(--el-text-color-secondary); font-size: 13px; line-height: 22px; }
 .match-panel { margin: 16px 0; padding: 14px; background: var(--el-fill-color-extra-light); border: 1px solid var(--el-border-color-light); border-radius: 6px; font-size: 13px; line-height: 1.7; }

@@ -73,15 +73,16 @@ async function header(){
   await page.getByLabel('预付比例',{exact:true}).fill('0');await page.getByLabel('账期天数',{exact:true}).fill('0')
   const button=page.getByRole('button',{name:'保存基础信息',exact:true});if(await button.isEnabled())await command(`/pur/order-imports/${state[active].batchId}`,()=>button.click());assert.equal(latest.header.bookId,6);assert.equal(latest.header.supplierId,211);assert.equal(latest.header.currency,'USD');assert.equal(latest.header.orderDate,'2026-10-29')
 }
-async function reviewDialog(rowNo){
+async function reviewDialog(rowNo,tabName='商品与单位'){
   const d=page.getByRole('dialog',{name:'核对商品与原图',exact:true})
   if(!await d.isVisible())await page.getByRole('button',{name:'核对商品',exact:true}).click()
+  await d.getByRole('tab',{name:tabName,exact:true}).click()
   await select(d.getByRole('combobox',{name:'选择待核对采购行',exact:true}),new RegExp(`^第${rowNo}行 `));return d
 }
 async function photos(){
   for(const original of [...latest.rows]){
     if(!original.images?.some(i=>i.status!=='CONFIRMED'))continue
-    const d=await reviewDialog(original.rowNo)
+    const d=await reviewDialog(original.rowNo,'原图核对')
     while(await d.getByRole('button',{name:'确认原图属于本行',exact:true}).count())await command(`/pur/order-imports/${state[active].batchId}/rows/${original.id}/images/${latest.rows.find(r=>r.id===original.id).images.find(i=>i.status!=='CONFIRMED').id}/association`,()=>d.getByRole('button',{name:'确认原图属于本行',exact:true}).first().click())
     // 单行响应由页面模型更新；重新读取取得下一幅照片的最新版本与状态。
     await d.getByRole('button',{name:'返回明细',exact:true}).click();await refresh()
