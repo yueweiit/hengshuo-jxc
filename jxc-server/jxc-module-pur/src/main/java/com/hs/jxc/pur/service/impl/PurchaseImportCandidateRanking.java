@@ -3,7 +3,7 @@ package com.hs.jxc.pur.service.impl;
 import java.text.Normalizer;
 import java.util.*;
 
-/** 采购候选的唯一评分规则；不修改检索证据，不代替人工确认商品。 */
+/** 图片大于80%取最高分，同分取返回顺序第一条；文字评分仅保留作参考。 */
 public final class PurchaseImportCandidateRanking {
     private static final double THRESHOLD=0.8;
     private record Field(String key,String source,String label,int weight) {}
@@ -46,25 +46,26 @@ public final class PurchaseImportCandidateRanking {
             }
             Double textScore=comparedWeight==0?null:weighted/comparedWeight;
             Object photo=candidate.get("visualScore");
-            boolean top=photo!=null&&photoScore(photo)>=THRESHOLD&&Double.compare(photoScore(photo),highestPhoto)==0;
+            boolean top=photo!=null&&photoScore(photo)>THRESHOLD&&Double.compare(photoScore(photo),highestPhoto)==0;
             if(top)highest.add(id);
             var item=new LinkedHashMap<String,Object>();
             item.put("productId",id);item.put("photoScore",photo);item.put("textScore",textScore);item.put("fields",fields);
-            item.put("reason",photo==null?"没有可用照片分数":photoScore(photo)<THRESHOLD?"照片分数不足80%":!top?"未进入照片最高分组":textScore==null?"没有可比较的商品文字，待人工核对":textScore<THRESHOLD?"文字综合分不足80%，待人工核对":"待比较最高文字分");
+            item.put("reason",photo==null?"文字目录候选":photoScore(photo)<=THRESHOLD?"照片相似度未大于80%":!top?"其他候选照片相似度更高":"照片相似度最高，同分按返回顺序选择");
             scores.add(item);
         }
-        var qualified=scores.stream().filter(s->highest.contains(s.get("productId"))&&s.get("textScore")!=null&&((Number)s.get("textScore")).doubleValue()>=THRESHOLD).toList();
-        double highestText=qualified.stream().mapToDouble(s->((Number)s.get("textScore")).doubleValue()).max().orElse(-1);
-        var winners=qualified.stream().filter(s->Double.compare(((Number)s.get("textScore")).doubleValue(),highestText)==0).toList();
-        var recommended=completePhotoGroup&&winners.size()==1?List.of(winners.getFirst().get("productId")):List.of();
-        for(var score:qualified)score.put("reason",!completePhotoGroup?"照片最高分组尚不完整，待人工核对":recommended.contains(score.get("productId"))?"照片最高组且文字最高，达到推荐门槛":winners.contains(score)?"照片及文字最高分仍并列，待人工核对":"同组其他候选文字分更高");
+        var recommended=new ArrayList<Long>();
+        if(!highest.isEmpty())recommended.add(highest.getFirst());
+        else if(candidates.stream().noneMatch(c->c.get("visualScore")!=null)){
+            candidates.stream().filter(c->c.get("textEvidence") instanceof List<?> evidence&&!evidence.isEmpty()).findFirst()
+                .ifPresent(c->recommended.add(((Number)c.get("productId")).longValue()));
+        }
         var result=new LinkedHashMap<String,Object>();
-        result.put("format","CandidateRankingV1");result.put("policyVersion","photo-first-text-40-40-20-v1");
-        result.put("photoThreshold",THRESHOLD);result.put("textThreshold",THRESHOLD);
+        result.put("format","CandidateRankingV1");result.put("policyVersion","photo-best-or-first-text-v2");
+        result.put("photoThreshold",THRESHOLD);result.put("textThreshold",null);
         result.put("weights",Map.of("productCode",40,"spec",40,"name",20));
         result.put("completePhotoGroup",completePhotoGroup);
         result.put("status",recommended.isEmpty()?"NEEDS_REVIEW":"RECOMMENDED");
-        result.put("reason",!completePhotoGroup?"照片最高分组可能因检索数量上限而不完整，已保留候选待人工核对":!recommended.isEmpty()?"已按照片最高组及文字加权分选出候选，仍须人工确认商品与单位":highest.isEmpty()?"没有达到80%的照片候选，已保留原候选供人工核对":winners.size()>1?"照片及文字最高分仍并列，已保留候选待人工核对":"照片最高组没有达到80%的可比较文字分，已保留候选且不比较下一档照片");
+        result.put("reason",recommended.isEmpty()?"没有符合条件的商品，请人工核对或确认创建新品":!highest.isEmpty()?"已选择相似度大于80%的最高分商品，同分取第一条；自动确认商品与单位":"文字目录已命中，默认选择第一条并自动确认商品与单位");
         result.put("highestPhotoIds",highest);result.put("recommendedIds",recommended);result.put("scores",scores);
         return result;
     }

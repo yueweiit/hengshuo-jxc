@@ -23,12 +23,13 @@ public class PurchaseImportTaskServiceImpl implements PurchaseImportTaskService 
     private final PurchaseImportServiceImpl imports;private final PurchaseImportRecognitionClient parser;
     private final org.springframework.beans.factory.ObjectProvider<PurchaseImportTaskHandler> handlers;
     private final PurchaseImportProgressService progress;private final PurchaseImportConnections connections;
+    private final PurchaseImportBatchExecutor batches;
     private final AttachmentAssetService assets;private final PurchaseImportTaskMapper mapper;private final DbContext db;private final IdempotencyExecutor commands;
     record Lease(UUID id,long country,UUID batch,long source,int revision,UUID owner,RequestContext actor,String token,String sha,String sheet,String kind,Map<String,Object> input){}
-    public PurchaseImportTaskServiceImpl(PurchaseImportServiceImpl imports,PurchaseImportRecognitionClient parser,AttachmentAssetService assets,PurchaseImportTaskMapper mapper,DbContext db,IdempotencyExecutor commands,org.springframework.beans.factory.ObjectProvider<PurchaseImportTaskHandler> handlers,PurchaseImportProgressService progress,PurchaseImportConnections connections){this.connections=connections;this.progress=progress;this.handlers=handlers;this.imports=imports;this.parser=parser;this.assets=assets;this.mapper=mapper;this.db=db;this.commands=commands;}
+    public PurchaseImportTaskServiceImpl(PurchaseImportServiceImpl imports,PurchaseImportRecognitionClient parser,AttachmentAssetService assets,PurchaseImportTaskMapper mapper,DbContext db,IdempotencyExecutor commands,org.springframework.beans.factory.ObjectProvider<PurchaseImportTaskHandler> handlers,PurchaseImportProgressService progress,PurchaseImportBatchExecutor batches,PurchaseImportConnections connections){this.connections=connections;this.batches=batches;this.progress=progress;this.handlers=handlers;this.imports=imports;this.parser=parser;this.assets=assets;this.mapper=mapper;this.db=db;this.commands=commands;}
     private void gates(long country){db.apply(null);imports.auth.gate(0,false);db.apply(country);imports.auth.gate(country,false);}
     RequestContext actor(Map<String,Object> t){var basis=imports.map(t.get("authorization_basis"));return new RequestContext(number(t,"requested_by"),number(t,"country_id"),"purchase-task-"+t.get("id"),basis.get("tokenHash").toString());}
-    private Lease claim(long country,UUID id){return imports.tx.execute(s->{
+    Lease claim(long country,UUID id){return imports.tx.execute(s->{
         gates(country);var found=mapper.selectClaimableTask(country,id);if(found.isEmpty())return null;
         // 领取、完成、编辑和重试统一先锁批次，再锁任务，避免恢复竞争时逆序锁定。
         mapper.lockBatch(country,found.getFirst().get("batch_id"));
@@ -72,12 +73,14 @@ public class PurchaseImportTaskServiceImpl implements PurchaseImportTaskService 
                 mapper.completeBatch(next,country,lease.batch);
                 long reviewRows=list(result.get("rows")).stream().filter(r->{var v=imports.map(r.get("normalizedValues"));return List.of("sourceOrderNo","productSpec","purchaseQty","purchaseUnitPrice").stream().anyMatch(k->v.get(k)==null);}).count();long unstaged=list(result.get("warnings")).stream().filter(w->"ROW_NOT_STAGED".equals(w.get("code"))).count();mapper.completeParseTask(imports.json.write(Map.of("sourceId",lease.source,"rows",list(result.get("rows")).size(),"images",imageIds.size(),"reviewRows",reviewRows,"unstagedCandidates",unstaged)),country,taskId);return null;
             });
-        }catch(RuntimeException error){if(!(error instanceof ApiException)){Throwable root=error;while(root.getCause()!=null)root=root.getCause();String diagnostic=root instanceof org.postgresql.util.PSQLException pg&&pg.getServerErrorMessage()!=null?pg.getServerErrorMessage().getMessage():root.getClass().getName();LOG.warn("Purchase import task {} kind {} failed: {}; frames={}",taskId,lease.kind,diagnostic,java.util.Arrays.stream(root.getStackTrace()).filter(frame->frame.getClassName().startsWith("com.hs.")).limit(8).toList());}String code=error instanceof ApiException api?api.getCode():lease.kind.equals("PARSE")?"PARSE_FAILED":"TASK_FAILED";String message=error instanceof ApiException api?api.getMessage():"任务执行或保存失败，请检查服务后重试";
-            imports.tx.execute(s->{gates(country);String state=code.equals("INPUT_CHANGED")?"STALE":code.startsWith("AUTH_")||code.equals("SYS_FORBIDDEN")?"NEEDS_REAUTH":"FAILED";Object details=error instanceof ApiException api?api.getData():null;
-                int changed=mapper.failOwnedTask(state,code,message,details==null?null:imports.json.write(details),country,taskId,lease.owner);
-                if(changed==1&&"PARSE".equals(lease.kind)){mapper.failSource(state.equals("STALE")?"STALE":"FAILED",code,message,country,lease.source);mapper.failBatch(country,lease.batch);}return null;
+        }catch(RuntimeException error){fail(lease,error);}
+    }
+    void fail(Lease lease,RuntimeException error){
+        if(!(error instanceof ApiException)){Throwable root=error;while(root.getCause()!=null)root=root.getCause();String diagnostic=root instanceof org.postgresql.util.PSQLException pg&&pg.getServerErrorMessage()!=null?pg.getServerErrorMessage().getMessage():root.getClass().getName();LOG.warn("Purchase import task {} kind {} failed: {}; frames={}",lease.id,lease.kind,diagnostic,java.util.Arrays.stream(root.getStackTrace()).filter(frame->frame.getClassName().startsWith("com.hs.")).limit(8).toList());}String code=error instanceof ApiException api?api.getCode():lease.kind.equals("PARSE")?"PARSE_FAILED":"TASK_FAILED";String message=error instanceof ApiException api?api.getMessage():"任务执行或保存失败，请检查服务后重试";
+            imports.tx.execute(s->{gates(lease.country);String state=code.equals("INPUT_CHANGED")?"STALE":code.startsWith("AUTH_")||code.equals("SYS_FORBIDDEN")?"NEEDS_REAUTH":"FAILED";Object details=error instanceof ApiException api?api.getData():null;
+                int changed=mapper.failOwnedTask(state,code,message,details==null?null:imports.json.write(details),lease.country,lease.id,lease.owner);
+                if(changed==1&&"PARSE".equals(lease.kind)){mapper.failSource(state.equals("STALE")?"STALE":"FAILED",code,message,lease.country,lease.source);mapper.failBatch(lease.country,lease.batch);}return null;
             });
-        }
     }
     Map<String,Object> active(Lease lease){var a=imports.access(lease.actor,true);imports.batch(a,lease.batch,true);var found=mapper.selectActiveTaskForUpdate(lease.country,lease.id,lease.owner);if(found.size()!=1)throw new ApiException(409,"TASK_LEASE_LOST","任务租约已失效，旧结果未写入");mapper.renewOwnedLease(lease.country,lease.id,lease.owner);return found.getFirst();}
     private String sourceKey(Map<String,Object> row){
@@ -90,7 +93,18 @@ public class PurchaseImportTaskServiceImpl implements PurchaseImportTaskService 
     public Map<String,Object> get(RequestContext ctx,UUID id){return imports.tx.execute(s->{Access a=imports.access(ctx,false);var rows=mapper.selectTask(a.requireCountry(),id);if(rows.size()!=1)throw ApiException.notFound();imports.batch(a,(UUID)rows.getFirst().get("batch_id"),false);return imports.taskDto(rows.getFirst());});}
     public Map<String,Object> retry(RequestContext ctx,UUID id,String key,String sheet){return retry(ctx,id,key,sheet,null);}
     public Map<String,Object> retry(RequestContext ctx,UUID id,String key,String sheet,Map<String,Object> overrides){if(overrides!=null&&(imports.json.write(overrides).length()>4*1024*1024||!overrides.keySet().equals(Set.of("mapping","specLabels","confirm"))||!Boolean.TRUE.equals(overrides.get("confirm"))))throw Inputs.bad("字段修正仅接受原单元格映射、规格标签和明确确认");return imports.tx.execute(s->{Access a=imports.access(ctx,true);var rows=mapper.selectTask(a.requireCountry(),id);if(rows.size()!=1)throw ApiException.notFound();var task=rows.getFirst();var b=imports.batch(a,(UUID)task.get("batch_id"),true);var lockedTask=PurchaseRows.one(mapper.selectTaskForUpdate(a.requireCountry(),id));var request=new LinkedHashMap<String,Object>();request.put("sheet",sheet);if(overrides!=null)request.put("mappingOverrides",overrides);return commands.execute(ctx,"POST",BASE+"/tasks/"+id+"/retry",key,request,imports.bookId(imports.map(b.get("header"))),()->{if(!Set.of("FAILED","NEEDS_REAUTH","STALE").contains(lockedTask.get("status")))throw Inputs.conflict();boolean parse="PARSE".equals(lockedTask.get("kind"));if(!parse){if(sheet!=null||overrides!=null)throw Inputs.bad("照片或图库任务不接受字段修正");handler(lockedTask.get("kind").toString()).retry(ctx,lockedTask);}mapper.requeueTask((parse?b.get("version"):lockedTask.get("input_revision")),imports.json.write(Map.of("userId",ctx.userId(),"tokenHash",ctx.tokenHash())),ctx.userId(),a.requireCountry(),id);if(parse){progress.clear(a.requireCountry(),id);var options=new LinkedHashMap<String,Object>();if(sheet!=null)options.put("sheet",sheet);if(overrides!=null)options.put("mappingOverrides",overrides);mapper.requeueSource(imports.json.write(options),a.requireCountry(),task.get("source_id"));mapper.markBatchQueued(a.requireCountry(),task.get("batch_id"));}return Map.of("id",id.toString(),"status","QUEUED");},r->imports.batch(a,(UUID)task.get("batch_id"),false));});}
-    public int recover(long country,int limit){var ids=imports.tx.execute(s->{gates(country);return mapper.selectRecoverableIds(country,limit);});ids.forEach(id->execute(country,id));return ids.size();}
+    public int recover(long country,int limit){
+        var queued=imports.tx.execute(s->{gates(country);return mapper.selectRecoverableTasks(country,limit);});
+        var grouped=new LinkedHashMap<UUID,List<UUID>>();
+        for(var task:queued){if("MATCH".equals(task.get("kind")))grouped.computeIfAbsent((UUID)task.get("batch_id"),k->new ArrayList<>()).add((UUID)task.get("id"));else execute(country,(UUID)task.get("id"));}
+        var work=new ArrayList<Runnable>();
+        for(var ids:grouped.values())for(int start=0;start<ids.size();start+=PurchaseImportReviewBatch.ROWS){var group=List.copyOf(ids.subList(start,Math.min(start+PurchaseImportReviewBatch.ROWS,ids.size())));work.add(()->executeBatch(country,group));}
+        batches.run(work);return queued.size();
+    }
+    private void executeBatch(long country,List<UUID> ids){
+        handler("MATCH").executeBatch(country,ids,this);
+    }
+    int connectionVersion(Lease lease){return connections.versionForTask(lease.id(),lease.token());}
     record Scope(RequestContext actor,Map<String,Object> task){}
     Scope scoped(UUID taskId,String token,boolean completedCallback){
         return scoped(taskId,token,completedCallback,true);

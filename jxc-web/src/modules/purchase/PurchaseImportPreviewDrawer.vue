@@ -2,10 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { formatImportDecimal } from './purchaseImportDisplay'
 import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
-import type { FeeReviewInput, ImportDraftGroup, PurchaseImportModel } from './purchaseImportModel'
+import { summarizeImportIssues } from './purchaseImportIssues'
+import type { FeeReviewInput, ImportDraftGroup, ImportRow, PurchaseImportModel } from './purchaseImportModel'
 
 const props = defineProps<{ modelValue: boolean; page: PurchaseImportModel; books: { id: number; name: string }[]; suppliers: { id: number; name: string }[]; currencies: { code: string }[]; creationEnabled:boolean; creationLoading:boolean; creationError:string }>()
-const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save:[]; 'pending-review':[value:boolean] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save:[]; review:[row:ImportRow]; 'pending-review':[value:boolean] }>()
 const editingVersion = ref<number | null>(null)
 const editing = ref<number | null>(null), header = ref<Record<string, any>>({}), split = ref<number[]>([])
 const feeEdits = ref<Record<number, FeeReviewInput[]>>({})
@@ -21,6 +22,12 @@ function edit(group: ImportDraftGroup) { editing.value = group.id; editingVersio
 async function save(group: ImportDraftGroup) { if (editing.value !== group.id || editingVersion.value === null) return; if (await props.page.saveGroup({ ...group, version: editingVersion.value }, header.value, split.value)) { editing.value = null; editingVersion.value = null } }
 function productLabel(id:number) { const product=props.page.state.rows.find(row=>row.matchedProductId===id)?.productSnapshot; return `${product?.productCode ?? '编码待核对'} · ${product?.name ?? '名称待核对'}` }
 function groupRows(group: ImportDraftGroup) { return props.page.state.rows.filter(row => row.groupId === group.id) }
+function issueRowLabel(issue: ImportDraftGroup['errors'][number]) { const row = props.page.state.rows.find(row => row.id === issue.rowId); return row ? `查看第${row.rowNo}行` : '查看对应明细' }
+function reviewIssue(issue: ImportDraftGroup['errors'][number]) {
+  const row = props.page.state.rows.find(row => row.id === issue.rowId)
+  if (!row) { props.page.failure(new Error('对应采购明细已变化，请重新读取后核对')); return }
+  emit('review', row)
+}
 function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', READY: '可确认建单', CREATING: '创建处理中', CREATED: '已创建草稿', FAILED: '创建失败', UNKNOWN: '创建结果待核实' } as Record<string, string>)[group.createStatus] }
 </script>
 
@@ -50,7 +57,10 @@ function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', R
       </el-form>
       <p class="hint">{{ books.find(item => item.id === group.header.bookId)?.name || '账套待核实' }} · {{ suppliers.find(item => item.id === group.header.supplierId)?.name || '供应商待核实' }} · {{ group.header.currency }} · {{ group.header.orderDate }}</p>
       <p class="hint">预计交货 {{ group.header.expectedDate || '未填写' }}；预付比例 {{ formatImportDecimal(group.header.prepayRatio ?? null) }}；账期 {{ group.header.termDays ?? '待核实' }} 天；付款条件 {{ group.header.paymentTerms || '未填写' }}；税率 {{ formatImportDecimal(group.header.taxRate ?? null) }}；单价口径 {{ group.header.priceTaxBasis === 'EXCLUSIVE' ? '未含税' : '待核实' }}</p>
-      <ul v-if="group.errors.length" class="issues"><li v-for="(error, n) in group.errors" :key="n"><span v-if="error.sourceRow">{{ error.sourceSheet }} 原第{{ error.sourceRow }}行：</span>{{ error.message }}</li></ul>
+      <ul v-if="group.errors.length" class="issues"><li v-for="(summary, n) in summarizeImportIssues(group.errors)" :key="n">
+        <details v-if="summary.issues.some(issue => issue.rowId != null || issue.sourceRow != null)"><summary>{{ summary.message }} · 展开查看对应明细</summary><ul><li v-for="(issue, index) in summary.issues" :key="index"><span v-if="issue.sourceRow != null">{{ issue.sourceSheet }} 原第{{ issue.sourceRow }}行：</span><el-button v-if="issue.rowId != null" link type="primary" :disabled="locked" @click="reviewIssue(issue)">{{ issueRowLabel(issue) }}</el-button><span v-else>{{ issue.message }}</span></li></ul></details>
+        <span v-else>{{ summary.message }}</span>
+      </li></ul>
       <div v-if="group.preview" class="preview-scroll"><table><thead><tr><th>行</th><th>商品／规格</th><th>数量与单位</th><th>原始采购单价</th><th>正式采购单价</th><th>舍入差额</th><th>税率</th><th>金额</th></tr></thead><tbody><tr v-for="line in group.preview.lines" :key="line.lineNo"><td>{{ line.lineNo }}</td><td>{{ productLabel(line.productId) }} · {{ line.productSpec || '规格待核实' }}</td><td>{{ formatImportDecimal(line.qty) }} {{ line.unit }}</td><td :title="line.sourceUnitPrice">{{ formatImportDecimal(line.sourceUnitPrice) }}</td><td :title="line.unitPrice">{{ formatImportDecimal(line.unitPrice) }}</td><td :title="line.unitPriceDifference">{{ line.unitPriceDifference.startsWith('-') ? '-' : '' }}{{ formatImportDecimal(line.unitPriceDifference.replace(/^-/,'') ) }}</td><td :title="line.taxRate">{{ formatImportDecimal(line.taxRate) }}</td><td :title="line.amount">{{ formatImportDecimal(line.amount) }}</td></tr></tbody></table><p>货款 {{ formatImportDecimal(group.preview.totalAmount) }} {{ group.header.currency }}；税额 {{ formatImportDecimal(group.preview.taxAmount) }} {{ group.header.currency }}</p></div>
       <section class="fee-review" aria-label="费用来源核对">
         <h3>待后续登记的费用</h3><p class="hint">原表重复出现的运费不会自动相加。请核对整单或单行归属、原币和金额；此处只保存来源记录。</p>

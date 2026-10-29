@@ -30,6 +30,7 @@ const current = computed(() => settings.value?.services[selected.value])
 const title = computed(() => serviceOptions.find(option => option.name === selected.value)?.title)
 let alive = true, generation = 0
 function clearSecrets() { form.key = ''; form.fieldsKey = ''; form.recognitionKey = ''; form.clearKey = false; form.clearFieldsKey = false; form.clearRecognitionKey = false }
+function clearSecretDraft(key: 'key' | 'fieldsKey' | 'recognitionKey') { const flag = key === 'key' ? 'clearKey' : key === 'fieldsKey' ? 'clearFieldsKey' : 'clearRecognitionKey'; if (form[flag]) form[key] = '' }
 function fillForm() {
   const service = settings.value?.services[selected.value]
   clearSecrets()
@@ -111,6 +112,7 @@ onBeforeUnmount(() => { alive = false; generation++; clearSecrets() })
     <div v-else-if="!settings" class="settings-empty"><p>尚未读取到服务配置。</p><el-button :disabled="busy" @click="loadSettings">重试</el-button></div>
     <template v-else>
       <el-alert v-if="!settings.keyReady" title="后端尚未配置有效的密钥加密主密钥，请联系部署管理员配置后再保存。" type="warning" :closable="false" />
+      <el-alert v-if="settings.services.deepseek.source === 'PAGE' && settings.services.n8n.source !== 'PAGE'" title="n8n 仍使用原连接。完成 n8n 配置与配套服务更新后，采购识别才会使用这里保存的模型设置。" type="info" :closable="false" />
       <div class="service-workspace">
         <nav class="service-list" aria-label="外部服务">
           <button v-for="option in serviceOptions" :key="option.name" type="button" class="service-choice" :class="{ active: selected === option.name }" :aria-pressed="selected === option.name" :disabled="busy" @click="selectService(option.name)">
@@ -118,7 +120,7 @@ onBeforeUnmount(() => { alive = false; generation++; clearSecrets() })
           </button>
         </nav>
         <section class="service-editor" :aria-label="title">
-          <div class="service-heading"><h3>{{ title }}</h3><span class="muted">{{ current?.source === 'PAGE' ? '来源：页面配置' : current?.source === 'STARTUP' ? '来源：启动配置' : '尚未配置' }} · 版本 {{ settings.version }}</span></div>
+          <div class="service-heading"><h3>{{ title }}</h3><span class="muted">{{ current?.source === 'PAGE' ? '来源：页面配置' : current?.source === 'STARTUP' ? '来源：启动配置快照' : '尚未配置' }} · 版本 {{ settings.version }}</span></div>
           <p v-if="selected === 'n8n'" class="muted">分别填写原采购字段识别、商品识别工作流的完整调用地址。访问密钥需与 n8n 中的入口认证一致。</p>
           <p v-else-if="selected === 'deepseek'" class="muted">密钥由后端保存，n8n 通过采购任务使用。这里只配置采购识别所用模型。</p>
           <p v-else class="muted">连接已部署的采购解析桥接服务。保存连接配置后，后台程序仍须已启动。</p>
@@ -126,17 +128,17 @@ onBeforeUnmount(() => { alive = false; generation++; clearSecrets() })
             <el-form-item label="启用连接"><el-switch v-model="form.enabled" aria-label="启用连接" /><span class="field-hint">停用后相关新任务会明确报错。</span></el-form-item>
             <template v-if="selected === 'n8n'">
               <el-form-item label="采购字段识别地址"><el-input v-model="form.fieldsUrl" placeholder="https://n8n.example.com/webhook/jxc-purchase-fields-v1" autocomplete="off" /></el-form-item>
-              <el-form-item label="字段识别访问密钥"><el-input v-model="form.fieldsKey" type="password" autocomplete="new-password" :disabled="form.clearFieldsKey" :placeholder="current?.fieldsKeyConfigured ? '已配置；留空保留原密钥' : '尚未配置'" /><el-checkbox v-model="form.clearFieldsKey">清除已保存密钥</el-checkbox></el-form-item>
+              <el-form-item label="字段识别访问密钥"><el-input v-model="form.fieldsKey" type="password" autocomplete="new-password" :disabled="form.clearFieldsKey" :placeholder="current?.fieldsKeyConfigured ? '已配置；留空保留原密钥' : '尚未配置'" /><el-checkbox v-model="form.clearFieldsKey" @change="clearSecretDraft('fieldsKey')">清除已保存密钥</el-checkbox></el-form-item>
               <el-form-item label="商品识别地址"><el-input v-model="form.recognitionUrl" placeholder="https://n8n.example.com/webhook/jxc-purchase-recognition-v1" autocomplete="off" /></el-form-item>
-              <el-form-item label="商品识别访问密钥"><el-input v-model="form.recognitionKey" type="password" autocomplete="new-password" :disabled="form.clearRecognitionKey" :placeholder="current?.recognitionKeyConfigured ? '已配置；留空保留原密钥' : '尚未配置'" /><el-checkbox v-model="form.clearRecognitionKey">清除已保存密钥</el-checkbox></el-form-item>
+              <el-form-item label="商品识别访问密钥"><el-input v-model="form.recognitionKey" type="password" autocomplete="new-password" :disabled="form.clearRecognitionKey" :placeholder="current?.recognitionKeyConfigured ? '已配置；留空保留原密钥' : '尚未配置'" /><el-checkbox v-model="form.clearRecognitionKey" @change="clearSecretDraft('recognitionKey')">清除已保存密钥</el-checkbox></el-form-item>
             </template>
             <template v-else>
               <el-form-item :label="selected === 'deepseek' ? 'API 根地址' : '解析服务根地址'"><el-input v-model="form.url" :placeholder="selected === 'deepseek' ? 'https://api.deepseek.com' : 'http://识别服务地址:端口'" autocomplete="off" /></el-form-item>
               <el-form-item v-if="selected === 'deepseek'" label="模型名称"><el-input v-model="form.model" placeholder="填写账户可用的模型名称" autocomplete="off" /></el-form-item>
-              <el-form-item :label="selected === 'deepseek' ? 'API Key' : '访问密钥'"><el-input v-model="form.key" type="password" autocomplete="new-password" :disabled="form.clearKey" :placeholder="current?.keyConfigured ? '已配置；留空保留原密钥' : '尚未配置'" /><el-checkbox v-model="form.clearKey">清除已保存密钥</el-checkbox></el-form-item>
+              <el-form-item :label="selected === 'deepseek' ? 'API Key' : '访问密钥'"><el-input v-model="form.key" type="password" autocomplete="new-password" :disabled="form.clearKey" :placeholder="current?.keyConfigured ? '已配置；留空保留原密钥' : '尚未配置'" /><el-checkbox v-model="form.clearKey" @change="clearSecretDraft('key')">清除已保存密钥</el-checkbox></el-form-item>
             </template>
             <el-form-item label="请求超时（秒）"><el-input-number v-model="form.timeoutSeconds" :min="1" :max="600" :precision="0" /><span class="field-hint">超过时限后保留失败原因，可在业务页面重试。</span></el-form-item>
-            <div class="settings-actions"><el-button type="primary" native-type="submit" :loading="saving" @click="save">保存配置</el-button><el-button :loading="testing" @click="testConnection">测试已保存连接</el-button></div>
+            <div class="settings-actions"><el-button type="primary" native-type="submit" :loading="saving">保存配置</el-button><el-button :loading="testing" @click="testConnection">测试已保存连接</el-button></div>
           </el-form>
           <p class="field-hint">测试使用已保存配置，不保存当前输入，也不提交采购文件。连接检查通过后，仍需验证实际识别效果。</p>
           <div v-if="current?.lastTest" class="last-test"><strong>最近连接检查</strong><p :class="{ 'test-error': current.lastTest.status === 'error' }">{{ current.lastTest.message }}</p><span class="muted">{{ current.lastTest.checkedAt }}</span></div>

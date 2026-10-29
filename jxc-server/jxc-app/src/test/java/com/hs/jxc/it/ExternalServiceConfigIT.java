@@ -27,6 +27,7 @@ class ExternalServiceConfigIT extends BasePgIT {
         var initial=data(send("GET","",null,"integration-admin",200));
         assertThat(initial).containsEntry("version",0).containsEntry("keyReady",true);
         assertThat(((Map<?,?>)initial.get("services")).keySet().containsAll(List.of("n8n","deepseek","docling"))).isTrue();
+        assertThat(service(initial,"deepseek")).containsKey("lastTest");
         send("GET","",null,"integration-user",403);
         send("PUT","/deepseek",deepseek(0,"first-secret"),"integration-user",403);
         send("GET","",null,null,401);
@@ -43,7 +44,7 @@ class ExternalServiceConfigIT extends BasePgIT {
         send("PUT","/deepseek",changed,"integration-admin",200);
         var clear=deepseek(3,"");clear.put("enabled",false);clear.put("clearKey",true);
         assertThat(service(data(send("PUT","/deepseek",clear,"integration-admin",200)),"deepseek")).containsEntry("keyConfigured",false);
-        assertThat(owner.queryForObject("SELECT string_agg(coalesce(after_value::text,''),'') FROM sys_audit_log",String.class)).doesNotContain("first-secret","second-secret");
+        assertThat(owner.queryForObject("SELECT string_agg(coalesce(after_value::text,''),'') FROM sys_audit_log",String.class)).doesNotContain("first-secret","second-secret","https://api.deepseek.com");
         assertThat(owner.queryForObject("SELECT count(*) FROM sys_external_service_revision",Integer.class)).isEqualTo(4);
     }
     @Test void staleVersionMalformedUrlUnknownFieldsAndConflictingSecretEditsDoNotMutate()throws Exception{
@@ -54,6 +55,7 @@ class ExternalServiceConfigIT extends BasePgIT {
         }
         var unknown=deepseek(1,"");unknown.put("arbitrary",true);send("PUT","/deepseek",unknown,"integration-admin",400);
         var conflict=deepseek(1,"new-secret");conflict.put("clearKey",true);send("PUT","/deepseek",conflict,"integration-admin",400);
+        var invalidFlag=deepseek(1,"");invalidFlag.put("clearKey",null);send("PUT","/deepseek",invalidFlag,"integration-admin",400);
         assertThat(data(send("GET","",null,"integration-admin",200))).containsEntry("version",1);
     }
     @Test void disabledServiceCannotSilentlyUseAnOldAddressAndTestDoesNotChangeVersion()throws Exception{

@@ -34,8 +34,16 @@ export function createPurchaseImportGrid(deps: GridDeps) {
   let temporaryId = 0, epoch = 0
   let uploading = false, checkpoint: () => Promise<boolean> = async () => true
   let intent: { input: GridSaveInput; key: string } | null = null
-  const rows = () => view.draft ?? deps.state.rows
   const value = (row: ImportRow, field: GridField) => row[field] ?? null
+  // 未编辑业务内容的草稿行采用最新记录；真正改动的行保留原版本以继续检测冲突。
+  const rows = () => {
+    if (!view.draft) return deps.state.rows
+    const saved = new Map(deps.state.rows.map(row => [row.id, row]))
+    return view.draft.map(row => {
+      const current = saved.get(row.id)
+      return current && deps.columns.every(col => value(current, col.key) === value(row, col.key)) ? current : row
+    })
+  }
   // 只看业务内容；格式产生的零不使空白占位行成为有效数据，已有来源行不在此删除。
   const hasContent = (row: ImportRow) => !!photos[row.id] || !!row.images?.length || deps.columns.some(col => {
     const text = value(row, col.key)?.trim()

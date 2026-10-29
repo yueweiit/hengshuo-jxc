@@ -36,7 +36,7 @@ async function workspace(confirm = async () => {}, dependencies = {}) {
       async saveHeader(_batch, value) { savedHeaders.push(value); return { batchId, header: { ...value }, rows: [{ ...row }] } },
     },
     ...dependencies,
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming', 'localDraft', 'openLocalDraft','reviewVisible','reviewRow','reviewTab','review','pendingProductCount'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming', 'localDraft', 'openLocalDraft','reviewVisible','reviewRow','reviewTab','review','pendingProductCount','reviewPreviewRow','preview','correctedBatch'])
   const initialDate = state.state.header.orderDate
   await state.localDraft.open(draft.purchaseImportDraftKey(7, 101, null))
   state.state.header.orderDate = initialDate
@@ -47,7 +47,7 @@ async function render(state) {
   const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
   const app = createSSRApp({ setup: () => ({ ...state, downloading: false, downloadError: '' }), render: compile(template) })
   // 测试真实工作区模板与操作；Element控件外观和明细表内部行为由构建及模型测试分别覆盖。
-  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) })
+  const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) })
   for (const name of ['ElForm', 'ElFormItem', 'ElSelect', 'ElDatePicker', 'ElInput', 'ElInputNumber', 'ElIcon', 'ElAlert', 'Upload', 'Download', 'Refresh']) app.component(name, slot)
   app.component('ElOption', defineComponent({ props: ['label', 'value', 'disabled'], setup: props => () => h('option', { value: props.value, disabled: props.disabled }, props.label) }))
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
@@ -58,6 +58,21 @@ async function render(state) {
   app.component('PurchaseImportSources', { render: () => null })
   return renderToString(app)
 }
+
+test('基础信息直接提供税率和单价口径入口，填写后通过原保存基础信息操作提交', async () => {
+  const { state, savedHeaders } = await workspace(); await state.loadReferences()
+  Object.assign(state.state, { batchId, rows: [row] })
+  Object.assign(state.state.header, { taxRate: '0.13', priceTaxBasis: 'EXCLUSIVE' })
+  const html = await render(state)
+  assert.match(html, /aria-label="税率"/)
+  assert.match(html, /aria-label="单价口径"/)
+  assert.match(html, /0\.13.*13%/)
+  await state.saveHeader()
+  assert.equal(savedHeaders.at(-1).taxRate, '0.13'); assert.equal(savedHeaders.at(-1).priceTaxBasis, 'EXCLUSIVE')
+  state.previewVisible.value = true; state.reviewPreviewRow(state.state.rows[0])
+  assert.equal(state.previewVisible.value, false); assert.equal(state.reviewVisible.value, true); assert.equal(state.reviewRow.value, row.id)
+  assert.equal(state.reviewTab.value, 'product')
+})
 
 test('主页面提供保存入口并直接展示已生成采购单号与读回状态',async()=>{
   const {state}=await workspace();await state.loadReferences()
@@ -334,7 +349,7 @@ test('真实来源组件呈现解析失败、工作表选择和逐规格原图�
   const page = state.page
   Object.assign(page.state, { batchId, tasks: [{ id: batchId, status: 'FAILED', errorCode: 'SHEET_SELECTION_REQUIRED', errorMessage: '请选择采购表', result: { sheets: ['采购A', '采购B'] } }], sources: [{ id: 8, fileName: '采购.xlsx', fileSha256: 'a'.repeat(64), status: 'FAILED' }], rows: [{ ...row, sourceSheet: '采购A', sourceRow: 2, images: [{ id: 9, sha256: 'b'.repeat(64), status: 'UNCONFIRMED' }] }] })
   const source = new URL('../src/modules/purchase/PurchaseImportSources.vue', import.meta.url)
-  const bindings = loadVueScript(source, { ref, watch, onBeforeUnmount() {}, defineProps: () => ({ page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: {} }, ['sheets', 'imageUrls', 'imageErrors', 'downloading', 'download', 'view', 'retry', 'publish'])
+  const bindings = loadVueScript(source, { ref, watch, onBeforeUnmount() {}, defineProps: () => ({ page }), defineEmits: () => () => {}, ElMessageBox: { async confirm() { throw 'cancel' } }, http: {} }, ['sheets', 'imageUrls', 'imageErrors', 'downloading', 'download', 'view', 'retry', 'publish'])
   let publications = 0
   page.publishPhotos = async () => { publications++; return true }
   page.state.rows[0].matchedProductId = 501

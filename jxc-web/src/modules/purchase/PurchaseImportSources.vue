@@ -35,6 +35,7 @@ async function download(id: number, name: string) {
   finally { if (context === epoch) downloading.value = null }
 }
 async function view(row: ImportRow, id: number) {
+  if (props.page.busy()) return
   if (row.images?.some(image => image.id === id)) return props.page.images.load(id)
 }
 async function publish(row: ImportRow, imageId: number) {
@@ -69,8 +70,8 @@ onBeforeUnmount(clean)
         <div v-for="row in page.state.rows.filter(item => item.images?.length)" :key="row.id" class="source-row">
           <div class="source-position">第{{ row.rowNo }}行 · {{ row.productSpec || '规格待核实' }}<small>{{ row.sourceSheet }} · 原第{{ row.sourceRow }}行</small></div>
           <div v-for="image in row.images" :key="image.id" class="source-image">
-            <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" :preview-src-list="[String(imageUrls[image.id])]" preview-teleported fit="contain" class="original-image" :alt="`第${row.rowNo}行商品照片`" />
-            <el-button v-else size="small" @click="view(row, image.id)">查看原图</el-button>
+            <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" :preview-src-list="page.busy() ? [] : [String(imageUrls[image.id])]" preview-teleported fit="contain" class="original-image" :alt="`第${row.rowNo}行商品照片`" />
+            <el-button v-else size="small" :disabled="page.busy()" @click="view(row, image.id)">查看原图</el-button>
             <span v-if="imageErrors[image.id]" class="source-error">{{ imageErrors[image.id] }}</span>
             <span v-if="image.origin === 'MANUAL_UPLOAD'">手工上传</span>
             <span>{{ image.status === 'CONFIRMED' ? '归属已确认' : image.status === 'REJECTED' ? '已排除' : '归属待核实' }}</span>

@@ -55,7 +55,9 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
         h.put("orderDate",date(input.get("orderDate"),true));h.put("expectedDate",date(input.get("expectedDate"),true));
         String terms=Inputs.text(input,"paymentTerms","");if(terms.length()>200)throw Inputs.bad("付款条件最多200字");h.put("paymentTerms",terms);
         BigDecimal ratio=decimal(input.get("prepayRatio"),6,1,false);if(ratio!=null&&ratio.compareTo(BigDecimal.ONE)>0)throw Inputs.bad("预付比例须为0至1");h.put("prepayRatio",ratio==null?null:ratio.stripTrailingZeros().toPlainString());
-        Object days=input.get("termDays");if(days!=null&&(!(days instanceof Number)||new BigDecimal(days.toString()).scale()>0||((Number)days).longValue()<0||((Number)days).longValue()>Integer.MAX_VALUE))throw Inputs.bad("账期天数须为非负整数");h.put("termDays",days==null?null:((Number)days).intValue());return h;
+        Object days=input.get("termDays");if(days!=null&&(!(days instanceof Number)||new BigDecimal(days.toString()).scale()>0||((Number)days).longValue()<0||((Number)days).longValue()>Integer.MAX_VALUE))throw Inputs.bad("账期天数须为非负整数");h.put("termDays",days==null?null:((Number)days).intValue());
+        BigDecimal tax=decimal(input.get("taxRate"),6,1,false);if(tax!=null&&tax.compareTo(BigDecimal.ONE)>0)throw Inputs.bad("税率须为0至1");h.put("taxRate",tax==null?null:tax.toPlainString());
+        String basis=Inputs.text(input,"priceTaxBasis",null);if(basis!=null&&!basis.equals("EXCLUSIVE"))throw Inputs.bad("原采购按未含税单价计算，请先核对供应商单价");h.put("priceTaxBasis",basis);return h;
     }
     Map<String,Object> header(Access a,Map<String,Object> input){
         var h=stagingHeader(input);if(h.get("bookId")==null)throw Inputs.bad("请选择当前可用账套");if(h.get("supplierId")==null)throw Inputs.bad("请选择当前可用供应商");

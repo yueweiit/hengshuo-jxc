@@ -6,6 +6,6 @@
   "n8n/jxc-purchase-fields.test.mjs": "e3519ec0600497c0047f6dfeab58d8e776bd43db5a370b52b07d043bba5caf9d",
   "workbench/vision.py": "7e1761c85e51bdf303d301df0e7b3498422aa1e3e18053341503cb4e992f8bc0",
   "workbench/tests/test_jxc_gallery.py": "efe522edae30663f6cee15c7d64e6dc58d32aebc53bafc18bf1a2438dbf78700",
-  "n8n/jxc-purchase-recognition.json": "ec67597c53b596d96126a24db2772326589160a99088cd38434531e31ef2e610",
-  "n8n/jxc-purchase-recognition.test.mjs": "e92d022af37c2fc6c211e89b12665ab5f5a1452f65ba94b3ba36b569e33769f9"
+  "n8n/jxc-purchase-recognition.json": "ca1203f8f21f5ce5a9fcd358a099b4a4fa8f6b18e29424132898367a2be0ad76",
+  "n8n/jxc-purchase-recognition.test.mjs": "00c81ada6f295a46a7e38e7205f1fa2402242cfd87dd20c898bd85d8a819bdc2"
 }

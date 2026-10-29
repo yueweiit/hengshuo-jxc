@@ -8,19 +8,30 @@
 
 读取兼容已发布的IDMap2+Flat正式索引，以及仅演示入口允许的旧裸Flat索引。新建或重建才使用HNSW，不自动覆盖旧图库；旧读取保留至正式图库重建、旧演示迁移且核实无调用后移除，具体日期及其他调用方不确定。同步源码后需按运行维护流程重启Python进程；已有正式图库还需通过原有重建入口发布新索引，代码交付本身不代表这些运行步骤已执行。
 
-旧启动配置的字段环境：JXC_SUPPLIER_N8N_URL（必须以/jxc-purchase-fields-v1结尾）与JXC_SUPPLIER_N8N_KEY。页面配置模式不读取这两个值，Python经短期任务凭证调用Java /fields，由Java调用对应n8n。Java原任务retry接受mappingOverrides，仅允许原格映射、规格列标签和明确确认。旧/internal/jxc/parse保留给尚未升级客户端；当前本机客户端切换后，其他运行客户端是否仍调用不确定；全部客户端迁移且核实无调用后可删除，无承诺日期。
+旧启动配置的字段环境：JXC_SUPPLIER_N8N_URL（必须以/jxc-purchase-fields-v1结尾）与JXC_SUPPLIER_N8N_KEY。Java原任务retry接受mappingOverrides，仅允许原格映射、规格列标签和明确确认。旧/internal/jxc/parse保留给尚未升级客户端；当前本机客户端切换后，其他运行客户端是否仍调用不确定；全部客户端迁移且核实无调用后可删除，无承诺日期。
 
 manifest.json记录UTF-8文本将CRLF统一为LF后的SHA-256，避免Windows检出行尾导致相同源码误报变更。校验时按上述规范化读取；不移除空白、不改代码正文。运行包内旧清单按当时实际字节留存，其运行源码没有变化。
 
 ## 商品AI图文核对
 
-n8n/jxc-purchase-recognition.json是同一受限商品识别工作流的版本化交付，替代其旧版“只解释编号与分数”的实现；不是额外运行一套流程。导入后保持未激活，绑定专用Header凭据及Validate task中的受控Java、Python根地址，再沿原发布流程启用。没有页面配置时Java沿用jxc.purchase-import.n8n-url；页面配置后使用所绑定版本，路径保持/jxc-purchase-recognition-v1。源码交付不等于已激活线上工作流。
+n8n/jxc-purchase-recognition.json是同一受限商品识别工作流的版本化交付，替代其旧版“只解释编号与分数”的实现；不是额外运行一套流程。导入后保持未激活，绑定专用Header凭据及Validate task中的受控Java、Python根地址，再沿原发布流程启用。没有页面配置时沿用jxc.purchase-import.n8n-url；页面配置后使用任务绑定版本，路径保持/jxc-purchase-recognition-v1。源码交付不等于已激活线上工作流。
 
 Resolve real products后增加REVIEW工具调用：后台从固定FAISS命中选取每个候选的最佳命中配对，回查国家、图库代次和照片归属后读取真实图片；读文件在数据库事务之外，保存前再次校验证据。原图和候选图使用不同键，单图不超过10MiB、总原始图片不超过24MiB，超限或读取失败在候选原因中保留；不会创建公开图片URL。任务只存图片键及SHA，不存base64，模型请求不含任务凭证，n8n沿用不保存执行内容的设置。
 
 页面选定的DeepSeek模型接收实际image_url内容，先判照片同款，再核对来源productSpec与候选spec内真实的尺码、颜色、型号等属性。candidateChecks逐候选返回图片与规格状态；缺图/不确定/规格缺失不能伪装成一致，模型失败保留原候选。原确认商品与单位入口保留，候选及模型结果不自动创建商品或采购单。
 
 旧版本外部文件C:/project/docling-demo/n8n/jxc-purchase-recognition.json暂保留：当前在线工作流或其他运维脚本是否仍引用该文件不确定；保留到新版本完成授权发布且旧任务结束，核实无入口引用并归档旧发布包后再删除或同步。旧MatchRunV1文字解释仍可读；历史持久化结果是兼容对象，尚在运行的其他旧回调调用方不确定。全部工作流升级、旧任务结束且历史读取策略明确后才可收紧旧合同，不承诺删除日期。
+
+## 每批20行、最多3批图文核对
+
+MATCH恢复任务现在按同国家、同导入批次每组最多20行组织模型请求，采购专用执行器最多3组并行；其他任务沿原单行流程。每行仍使用原租约、版本、固定候选和结果回写校验。按需要逐行领取任务，超限时及时发送已准备的小批，避免未开始行提前耗尽租约。
+
+批量请求格式MatchReviewBatchV1只含rows与images；图片以内容SHA256去重，来源／候选配对仍逐行保留。完整UTF-8 JSON请求不超过40MiB，超过则拆小批；单行仍超限明确IMAGE_REVIEW_LIMIT，不丢图或降画质。工作流将多行放入一次模型请求，输出MatchReviewBatchResultV1.items；Java按runId、rowId、inputRevision和evidenceHash逐行核对，乱序可接受，缺行／重复／无效身份不能当成功。网络／解析失败不自动无限重试，已保存行不会被失败回执覆盖。
+
+同一webhook、Prepare explanation、模型HTTP节点和Validate explanation兼容原MatchTaskV1；旧入口仍用于EXPLAIN和直接单任务调用，已有部署客户端是否全部升级不确定。保留到协调升级及旧任务结束，核实无单行调用并确定历史读取策略后再收紧，未指定删除日期。
+
+交付JSON保持未激活；启用批量需要协调更新Java、此工作流及前端，并核实n8n请求体限制至少48MiB、模型访问凭据仍有效。仓库文件通过测试不代表运行工作流已更新。3批上限覆盖单应用实例；多实例部署需另行提供共享并发控制。未引入公开图片URL、Files API存储、数据库迁移或新的商品／采购写入口。
+
 
 ## 系统外部服务配置
 

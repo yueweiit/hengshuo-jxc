@@ -47,6 +47,13 @@ public class PurchaseImportRecognitionClient {
         String endpoint=ExternalServiceConfig.text(worker,"url").replaceAll("/$","")+"/internal/jxc/"+operation;
         return post(endpoint,ExternalServiceConfig.text(worker,"key"),body,field,maximum,"PARSER_UNAVAILABLE",((Number)worker.get("timeoutSeconds")).intValue());
     }
+    public Map<String,Object> reviewBatch(UUID task,String credential,Map<String,Object> input){
+        if(!"MatchReviewBatchV1".equals(input.get("format"))||!input.keySet().equals(Set.of("format","rows","images")))throw Inputs.bad("批量核对只接受已固定的行依据与图片");
+        var service=enabled(settings(task,credential),"n8n","N8N_UNAVAILABLE");String endpoint=ExternalServiceConfig.text(service,"recognitionUrl");
+        if(!URI.create(endpoint).getPath().endsWith("/jxc-purchase-recognition-v1"))throw new ApiException(503,"N8N_CONFIG_INVALID","请配置独立受限识别工作流地址");
+        var body=new LinkedHashMap<>(input);if("PAGE".equals(service.get("source"))){body.put("taskId",task.toString());body.put("credential",credential);}
+        return post(endpoint,ExternalServiceConfig.text(service,"recognitionKey"),body,"result",16*1024*1024,"N8N_UNAVAILABLE",((Number)service.get("timeoutSeconds")).intValue());
+    }
     private Map<String,Object> post(String endpoint,String key,Map<String,Object> body,String field,int maximum,String failureCode,int timeout){
         var response=transport.exchange(endpoint,key,"POST",body,timeout,maximum);var result=response.body();
         if(response.status()!=200||!"ok".equals(result.get("status"))){

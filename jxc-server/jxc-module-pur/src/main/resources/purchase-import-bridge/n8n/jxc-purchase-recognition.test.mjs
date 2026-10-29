@@ -16,6 +16,7 @@ test('商品模型调用统一配置且连接探测不会进入原业务识别',
   assert.equal(w.connections['Connection probe'].main[0][0].node,'Reply connection probe')
 })
 function run(name, input, refs = {}) {
+  if(name==='Prepare explanation'&&input.body?.format==='MatchReviewBatchV1')input={...input,body:{...input.body,taskId:'11111111-2222-4333-8444-555555555555',credential:'101:'+'a'.repeat(72)}}
   const node = workflow().nodes.find(n => n.name === name)
   const source = node.parameters.jsCode.replace('REPLACE_WITH_JXC_API_ORIGIN', 'http://application:8080').replace('REPLACE_WITH_JXC_PYTHON_ORIGIN', 'http://python:5003')
   return vm.runInNewContext(`(function(){${source}\n})()`, { $input: { first: () => ({ json: input }), all: () => input.map ? input.map(json => ({ json })) : [{ json: input }] }, $: name => ({ first: () => ({ json: refs[name] }), all: () => refs[name].map(json => ({ json })) }) })
@@ -78,4 +79,57 @@ test('同款但规格冲突可回传，未同款就声称规格一致必须失�
   const reply=c=>({statusCode:200,body:{choices:[{message:{content:JSON.stringify({status:'READY',message:'需人工核对',candidateIds:[],candidateChecks:[c]})}}]}})
   assert.equal(run('Validate explanation',reply(check),{'Prepare explanation':prepared})[0].json.explanation.status,'READY')
   assert.equal(run('Validate explanation',reply({...check,imageMatch:'DIFFERENT',specMatch:'MATCH'}),{'Prepare explanation':prepared})[0].json.explanation.status,'FAILED')
+})
+
+const batchFixture=()=>({format:'MatchReviewBatchV1',rows:[1,2].map(id=>({sourceInput:{productSpec:'S'},candidates:[{productId:501,product:{spec:'M'}}],inputRevision:2,evidenceHash:'a',runId:`11111111-2222-4333-8444-${String(id).padStart(12,'0')}`,rowId:id,pairs:picturesFixture().pairs,errors:[]})),images:picturesFixture().images.map((image,i)=>({...image,sha256:String(i+1).repeat(64)}))})
+test('批量二十行合成一个模型请求，共用图片但保留每行规格与身份',()=>{
+  const batch=batchFixture();batch.rows=Array.from({length:20},(_,i)=>({...batch.rows[0],rowId:i+1,runId:`11111111-2222-4333-8444-${String(i+1).padStart(12,'0')}`,sourceInput:{productSpec:`规格${i+1}`}}))
+  const prepared=run('Prepare explanation',{body:batch})[0].json
+  assert.equal(prepared.batch,true);assert.equal(prepared.rows.length,20)
+  assert.equal(prepared.prompt.messages[1].content.filter(p=>p.type==='image_url').length,2)
+  assert.match(JSON.stringify(prepared.prompt),/规格20/);assert.ok(!JSON.stringify(prepared.prompt).includes('credential'))
+})
+test('批量结果乱序仍按原任务回传，缺行和重复行明确失败',()=>{
+  const prepared=run('Prepare explanation',{body:batchFixture()})[0].json
+  const explanation={status:'READY',message:'需人工核对',candidateIds:[],candidateChecks:[{productId:501,imageMatch:'SAME',imageReason:'同款',specMatch:'CONFLICT',specReason:'S与M不同'}]}
+  const item=i=>({runId:prepared.rows[i].evidence.runId,rowId:i+1,inputRevision:2,evidenceHash:'a',explanation})
+  const reply=items=>({statusCode:200,body:{choices:[{finish_reason:'stop',message:{content:JSON.stringify({items})}}]}})
+  let out=run('Validate explanation',reply([item(1),item(0)]),{'Prepare explanation':prepared})[0].json
+  assert.equal(out.result.items[0].rowId,1);assert.equal(out.result.items[0].explanation.status,'READY')
+  out=run('Validate explanation',reply([item(0),item(0)]),{'Prepare explanation':prepared})[0].json
+  assert.equal(out.result.items[0].explanation.status,'FAILED');assert.equal(out.result.items[1].explanation.status,'FAILED')
+})
+test('批量截断或空响应不当成已完成',()=>{
+  const prepared=run('Prepare explanation',{body:batchFixture()})[0].json
+  for(const content of ['', '{"items":[']){
+    const out=run('Validate explanation',{statusCode:200,body:{choices:[{finish_reason:'length',message:{content}}]}},{'Prepare explanation':prepared})[0].json
+    assert.ok(out.result.items.every(row=>row.explanation.status==='FAILED'))
+  }
+})
+
+test('批量禁止额外凭证字段进入模型，候选越界仅拒绝对应行',()=>{
+  const batch=batchFixture();assert.throws(()=>run('Prepare explanation',{body:{...batch,rows:batch.rows.map(r=>({...r,credential:'must-not-reach-model'}))}}))
+  const prepared=run('Prepare explanation',{body:batch})[0].json
+  const explanation={status:'READY',message:'核对',candidateIds:[],candidateChecks:[{productId:501,imageMatch:'SAME',imageReason:'同款',specMatch:'CONFLICT',specReason:'规格不同'}]}
+  const items=batch.rows.map((r,i)=>({runId:r.runId,rowId:r.rowId,inputRevision:r.inputRevision,evidenceHash:r.evidenceHash,explanation:i===0?{...explanation,candidateIds:[999]}:explanation}))
+  const out=run('Validate explanation',{statusCode:200,body:{choices:[{message:{content:JSON.stringify({items})}}]}},{'Prepare explanation':prepared})[0].json
+  assert.equal(out.result.items[0].explanation.status,'FAILED');assert.equal(out.result.items[1].explanation.status,'READY')
+})
+
+test('实际工作流连接把批量送入同一个模型节点并直接返回逐行结果',()=>{
+  const w=workflow(),batch=batchFixture(),refs={};let name='Is batch review',data={body:batch},requests=0,response
+  for(let steps=0;steps<24;steps++){
+    const node=w.nodes.find(n=>n.name===name);assert.ok(node,`节点不存在：${name}`);let branch=0
+    if(node.type.endsWith('.code'))data=run(name,data,refs)[0].json
+    else if(node.type.endsWith('.if')){const expression=node.parameters.conditions.conditions[0].leftValue;branch=vm.runInNewContext(`(${expression.slice(3,-2)})`,{$json:data})?0:1}
+    else if(node.type.endsWith('.httpRequest')){
+      assert.equal(name,'Explain fixed evidence');requests++
+      assert.equal(data.prompt.messages[1].content.filter(c=>c.type==='image_url').length,2)
+      data={statusCode:200,body:{choices:[{finish_reason:'stop',message:{content:JSON.stringify({items:batch.rows.map(r=>({runId:r.runId,rowId:r.rowId,inputRevision:r.inputRevision,evidenceHash:r.evidenceHash,explanation:{status:'READY',message:'核对完成',candidateIds:[],candidateChecks:[{productId:501,imageMatch:'SAME',imageReason:'同款',specMatch:'CONFLICT',specReason:'规格不同'}]}}))})}}]}}
+    }else if(node.type.endsWith('.respondToWebhook')){response=vm.runInNewContext(`(${node.parameters.responseBody.slice(3,-2)})`,{$json:data});break}
+    else assert.fail(`不应进入${name}`)
+    refs[name]=data;name=w.connections[name]?.main[branch]?.[0]?.node
+  }
+  assert.equal(requests,1);assert.equal(response.status,'ok');assert.equal(response.result.format,'MatchReviewBatchResultV1')
+  assert.equal(response.result.items.length,2);assert.ok(response.result.items.every(i=>i.explanation.status==='READY'))
 })

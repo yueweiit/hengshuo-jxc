@@ -15,13 +15,14 @@ import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/** 真实目录/图库证据先固定，模型只解释；不调用商品、采购或费用写入口。 */
+/** 真实目录/图库证据先固定；按已授权规则自动选定导入行商品，不创建商品、采购或费用。 */
 @Service
 public class PurchaseImportMatchServiceImpl implements PurchaseImportTaskHandler,PurchaseImportMatchService {
     private final PurchaseImportMatchMapper mapper;
+    private final PurchaseImportProductServiceImpl review;
     private final PurchaseImportServiceImpl imports;private final PurchaseImportTaskServiceImpl tasks;private final PurchaseImportRecognitionClient client;private final MasterProductMaintenanceApi products;private final ProductImageApi images;private final IdempotencyExecutor commands;private final com.hs.jxc.common.audit.AuditWriter audit;
     @Value("${jxc.purchase-import.recognition.enabled:false}") private boolean enabled;
-    public PurchaseImportMatchServiceImpl(PurchaseImportServiceImpl imports,PurchaseImportTaskServiceImpl tasks,PurchaseImportRecognitionClient client,MasterProductMaintenanceApi products,ProductImageApi images,IdempotencyExecutor commands,com.hs.jxc.common.audit.AuditWriter audit,PurchaseImportMatchMapper mapper){this.mapper=mapper;this.imports=imports;this.tasks=tasks;this.client=client;this.products=products;this.images=images;this.commands=commands;this.audit=audit;}
+    public PurchaseImportMatchServiceImpl(PurchaseImportServiceImpl imports,PurchaseImportTaskServiceImpl tasks,PurchaseImportRecognitionClient client,MasterProductMaintenanceApi products,ProductImageApi images,IdempotencyExecutor commands,com.hs.jxc.common.audit.AuditWriter audit,PurchaseImportMatchMapper mapper,PurchaseImportProductServiceImpl review){this.review=review;this.mapper=mapper;this.imports=imports;this.tasks=tasks;this.client=client;this.products=products;this.images=images;this.commands=commands;this.audit=audit;}
     public Set<String> kinds(){return Set.of("MATCH","EXPLAIN");}
     private String canonical(Object value){return imports.json.write(IdempotencyExecutor.canonical(value));}
     private String hash(Object value){return Digests.sha256(canonical(value));}
@@ -187,18 +188,65 @@ public class PurchaseImportMatchServiceImpl implements PurchaseImportTaskHandler
     public Map<String,Object> result(UUID taskId,String credential,Map<String,Object> body){var scope=tasks.scoped(taskId,credential,true);String callbackHash=hash(body);var saved=imports.tx.execute(s->{var task=locked(scope,true);var a=access(scope.actor());var data=imports.map(task.get("result"));if(task.get("callback_hash")!=null){if(!Objects.equals(task.get("callback_hash"),callbackHash))throw new ApiException(409,"SYS_IDEMPOTENCY_CONFLICT","同一回调不能改变已保存内容");return imports.map(data.get("public"));}
         try{validate(scope.actor(),task);}catch(ApiException stale){if(!stale.getCode().equals("INPUT_CHANGED"))throw stale;mapper.markInputStale(stale.getMessage(),a.requireCountry(),taskId);return Map.<String,Object>of("stale",true,"message",stale.getMessage());}
         if(!body.keySet().equals(Set.of("format","runId","rowId","inputRevision","evidenceHash","explanation"))||!"MatchResultV1".equals(body.get("format"))||!taskId.toString().equals(body.get("runId")))throw Inputs.bad("识别回调合同或任务编号无效");if(data.get("evidence")==null)throw Inputs.bad("服务端尚未固定真实候选证据");var evidence=imports.map(data.get("evidence"));if(Inputs.id(body.get("rowId"))!=Inputs.id(evidence.get("rowId"))||Inputs.id(body.get("inputRevision"))!=number(task,"input_revision")||!Objects.equals(body.get("evidenceHash"),evidence.get("evidenceHash")))throw Inputs.bad("回调来源版本或证据hash不一致");verifyCatalog(scope.actor(),imports.map(data.get("snapshots")));var candidates=list(evidence.get("candidates"));Set<Long> allowed=new HashSet<>();candidates.forEach(c->allowed.add(Inputs.id(c.get("productId"))));var explanation=explanation(imports.map(body.get("explanation")),allowed);validateChecks(scope.actor(),imports.map(body.get("explanation")),explanation,evidence,data);var complete=new LinkedHashMap<String,Object>(evidence);complete.put("format","MatchRunV1");complete.put("explanation",explanation);complete.put("ranking",PurchaseImportCandidateRanking.rank(imports.map(evidence.get("sourceInput")),candidates,!Boolean.TRUE.equals(evidence.get("photoGroupIncomplete"))));long rowId=Inputs.id(evidence.get("rowId"));
-        if("MATCH".equals(task.get("kind"))){for(var candidate:candidates)mapper.insertCandidate(a.requireCountry(),rowId,taskId,candidate.get("productId"),imports.json.write(candidate));mapper.saveMatchResult(imports.json.write(complete),a.requireCountry(),rowId);}
+        if("MATCH".equals(task.get("kind"))){for(var candidate:candidates)mapper.insertCandidate(a.requireCountry(),rowId,taskId,candidate.get("productId"),imports.json.write(candidate));mapper.saveMatchResult(imports.json.write(complete),a.requireCountry(),rowId);
+            long revision=review.selectAutomatically(scope.actor(),(UUID)task.get("batch_id"),source(a,task),complete);
+            if(revision!=number(task,"input_revision")){complete.put("inputRevision",revision);mapper.saveMatchResult(imports.json.write(complete),a.requireCountry(),rowId);}
+        }
         else{var row=source(a,task);var parent=imports.map(row.get("match_result"));parent.put("explanation",explanation);parent.put("explanationTaskId",taskId.toString());mapper.saveMatchResult(imports.json.write(parent),a.requireCountry(),rowId);}
-        data.put("public",complete);boolean failed="FAILED".equals(evidence.get("status"))||"EXPLAIN".equals(task.get("kind"))&&!"READY".equals(explanation.get("status"));mapper.completeCallback(failed?"FAILED":"SUCCEEDED",imports.json.write(data),callbackHash,failed?"MATCH_COMPONENT_FAILED":null,failed?"候选或解释存在明确失败，请查看分路原因":null,a.requireCountry(),taskId);audit.append(scope.actor(),"PUR_IMPORT_MATCH_RESULT","PURCHASE_IMPORT",rowId,null,Map.of("runId",taskId.toString(),"candidateCount",candidates.size(),"status",evidence.get("status"),"explanationStatus",explanation.get("status")));return complete;
+        data.put("public",complete);boolean failed="FAILED".equals(evidence.get("status"))||"FAILED".equals(explanation.get("status"))||"EXPLAIN".equals(task.get("kind"))&&!"READY".equals(explanation.get("status"));mapper.completeCallback(failed?"FAILED":"SUCCEEDED",imports.json.write(data),callbackHash,failed?"MATCH_COMPONENT_FAILED":null,failed?"候选或解释存在明确失败，请查看分路原因":null,a.requireCountry(),taskId);audit.append(scope.actor(),"PUR_IMPORT_MATCH_RESULT","PURCHASE_IMPORT",rowId,null,Map.of("runId",taskId.toString(),"candidateCount",candidates.size(),"status",evidence.get("status"),"explanationStatus",explanation.get("status")));return complete;
     });if(Boolean.TRUE.equals(saved.get("stale")))throw new ApiException(409,"INPUT_CHANGED",saved.get("message").toString());return saved;}
     public AttachmentService.Download asset(RequestContext ctx,Map<String,Object> task,long asset){returnAssetCheck(ctx,task);var input=imports.map(task.get("input_data"));var allowed=input.get("allowedAssets")==null?List.<Map<String,Object>>of():list(input.get("allowedAssets"));var found=allowed.stream().filter(item->Inputs.id(item.get("id"))==asset).findFirst();if(found.isEmpty())throw ApiException.forbidden();if("IMAGE".equals(found.get().get("kind")))return imports.content(ctx,(UUID)task.get("batch_id"),asset,true);return images.indexContent(ctx,Inputs.required(found.get(),"generation"));}
     private void returnAssetCheck(RequestContext ctx,Map<String,Object> task){imports.tx.execute(s->{validate(ctx,task);return null;});}
+    @Override public void executeBatch(long country,List<UUID> ids,PurchaseImportTaskServiceImpl runtime){
+        var pending=new LinkedHashMap<String,PurchaseImportTaskServiceImpl.Lease>();var current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);Integer currentVersion=null;
+        // 每行准备后立刻规范图片键；大图不进入另一条业务保存流程。
+        for(UUID id:ids){var lease=runtime.claim(country,id);if(lease==null)continue;try{
+            var cached=imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return reusePhotos(lease.actor(),task);});
+            if(cached!=null){completeEvidence(lease,cached,Map.of("status","NOT_REQUESTED","message","已复用原照片候选缓存并重算文字分，未重复调用图片检索或模型","candidateIds",List.of()));continue;}
+            var catalog=catalogSearch(lease.id(),lease.token(),Map.of("operation","TEXT"));var replies=searchPhotos(lease,catalog);
+            var evidence=catalogSearch(lease.id(),lease.token(),Map.of("operation","RESOLVE","imageResults",replies));
+            var review=catalogSearch(lease.id(),lease.token(),Map.of("operation","REVIEW"));
+            if(list(review.get("pairs")).isEmpty()){
+                var checks=new ArrayList<Map<String,Object>>();for(var candidate:list(evidence.get("candidates")))checks.add(Map.of("productId",candidate.get("productId"),"imageMatch","NO_INPUT","imageReason","没有可读的来源图与候选图配对","specMatch","NOT_CHECKED","specReason","尚未确认照片同款，未继续核对规格"));
+                completeEvidence(lease,evidence,Map.of("status","NOT_REQUESTED","message","没有可读图片配对，尚未进行图文核对","candidateIds",List.of(),"candidateChecks",checks));continue;
+            }
+            var row=batchRow(evidence,review);
+            int version=runtime.connectionVersion(lease);
+            if(currentVersion!=null&&currentVersion!=version||!current.add(row)){reviewPrepared(current.request(),pending,runtime);pending.clear();current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return null;});current.add(row);}currentVersion=version;
+            pending.put(lease.id().toString(),lease);
+        }catch(RuntimeException failure){runtime.fail(lease,failure);}}
+        if(!current.empty())reviewPrepared(current.request(),pending,runtime);
+    }
+    private void reviewPrepared(Map<String,Object> request,Map<String,PurchaseImportTaskServiceImpl.Lease> pending,PurchaseImportTaskServiceImpl runtime){
+        try{
+            var first=pending.values().iterator().next();var response=client.reviewBatch(first.id(),first.token(),request);
+            for(var item:PurchaseImportReviewBatch.responses(request,response)){
+                var lease=pending.get(item.get("runId"));
+                try{var explanation=imports.map(item.get("explanation"));if("READY".equals(explanation.get("status"))&&!(explanation.get("candidateChecks") instanceof List<?>))throw Inputs.bad("批量核对必须逐一检查所有候选");var body=new LinkedHashMap<>(item);body.put("format","MatchResultV1");result(lease.id(),lease.token(),body);}
+                catch(RuntimeException failure){runtime.fail(lease,failure);}
+            }
+        }catch(RuntimeException failure){for(var row:list(request.get("rows")))runtime.fail(pending.get(row.get("runId")),failure);}
+    }
+    private Map<String,Object> batchRow(Map<String,Object> evidence,Map<String,Object> review){
+        var row=new LinkedHashMap<String,Object>();for(String key:List.of("runId","rowId","inputRevision","evidenceHash","sourceInput","candidates"))row.put(key,evidence.get(key));
+        var keys=new HashMap<String,String>();var pictures=new LinkedHashMap<String,Map<String,Object>>();
+        for(var image:list(review.get("images"))){String sha=Inputs.required(image,"sha256"),key="IMAGE:"+sha;keys.put(Inputs.required(image,"key"),key);var unique=Map.<String,Object>of("key",key,"sha256",sha,"dataUrl",image.get("dataUrl"));pictures.put(sha,unique);}
+        var pairs=new ArrayList<Map<String,Object>>();for(var pair:list(review.get("pairs")))pairs.add(Map.of("productId",pair.get("productId"),"sourceKey",keys.get(pair.get("sourceKey")),"candidateKey",keys.get(pair.get("candidateKey"))));
+        row.put("pairs",pairs);row.put("errors",review.get("errors"));row.put("images",new ArrayList<>(pictures.values()));return row;
+    }
+    private void completeEvidence(PurchaseImportTaskServiceImpl.Lease lease,Map<String,Object> evidence,Map<String,Object> explanation){result(lease.id(),lease.token(),Map.of("format","MatchResultV1","runId",lease.id().toString(),"rowId",evidence.get("rowId"),"inputRevision",evidence.get("inputRevision"),"evidenceHash",evidence.get("evidenceHash"),"explanation",explanation));}
+    private List<Map<String,Object>> searchPhotos(PurchaseImportTaskServiceImpl.Lease lease,Map<String,Object> catalog){
+        var replies=new ArrayList<Map<String,Object>>();var plan=imports.map(catalog.get("imagePlan"));
+        for(var request:list(plan.get("requests")))try{var searched=client.search(lease.id(),lease.token(),new LinkedHashMap<>(request));var hits=list(searched.get("hits"));replies.add(Map.of("queryAssetId",request.get("queryAssetId"),"status",hits.isEmpty()?"NOT_FOUND":"FOUND","reason","受限Python图片检索","hits",hits));}
+        catch(ApiException failure){if(Set.of("AUTH_REQUIRED","SYS_FORBIDDEN","INPUT_CHANGED","PARSER_INTERRUPTED").contains(failure.getCode()))throw failure;replies.add(Map.of("queryAssetId",request.get("queryAssetId"),"status","FAILED","reason",failure.getCode()+"："+failure.getMessage(),"hits",List.of()));}
+        return replies;
+    }
     public void execute(PurchaseImportTaskServiceImpl.Lease lease,PurchaseImportTaskServiceImpl runtime){imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return null;});
         var cached=imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return reusePhotos(lease.actor(),task);});
         if(cached!=null){result(lease.id(),lease.token(),Map.of("format","MatchResultV1","runId",lease.id().toString(),"rowId",cached.get("rowId"),"inputRevision",cached.get("inputRevision"),"evidenceHash",cached.get("evidenceHash"),"explanation",Map.of("status","NOT_REQUESTED","message","已复用原照片候选缓存并重算文字分，未重复调用图片检索或模型","candidateIds",List.of())));return;}
         try{client.recognize(lease.id(),lease.token(),Map.of("format","MatchTaskV1","mode",lease.kind(),"rowId",lease.input().get("rowId"),"inputRevision",lease.revision(),"sourceId",lease.source()));var state=imports.tx.execute(s->raw(access(lease.actor()),lease.id(),false));if(state.get("callback_hash")!=null||!"RUNNING".equals(state.get("status")))return;throw new ApiException(502,"N8N_RESULT_MISSING","工作流响应但未保存受限回调结果");}
         catch(ApiException unavailable){var state=imports.tx.execute(s->raw(access(lease.actor()),lease.id(),false));if(state.get("callback_hash")!=null||!"RUNNING".equals(state.get("status")))return;if(Set.of("AUTH_REQUIRED","SYS_FORBIDDEN","INPUT_CHANGED","PARSER_INTERRUPTED").contains(unavailable.getCode()))throw unavailable;
-            if("EXPLAIN".equals(lease.kind()))throw unavailable;var catalog=catalogSearch(lease.id(),lease.token(),Map.of("operation","TEXT"));var plan=imports.map(catalog.get("imagePlan"));var replies=new ArrayList<Map<String,Object>>();for(var request:list(plan.get("requests"))){var query=new LinkedHashMap<String,Object>(request);try{var searched=client.search(lease.id(),lease.token(),query);var hits=list(searched.get("hits"));replies.add(Map.of("queryAssetId",request.get("queryAssetId"),"status",hits.isEmpty()?"NOT_FOUND":"FOUND","reason","受限Python图片检索","hits",hits));}catch(ApiException imageFailure){replies.add(Map.of("queryAssetId",request.get("queryAssetId"),"status","FAILED","reason",imageFailure.getCode()+"："+imageFailure.getMessage(),"hits",List.of()));}}
+            if("EXPLAIN".equals(lease.kind()))throw unavailable;var catalog=catalogSearch(lease.id(),lease.token(),Map.of("operation","TEXT"));var replies=searchPhotos(lease,catalog);
             var previous=imports.map(state.get("result"));var evidence=previous.get("evidence")!=null?imports.map(previous.get("evidence")):catalogSearch(lease.id(),lease.token(),Map.of("operation","RESOLVE","imageResults",replies));boolean noEvidence=list(evidence.get("candidates")).isEmpty();var explanation=Map.of("status",noEvidence?"NOT_REQUESTED":"UNAVAILABLE","message",noEvidence?"当前没有可供解释的真实候选，未调用模型":unavailable.getCode()+"："+unavailable.getMessage(),"candidateIds",List.of());result(lease.id(),lease.token(),Map.of("format","MatchResultV1","runId",lease.id().toString(),"rowId",evidence.get("rowId"),"inputRevision",evidence.get("inputRevision"),"evidenceHash",evidence.get("evidenceHash"),"explanation",explanation));
         }
     }

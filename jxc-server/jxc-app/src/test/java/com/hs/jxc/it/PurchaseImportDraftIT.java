@@ -21,6 +21,26 @@ class PurchaseImportDraftIT extends PurchaseImportFixture {
     Map<String,Object> readyGroup(Map<String,Object>b){var initial=groups(preview(b)).getFirst();var h=header();h.put("taxRate","0.13");h.put("priceTaxBasis","EXCLUSIVE");drafts.saveGroup(actor,id(b),((Number)initial.get("id")).longValue(),Map.of("groupVersion",initial.get("version"),"header",h));return groups(preview(b)).getFirst();}
     long groupId(Map<String,Object>g){return ((Number)g.get("id")).longValue();}
     Map<String,Object> confirmation(Map<String,Object>g){return Map.of("groupVersion",g.get("version"),"previewToken",g.get("previewToken"),"confirm",true);}
+    @Test void batchHeaderTaxIsPersistedInheritedAndUsedByTheExistingPreview(){
+        var b=prepared();var h=header();h.put("taxRate","0.13");h.put("priceTaxBasis","EXCLUSIVE");
+        var saved=saveBatchHeader(b,h);assertThat(new java.math.BigDecimal(((Map<?,?>)saved.get("header")).get("taxRate").toString())).isEqualByComparingTo("0.13");assertThat(((Map<?,?>)saved.get("header")).get("priceTaxBasis")).isEqualTo("EXCLUSIVE");
+        var g=groups(preview(b)).getFirst();assertThat(g.get("createStatus")).isEqualTo("READY");
+        assertThat(((Map<?,?>)g.get("preview")).get("taxAmount")).isEqualTo("69.0606");
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+    }
+    @Test void batchTaxUnknownAndExplicitZeroRemainDifferentAndOverridesArePreserved(){
+        var b=prepared();var original=readyGroup(b);var h=header();h.put("taxRate","0");h.put("priceTaxBasis","EXCLUSIVE");
+        saveBatchHeader(b,h);var g=groups(preview(b)).getFirst();assertThat(g.get("header")).isEqualTo(original.get("header"));
+        var second=prepared();saveBatchHeader(second,h);var zero=groups(preview(second)).getFirst();assertThat(zero.get("createStatus")).isEqualTo("READY");assertThat(((Map<?,?>)zero.get("preview")).get("taxAmount")).isEqualTo("0.0000");
+        h.put("taxRate",null);var unknown=saveBatchHeader(second,h);assertThat(((Map<?,?>)unknown.get("header")).get("taxRate")).isNull();
+        assertThat(groups(preview(second)).getFirst().get("errors")).asString().contains("税率待核实");
+    }
+    @Test void invalidTaxOrPriceBasisIsRejectedByBothBatchAndGroupHeaders(){
+        var b=prepared();var g=groups(preview(b)).getFirst();
+        for(String rate:List.of("-0.01","1.01","0.1234567","abc")){var h=header();h.put("taxRate",rate);assertThatThrownBy(()->saveBatchHeader(b,h)).isInstanceOf(ApiException.class);assertThatThrownBy(()->drafts.saveGroup(actor,id(b),groupId(g),Map.of("groupVersion",g.get("version"),"header",h))).isInstanceOf(ApiException.class);}
+        var h=header();h.put("priceTaxBasis","INCLUSIVE");assertThatThrownBy(()->saveBatchHeader(b,h)).isInstanceOf(ApiException.class);
+    }
+    Map<String,Object> saveBatchHeader(Map<String,Object>b,Map<String,Object>h){var current=imports.get(actor,id(b));return imports.saveHeader(actor,id(b),Map.of("header",h,"batchVersion",current.get("version"),"versions",rows(current).stream().map(r->Map.of("id",r.get("id"),"version",r.get("version"))).toList()));}
     @Test void previewRequiresTaxAndCompleteConfirmationWithoutAllocatingBusinessState(){
         var b=prepared();var group=groups(preview(b)).getFirst();assertThat(group.get("createStatus")).isEqualTo("DRAFT");assertThat(group.get("errors")).asString().contains("税率","价税");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM md_product_unit_used",Integer.class)).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class)).isZero();
     }

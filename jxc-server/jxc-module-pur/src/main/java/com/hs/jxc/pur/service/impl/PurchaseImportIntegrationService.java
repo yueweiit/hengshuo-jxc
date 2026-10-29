@@ -43,7 +43,7 @@ public class PurchaseImportIntegrationService {
     }
     private Map<String,Object> validatePrompt(Object input){
         var prompt=ExternalServiceConfig.map(input);
-        if(!Set.of("model","messages","temperature","response_format").containsAll(prompt.keySet())||!(prompt.get("messages") instanceof List<?> messages)||messages.size()!=2||json.write(prompt).getBytes(java.nio.charset.StandardCharsets.UTF_8).length>36*1024*1024)throw Inputs.bad("模型请求仅接受不超过36MiB的固定采购识别消息");
+        if(!Set.of("model","messages","temperature","response_format","max_tokens").containsAll(prompt.keySet())||!(prompt.get("messages") instanceof List<?> messages)||messages.size()!=2||json.write(prompt).getBytes(java.nio.charset.StandardCharsets.UTF_8).length>PurchaseImportReviewBatch.MAX_BYTES+4*1024*1024)throw Inputs.bad("模型请求仅接受不超过44MiB的固定采购识别消息");
         for(int i=0;i<messages.size();i++){
             var message=ExternalServiceConfig.map(messages.get(i));
             if(!message.keySet().equals(Set.of("role","content"))||!Objects.equals(message.get("role"),i==0?"system":"user"))throw Inputs.bad("采购模型消息角色或字段无效");
@@ -58,6 +58,10 @@ public class PurchaseImportIntegrationService {
             }else throw Inputs.bad("采购模型消息内容无效");
         }
         if(prompt.containsKey("response_format")&&!Objects.equals(prompt.get("response_format"),Map.of("type","json_object")))throw Inputs.bad("采购模型输出仅接受JSON格式");
+        if(prompt.containsKey("max_tokens")){
+            Object value=prompt.get("max_tokens");if(!(value instanceof Number))throw Inputs.bad("批量模型输出额度无效");
+            try{int limit=new java.math.BigDecimal(value.toString()).intValueExact();if(limit<1||limit>32768)throw Inputs.bad("批量模型输出额度无效");}catch(ArithmeticException|NumberFormatException invalid){throw Inputs.bad("批量模型输出额度无效");}
+        }
         return new LinkedHashMap<>(prompt);
     }
 }

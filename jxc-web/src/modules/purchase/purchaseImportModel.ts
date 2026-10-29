@@ -2,7 +2,7 @@ import { reactive } from 'vue'
 import { createPurchaseImportWorkflow } from '@/modules/purchase/purchaseImportWorkflow'
 import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
 import { createPurchaseImportGrid, type GridField, type GridSaveInput } from '@/modules/purchase/purchaseImportGrid'
-import { readImportTask, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
+import { readImportTask, imageReviewProgress, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
 import { reviewProposalCurrent, type ReviewProposal, type SourceReviewSheet } from '@/modules/purchase/purchaseImportReview'
 
 export interface ImportHeader {
@@ -14,6 +14,8 @@ export interface ImportHeader {
   paymentTerms: string
   prepayRatio: string | null
   termDays: number | null
+  taxRate?: string | null
+  priceTaxBasis?: 'EXCLUSIVE' | null
 }
 export const importColumns = [
   { key: 'sourceOrderNo', label: '采购单号', width: 150 },
@@ -39,7 +41,7 @@ export interface CandidateCheck { productId: number; imageMatch: 'SAME' | 'DIFFE
 export interface MatchCandidate { productId: number; product: { id: number; productCode: string; name: string; spec: string | null; status?: string; units: { unit: string }[] }; visualScore: number | null; textEvidence: { reason: string }[]; visualEvidence: VisualMatchEvidence[]; conflicts: string[] }
 export interface CandidateTextField { field: 'productCode' | 'spec' | 'name'; label: string; weight: number; source: string | null; target: string | null; score: number | null }
 export interface CandidateScore { productId: number; photoScore: number | null; textScore: number | null; fields: CandidateTextField[]; reason: string }
-export interface CandidateRanking { format: 'CandidateRankingV1'; policyVersion: string; status: 'RECOMMENDED' | 'NEEDS_REVIEW'; reason: string; completePhotoGroup: boolean; photoThreshold: number; textThreshold: number; weights: { productCode: number; spec: number; name: number }; highestPhotoIds: number[]; recommendedIds: number[]; scores: CandidateScore[] }
+export interface CandidateRanking { format: 'CandidateRankingV1'; policyVersion: string; status: 'RECOMMENDED' | 'NEEDS_REVIEW'; reason: string; completePhotoGroup: boolean; photoThreshold: number; textThreshold: number | null; weights: { productCode: number; spec: number; name: number }; highestPhotoIds: number[]; recommendedIds: number[]; scores: CandidateScore[] }
 export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: number; status: string; ranking?: CandidateRanking; cacheReused?: boolean; text: { status: string; reason: string }; image: { status: string; reason: string; errors?: { reason: string }[] }; candidates: MatchCandidate[]; explanation: { status: string; message: string; candidateNotes?: { productId: number; message: string }[]; candidateChecks?: CandidateCheck[] } }
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; sourceItemKey?: string; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface SupplierMapping { format: string; fileSha256: string; sheet: string; needsReview: boolean; reasons: string[]; ignoredRows: { sourceRow:number; reason:string }[]; lines: { sourceRow:number; cells: Record<string,string | string[] | null> }[] }
@@ -51,7 +53,7 @@ export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE
 export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
 export interface FeeTodo extends Omit<FeeReviewInput, 'confirm'> { format: 'FeeTodoV1'; todoId: string; sourceRows: ImportSourceRef[]; status: 'PENDING'; reviewStatus: 'UNRESOLVED' | 'CONFIRMED' | 'STALE'; registeredReference: null; targetOrderId: number | null; targetDocNo: string | null; targetReferenceStatus: string }
 export interface ImportSourceEvidence extends ImportSourceRef { currentValues: ImportValues; originalValues: Record<string, unknown> | null; formulaProvenance: Record<string, unknown> | null; targetOrderLineId: number | null }
-export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: number; sourceBasisHash?: string; sourceEvidence?: ImportSourceEvidence[]; id: number; version: number; sourceOrderNo: string; header: ImportHeader & { taxRate?: string | null; priceTaxBasis?: string | null }; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number; sourceSheet?: string; sourceRow?: number; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
+export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: number; sourceBasisHash?: string; sourceEvidence?: ImportSourceEvidence[]; id: number; version: number; sourceOrderNo: string; header: ImportHeader; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number | null; sourceSheet?: string | null; sourceRow?: number | null; field?: string; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
@@ -97,6 +99,8 @@ export function validateImportHeader(header: ImportHeader, complete = true): str
   if (typeof header.paymentTerms !== 'string' || header.paymentTerms.length > 200) return '付款条件最多200个字符'
   if (header.prepayRatio !== null && header.prepayRatio !== '' && (!/^\d(\.\d{1,6})?$/.test(header.prepayRatio) || Number(header.prepayRatio) > 1)) return '预付比例应为0至1，最多6位小数'
   if (header.termDays !== null && (!Number.isInteger(header.termDays) || header.termDays < 0 || header.termDays > 2147483647)) return '账期天数应为非负整数'
+  if (header.taxRate != null && header.taxRate !== '' && (typeof header.taxRate !== 'string' || !/^\d(\.\d{1,6})?$/.test(header.taxRate) || Number(header.taxRate) > 1)) return '税率应为0至1，最多6位小数'
+  if (header.priceTaxBasis != null && header.priceTaxBasis !== 'EXCLUSIVE') return '请核对单价口径，当前仅支持未含税单价'
   return ''
 }
 
@@ -119,15 +123,23 @@ function normalizeValues(values: ImportValues): ImportValues {
 
 function validRanking(value: unknown, candidates: Record<string, unknown>[]) {
   if (!record(value)) return false
+  // 已保存批次仍可能携带旧评分；只读兼容，重新匹配后统一使用新版。
+  const automatic = value.policyVersion === 'photo-best-or-first-text-v2'
   const score = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1
   const ids = (v: unknown) => Array.isArray(v) && new Set(v).size === v.length && v.every(id => candidates.some(c => c.productId === id))
-  if (value.format !== 'CandidateRankingV1' || value.policyVersion !== 'photo-first-text-40-40-20-v1' || !['RECOMMENDED', 'NEEDS_REVIEW'].includes(String(value.status)) || typeof value.reason !== 'string' || value.photoThreshold !== 0.8 || value.textThreshold !== 0.8 || !record(value.weights) || value.weights.productCode !== 40 || value.weights.spec !== 40 || value.weights.name !== 20 || !ids(value.highestPhotoIds) || !ids(value.recommendedIds) || !Array.isArray(value.scores)) return false
+  if (value.format !== 'CandidateRankingV1' || !automatic && value.policyVersion !== 'photo-first-text-40-40-20-v1' || !['RECOMMENDED', 'NEEDS_REVIEW'].includes(String(value.status)) || typeof value.reason !== 'string' || value.photoThreshold !== 0.8 || value.textThreshold !== (automatic ? null : 0.8) || !record(value.weights) || value.weights.productCode !== 40 || value.weights.spec !== 40 || value.weights.name !== 20 || !ids(value.highestPhotoIds) || !ids(value.recommendedIds) || !Array.isArray(value.scores)) return false
   const highest = value.highestPhotoIds as number[], recommended = value.recommendedIds as number[], scores = value.scores
-  if (typeof value.completePhotoGroup !== 'boolean' || recommended.length > 1 || recommended.length && !value.completePhotoGroup || (value.status === 'RECOMMENDED') !== (recommended.length === 1) || scores.length !== candidates.length || new Set(scores.map(s => record(s) ? s.productId : null)).size !== candidates.length) return false
+  if (typeof value.completePhotoGroup !== 'boolean' || recommended.length > 1 || !automatic && recommended.length && !value.completePhotoGroup || (value.status === 'RECOMMENDED') !== (recommended.length === 1) || scores.length !== candidates.length || new Set(scores.map(s => record(s) ? s.productId : null)).size !== candidates.length) return false
+  if (automatic) {
+    const photos = candidates.filter(c => typeof c.visualScore === 'number' && c.visualScore > 0.8)
+    const top = photos.reduce<Record<string, unknown> | undefined>((best, c) => !best || Number(c.visualScore) > Number(best.visualScore) ? c : best, undefined)
+    const first = top ?? (candidates.every(c => c.visualScore === null) ? candidates.find(c => Array.isArray(c.textEvidence) && c.textEvidence.length) : undefined)
+    if (recommended.length !== (first ? 1 : 0) || first && recommended[0] !== first.productId) return false
+  }
   return scores.every(s => {
     if (!record(s) || !candidates.some(c => c.productId === s.productId && c.visualScore === s.photoScore) || s.textScore !== null && !score(s.textScore) || typeof s.reason !== 'string' || !Array.isArray(s.fields) || s.fields.length !== 3 || new Set(s.fields.map(f => record(f) ? f.field : null)).size !== 3) return false
     if (s.fields.some(f => !record(f) || !['productCode', 'spec', 'name'].includes(String(f.field)) || f.weight !== (value.weights as Record<string, unknown>)[String(f.field)] || typeof f.label !== 'string' || f.source !== null && typeof f.source !== 'string' || f.target !== null && typeof f.target !== 'string' || f.score !== null && !score(f.score))) return false
-    return !recommended.includes(s.productId as number) || highest.includes(s.productId as number) && typeof s.photoScore === 'number' && s.photoScore >= 0.8 && typeof s.textScore === 'number' && s.textScore >= 0.8
+    return automatic || !recommended.includes(s.productId as number) || highest.includes(s.productId as number) && typeof s.photoScore === 'number' && s.photoScore >= 0.8 && typeof s.textScore === 'number' && s.textScore >= 0.8
   })
 }
 function readRow(value: unknown): ImportRow {
@@ -195,7 +207,9 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }, () => state.batchId)
   let epoch = 0, readSequence = 0, progressSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
   let clearIntent: { id: string; version: number; key: string } | null = null
-  const busy = () => state.loading || state.importing || state.saving || state.clearing || state.clearPending || state.status === 'PARSING'
+  const requestBusy = () => state.loading || state.importing || state.saving || state.clearing || state.clearPending || state.status === 'PARSING'
+  const imageReviewBusy = () => state.tasks.some(task => ['MATCH', 'EXPLAIN'].includes(task.kind || '') && ['QUEUED', 'RUNNING'].includes(task.status)) || state.imageReviewEnabled && !state.imageReviewError && state.status === 'REVIEW' && state.tasks.some(task => (!task.kind || task.kind === 'PARSE') && task.status === 'SUCCEEDED') && imageReviewProgress(state).pending > 0
+  const busy = () => requestBusy() || imageReviewBusy()
   const headerDirty = () => !state.clearPending && state.batchId !== null && JSON.stringify(state.header) !== savedHeader
   function failure(error: unknown) {
     state.success = ''
@@ -232,7 +246,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.edit = null
   }
   async function write(flag: 'importing' | 'saving', request: () => Promise<unknown>, apply: (response: unknown) => void) {
-    if (busy()) return false
+    if (requestBusy()) return false
     const context = epoch
     clearFeedback()
     state[flag] = true
@@ -250,6 +264,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   const reviewKeys = new Map<string, string>()
   async function confirmReview(proposal: ReviewProposal) {
+    if (busy()) return false
     if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，再确认来源核对')); return false }
     if (!api.confirmReview || state.edit || !reviewProposalCurrent(proposal, state.batchId, state.version, state.rows, state.sources)) { failure(new Error('补充预览已失效，请按当前文件重新核对')); return false }
     try {
@@ -502,7 +517,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.clearPending = raw.clearPending === true
     state.clearedBatchId = isBatchId(raw.clearedBatchId) ? raw.clearedBatchId : null
   }
-  const workflow = createPurchaseImportWorkflow({ state,api,busy: () => busy() || grid.hasChanges(),headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
+  const workflow = createPurchaseImportWorkflow({ state,api,busy: () => requestBusy() || grid.hasChanges(),reviewing: imageReviewBusy,headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
   function clearBlockReason() {
     if (state.loading || state.importing || state.saving || state.clearing || state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) return '当前批次正在处理，请等待处理结束后清空'
     if (state.upload?.status === 'UNKNOWN') return '文件接收结果尚未确认，请先按原上传请求重试核实'
@@ -565,7 +580,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.groups = []; photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, grid, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, sourceMapping, correctSource, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
+  return { ...workflow, state, grid, images, busy, imageReviewBusy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, sourceMapping, correctSource, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
 
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

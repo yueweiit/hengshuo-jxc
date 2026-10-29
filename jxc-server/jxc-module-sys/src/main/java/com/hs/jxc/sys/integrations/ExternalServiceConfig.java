@@ -48,7 +48,7 @@ public class ExternalServiceConfig {
         if(name.equals("deepseek")){String model=Inputs.text(body,"model","").trim();if(!model.isEmpty()&&!model.matches("[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}"))throw Inputs.bad("模型名称格式无效");service.put("model",model);}
         for(String field:keyFields(name)){
             String clear=clearField(field);Object flag=body.get(clear);
-            if(flag!=null&&!(flag instanceof Boolean))throw Inputs.bad("清除密钥须为明确的是或否");
+            if(body.containsKey(clear)&&!(flag instanceof Boolean))throw Inputs.bad("清除密钥须为明确的是或否");
             String value=Inputs.text(body,field,"");
             if(Boolean.TRUE.equals(flag)&&!value.isEmpty())throw Inputs.bad("替换密钥和清除密钥不能同时进行");
             if(!value.isEmpty()&&(value.length()>4096||value.chars().anyMatch(c->c<33||c>126)))throw Inputs.bad("访问密钥含空白、无效字符或长度超过限制");
@@ -63,7 +63,7 @@ public class ExternalServiceConfig {
         Long country=ctx.countryId();if(country==null)country=jdbc.queryForObject("SELECT created_country_id FROM sys_user WHERE id=?",Long.class,ctx.userId());
         if(country==null)throw Inputs.bad("请先选择记录配置操作日志的国家");
         db.apply(country);auth.gate(country,false);
-        audit.append(country,ctx.userId(),"保存外部服务配置","EXTERNAL_SERVICE",next,before,publicService(name,service),"系统级 "+name+" 连接配置");
+        audit.append(country,ctx.userId(),"保存外部服务配置","EXTERNAL_SERVICE",next,auditState(name,before),auditState(name,publicService(name,service)),"系统级 "+name+" 连接配置");
         return output(next);
     }
     /** 仅供任务连接读取，不可作为HTTP响应。版本0保留原启动配置。 */
@@ -86,6 +86,7 @@ public class ExternalServiceConfig {
     private static int integer(Object value,int min,int max,String message){if(!(value instanceof Number number))throw Inputs.bad(message);try{int n=new java.math.BigDecimal(number.toString()).intValueExact();if(n<min||n>max)throw Inputs.bad(message);return n;}catch(ArithmeticException|NumberFormatException error){throw Inputs.bad(message);}}
     private static List<String> keyFields(String name){return name.equals("n8n")?List.of("fieldsKey","recognitionKey"):List.of("key");}
     private static String clearField(String field){return "clear"+Character.toUpperCase(field.charAt(0))+field.substring(1);}
+    private Map<String,Object> auditState(String name,Map<String,Object> service){var out=new LinkedHashMap<String,Object>();out.put("service",name);for(String field:List.of("enabled","source","timeoutSeconds"))out.put(field,service.get(field));for(String field:keyFields(name))out.put(field+"Configured",service.get(field+"Configured"));return out;}
     private Map<String,Object> publicService(String name,Map<String,Object> raw){var out=new LinkedHashMap<>(raw);for(String field:keyFields(name)){out.remove(field);out.put(field+"Configured",!text(raw,field).isEmpty());}out.put("lastTest",null);return out;}
     private Map<String,Object> output(int version){
         Map<String,Object> raw;
@@ -97,6 +98,8 @@ public class ExternalServiceConfig {
     private Map<String,Object> startup(){
         var n8n=new LinkedHashMap<String,Object>();n8n.put("fieldsUrl",env.getProperty("jxc.purchase-import.fields-url",""));n8n.put("fieldsKey",env.getProperty("jxc.purchase-import.fields-key",""));n8n.put("recognitionUrl",env.getProperty("jxc.purchase-import.n8n-url",""));n8n.put("recognitionKey",env.getProperty("jxc.purchase-import.n8n-key",""));n8n.put("timeoutSeconds",600);n8n.put("source","STARTUP");n8n.put("enabled",!text(n8n,"recognitionUrl").isBlank()&&!text(n8n,"recognitionKey").isBlank());
         var docling=new LinkedHashMap<String,Object>();docling.put("url",env.getProperty("jxc.purchase-import.worker-url",""));docling.put("key",env.getProperty("jxc.purchase-import.worker-key",""));docling.put("timeoutSeconds",600);docling.put("source","STARTUP");docling.put("enabled",!text(docling,"url").isBlank()&&!text(docling,"key").isBlank());
-        return new LinkedHashMap<>(Map.of("n8n",n8n,"docling",docling,"deepseek",new LinkedHashMap<>(Map.of("url","https://api.deepseek.com","model","deepseek-flash","key","","enabled",false,"timeoutSeconds",180,"source","UNCONFIGURED"))));
+        if(text(n8n,"fieldsUrl").isBlank()&&text(n8n,"recognitionUrl").isBlank())n8n.put("source","UNCONFIGURED");
+        if(text(docling,"url").isBlank())docling.put("source","UNCONFIGURED");
+        return new LinkedHashMap<>(Map.of("n8n",n8n,"docling",docling,"deepseek",new LinkedHashMap<>(Map.of("url","https://api.deepseek.com","model","deepseek-flash","key","","enabled",false,"timeoutSeconds",540,"source","UNCONFIGURED"))));
     }
 }

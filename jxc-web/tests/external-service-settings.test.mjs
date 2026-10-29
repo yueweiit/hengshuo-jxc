@@ -22,7 +22,7 @@ function setup(options = {}) {
       put: async (url, body, config) => { calls.push(['put', url, structuredClone(body), config]); const next = initial(); next.version = 1; next.services.deepseek.source = 'PAGE'; next.services.deepseek.keyConfigured = true; return options.put ? options.put(url, body) : next },
       post: async (...args) => { calls.push(['post', ...args]); return options.post ? options.post(...args) : { status: 'ok', message: '连接协议检查通过', checkedAt: '2026-10-30T10:00:00Z' } },
     },
-  }, ['loadSettings', 'save', 'testConnection', 'selected', 'form', 'settings', 'loading', 'saving', 'testing', 'error', 'notice', 'selectService'])
+  }, ['loadSettings', 'save', 'testConnection', 'selected', 'form', 'settings', 'loading', 'saving', 'testing', 'error', 'notice', 'selectService', 'clearSecretDraft'])
   return { ...p, calls, hooks, unmount }
 }
 test('加载真实配置并区分未配置与读取失败，支持重试', async () => {
@@ -41,7 +41,8 @@ test('密钥留空时不发送替换，保存使用当前版本和唯一后端�
 test('明确替换与清除分别发送，保存后清掉输入中的密钥', async () => {
   const p = setup(); await p.loadSettings(); p.selectService('deepseek'); p.form.key = 'test-key'; await p.save()
   assert.equal(p.calls.find(c => c[0] === 'put')[2].key, 'test-key'); assert.equal(p.form.key, '')
-  p.form.clearKey = true; await p.save(); assert.equal(p.calls.filter(c => c[0] === 'put')[1][2].clearKey, true)
+  p.form.key = 'pending-replacement'; p.form.clearKey = true; p.clearSecretDraft('key'); await p.save()
+  const cleared = p.calls.filter(c => c[0] === 'put')[1][2]; assert.equal(cleared.clearKey, true); assert.equal('key' in cleared, false)
 })
 test('版本冲突保留草稿与错误，不能显示保存成功', async () => {
   const p = setup({ put: async () => { throw new Error('记录已被他人修改，请刷新后重试') } })
@@ -69,4 +70,14 @@ test('离开页面清除密钥并忽略晚到的加载响应', async () => {
   let finish; const pending = new Promise(resolve => { finish = resolve })
   const p = setup({ get: () => pending }); p.form.key = 'local-secret'; const loading = p.loadSettings()
   p.unmount[0](); assert.equal(p.form.key, ''); finish(initial()); await loading; assert.equal(p.settings.value, null)
+})
+test('普通账号即使具有广泛角色权限也看不到平台配置菜单', async () => {
+  const user = Vue.reactive({ user: { isPlatformAdmin: false }, hasPerm: () => true })
+  const menu = loadVueScript(new URL('../src/layouts/components/SideMenu.vue', import.meta.url), {
+    computed: Vue.computed, useRoute: () => ({ path: '/workbench', meta: {} }), useI18n: () => ({ t: value => value }),
+    useUserStore: () => user, useCountryStore: () => ({ current: { id: 101 }, isModuleEnabled: () => true }),
+    menuGroups: [{ key: 'settings', children: [{ path: '/settings/external-services', meta: { platformOnly: true, perm: 'sys:integration:config' } }] }],
+  }, ['visibleGroups'])
+  assert.equal(menu.visibleGroups.value.length, 0)
+  user.user.isPlatformAdmin = true; await Vue.nextTick(); assert.equal(menu.visibleGroups.value.length, 1)
 })
