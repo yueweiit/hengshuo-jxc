@@ -6,6 +6,7 @@ import { http } from '@/api/http'
 import { useCountryStore } from '@/stores/country'
 import type { PurchaseImportModel, ImportRow, MatchCandidate, VisualMatchEvidence } from './purchaseImportModel'
 import { createPurchaseImportCatalogImages } from './purchaseImportCatalogImages'
+import { importProductNameDraft, currentImportNameSuggestion } from './purchaseImportDisplay'
 import PurchaseImportProductPhoto from './PurchaseImportProductPhoto.vue'
 import PurchaseImportReviewAssistant from './PurchaseImportReviewAssistant.vue'
 
@@ -92,7 +93,7 @@ function syncRow(value?: ImportRow) {
   candidateRun.value = null; candidateProduct.value = null; manualCandidate.value = false
   matchInputs.value = { suppliedProductCode: value?.suppliedProductCode || '', suppliedProductName: value?.suppliedProductName || '', supplierProductCode: value?.supplierProductCode || '' }
   productId.value = value?.matchedProductId ?? null; unit.value = value?.purchaseUnit ?? ''; mode.value = 'existing'
-  const source: NewProduct = { productCode: value?.suppliedProductCode ?? '', name: value?.suppliedProductName ?? '', baseUnit: '', spec: value?.productSpec ?? '' }
+  const source: NewProduct = { productCode: value?.suppliedProductCode ?? '', name: importProductNameDraft(value), baseUnit: '', spec: value?.productSpec ?? '' }
   const draft = value ? newDrafts.get(value.id) : undefined
   fresh.value = { ...source }
   if (draft) for (const key of Object.keys(source) as (keyof NewProduct)[]) if (draft.values[key] !== draft.source[key]) fresh.value[key] = draft.values[key]
@@ -100,6 +101,12 @@ function syncRow(value?: ImportRow) {
   if (value?.productOperation) choices.value[value.id] = { key: value.productOperation.key, request: value.productOperation.request }
 }
 watch(() => row.value?.version, () => syncRow(row.value))
+watch(() => [row.value?.matchResult?.explanation?.productNameSuggestion?.name, row.value?.matchResult?.explanation?.productNameSuggestion?.status], () => {
+  if (!row.value || freshRow !== row.value.id) return
+  const name = importProductNameDraft(row.value)
+  if (fresh.value.name === freshSource.name) fresh.value.name = name
+  freshSource = { ...freshSource, name }
+})
 watch(() => selectedRow.value, () => { props.page.clearFeedback(); showCached.value = false; syncRow(row.value) })
 watch(() => props.page.state.rows.map(item => item.id).join(','), () => { if (!props.page.state.rows.some(item => item.id === selectedRow.value)) { selectedRow.value = props.page.state.rows[0]?.id ?? null; syncRow(row.value) } }, { immediate: true })
 watch(() => props.page.state.batchId, () => { ++epoch; catalogLoading.value = false; products.value = []; catalogLoaded.value = false; catalogError.value = ''; choices.value = {}; newDrafts.clear(); freshRow = null; syncRow(row.value) })
@@ -232,6 +239,7 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
         <template v-if="choices[row.id] || row.productOperation"><p class="review-hint">已有新品操作，继续处理原请求。已成功建立的商品将保留。</p><el-button type="primary" :disabled="locked || row.readiness === 'READY'" @click="createNew">继续原新品操作</el-button></template>
         <el-form v-else :model="fresh" :disabled="locked" label-width="90px" @submit.prevent>
           <p class="review-hint">已有编码、名称和规格已带入，请核对后确认；空白字段缺少原值，需要补充。基础单位须明确填写。</p>
+          <p v-if="currentImportNameSuggestion(row)" class="review-hint">图片识别类别：{{ currentImportNameSuggestion(row)?.category || '待确认' }}；{{ currentImportNameSuggestion(row)?.reason }}。名称可修改，请确认实际类别与规格。</p>
           <el-form-item label="商品编码" required><el-input v-model="fresh.productCode" /></el-form-item><el-form-item label="商品名称" required><el-input v-model="fresh.name" /></el-form-item><el-form-item label="基础单位" required><el-input v-model="fresh.baseUnit" /></el-form-item><el-form-item label="商品规格"><el-input v-model="fresh.spec" /></el-form-item><el-button type="primary" @click="createNew">核对并确认新增</el-button>
         </el-form>
       </div>

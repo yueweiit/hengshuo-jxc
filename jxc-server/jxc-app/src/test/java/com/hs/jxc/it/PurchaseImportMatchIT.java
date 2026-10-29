@@ -26,7 +26,59 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @SuppressWarnings("unchecked") Map<String,Object> matched(Map<String,Object>b){return (Map<String,Object>)rows(imports.get(actor,id(b))).getFirst().get("matchResult");}
     Map<String,Object> photoBatch(boolean published){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:edit\"]'::jsonb WHERE id=801");var b=upload(UUID.randomUUID().toString());doReturn(photoDocument()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));long image=owner.queryForObject("SELECT id FROM pur_order_import_image",Long.class);imports.associate(actor,id(b),rowId(b),image,Map.of("version",1,"association","CONFIRMED"));if(published){review.decide(actor,id(b),rowId(b),Map.of("version",2,"decision","EXISTING","productId",501,"unit","PCS"));var result=photos.publish(actor,id(b),rowId(b),Map.of("version",3,"confirmOwnership",true,"imageIds",List.of(image)),UUID.randomUUID().toString());doReturn(vector()).when(parser).embed(any(),anyString(),anyLong(),anyString());doAnswer(call->indexResult(call.getArgument(2))).when(parser).index(any(),anyString(),anyMap());tasks.execute(101,UUID.fromString(((List<?>)result.get("taskIds")).getFirst().toString()));}return imports.get(actor,id(b));}
     @SuppressWarnings("unchecked") Map<String,Object> map(Object value){return (Map<String,Object>)value;}
+    @Test void sourceOnlyPhotoNamingSurvivesReloadWithoutCreatingOrRenamingProducts(){
+        var b=photoBatch(false);String originalName=owner.queryForObject("SELECT name FROM md_product WHERE id=501",String.class);UUID task=start(b);
+        doAnswer(call->{String credential=call.getArgument(1);matches.catalogSearch(task,credential,Map.of("operation","TEXT"));
+            var evidence=matches.catalogSearch(task,credential,Map.of("operation","RESOLVE","imageResults",List.of()));
+            var pictures=matches.catalogSearch(task,credential,Map.of("operation","REVIEW"));
+            assertThat((List<?>)pictures.get("images")).hasSize(1);assertThat((List<?>)pictures.get("pairs")).isEmpty();
+            String sourceKey=map(((List<?>)pictures.get("images")).getFirst()).get("key").toString();
+            var body=new LinkedHashMap<>(callback(task,evidence,List.of()));var explanation=new LinkedHashMap<>(map(body.get("explanation")));
+            explanation.put("candidateChecks",List.of());explanation.put("productNameSuggestion",Map.of("status","READY","category","裤子","baseName","黑色条纹裤子","reason","来源图可见黑色条纹裤子","sourceKeys",List.of(sourceKey)));body.put("explanation",explanation);
+            matches.result(task,credential,body);return Map.of("taskId",task.toString());
+        }).when(parser).recognize(any(),anyString(),anyMap());tasks.execute(101,task);
+        assertThat(tasks.get(actor,task)).containsEntry("status","FAILED").containsEntry("errorCode","MATCH_COMPONENT_FAILED"); // 图库不可用仍是真实匹配失败，独立命名结果保留。
+        assertThat(map(map(matched(b).get("explanation")).get("productNameSuggestion"))).containsEntry("name","S码黑色条纹裤子");
+        assertThat(rows(imports.get(actor,id(b))).getFirst()).containsEntry("suppliedProductName",null).containsEntry("matchedProductId",null);
+        assertThat(owner.queryForObject("SELECT name FROM md_product WHERE id=501",String.class)).isEqualTo(originalName);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+    }
+    @Test void namedPhotoCacheRecomposesTheCurrentSizeWithoutCallingModelOrFeedingMatchingInputs(){
+        var b=photoBatch(true);owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=501");
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        doAnswer(call->{UUID task=call.getArgument(0);String credential=call.getArgument(1);var catalog=matches.catalogSearch(task,credential,Map.of("operation","TEXT"));
+            var request=map(((List<?>)map(catalog.get("imagePlan")).get("requests")).getFirst());
+            var evidence=matches.catalogSearch(task,credential,Map.of("operation","RESOLVE","imageResults",List.of(Map.of("queryAssetId",request.get("queryAssetId"),"status","FOUND","hits",List.of(Map.of("featureId",feature,"score",0.99))))));
+            var pictures=matches.catalogSearch(task,credential,Map.of("operation","REVIEW"));String sourceKey=map(((List<?>)pictures.get("pairs")).getFirst()).get("sourceKey").toString();
+            var body=new LinkedHashMap<>(callback(task,evidence,List.of(501L)));var explanation=new LinkedHashMap<>(map(body.get("explanation")));
+            explanation.put("candidateChecks",List.of(Map.of("productId",501,"imageMatch","SAME","imageReason","照片同款","specMatch","MATCH","specReason","S一致")));
+            explanation.put("productNameSuggestion",Map.of("status","READY","category","裤子","baseName","黑色条纹裤子","reason","已看来源图","sourceKeys",List.of(sourceKey)));body.put("explanation",explanation);matches.result(task,credential,body);return Map.of("taskId",task.toString());
+        }).when(parser).recognize(any(),anyString(),anyMap());
+        tasks.execute(101,start(b));assertThat(map(map(matched(b).get("explanation")).get("productNameSuggestion"))).containsEntry("name","S码黑色条纹裤子");
+        var row=rows(imports.get(actor,id(b))).getFirst();var changed=values();changed.put("productSpec","M");imports.saveRow(actor,id(b),rowId(b),Map.of("version",row.get("version"),"values",changed));clearInvocations(parser);
+        tasks.execute(101,start(b));assertThat(matched(b)).containsEntry("cacheReused",true);
+        assertThat(map(map(matched(b).get("explanation")).get("productNameSuggestion"))).containsEntry("name","M码黑色条纹裤子");
+        assertThat(rows(imports.get(actor,id(b))).getFirst()).containsEntry("suppliedProductName",null);
+        verify(parser,never()).recognize(any(),anyString(),anyMap());verify(parser,never()).search(any(),anyString(),anyMap());
+    }
+    @Test void sourceOnlyModelFailureIsUnavailableRatherThanAClaimOfNoNamingInput(){
+        var b=photoBatch(false);tasks.execute(101,start(b));
+        assertThat(map(matched(b).get("explanation"))).containsEntry("status","UNAVAILABLE");
+        assertThat(map(matched(b).get("explanation")).get("message")).asString().contains("N8N_UNAVAILABLE");
+    }
     Map<String,Object> freshPhotoBatch(){photoBatch(true);var b=upload(UUID.randomUUID().toString());doReturn(photoDocument()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));return imports.get(actor,id(b));}
+    @Test void batchSourceOnlyNamingUsesTheOriginalSourceKeyAfterSharedImagePacking(){
+        var b=photoBatch(false);UUID task=start(b);
+        doAnswer(call->{Map<String,Object> request=call.getArgument(2);var input=map(((List<?>)request.get("rows")).getFirst());var source=map(((List<?>)input.get("sourceImages")).getFirst());
+            assertThat(source.get("sourceKey")).asString().startsWith("SOURCE:");assertThat(source.get("imageKey")).asString().startsWith("IMAGE:");
+            var item=new LinkedHashMap<String,Object>();for(String key:List.of("runId","rowId","inputRevision","evidenceHash"))item.put(key,input.get(key));
+            item.put("explanation",Map.of("status","READY","message","命名完成","candidateIds",List.of(),"candidateChecks",List.of(),"productNameSuggestion",Map.of("status","READY","category","裤子","baseName","黑色条纹裤子","reason","已看本行来源图片","sourceKeys",List.of(source.get("sourceKey")))));
+            return Map.of("format","MatchReviewBatchResultV1","items",List.of(item));
+        }).when(parser).reviewBatch(any(),anyString(),anyMap());
+        matches.executeBatch(101,List.of(task),tasks);
+        assertThat(map(map(matched(b).get("explanation")).get("productNameSuggestion"))).containsEntry("name","S码黑色条纹裤子");
+        verify(parser,times(1)).reviewBatch(any(),anyString(),anyMap());verify(parser,never()).recognize(any(),anyString(),anyMap());
+    }
     @Test void freshUnconfirmedPhotoCanRecommendBeforeOwnershipAndConfirmingReusesButRejectingDiscardsCache(){
         owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=501");
         photoBatch(true); // Existing formal gallery belongs to the catalog, independently of this fresh source.
@@ -39,7 +91,7 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
         assertThat(((Number)matched(b).get("inputRevision")).longValue()).isEqualTo(((Number)row.get("version")).longValue());
         assertThat(map(((List<?>)row.get("images")).getFirst())).containsEntry("status","UNCONFIRMED");
         imports.associate(actor,id(b),rowId(b),image,Map.of("version",row.get("version"),"association","CONFIRMED"));clearInvocations(parser);tasks.execute(101,start(b));
-        assertThat(matched(b)).containsEntry("cacheReused",true);verify(parser,never()).search(any(),anyString(),anyMap());verify(parser,never()).recognize(any(),anyString(),anyMap());
+        assertThat(matched(b)).containsEntry("cacheReused",true);verify(parser,never()).search(any(),anyString(),anyMap());verify(parser,times(1)).recognize(any(),anyString(),anyMap());
         row=rows(imports.get(actor,id(b))).getFirst();imports.associate(actor,id(b),rowId(b),image,Map.of("version",row.get("version"),"association","REJECTED"));tasks.execute(101,start(b));
         assertThat(map(matched(b).get("image"))).containsEntry("status","NO_INPUT");assertThat(matched(b).get("candidates")).asList().isEmpty();
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
@@ -54,7 +106,7 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_candidate WHERE run_id=?",Integer.class,run)).isEqualTo(1);
         assertThat(map(matched(b).get("ranking"))).isEqualTo(map(result.get("ranking")));
     }
-    @Test void changingOnlyTextReusesPhotosAndRescoresWithoutCallingRecognitionOrSearch(){
+    @Test void changingOnlyTextReusesPhotosAndSupplementsMissingNamesWithoutSearchingAgain(){
         var b=photoBatch(true);owner.update("UPDATE md_product SET spec='M',version=version+1 WHERE id=501");
         long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
         doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",0.99)))).when(parser).search(any(),anyString(),anyMap());
@@ -66,7 +118,7 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
         assertThat(map(matched(b).get("ranking"))).containsEntry("recommendedIds",List.of(501));
         assertThat(matched(b)).containsEntry("cacheReused",true).containsEntry("runId",rerun.toString());
         assertThat(map(old.get("ranking"))).containsEntry("recommendedIds",List.of(501));
-        verify(parser,never()).recognize(any(),anyString(),anyMap());verify(parser,never()).search(any(),anyString(),anyMap());
+        verify(parser,times(1)).recognize(any(),anyString(),anyMap());verify(parser,never()).search(any(),anyString(),anyMap());
     }
     @Test void emptyPhotoResultsCannotHideANewlySuppliedRealCatalogCode(){
         var b=photoBatch(true);doReturn(Map.of("hits",List.of())).when(parser).search(any(),anyString(),anyMap());
