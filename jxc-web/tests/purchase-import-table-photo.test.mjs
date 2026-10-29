@@ -198,13 +198,27 @@ async function renderDraftPreview(page) {
   const previewSource=new URL('../src/modules/purchase/PurchaseImportPreviewDrawer.vue',import.meta.url), emitted=[]
   const props={page,modelValue:true,books:[],suppliers:[],currencies:[],creationEnabled:true,creationLoading:false,creationError:''}
   const {purchaseOrderSaveStatus}=feature('purchaseImportWorkflow'),{formatImportDecimal}=feature('purchaseImportDisplay')
-  const bindings=loadVueScript(previewSource,{ref,computed,watch,defineProps:()=>props,defineEmits:()=>(...args)=>emitted.push(args),formatImportDecimal,purchaseOrderSaveStatus},['editingVersion','editing','header','split','feeEdits','locked','edit','save','productLabel','groupRows','status','purchaseOrderSaveStatus','pendingReview'])
+  const issues=feature('purchaseImportIssues')
+  const bindings=loadVueScript(previewSource,{ref,computed,watch,defineProps:()=>props,defineEmits:()=>(...args)=>emitted.push(args),formatImportDecimal,purchaseOrderSaveStatus,...issues},['editingVersion','editing','header','split','feeEdits','locked','edit','save','productLabel','groupRows','status','purchaseOrderSaveStatus','pendingReview','reviewIssue','issueRowLabel'])
   const template=readFileSync(previewSource,'utf8').match(/<template>([\s\S]*)<\/template>/)[1].replaceAll('feeEdits[group.id]!','feeEdits[group.id]')
-  const app=createSSRApp({setup:()=>({...bindings,...props,formatImportDecimal}),render:compile(template)})
+  const app=createSSRApp({setup:()=>({...bindings,...props,formatImportDecimal,...issues}),render:compile(template)})
   const slot=defineComponent({inheritAttrs:false,setup:(_,ctx)=>()=>h('div',ctx.attrs,[ctx.slots.default?.(),ctx.slots.footer?.()])})
   for(const name of ['ElDrawer','ElAlert','ElButton','ElForm','ElFormItem','ElSelect','ElOption','ElInput','ElCheckbox','ElCollapse','ElCollapseItem','RouterLink'])app.component(name,slot)
   return {html:await renderToString(app),bindings,emitted}
 }
+
+test('预览汇总税率缺项并保留来源，行入口定位到原核对行，失效行明确报错', async () => {
+  const page=setup();await page.loadBatch(batchId)
+  page.state.rows=Array.from({length:60},(_,n)=>({...row,id:n+1,rowNo:n+1}))
+  const errors=page.state.rows.map(item=>({rowId:item.id,sourceSheet:'采购',sourceRow:18,field:'taxRate',message:'本行税率待核实，请明确填写'}))
+  page.state.groups=[{id:7,version:1,sourceOrderNo:'NY-051',header:{...header},createStatus:'DRAFT',orderId:null,preview:null,errors,feeTodos:[]}]
+  const {html,bindings,emitted}=await renderDraftPreview(page)
+  assert.match(html,/本行税率待核实，请明确填写（60行）/)
+  assert.match(html,/<details/);assert.match(html,/查看第60行/);assert.match(html,/采购.*原第18行/)
+  bindings.reviewIssue(errors[59]);assert.equal(emitted.at(-1)[0],'review');assert.equal(emitted.at(-1)[1].id,60)
+  bindings.reviewIssue({...errors[0],rowId:999});assert.match(page.state.error,/明细.*变化/)
+  assert.equal(page.state.groups[0].errors.length,60)
+})
 test('预览中表头和费用的未保存修改上报给主保存，保存或取消后解除阻断',async()=>{
   const page=setup();await page.loadBatch(batchId)
   page.state.groups=[{id:7,version:1,sourceOrderNo:'PO',header:{...header},createStatus:'READY',orderId:null,preview:null,errors:[],feeTodosVersion:1,feeTodos:[{sourceRowIds:[1],scope:null,amount:null,currency:null,reason:'待核对',reviewStatus:'UNRESOLVED'}]}]

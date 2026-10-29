@@ -9,7 +9,7 @@ import { createPurchaseImportCatalogImages } from './purchaseImportCatalogImages
 import PurchaseImportProductPhoto from './PurchaseImportProductPhoto.vue'
 import PurchaseImportReviewAssistant from './PurchaseImportReviewAssistant.vue'
 
-const props = defineProps<{ page: PurchaseImportModel; modelValue: boolean; rowId?: number | null; initialTab?: 'todos' | 'match' }>()
+const props = defineProps<{ page: PurchaseImportModel; modelValue: boolean; rowId?: number | null; initialTab?: 'todos' | 'match' | 'product' }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; preview: [] }>()
 interface Product { id: number; productCode: string; name: string; spec: string; baseUnit: string; status: string; units: { unit: string }[] }
 type ReviewTab = 'todos' | 'product' | 'images' | 'match'

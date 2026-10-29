@@ -13,6 +13,41 @@ function setup(saveGrid = async () => batch()) {
   return page
 }
 
+test('切换编辑视图后确认商品，列表立即显示最新状态和版本且后续编辑使用新版本', async () => {
+  const { createPurchaseImportModel } = loadTsModule(new URL('../src/modules/purchase/purchaseImportModel.ts', import.meta.url))
+  let submitted
+  const page = createPurchaseImportModel({
+    load: async () => ({ ...batch(), rows: [{ ...row(), readiness: 'UNRESOLVED' }] }),
+    decide: async (_id, current) => ({ ...current, version: 4, batchVersion: 6, readiness: 'READY', decision: 'EXISTING', matchedProductId: 501, purchaseUnit: 'PCS' }),
+    saveGrid: async input => { submitted = input; return { ...batch(), version: 7, rows: [{ ...row(), version: 5, purchaseQty: '12' }] } },
+  }, '2026-10-30')
+  await page.loadBatch(batchId)
+  page.grid.setMode('excel'); page.grid.setMode('table')
+  assert.equal(await page.decideProduct(page.state.rows[0], { decision: 'EXISTING', productId: 501, unit: 'PCS' }), true)
+  assert.equal(page.grid.rows()[0].readiness, 'READY')
+  assert.equal(page.grid.rows()[0].version, 4)
+  assert.equal(page.grid.hasChanges(), false)
+  page.grid.edit(17, 'purchaseQty', '12')
+  assert.equal(await page.grid.save(), true)
+  assert.equal(submitted.rows[0].version, 4)
+})
+
+test('最新确认记录替换未改动行，保留其他行的未上传内容、新增行和原冲突版本', async () => {
+  const page = setup(); await page.loadBatch(batchId)
+  page.state.rows.push({ ...row(), id: 18, rowNo: 2, readiness: 'UNRESOLVED' })
+  page.grid.setMode('excel')
+  page.grid.edit(17, 'purchaseQty', '12')
+  page.grid.applyPaste(2, 'sourceOrderNo', [['新增采购']])
+  page.grid.setMode('table')
+  page.state.rows[0] = { ...page.state.rows[0], version: 4 }
+  page.state.rows[1] = { ...page.state.rows[1], version: 4, readiness: 'READY', purchaseUnit: 'PCS' }
+  assert.equal(page.grid.rows()[1].readiness, 'READY')
+  assert.equal(page.grid.rows()[0].purchaseQty, '12')
+  assert.equal(page.grid.rows()[0].version, 3)
+  assert.equal(page.grid.rows()[2].sourceOrderNo, '新增采购')
+  assert.equal(page.grid.hasChanges(), true)
+})
+
 test('完成编辑舍弃空行与仅零数值行，保留名称加零、非零数量和原精度且不上传', () => {
   let calls = 0
   const page = setup(async () => { calls++; return batch() })
