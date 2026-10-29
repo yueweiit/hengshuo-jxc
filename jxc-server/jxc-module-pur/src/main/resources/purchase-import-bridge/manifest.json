@@ -1,7 +1,7 @@
 {
-  "workbench/jxc_bridge.py": "f8179536fd1402c2885f31b6ffb753261570b381023eef28723d4aa463da92ee",
-  "workbench/jxc_supplier.py": "9b1f7afffc283455f8e980d67c947a7833e5ab3e1ba681a03285969af18dbe05",
-  "workbench/tests/test_jxc_supplier.py": "875038a9eab90447ebcd8cd79373bc189f0aedf924c2fdae4dfadc98132b164b",
-  "n8n/jxc-purchase-fields.json": "b015174c1a0a58e968cca1a80e5e4c3d40d9cbcfbf7efe868b5df4f5c9eb8f55",
+  "workbench/jxc_bridge.py": "3ca163618b202a6dccf92a019a2706a79a04bb4748961f3738b2d195730fc9a3",
+  "workbench/jxc_supplier.py": "f62cc5ed608f9bf5b3581c8e36ac216268de4499aa57e95a2e86a21abd07a865",
+  "workbench/tests/test_jxc_supplier.py": "2ff786be9c8d4cf4fab3fed515e8ccbdbaf1d3c6631d844081fb8da8bf578b5f",
+  "n8n/jxc-purchase-fields.json": "be2da6681972f26ef367c45aa870cc354bf670bf39370291696a603efaee0e00",
   "n8n/jxc-purchase-fields.test.mjs": "fdc65cd3a4fdb96f5621910da2c3ccbad7ad67e0a6de34158867576065941892"
 }
