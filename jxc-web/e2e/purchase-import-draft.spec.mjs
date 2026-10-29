@@ -22,6 +22,10 @@ page.on('response',async response=>{
   if(!path.startsWith('/api/v1/')||path.startsWith('/api/v1/auth/'))return
   if(response.headers()['content-type']?.includes('application/json')){
     const body=await response.json().catch(()=>null);if(!body)return
+    if(active && latest && /^\/api\/v1\/pur\/order-imports\/tasks\//.test(path)){
+      const index=latest.tasks.findIndex(t=>t.id===body.data?.id)
+      if(index>=0){latest.tasks[index]={...latest.tasks[index],...body.data};if(latest.tasks[index].kind==='PARSE'&&['FAILED','NEEDS_REAUTH','STALE'].includes(body.data.status))latest.status='FAILED'}
+    }
     if(path==='/api/v1/org/books')books=body.data
     if(path==='/api/v1/md/partners')suppliers.push(...(body.data?.records ?? []))
     if(active && body.data?.batchId && Array.isArray(body.data.rows)){
@@ -35,6 +39,7 @@ async function command(path,action){
   const result=page.waitForResponse(r=>new URL(r.url()).pathname===`/api/v1${path}`&&r.request().method()!=='GET',{timeout:180000})
   await action();const response=await result,body=await response.json();assert.equal(body.code,'OK',`${path}: ${body.message}`);
   if(body.data?.batchId&&Array.isArray(body.data.rows))latest=body.data
+  else if(latest&&body.data?.id&&body.data.status==='QUEUED'&&path.endsWith('/retry')){const task=latest.tasks.find(t=>t.id===body.data.id);if(task){task.status='QUEUED';if(task.kind==='PARSE')latest.status='PARSING'}}
   else if(latest&&body.data?.rowNo){const index=latest.rows.findIndex(r=>r.id===body.data.id);if(index>=0)latest.rows[index]=body.data}
   return body.data
 }

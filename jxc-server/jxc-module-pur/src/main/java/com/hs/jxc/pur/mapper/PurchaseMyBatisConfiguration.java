@@ -39,6 +39,7 @@ public class PurchaseMyBatisConfiguration {
     @Bean public PurchaseMapper purchaseMapper(Sessions sessions) { return sessions.template().getMapper(PurchaseMapper.class); }
     @Bean public PurchaseImportMapper purchaseImportMapper(Sessions sessions) { return sessions.template().getMapper(PurchaseImportMapper.class); }
     @Bean public PurchaseImportTaskMapper purchaseImportTaskMapper(Sessions sessions) { return sessions.template().getMapper(PurchaseImportTaskMapper.class); }
+    @Bean public PurchaseImportProgressMapper purchaseImportProgressMapper(Sessions sessions) { return sessions.template().getMapper(PurchaseImportProgressMapper.class); }
     @Bean public PurchaseImportDraftMapper purchaseImportDraftMapper(Sessions sessions) { return sessions.template().getMapper(PurchaseImportDraftMapper.class); }
     @Bean public PurchaseImportProductMapper purchaseImportProductMapper(Sessions sessions) { return sessions.template().getMapper(PurchaseImportProductMapper.class); }
     @Bean public PurchaseImportPhotoMapper purchaseImportPhotoMapper(Sessions sessions) { return sessions.template().getMapper(PurchaseImportPhotoMapper.class); }

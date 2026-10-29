@@ -12,4 +12,6 @@ public class PurchaseImportTaskAssetController {
     public PurchaseImportTaskAssetController(PurchaseImportTaskService tasks){this.tasks=tasks;}
     @GetMapping("/internal/purchase-import/tasks/{taskId}/assets/{sourceId}")
     public ResponseEntity<byte[]> asset(@PathVariable UUID taskId,@PathVariable long sourceId,@RequestHeader(value="X-Purchase-Task",defaultValue="")String credential){return PurchaseImportController.binary(tasks.taskAsset(taskId,sourceId,credential));}
+    @PostMapping("/internal/purchase-import/tasks/{taskId}/progress")
+    public ResponseEntity<Void> progress(@PathVariable UUID taskId,@RequestHeader(value="X-Purchase-Task",defaultValue="")String credential,@RequestBody java.util.Map<String,Object> input){tasks.reportProgress(taskId,credential,input);return ResponseEntity.ok().build();}
 }

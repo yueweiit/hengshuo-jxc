@@ -41,7 +41,7 @@ public final class PurchaseXlsxTemplateParser {
             var matching=sheets.stream().filter(s->s.header!=null).toList();if(matching.isEmpty())return Optional.empty();
             if(selection==null&&matching.size()>1)throw new ApiException(422,"SHEET_SELECTION_REQUIRED","多个工作表符合模板，请选择采购工作表",Map.of("sheets",matching.stream().map(Sheet::name).toList()));
             var selected=matching.stream().filter(s->selection==null||s.name.equals(selection)).findFirst().orElseThrow(()->bad("所选工作表不符合模板"));
-            var out=new LinkedHashMap<String,Object>();out.put("format","SourceDocumentV1");out.put("source",Map.of("fileSha256",AttachmentObjectStore.sha256(bytes),"fileName",name,"bytes",bytes.length,"parserVersion","java-template-v1"));
+            var out=new LinkedHashMap<String,Object>();out.put("format","SourceDocumentV1");var sourceInfo=new LinkedHashMap<String,Object>(Map.of("fileSha256",AttachmentObjectStore.sha256(bytes),"fileName",name,"bytes",bytes.length,"parserVersion","java-template-v1"));out.put("source",sourceInfo);
             var rows=new ArrayList<Map<String,Object>>();var warnings=new ArrayList<Map<String,Object>>();var images=new ArrayList<Map<String,Object>>();var associations=new ArrayList<Map<String,Object>>();var sheetInfo=new ArrayList<Map<String,Object>>();
             for(var sheet:sheets){
                 var sourceRows=new ArrayList<Map<String,Object>>();
@@ -91,7 +91,7 @@ public final class PurchaseXlsxTemplateParser {
                     var from=first(anchor,DRAW,"from");Integer sourceRow=from==null?null:Integer.parseInt(text(from,DRAW,"row"))+1;var association=new LinkedHashMap<String,Object>();association.put("imageId",sha);association.put("sourceSheet",selected.name);association.put("sourceRow",sourceRow);association.put("anchor",Map.of("type",anchor.getLocalName(),"xml",serialize(anchor)));association.put("status","UNCONFIRMED");associations.add(association);
                 }
             }
-            out.put("rows",rows);out.put("sheets",sheetInfo);out.put("images",images);out.put("associations",associations);out.put("warnings",warnings);out.put("errors",List.of());return Optional.of(out);
+            sourceInfo.put("fileRows",rows.size());out.put("rows",rows);out.put("sheets",sheetInfo);out.put("images",images);out.put("associations",associations);out.put("warnings",warnings);out.put("errors",List.of());return Optional.of(out);
         }catch(ApiException e){throw e;}catch(Exception e){throw bad("工作簿损坏或包含无法校验的内容，请核对原文件");}
     }
     private static Map<String,byte[]> archive(byte[] bytes)throws IOException{

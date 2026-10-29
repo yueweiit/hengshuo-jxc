@@ -18,7 +18,7 @@ public class PurchaseImportRecognitionClient {
     public Map<String,Object> parse(UUID taskId,String credential,long sourceId,String sha256,String sheet){return parse(taskId,credential,sourceId,sha256,sheet,null);}
     public Map<String,Object> parse(UUID taskId,String credential,long sourceId,String sha256,String sheet,Map<String,Object> overrides){
         if(workerUrl.isBlank()||workerKey.isBlank())throw new ApiException(503,"PARSER_UNAVAILABLE","采购解析服务未配置，请联系管理员");
-        var body=new LinkedHashMap<String,Object>();body.put("taskId",taskId.toString());body.put("credential",credential);body.put("sourceId",sourceId);body.put("sha256",sha256);body.put("sheet",sheet);
+        var body=new LinkedHashMap<String,Object>();body.put("taskId",taskId.toString());body.put("credential",credential);body.put("sourceId",sourceId);body.put("sha256",sha256);body.put("sheet",sheet);body.put("reportProgress",true);
         if(overrides!=null)body.put("mappingOverrides",overrides);return invoke("supplier-parse",body,"document",160*1024*1024);
     }
     public Map<String,Object> embed(UUID task,String credential,long asset,String sha){return invoke("embedding",Map.of("taskId",task.toString(),"credential",credential,"assetId",asset,"sha256",sha),"feature",1024*1024);}

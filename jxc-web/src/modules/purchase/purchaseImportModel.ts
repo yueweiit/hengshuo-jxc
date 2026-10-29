@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { createPurchaseImportWorkflow } from '@/modules/purchase/purchaseImportWorkflow'
 import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
+import { readImportTask, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
 
 export interface ImportHeader {
   bookId: number | null
@@ -34,7 +35,7 @@ export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: 
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; sourceItemKey?: string; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface SupplierMapping { format: string; fileSha256: string; sheet: string; needsReview: boolean; reasons: string[]; ignoredRows: { sourceRow:number; reason:string }[]; lines: { sourceRow:number; cells: Record<string,string | string[] | null> }[] }
 export interface MappingOverrides { mapping:SupplierMapping; specLabels:Record<string,string>; confirm:boolean }
-export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number; mapping?: SupplierMapping; sourceCells?: { sheet: string; cell: string; value: string }[] } }
+export interface ImportTask { id: string; sourceId?: number | null; fileName?: string | null; kind?: string; phase?: string; progress?: ImportProgress | null; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number; mapping?: SupplierMapping; sourceCells?: { sheet: string; cell: string; value: string }[]; rows?: number; images?: number } }
 export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; origin?: 'MANUAL_UPLOAD' | 'XLSX'; warnings?: { sourceRow?: number; message: string }[] }
 export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE' | null; amount: string | null; currency: string | null; reason: string; confirm: boolean }
 export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
@@ -44,7 +45,8 @@ export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: numb
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
-  upload(file: File, batchId: string | null, key: string): Promise<unknown>
+  upload(file: File, batchId: string | null, key: string, progress?: (loaded: number, total: number | null) => void): Promise<unknown>
+  readTask?(id: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
   saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
   saveRow(batchId: string, row: ImportRow, values: ImportValues, matchInputs?: MatchInputs): Promise<unknown>
@@ -129,7 +131,7 @@ function readBatch(value: unknown): ImportBatch {
   if (value.version !== undefined && !positiveId(value.version)) throw new Error('后端返回的批次版本无效')
   if (value.status !== undefined && !['DRAFT', 'PARSING', 'REVIEW', 'COMPLETED', 'CANCELLED', 'FAILED'].includes(String(value.status))) throw new Error('后端返回的批次状态无效')
   for (const field of ['sources', 'tasks', 'groups']) if (value[field] !== undefined && !Array.isArray(value[field])) throw new Error('后端返回的来源、任务或分组不完整')
-  if (Array.isArray(value.tasks) && value.tasks.some(task => !record(task) || !isBatchId(task.id) || !['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'NEEDS_REAUTH', 'STALE'].includes(String(task.status)))) throw new Error('后端返回的任务状态无效')
+  if (Array.isArray(value.tasks)) value.tasks = value.tasks.map(readImportTask)
   return { ...value, batchId: value.batchId, header: { ...header }, rows } as unknown as ImportBatch
 }
 
@@ -142,6 +144,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     loading: false, importing: false, saving: false, deletingId: null as number | null,
     partialResult: null as Record<string, unknown> | null, error: '', errorCode: '', errors: [] as ImportIssue[], success: '',
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
+    activeTaskId: null as string | null, upload: null as ImportUpload | null, progressError: '', progressReading: false, progressReloadNeeded: false,
     groups: [] as ImportDraftGroup[],
   })
   const images = createPurchaseImportImages((id, imageId, signal) => {
@@ -149,7 +152,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     return api.readImage(id, imageId, signal)
   }, () => state.batchId)
   let photoFile: File | null = null, photoSignature = '', photoKey = ''
-  let epoch = 0, readSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
+  let epoch = 0, readSequence = 0, progressSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
   const busy = () => state.loading || state.importing || state.saving || state.status === 'PARSING'
   const headerDirty = () => state.batchId !== null && JSON.stringify(state.header) !== savedHeader
   function failure(error: unknown) {
@@ -182,6 +185,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.status = batch.status === undefined ? 'REVIEW' : batch.status
     state.sources = batch.sources === undefined ? [] : batch.sources
     state.tasks = batch.tasks === undefined ? [] : batch.tasks
+    if (!state.tasks.some(task => task.id === state.activeTaskId)) state.activeTaskId = state.tasks.filter(task => !task.kind || task.kind === 'PARSE').at(-1)?.id ?? null
     state.groups = batch.groups === undefined ? [] : batch.groups
     state.edit = null
   }
@@ -230,14 +234,24 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (file.size > 100 * 1024 * 1024) { failure(new Error('采购文件不能超过100MiB')); return false }
     const signature = JSON.stringify([state.batchId])
     if (selectedFile !== file || signature !== intentSignature) { intentKey = newKey(); selectedFile = file; intentSignature = signature }
-    return write('importing', () => api.upload(file, state.batchId, intentKey), response => {
+    const context = epoch
+    state.upload = { fileName: file.name, loaded: 0, total: null, status: 'UPLOADING' }; state.progressError = ''
+    const saved = await write('importing', () => api.upload(file, state.batchId, intentKey, (loaded, total) => {
+      if (context !== epoch || !state.importing || !state.upload) return
+      state.upload.loaded = loaded; state.upload.total = total
+      if (total !== null && loaded >= total) state.upload.status = 'ACCEPTING'
+    }), response => {
       const batch = readBatch(response)
       if (batch.rows.length === 0 && !(batch.status === 'PARSING' && batch.tasks?.some(task => ['QUEUED', 'RUNNING'].includes(task.status)))) throw new Error('后端返回的导入结果没有明细或有效解析任务，请核对文件')
       if (state.batchId !== null && batch.batchId !== state.batchId) throw new Error('后端返回的导入批次与当前批次不一致')
       applyBatch(batch, true)
+      if (record(response) && isBatchId(response.taskId) && state.tasks.some(task => task.id === response.taskId)) state.activeTaskId = response.taskId
+      state.upload = null
       selectedFile = null; intentKey = ''; intentSignature = ''
-      if (batch.status !== 'PARSING') state.success = `已导入暂存${batch.rows.length}条明细，请核对无误`
+      if (batch.status !== 'PARSING') state.success = '文件明细已暂存，请核对无误'
     })
+    if (!saved && context === epoch && state.upload) state.upload.status = /连接中断|Network Error|超时/.test(state.error) ? 'UNKNOWN' : 'ERROR'
+    return saved
   }
   function rowLocked(row: ImportRow) { return !!row.targetOrderLineId || state.groups.some(group => group.id === row.groupId && ['CREATING', 'UNKNOWN'].includes(group.createStatus)) }
   function startEdit(row: ImportRow, field: ImportField | null) {
@@ -309,14 +323,38 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   async function refreshTasks() {
     if (!state.batchId || state.edit || state.saving || state.importing) return false
+    const id = state.batchId, current = state.tasks.find(task => task.id === state.activeTaskId)
+    // 历史任务或旧接口没有逐任务读取时，继续使用原批次恢复入口。
+    if (current && api.readTask && (['QUEUED', 'RUNNING'].includes(current.status) || state.progressReloadNeeded)) {
+      if (state.progressReading) return false
+      const context = epoch, sequence = ++progressSequence; state.progressReading = true
+      try {
+        if (!state.progressReloadNeeded) {
+          const task = readImportTask(await api.readTask(current.id))
+          if (context !== epoch || state.batchId !== id || state.activeTaskId !== current.id || sequence !== progressSequence) return false
+          if (task.id !== current.id || task.attemptCount !== undefined && current.attemptCount !== undefined && task.attemptCount < current.attemptCount) throw new Error('任务编号或尝试次数与当前进度不一致')
+          state.tasks.splice(state.tasks.findIndex(item => item.id === current.id), 1, task)
+          if (task.status === 'SUCCEEDED') state.progressReloadNeeded = true
+          else if (['FAILED', 'CANCELLED', 'NEEDS_REAUTH', 'STALE'].includes(task.status)) state.status = 'FAILED'
+        }
+        if (state.progressReloadNeeded) {
+          if (!await loadBatch(id, true)) { if (context === epoch) state.progressError = state.error || '明细读取失败，请重试'; return false }
+          state.progressReloadNeeded = false
+        }
+        if (context === epoch) state.progressError = ''
+        return true
+      } catch (error) { if (context === epoch && sequence === progressSequence) state.progressError = error instanceof Error ? error.message : '进度读取失败，请重试'; return false }
+      finally { if (context === epoch && sequence === progressSequence) state.progressReading = false }
+    }
     const pending = state.status === 'PARSING'
     const saved = await loadBatch(state.batchId, true)
-    if (saved && pending && state.status === 'REVIEW') state.success = `已导入暂存${state.rows.length}条明细，请核对无误`
+    if (saved && pending && state.status === 'REVIEW') state.success = '文件明细已暂存，请核对无误'
     return saved
   }
   const retryKeys = new Map<string, string>()
   async function retryTask(task: ImportTask, sheet: string | null = null, mappingOverrides?: MappingOverrides) {
     if (!api.retryTask || busy() || state.edit) return false
+    ++progressSequence; state.progressReading = false
     const signature = JSON.stringify([task.id, sheet, mappingOverrides])
     if (!retryKeys.has(signature)) retryKeys.set(signature, newKey())
     return write('saving', () => api.retryTask!(task.id, retryKeys.get(signature)!, sheet, mappingOverrides), response => {
@@ -324,6 +362,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       const saved = state.tasks.find(item => item.id === task.id)
       if (!saved) throw new Error('当前批次任务已变化，请重新读取')
       saved.status = 'QUEUED'; saved.errorCode = null; saved.errorMessage = null
+      if (!task.kind || task.kind === 'PARSE') { saved.progress = null; delete saved.result; state.activeTaskId = saved.id; state.progressError = ''; state.progressReloadNeeded = false }
       if (!task.kind || task.kind === 'PARSE') state.status = 'PARSING'
       retryKeys.delete(signature)
     })
@@ -348,8 +387,9 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   const workflow = createPurchaseImportWorkflow({ state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,write,readRow,readGroup,readBatch,applyBatch })
   function invalidate() {
     workflow.reset()
-    ++epoch; ++readSequence
+    ++epoch; ++readSequence; ++progressSequence
     images.reset(); photoFile = null; photoKey = ''; photoSignature = ''
+    state.activeTaskId = null; state.upload = null; state.progressError = ''; state.progressReading = false; state.progressReloadNeeded = false
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()

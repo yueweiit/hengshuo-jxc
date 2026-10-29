@@ -41,14 +41,11 @@ onBeforeUnmount(clean)
 
 <template>
   <div v-if="page.state.batchId" class="source-panel">
-    <div v-for="task in page.state.tasks.filter(item => !item.kind || item.kind === 'PARSE')" :key="task.id" class="source-task" role="status">
-      <span v-if="['QUEUED', 'RUNNING'].includes(task.status)">文件已接收，{{ task.status === 'QUEUED' ? '等待解析' : '正在解析与保存' }}。可离开页面，返回此批次继续核对。</span>
-      <template v-else-if="['FAILED', 'NEEDS_REAUTH', 'STALE'].includes(task.status)">
+    <div v-for="task in page.state.tasks.filter(item => (!item.kind || item.kind === 'PARSE') && ['FAILED', 'NEEDS_REAUTH', 'STALE'].includes(item.status))" :key="task.id" class="source-task" role="status">
         <span class="source-error">{{ task.errorMessage || '任务未完成，请重新读取原因' }}</span>
         <el-select v-if="task.errorCode === 'SHEET_SELECTION_REQUIRED'" v-model="sheets[task.id]" placeholder="请选择采购工作表" aria-label="采购工作表"><el-option v-for="sheet in task.result?.sheets" :key="sheet" :value="sheet" :label="sheet" /></el-select>
         <el-button v-if="task.result?.mapping" :disabled="page.busy() || !!page.state.edit" @click="mappingTask=task;mappingVisible=true">核对原列与规格</el-button>
         <el-button :disabled="page.busy() || !!page.state.edit || (task.errorCode === 'SHEET_SELECTION_REQUIRED' && !sheets[task.id])" @click="retry(task)">重试解析</el-button>
-      </template>
     </div>
     <div v-for="source in page.state.sources" :id="`import-source-${source.id}`" :key="source.id" class="source-file">
       <div><strong>{{ source.fileName }}</strong><small>{{ source.origin === 'MANUAL_UPLOAD' ? '手工上传照片' : '原文件' }} SHA256：{{ source.fileSha256 }}</small></div>

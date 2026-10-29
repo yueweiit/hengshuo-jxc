@@ -119,7 +119,10 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
         file_rows = len(detail - ignored_rows)
         output['source']['fileRows'] = file_rows
         progress_event(progress, 'PARSING', 0, file_rows, sheet=sheet_name)
-        for line in lines:
+        last_line = {item['sourceRow']: position for position, item in enumerate(lines)
+                     if isinstance(item, dict) and type(item.get('sourceRow')) is int}
+        completed_rows = set()
+        for line_number, line in enumerate(lines):
             if not isinstance(line,dict) or set(line)!=set(('sourceRow','cells')) or type(line['sourceRow']) is not int or line['sourceRow'] not in detail or line['sourceRow'] in ignored_rows or not isinstance(line['cells'],dict) or set(line['cells'])-set(FIELDS):
                 reject('采购行来源或字段不正确')
             row_no=line['sourceRow']; covered.add(row_no); mapped=line['cells']; normalized={}; selected={}; formulas={}; numeric={}; cached={}
@@ -186,6 +189,10 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
             original={re.sub('[0-9]','',ref):value for ref,value in values.items() if int(re.search('[0-9]+',ref).group())==row_no}
             output['rows'].append(dict(sourceSheet=sheet_name,sourceRow=row_no,sourceItemKey=mapped['purchaseQty'],sourceCells=selected,
                                        originalValues=original,rawNumericTexts=numeric,formulas=formulas,cachedValues=cached,normalizedValues=normalized))
+            if last_line[row_no] == line_number:
+                completed_rows.add(row_no)
+                if len(completed_rows) == 1 or len(completed_rows) % 25 == 0:
+                    progress_event(progress, 'PARSING', len(completed_rows), file_rows, sheet=sheet_name, row=row_no)
         if covered!=detail: reject('识别结果遗漏原采购行，未保存不完整采购单')
         progress_event(progress, 'PARSING', file_rows, file_rows, sheet=sheet_name)
         for sheet in sheets:
