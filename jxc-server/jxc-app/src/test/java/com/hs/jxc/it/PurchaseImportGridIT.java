@@ -19,7 +19,11 @@ class PurchaseImportGridIT extends PurchaseImportFixture {
         var body=new LinkedHashMap<String,Object>();body.put("batchId",b==null?null:b.get("batchId"));body.put("batchVersion",b==null?null:b.get("version"));body.put("header",Map.of());body.put("rows",rows);return body;
     }
     HttpResponse<String> post(Map<String,Object> body,String key)throws Exception {
-        return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/v1/pur/order-imports/grid"))
+        return post("http://127.0.0.1:"+port,body,key);
+    }
+    HttpResponse<String> post(String base,Map<String,Object> body,String key)throws Exception {
+        return client.send(HttpRequest.newBuilder(URI.create(base+"/api/v1/pur/order-imports/grid"))
+            .timeout(java.time.Duration.ofSeconds(30))
             .header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Content-Type","application/json").header("Idempotency-Key",key)
             .POST(HttpRequest.BodyPublishers.ofString(codec.write(body))).build(),HttpResponse.BodyHandlers.ofString());
     }
@@ -98,5 +102,21 @@ class PurchaseImportGridIT extends PurchaseImportFixture {
         assertThat(clearing.statusCode()).as(clearing.body()).isEqualTo(200);
         assertThat(owner.queryForObject("SELECT response->>'cleared' FROM sys_idempotency WHERE key=?",String.class,key)).isEqualTo("true");
         assertThat(post(body,key).statusCode()).isEqualTo(404);
+    }
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="jxc.grid.acceptance.image",matches=".+")
+    void packagedFeatureImageWritesAndReadsOnlyItsIsolatedStaging()throws Exception {
+        try(var app=featureContainer(System.getProperty("jxc.grid.acceptance.image"),false)) {
+            app.start();String base="http://"+app.getHost()+":"+app.getMappedPort(8080);
+            var body=request(null,List.of(item(null,null,"-1","镜像采购表格")));String key=UUID.randomUUID().toString();
+            var response=post(base,body,key);assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            var saved=data(response);assertThat(rows(saved).getFirst().get("suppliedProductName")).isEqualTo("镜像采购表格");
+            assertThat(post(base,body,key).statusCode()).isEqualTo(200);
+            var read=client.send(HttpRequest.newBuilder(URI.create(base+"/api/v1/pur/order-imports/"+saved.get("batchId")))
+                .header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").GET().build(),HttpResponse.BodyHandlers.ofString());
+            assertThat(read.statusCode()).isEqualTo(200);assertThat(rows(data(read))).hasSize(1);
+            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import",Integer.class)).isEqualTo(1);
+            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+        }
     }
 }
