@@ -8,6 +8,7 @@ const batchId = '11111111-2222-4333-8444-555555555555'
 const header = () => ({ bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2026-10-28', expectedDate: null, paymentTerms: '', prepayRatio: '0', termDays: null })
 const row = (id = 1) => ({ id, version: 1, rowNo: id, sourceOrderNo: 'NY-051', photo: null, productSpec: 'S', purchaseQty: '10', saleUnitPrice: '82.15', saleTotal: '821.5', purchaseUnitPrice: '53', freight: null, landedUnitCost: null, usdUnitCost: null, usdTotal: null })
 const batch = () => ({ batchId, header: header(), rows: [row()] })
+const group = () => ({ id: 8, version: 2, sourceOrderNo: 'NY-051', header: header(), createStatus: 'DRAFT', verifyStatus: 'NOT_CHECKED', errors: [], preview: null, previewToken: null, orderId: null })
 const file = () => new File(['xlsx-bytes'], '采购.xlsx')
 const unconfiguredHeader = () => ({ bookId: null, supplierId: null, currency: null, orderDate: null, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null })
 function setup(overrides = {}) {
@@ -304,4 +305,34 @@ test('已过期的删除目标不会被提交到当前批次', async () => {
   assert.equal(await page.removeRow({ ...row(), version: 9 }), false)
   assert.equal(calls.filter(call => call[0] === 'delete').length, 0)
   assert.equal(page.state.rows.length, 1)
+})
+
+test('重新读取坏候选证据时明确失败并保留原明细', async () => {
+  let response = batch()
+  const { page } = setup({ async load() { return response } })
+  await page.loadBatch(batchId)
+  response = { ...batch(), rows: [{ ...row(), matchResult: { format: 'MatchRunV1', candidates: [{ productId: 'fake' }] } }] }
+  assert.equal(await page.loadBatch(batchId), false)
+  assert.match(page.state.error, /候选/)
+  assert.deepEqual(page.state.rows, batch().rows)
+})
+
+test('历史批次不能把费用待办伪装成已登记，坏响应保留原分组', async () => {
+  const original = { ...group(), feeTodosVersion: 1, sourceBasisHash: 'a'.repeat(64), feeTodos: [], sourceEvidence: [] }
+  let response = { ...batch(), groups: [original] }
+  const { page } = setup({ async load() { return response } })
+  await page.loadBatch(batchId)
+  response = { ...batch(), groups: [{ ...original, feeTodos: [{ format: 'FeeTodoV1', todoId: batchId, status: 'REGISTERED', registeredReference: null, reviewStatus: 'UNRESOLVED', sourceRowIds: [1], sourceRows: [{ rowId: 1 }], amount: '0', currency: 'USD', scope: 'ORDER', reason: '原运费待核实' }] }] }
+  assert.equal(await page.loadBatch(batchId), false)
+  assert.match(page.state.error, /费用待办/)
+  assert.deepEqual(page.state.groups, [original])
+})
+
+test('刷新历史批次后创建结果待核实的来源仍禁止编辑', async () => {
+  const pending = { ...group(), createStatus: 'UNKNOWN', createIntent: { key: batchId, request: { groupVersion: 2 } } }
+  const { page } = setup({ async load() { return { ...batch(), rows: [{ ...row(), groupId: 8 }], groups: [pending] } } })
+  assert.equal(await page.loadBatch(batchId), true)
+  assert.equal(page.startEdit(page.state.rows[0], 'productSpec'), false)
+  assert.equal(page.state.edit, null)
+  assert.equal(page.state.groups[0].createIntent.key, batchId)
 })

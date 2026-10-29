@@ -9,10 +9,6 @@ import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
-import PurchaseImportGallery from './PurchaseImportGallery.vue'
-import PurchaseImportFeeTodos from './PurchaseImportFeeTodos.vue'
-import PurchaseImportDraftPreview from './PurchaseImportDraftPreview.vue'
-import PurchaseImportProductReview from './PurchaseImportProductReview.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 
@@ -144,21 +140,17 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
 
     <section class="import-section import-details" aria-labelledby="import-details-title">
       <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
-      <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细可先暂存，创建采购草稿前请补齐并保存。" :closable="false" show-icon class="import-alert" />
+      <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细已独立暂存，请补齐后保存基础信息。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />
       <PurchaseImportSources :page="page" />
-      <PurchaseImportGallery :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
       <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" />
-      <PurchaseImportProductReview :page="page" />
-      <PurchaseImportDraftPreview :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" />
-      <PurchaseImportFeeTodos :page="page" :currencies="currencies" />
     </section>
 
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
-      <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>导入后先暂存明细；基础信息在保存或创建草稿时核验，原图归属需人工确认。</li></ol>
+      <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>导入后先暂存明细；基础信息在保存时核验，原图归属需人工确认。</li></ol>
       <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="state.importing" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
       <el-alert v-if="downloadError" :title="downloadError" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />

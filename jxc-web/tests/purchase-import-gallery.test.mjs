@@ -24,10 +24,3 @@ test('只重试图库阶段不会让整个批次重新进入文件解析', async
   await page.retryTask(task)
   assert.equal(page.state.status, 'REVIEW'); assert.equal(page.state.tasks[0].status, 'QUEUED')
 })
-test('图库读取失败明确报错，不能伪装成空图库', async () => {
-  const { page } = setup({ async gallery() { throw new Error('图库权限读取失败') } })
-  await page.loadBatch(batchId)
-  assert.equal(await page.loadGallery(), false)
-  assert.equal(page.state.gallery, null); assert.match(page.state.galleryError, /权限读取失败/)
-  assert.equal(page.state.rows.length, 1)
-})

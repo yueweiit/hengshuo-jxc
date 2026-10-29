@@ -43,22 +43,11 @@ export interface PurchaseImportApi {
   upload(file: File, batchId: string | null, key: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
   saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
-  saveRow(batchId: string, row: ImportRow, values: ImportValues, matchInputs?: MatchInputs): Promise<unknown>
+  saveRow(batchId: string, row: ImportRow, values: ImportValues): Promise<unknown>
   deleteRow(batchId: string, row: ImportRow): Promise<unknown>
   retryTask?(taskId: string, key: string, sheet: string | null): Promise<unknown>
   associate?(batchId: string, row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED'): Promise<unknown>
-  decide?(batchId: string, row: ImportRow, input: Record<string, unknown>): Promise<unknown>
-  createProduct?(batchId: string, row: ImportRow, input: Record<string, unknown>, key: string): Promise<unknown>
   publishPhotos?(batchId: string, row: ImportRow, imageIds: number[], key: string): Promise<unknown>
-  startMatches?(batchId: string, batchVersion: number, rowIds: number[], key: string): Promise<unknown>
-  explain?(batchId: string, row: ImportRow, key: string): Promise<unknown>
-  gallery?(): Promise<unknown>
-  rebuildGallery?(batchId: string, key: string): Promise<unknown>
-  previews?(batchId: string, batchVersion: number): Promise<unknown>
-  saveGroup?(batchId: string, group: ImportDraftGroup, header: Record<string, unknown>, splitRowIds?: number[]): Promise<unknown>
-  createDraft?(batchId: string, group: ImportDraftGroup, request: Record<string, unknown>, key: string): Promise<unknown>
-  saveFeeTodos?(batchId: string, group: ImportDraftGroup, items: FeeReviewInput[]): Promise<unknown>
-  creation?(batchId: string, group: ImportDraftGroup): Promise<unknown>
 }
 export const isBatchId = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -138,10 +127,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     loading: false, importing: false, saving: false, deletingId: null as number | null,
     error: '', errorCode: '', errors: [] as ImportIssue[], success: '',
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
-    partialResult: null as Record<string, unknown> | null,
     groups: [] as ImportDraftGroup[],
-    gallery: null as { status: string; coverage: { photos: number; eligiblePhotos?: number; readyPhotos: number; features: number }; lastError?: string | null } | null,
-    galleryError: '', galleryLoading: false,
   })
   let epoch = 0, readSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
   const busy = () => state.loading || state.importing || state.saving || state.status === 'PARSING'
@@ -155,16 +141,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (record(error) && record(error.data) && Array.isArray(error.data.errors)) {
       state.errors = error.data.errors.filter((issue): issue is ImportIssue => record(issue) && typeof issue.message === 'string' && issue.message.trim().length > 0)
     }
-    if (record(error) && record(error.data) && record(error.data.partialResult)) {
-      const partial = error.data.partialResult
-      state.partialResult = partial
-      const row = state.rows.find(item => item.id === partial.rowId)
-      if (row && positiveId(partial.productId) && positiveId(partial.rowVersion) && partial.rowVersion >= row.version) {
-        row.matchedProductId = partial.productId; row.version = partial.rowVersion; row.readiness = 'NEEDS_SETUP'
-      }
-    }
   }
-  function clearFeedback() { state.error = ''; state.errorCode = ''; state.errors = []; state.success = ''; state.partialResult = null }
+  function clearFeedback() { state.error = ''; state.errorCode = ''; state.errors = []; state.success = '' }
   function applyBatch(batch: ImportBatch, preserveDraft = false) {
     const draft = preserveDraft && (state.batchId === null || headerDirty()) ? state.header : null
     savedHeader = JSON.stringify(batch.header)
@@ -310,48 +288,6 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       if (saved.batchVersion !== undefined) state.version = saved.batchVersion
     })
   }
-  function applyReview(row: ImportRow, response: unknown) {
-    const saved = readRow(response)
-    if (saved.id !== row.id || saved.rowNo !== row.rowNo || saved.version <= row.version) throw new Error('后端返回的商品确认记录或版本不正确')
-    state.rows.splice(state.rows.findIndex(item => item.id === row.id), 1, saved)
-    if (saved.batchVersion !== undefined) state.version = saved.batchVersion
-    state.success = saved.readiness === 'READY' ? '本行商品与单位已确认' : saved.readiness === 'NEEDS_SETUP' ? '已保存真实商品，请完成所需配置后重新核对' : '本行已保存为待确认'
-  }
-  async function decideProduct(row: ImportRow, input: Record<string, unknown>) {
-    if (!api.decide || !state.batchId || busy() || state.edit || rowLocked(row)) return false
-    return write('saving', () => api.decide!(state.batchId!, { ...row }, input), response => applyReview(row, response))
-  }
-  async function createProduct(row: ImportRow, input: Record<string, unknown>, key: string) {
-    if (!api.createProduct || !state.batchId || busy() || state.edit || rowLocked(row)) return false
-    const request = JSON.parse(JSON.stringify(input)) as Record<string, unknown>
-    return write('saving', () => api.createProduct!(state.batchId!, { ...row }, request, key), response => applyReview(row, response))
-  }
-  const matchKeys = new Map<string, string>()
-  async function saveMatchInputs(row: ImportRow, input: MatchInputs) {
-    if (!state.batchId || busy() || state.edit || headerDirty() || rowLocked(row)) return false
-    const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, value?.trim() || null])) as unknown as MatchInputs
-    if (Object.values(normalized).some(value => value !== null && value.length > 200)) { failure(new Error('补充文字最多200个字符')); return false }
-    const values = Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues
-    return write('saving', () => api.saveRow(state.batchId!, row, values, normalized), response => applyReview(row, response))
-  }
-  async function startMatches(rowIds: number[]) {
-    if (!api.startMatches || !state.batchId || busy() || state.edit || headerDirty() || !rowIds.length || new Set(rowIds).size !== rowIds.length || rowIds.some(id => !state.rows.some(row => row.id === id && !rowLocked(row)))) return false
-    const signature = JSON.stringify([state.batchId, state.version, rowIds])
-    if (!matchKeys.has(signature)) matchKeys.set(signature, newKey())
-    return write('saving', () => api.startMatches!(state.batchId!, state.version, rowIds, matchKeys.get(signature)!), response => {
-      if (!record(response) || !Array.isArray(response.taskIds) || response.taskIds.length !== rowIds.length || response.taskIds.some(id => !isBatchId(id))) throw new Error('后端未确认候选任务')
-      applyBatch(readBatch(response)); matchKeys.delete(signature); state.success = '候选任务已登记，请等待结果并人工核对'
-    })
-  }
-  async function explainMatch(row: ImportRow) {
-    if (!api.explain || !state.batchId || busy() || state.edit || headerDirty() || rowLocked(row) || !row.matchResult || row.matchResult.inputRevision !== row.version) return false
-    const signature = JSON.stringify([row.id, row.version, row.matchResult.runId, 'EXPLAIN'])
-    if (!matchKeys.has(signature)) matchKeys.set(signature, newKey())
-    return write('saving', () => api.explain!(state.batchId!, row, matchKeys.get(signature)!), response => {
-      if (!record(response) || !isBatchId(response.id) || response.status !== 'QUEUED') throw new Error('后端未确认解释任务')
-      state.tasks.push({ id: response.id, kind: 'EXPLAIN', status: 'QUEUED', result: { rowId: row.id } }); matchKeys.delete(signature)
-    })
-  }
   const photoKeys = new Map<string, string>()
   async function publishPhotos(row: ImportRow, imageIds: number[]) {
     if (!api.publishPhotos || !state.batchId || busy() || state.edit || headerDirty()) return false
@@ -360,76 +296,14 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!photoKeys.has(signature)) photoKeys.set(signature, newKey())
     return write('saving', () => api.publishPhotos!(state.batchId!, row, imageIds, photoKeys.get(signature)!), response => { applyBatch(readBatch(response)); photoKeys.delete(signature); state.success = '商品照片已关联，特征和索引在后台处理' })
   }
-  let gallerySequence = 0, rebuildKey = ''
-  async function loadGallery() {
-    if (!api.gallery || !state.batchId) return false
-    const context = epoch, sequence = ++gallerySequence
-    state.galleryLoading = true; state.galleryError = ''
-    try {
-      const result = await api.gallery()
-      if (context !== epoch || sequence !== gallerySequence) return false
-      if (!record(result) || !['EMPTY', 'NOT_READY', 'READY', 'PARTIAL', 'FAILED'].includes(String(result.status)) || !record(result.coverage)) throw new Error('图库状态或覆盖统计返回格式不正确')
-      const coverage = result.coverage as Record<string, unknown>
-      if (['photos', 'readyPhotos', 'features'].some(field => !Number.isSafeInteger(coverage[field]) || Number(coverage[field]) < 0)) throw new Error('图库覆盖统计无效')
-      state.gallery = result as unknown as NonNullable<typeof state.gallery>
-      return true
-    } catch (error) { if (context === epoch && sequence === gallerySequence) state.galleryError = error instanceof Error ? error.message : '图库状态读取失败'; return false }
-    finally { if (context === epoch && sequence === gallerySequence) state.galleryLoading = false }
-  }
-  async function rebuildGallery() {
-    if (!api.rebuildGallery || !state.batchId || busy() || state.edit) return false
-    if (!rebuildKey) rebuildKey = newKey()
-    return write('saving', () => api.rebuildGallery!(state.batchId!, rebuildKey), response => {
-      if (!record(response) || !isBatchId(response.id) || response.status !== 'QUEUED') throw new Error('后端未确认图库重建任务')
-      state.tasks.push({ id: response.id, kind: 'GALLERY_REBUILD', phase: 'INDEX', status: 'QUEUED' }); rebuildKey = ''
-    })
-  }
-  async function previewDrafts() {
-    if (!api.previews || !state.batchId || busy() || state.edit || headerDirty()) return false
-    return write('saving', () => api.previews!(state.batchId!, state.version), response => applyBatch(readBatch(response)))
-  }
-  async function saveGroup(group: ImportDraftGroup, header: Record<string, unknown>, splitRowIds?: number[]) {
-    if (!api.saveGroup || !state.batchId || busy() || state.edit) return false
-    return write('saving', () => api.saveGroup!(state.batchId!, group, header, splitRowIds), response => applyBatch(readBatch(response)))
-  }
-  const creationIntents = new Map<number, { key: string; request: Record<string, unknown> }>()
-  function applyCreation(group: ImportDraftGroup, response: unknown) {
-    if (!record(response) || response.id !== group.id || typeof response.createStatus !== 'string' || !['CREATED', 'CREATING', 'UNKNOWN', 'FAILED', 'READY', 'DRAFT'].includes(response.createStatus) || (response.createStatus === 'CREATED' && !positiveId(response.orderId))) throw new Error('后端返回的采购创建结果不完整，请查询原请求结果')
-    const index = state.groups.findIndex(item => item.id === group.id)
-    if (index < 0) throw new Error('当前采购分组已变化，请重新读取')
-    state.groups.splice(index, 1, { ...group, ...readGroup(response) } as ImportDraftGroup)
-  }
-  async function createDraft(group: ImportDraftGroup) {
-    if (!api.createDraft || !state.batchId || busy() || state.edit || group.orderId || !['READY', 'FAILED', 'UNKNOWN'].includes(group.createStatus) || !group.previewToken) return false
-    let intent = group.createIntent || creationIntents.get(group.id)
-    if (!intent || (!group.createIntent && intent.request.previewToken !== group.previewToken)) intent = { key: newKey(), request: { groupVersion: group.version, previewToken: group.previewToken, confirm: true } }
-    creationIntents.set(group.id, intent)
-    const saved = await write('saving', () => api.createDraft!(state.batchId!, group, intent.request, intent.key), response => applyCreation(group, response))
-    if (saved) await loadBatch(state.batchId!)
-    return saved
-  }
-  async function refreshCreation(group: ImportDraftGroup) {
-    if (!api.creation || !state.batchId || busy() || state.edit) return false
-    return write('saving', () => api.creation!(state.batchId!, group), response => applyCreation(group, response))
-  }
-  async function saveFeeTodos(group: ImportDraftGroup, items: FeeReviewInput[]) {
-    if (!api.saveFeeTodos || !state.batchId || busy() || state.edit || headerDirty()) return false
-    return write('saving', () => api.saveFeeTodos!(state.batchId!, group, JSON.parse(JSON.stringify(items))), response => {
-      const saved = readGroup(response)
-      if (saved.id !== group.id || saved.version < group.version || !positiveId(saved.feeTodosVersion) || !positiveId(group.feeTodosVersion) || saved.feeTodosVersion <= group.feeTodosVersion) throw new Error('后端未确认费用核对版本，请刷新核对')
-      const index = state.groups.findIndex(item => item.id === group.id)
-      if (index < 0) throw new Error('当前分组已变化，请刷新核对')
-      state.groups.splice(index, 1, saved); state.success = '费用核对已保存，仍待在原业务页面登记'
-    })
-  }
   function invalidate() {
     ++epoch; ++readSequence
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
-    state.groups = []; creationIntents.clear(); photoKeys.clear(); matchKeys.clear(); rebuildKey = ''; ++gallerySequence; state.gallery = null; state.galleryError = ''; state.galleryLoading = false
+    state.groups = []; photoKeys.clear()
   }
-  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, decideProduct, createProduct, saveMatchInputs, startMatches, explainMatch, publishPhotos, loadGallery, rebuildGallery, previewDrafts, saveGroup, createDraft, refreshCreation, saveFeeTodos, invalidate }
+  return { state, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>
