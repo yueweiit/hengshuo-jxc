@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { computed, nextTick, reactive, ref, shallowReactive, watch } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
+import { loadTsModule } from './contracts/load-ts-module.mjs'
+const { createPurchaseImportCatalogImages } = loadTsModule(new URL('../src/modules/purchase/purchaseImportCatalogImages.ts', import.meta.url))
 
 const file = new URL('../src/modules/purchase/PurchaseImportReviewDialog.vue', import.meta.url)
 const image = (id, status = 'UNCONFIRMED') => ({ id, status, sha256: 'a'.repeat(64) })
@@ -20,8 +22,9 @@ function dialog(rows = [row(1)], options = {}) {
   const state = loadVueScript(file, {
     computed, ref, watch, onBeforeUnmount() {}, defineProps: () => props, defineEmits: () => () => {},
     useCountryStore: () => ({ current: { name: '测试国家' } }),
+    createPurchaseImportCatalogImages,
     http: { async get() { return { recognitionEnabled: true } } }, ElMessageBox: { async confirm() {} },
-  }, ['activeTab', 'selectedRow', 'row', 'todoItems', 'todoRowCount', 'openTodo', 'readyCount', 'needsProductSetup', 'needsCountrySetup', 'matchInputs', 'fresh', 'mode', 'chooseCandidate', 'productId', 'unit', 'confirmExisting', 'choices'])
+  }, ['activeTab', 'selectedRow', 'row', 'todoItems', 'todoRowCount', 'openTodo', 'readyCount', 'needsProductSetup', 'needsCountrySetup', 'matchInputs', 'fresh', 'mode', 'chooseCandidate', 'productId', 'unit', 'confirmExisting', 'choices', 'products', 'manualSelection'])
   return { ...state, page, props, calls }
 }
 
@@ -99,4 +102,36 @@ test('切页不丢失已经存在的新品原请求', async () => {
   const d = dialog([row(1, { productOperation: operation })])
   await nextTick(); d.activeTab.value = 'match'; await nextTick(); d.activeTab.value = 'product'; await nextTick()
   assert.deepEqual(d.choices.value[1], { key: operation.key, request: operation.request })
+})
+
+test('新品带入已有正式编码名称和规格，不把采购单位或供应商编号当新品资料', async () => {
+  const d = dialog([row(1, { suppliedProductCode: 'SKU-SOURCE', suppliedProductName: '原始商品名', purchaseUnit: '箱' }), row(2, { supplierProductCode: 'SUPPLIER-1' })])
+  await nextTick()
+  assert.deepEqual(d.fresh.value, { productCode: 'SKU-SOURCE', name: '原始商品名', baseUnit: '', spec: '测试规格' })
+  d.selectedRow.value = 2; await nextTick()
+  assert.deepEqual(d.fresh.value, { productCode: '', name: '', baseUnit: '', spec: '测试规格' })
+})
+
+test('新品人工草稿切行保留，来源更新只刷新未改字段，新批次不带走旧草稿', async () => {
+  const d = dialog([row(1, { suppliedProductCode: 'SKU-1', suppliedProductName: '源名称' }), row(2)])
+  await nextTick()
+  d.fresh.value.name = '人工名称'; d.fresh.value.baseUnit = '件'
+  d.selectedRow.value = 2; await nextTick(); d.selectedRow.value = 1; await nextTick()
+  assert.equal(d.fresh.value.name, '人工名称'); assert.equal(d.fresh.value.baseUnit, '件')
+  Object.assign(d.page.state.rows[0], { version: 2, suppliedProductCode: 'SKU-UPDATED', suppliedProductName: '更新源名称' })
+  await nextTick()
+  assert.equal(d.fresh.value.productCode, 'SKU-UPDATED'); assert.equal(d.fresh.value.name, '人工名称')
+  d.page.state.batchId = '22222222-2222-4333-8444-555555555555'; await nextTick()
+  assert.equal(d.fresh.value.name, '更新源名称'); assert.equal(d.fresh.value.baseUnit, '')
+})
+
+test('下拉选择有效识别候选仍带runId确认，过期后人工目录选择不冒充识别结果', async () => {
+  const candidate = { productId: 501, product: { id: 501, productCode: 'SKU-501', name: '候选商品', spec: '测试规格', units: [{ unit: '件' }] }, visualEvidence: [], textEvidence: [], visualScore: null, conflicts: [] }
+  const d = dialog([row(1, { matchTaskId: 'current-run', matchResult: { inputRevision: 1, runId: 'current-run', candidates: [candidate] } })])
+  await nextTick(); d.productId.value = 501; d.unit.value = '件'; d.manualSelection()
+  await d.confirmExisting()
+  assert.deepEqual(d.calls.at(-1), ['decide', 1, { decision: 'EXISTING', productId: 501, unit: '件', runId: 'current-run' }])
+  d.page.state.rows[0].version = 2; await nextTick()
+  d.productId.value = 501; d.unit.value = '件'; d.manualSelection(); await d.confirmExisting()
+  assert.deepEqual(d.calls.at(-1), ['decide', 1, { decision: 'EXISTING', productId: 501, unit: '件' }])
 })

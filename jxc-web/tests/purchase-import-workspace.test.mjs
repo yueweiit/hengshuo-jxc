@@ -318,6 +318,22 @@ test('重新读取坏候选证据时明确失败并保留原明细', async () =>
   assert.deepEqual(page.state.rows, batch().rows)
 })
 
+test('实际图片候选证据保留原图和命中图编号，损坏编号或分数拒绝替换已加载明细', async () => {
+  const evidence = { queryAssetId: 11, imageId: 701, featureId: 801, score: 0.91 }
+  const candidate = { productId: 501, product: { id: 501, productCode: 'SKU', name: '商品', spec: 'S', units: [{ unit: '件' }] }, visualScore: 0.91, visualEvidence: [evidence], textEvidence: [], conflicts: [] }
+  const matchResult = { format: 'MatchRunV1', runId: batchId, inputRevision: 1, status: 'OK', text: { status: 'NO_INPUT', reason: '无文字' }, image: { status: 'FOUND', reason: '有命中图' }, candidates: [candidate], explanation: { status: 'NOT_REQUESTED', message: '未请求' } }
+  let response = { ...batch(), rows: [{ ...row(), matchResult }] }
+  const { page } = setup({ async load() { return response } })
+  assert.equal(await page.loadBatch(batchId), true)
+  assert.deepEqual(page.state.rows[0].matchResult.candidates[0].visualEvidence, [evidence])
+  for (const patch of [{ queryAssetId: 0 }, { imageId: 'wrong' }, { featureId: null }, { score: NaN }, { score: 1.1 }]) {
+    response = { ...batch(), rows: [{ ...row(), matchResult: { ...matchResult, candidates: [{ ...candidate, visualEvidence: [{ ...evidence, ...patch }] }] } }] }
+    assert.equal(await page.loadBatch(batchId), false)
+    assert.match(page.state.error, /候选证据/)
+    assert.deepEqual(page.state.rows[0].matchResult.candidates[0].visualEvidence, [evidence])
+  }
+})
+
 test('历史批次不能把费用待办伪装成已登记，坏响应保留原分组', async () => {
   const original = { ...group(), feeTodosVersion: 1, sourceBasisHash: 'a'.repeat(64), feeTodos: [], sourceEvidence: [] }
   let response = { ...batch(), groups: [original] }

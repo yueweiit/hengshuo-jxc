@@ -4,7 +4,9 @@ import { ElMessageBox } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import { http } from '@/api/http'
 import { useCountryStore } from '@/stores/country'
-import type { PurchaseImportModel, ImportRow, MatchCandidate } from './purchaseImportModel'
+import type { PurchaseImportModel, ImportRow, MatchCandidate, VisualMatchEvidence } from './purchaseImportModel'
+import { createPurchaseImportCatalogImages } from './purchaseImportCatalogImages'
+import PurchaseImportProductPhoto from './PurchaseImportProductPhoto.vue'
 
 const props = defineProps<{ page: PurchaseImportModel; modelValue: boolean; rowId?: number | null }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
@@ -12,12 +14,22 @@ interface Product { id: number; productCode: string; name: string; spec: string;
 type ReviewTab = 'todos' | 'product' | 'images' | 'match'
 interface ReviewTodo { key: string; row: ImportRow; reason: string; tab: ReviewTab; imageId?: number }
 const country = useCountryStore()
+const photoScope = computed(() => props.page.state.batchId && country.currentId ? `${country.currentId}:${props.page.state.batchId}` : null)
+const catalogImages = createPurchaseImportCatalogImages(
+  (id, signal) => http.get(`/md/products/${id}/images`, undefined, { signal, silent: true }),
+  (id, signal) => http.attachmentBlob(`/api/v1/md/product-images/${id}/content`, { signal, silent: true }),
+  () => photoScope.value,
+)
+watch(photoScope, () => catalogImages.reset())
 const activeTab = ref<ReviewTab>('todos'), focusedImage = ref<number | null>(null)
 const matchEnabled = ref(false), capabilityError = ref(''), candidateRun = ref<string | null>(null), candidateProduct = ref<MatchCandidate['product'] | null>(null)
 const matchInputs = ref({ suppliedProductCode: '', suppliedProductName: '', supplierProductCode: '' })
 const selectedRow = ref<number | null>(null), keyword = ref(''), products = ref<Product[]>([]), productId = ref<number | null>(null), unit = ref('')
 const catalogLoading = ref(false), catalogError = ref(''), catalogLoaded = ref(false), mode = ref('existing')
 const fresh = ref({ productCode: '', name: '', baseUnit: '', spec: '' }), choices = ref<Record<number, { key: string; request: Record<string, unknown> }>>({})
+type NewProduct = typeof fresh.value
+const newDrafts = new Map<number, { values: NewProduct; source: NewProduct }>()
+let freshRow: number | null = null, freshSource: NewProduct = { ...fresh.value }
 const row = computed(() => props.page.state.rows.find(item => item.id === selectedRow.value))
 const selectedProduct = computed(() => candidateProduct.value?.id === productId.value ? candidateProduct.value : products.value.find(item => item.id === productId.value))
 const { urls:imageUrls, errors:imageErrors, loading:imageLoading } = props.page.images
@@ -43,29 +55,43 @@ const locked = computed(() => pickerLocked.value || !!row.value && props.page.ro
 const inputsDirty = computed(() => !!row.value && ['suppliedProductCode', 'suppliedProductName', 'supplierProductCode'].some(key => (matchInputs.value[key as keyof typeof matchInputs.value].trim() || null) !== (row.value![key as keyof ImportRow] || null)))
 function isCurrentMatch(item: ImportRow) { return !!item.matchResult && item.matchResult.inputRevision === item.version && item.matchResult.runId === item.matchTaskId }
 const currentMatch = computed(() => !!row.value && isCurrentMatch(row.value))
+const productOptions = computed(() => {
+  const options = new Map<number, { product: MatchCandidate['product']; candidate?: MatchCandidate }>()
+  if (currentMatch.value) for (const candidate of row.value!.matchResult!.candidates) options.set(candidate.productId, { product: candidate.product, candidate })
+  for (const product of products.value) if (!options.has(product.id)) options.set(product.id, { product })
+  return [...options.values()]
+})
+const selectedCandidate = computed(() => currentMatch.value ? row.value?.matchResult?.candidates.find(candidate => candidate.productId === productId.value) : undefined)
+function bestVisual(candidate: MatchCandidate) { return candidate.visualEvidence.reduce<VisualMatchEvidence | undefined>((best, evidence) => !best || evidence.score > best.score ? evidence : best, undefined) }
+const sourceImages = computed(() => row.value?.images?.filter(image => image.status !== 'REJECTED') ?? [])
 let epoch = 0, active = true
 watch(() => props.rowId, id => { if (id) selectedRow.value = id })
 watch(() => props.modelValue, opened => {
   if (opened) { activeTab.value = 'todos'; focusedImage.value = null; if (props.rowId && props.page.state.rows.some(item => item.id === props.rowId)) selectedRow.value = props.rowId }
 }, { immediate: true })
 watch(() => [props.modelValue,activeTab.value,row.value?.id,row.value?.version], () => {
-  if (props.modelValue && activeTab.value === 'images') for (const image of row.value?.images ?? []) void props.page.images.load(image.id)
+  if (props.modelValue && activeTab.value !== 'todos') for (const image of (activeTab.value === 'images' ? row.value?.images ?? [] : sourceImages.value)) void props.page.images.load(image.id)
 })
 function openTodo(todo: ReviewTodo) {
   if (pickerLocked.value) return
   selectedRow.value = todo.row.id; activeTab.value = todo.tab; focusedImage.value = todo.imageId ?? null
 }
 function syncRow(value?: ImportRow) {
+  if (freshRow !== null) newDrafts.set(freshRow, { values: { ...fresh.value }, source: freshSource })
   candidateRun.value = null; candidateProduct.value = null
   matchInputs.value = { suppliedProductCode: value?.suppliedProductCode || '', suppliedProductName: value?.suppliedProductName || '', supplierProductCode: value?.supplierProductCode || '' }
   productId.value = value?.matchedProductId ?? null; unit.value = value?.purchaseUnit ?? ''; mode.value = 'existing'
-  fresh.value = { productCode: '', name: '', baseUnit: '', spec: value?.productSpec || '' }
+  const source: NewProduct = { productCode: value?.suppliedProductCode ?? '', name: value?.suppliedProductName ?? '', baseUnit: '', spec: value?.productSpec ?? '' }
+  const draft = value ? newDrafts.get(value.id) : undefined
+  fresh.value = { ...source }
+  if (draft) for (const key of Object.keys(source) as (keyof NewProduct)[]) if (draft.values[key] !== draft.source[key]) fresh.value[key] = draft.values[key]
+  freshRow = value?.id ?? null; freshSource = source
   if (value?.productOperation) choices.value[value.id] = { key: value.productOperation.key, request: value.productOperation.request }
 }
 watch(() => row.value?.version, () => syncRow(row.value))
 watch(() => selectedRow.value, () => { props.page.clearFeedback(); syncRow(row.value) })
 watch(() => props.page.state.rows.map(item => item.id).join(','), () => { if (!props.page.state.rows.some(item => item.id === selectedRow.value)) { selectedRow.value = props.page.state.rows[0]?.id ?? null; syncRow(row.value) } }, { immediate: true })
-watch(() => props.page.state.batchId, () => { ++epoch; catalogLoading.value = false; products.value = []; catalogLoaded.value = false; catalogError.value = ''; choices.value = {}; syncRow(row.value) })
+watch(() => props.page.state.batchId, () => { ++epoch; catalogLoading.value = false; products.value = []; catalogLoaded.value = false; catalogError.value = ''; choices.value = {}; newDrafts.clear(); freshRow = null; syncRow(row.value) })
 watch(() => props.page.state.batchId, async () => {
   const context = epoch; matchEnabled.value = false; capabilityError.value = ''
   try { const result = await http.get<{ recognitionEnabled: boolean }>('/pur/order-imports/capabilities', undefined, { silent: true }); if (active && context === epoch) { if (typeof result.recognitionEnabled !== 'boolean') throw new Error('候选识别开关响应不完整'); matchEnabled.value = result.recognitionEnabled } }
@@ -75,7 +101,11 @@ function chooseCandidate(candidate: MatchCandidate) {
   if (!row.value || !currentMatch.value || locked.value) return
   candidateProduct.value = candidate.product; productId.value = candidate.productId; candidateRun.value = row.value.matchResult!.runId; activeTab.value = 'product'
 }
-function manualSelection() { candidateRun.value = null; candidateProduct.value = null }
+function manualSelection() {
+  const candidate = currentMatch.value ? row.value?.matchResult?.candidates.find(item => item.productId === productId.value) : undefined
+  if (candidate) chooseCandidate(candidate)
+  else { candidateRun.value = null; candidateProduct.value = null }
+}
 async function saveInputs() { if (row.value && await props.page.saveMatchInputs(row.value, { ...matchInputs.value })) syncRow(row.value) }
 const routeLabel = (status: string) => ({ FOUND: '已找到候选', NOT_FOUND: '未查到', NO_INPUT: '无输入', UNAVAILABLE: '暂不可用', FAILED: '执行失败' }[status] || status)
 async function search() {
@@ -109,7 +139,7 @@ async function createNew() {
   const saved = await props.page.createProduct(selected, intent.request, intent.key)
   if (!saved && !props.page.state.partialResult && ['SYS_BAD_REQUEST', 'SYS_VERSION_CONFLICT', 'PUR_IMPORT_PRODUCT_EXISTS', 'PUR_IMPORT_BATCH_PRODUCT_EXISTS', 'SYS_FORBIDDEN'].includes(props.page.state.errorCode)) delete choices.value[selected.id]
 }
-onBeforeUnmount(() => { active = false; ++epoch })
+onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
 </script>
 
 <template>
@@ -135,6 +165,15 @@ onBeforeUnmount(() => { active = false; ++epoch })
         </el-tab-pane>
         <el-tab-pane label="商品与单位" name="product">
           <template v-if="row">
+      <div v-if="activeTab === 'product'" class="product-source-photos">
+        <span class="review-hint">本行导入原图</span>
+        <div v-for="(image, index) in sourceImages" :key="image.id" class="source-photo">
+          <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" :preview-src-list="[imageUrls[image.id]!]" preview-teleported fit="contain" :alt="`本行导入原图${index + 1}`" />
+          <span v-else class="review-hint">{{ imageErrors[image.id] || (imageLoading[image.id] ? '原图加载中' : '原图待加载') }}</span>
+          <el-button v-if="imageErrors[image.id]" link type="primary" @click="page.images.load(image.id)">重试加载原图</el-button>
+        </div>
+        <span v-if="!sourceImages.length" class="review-hint">本行没有可用原图</span>
+      </div>
       <div class="review-status"><strong>{{ row.readiness === 'READY' ? '商品和单位已确认' : row.readiness === 'NEEDS_SETUP' ? '商品已选定，仍需配置' : '等待人工确认' }}</strong><span v-if="row.matchedProductId">商品 ID：{{ row.matchedProductId }}</span><span v-if="row.purchaseUnit">采购单位：{{ row.purchaseUnit }}</span></div>
       <p v-for="reason in row.setupReasons" :key="reason" class="review-warning">{{ reason }}</p>
       <div v-if="needsProductSetup || needsCountrySetup" class="review-links">
@@ -147,13 +186,20 @@ onBeforeUnmount(() => { active = false; ++epoch })
         <div class="catalog-search"><el-input v-model="keyword" placeholder="商品编码或名称" aria-label="检索真实商品" :disabled="locked" @keyup.enter="search" /><el-button :loading="catalogLoading" :disabled="locked" @click="search">查询商品</el-button></div>
         <el-alert v-if="catalogError" type="error" :closable="false" :title="catalogError" />
         <p v-if="catalogLoaded && !products.length && !catalogError" class="review-hint">当前检索没有商品，请核对编码、名称和规格。无结果不会自动创建新品。</p>
-        <el-select v-model="productId" filterable placeholder="从查询结果选择真实商品" aria-label="已有商品" :disabled="locked" @change="manualSelection"><el-option v-for="item in products" :key="item.id" :value="item.id" :label="`${item.productCode} · ${item.name} · ${item.spec || '规格未填写'}${item.status === 'ENABLED' ? '' : ' · 已停用'}`" /></el-select>
+        <el-select v-model="productId" filterable placeholder="从识别候选或查询结果选择商品" aria-label="已有商品" :disabled="locked" @change="manualSelection">
+          <el-option v-for="item in productOptions" :key="item.product.id" :value="item.product.id" :label="`${item.product.productCode} · ${item.product.name} · ${item.product.spec || '规格未填写'}`" class="review-product-option">
+            <PurchaseImportProductPhoto :catalog="catalogImages" :image-id="item.candidate ? bestVisual(item.candidate)?.imageId : undefined" :product-id="item.product.id" :label="`${item.product.name}照片`" compact />
+            <div class="product-option-text"><strong>{{ item.product.productCode }} · <span>{{ item.product.name }}</span></strong><span>规格：{{ item.product.spec || '规格未填写' }}{{ item.product.status && item.product.status !== 'ENABLED' ? ' · 已停用' : '' }}</span><span>{{ item.candidate ? item.candidate.visualEvidence.length ? '图片匹配' : '文字匹配' : '目录查询' }}<template v-if="item.candidate?.visualScore != null"> · 外观相似度 {{ item.candidate.visualScore.toFixed(4) }}</template></span></div>
+          </el-option>
+        </el-select>
         <el-select v-model="unit" filterable allow-create default-first-option placeholder="选择采购单位，缺少时填写后核对" aria-label="确认采购单位" :disabled="locked"><el-option v-for="item in selectedProduct?.units" :key="item.unit" :value="item.unit" :label="item.unit" /></el-select>
         <el-button type="primary" :disabled="locked" @click="confirmExisting">{{ row.readiness === 'NEEDS_SETUP' ? '重新核对商品与单位' : '确认商品与单位' }}</el-button><el-button :disabled="locked" @click="page.decideProduct(row, { decision: 'DEFERRED' })">暂缓本行</el-button>
+        <div v-if="selectedProduct" class="selected-product-photo"><PurchaseImportProductPhoto :catalog="catalogImages" :image-id="selectedCandidate ? bestVisual(selectedCandidate)?.imageId : undefined" :product-id="selectedProduct.id" :label="`已选商品${selectedProduct.name}照片`" /><span class="review-hint">{{ selectedCandidate?.visualEvidence.length ? '本次实际命中照片，可与上方原图对照' : '已选商品资料照片' }}</span></div>
       </div>
       <div v-else class="new-review">
         <template v-if="choices[row.id] || row.productOperation"><p class="review-hint">已有新品操作，继续处理原请求。已成功建立的商品将保留。</p><el-button type="primary" :disabled="locked || row.readiness === 'READY'" @click="createNew">继续原新品操作</el-button></template>
         <el-form v-else :model="fresh" :disabled="locked" label-width="90px" @submit.prevent>
+          <p class="review-hint">已有编码、名称和规格已带入，请核对后确认；空白字段缺少原值，需要补充。基础单位须明确填写。</p>
           <el-form-item label="商品编码" required><el-input v-model="fresh.productCode" /></el-form-item><el-form-item label="商品名称" required><el-input v-model="fresh.name" /></el-form-item><el-form-item label="基础单位" required><el-input v-model="fresh.baseUnit" /></el-form-item><el-form-item label="商品规格"><el-input v-model="fresh.spec" /></el-form-item><el-button type="primary" @click="createNew">核对并确认新增</el-button>
         </el-form>
       </div>
@@ -196,6 +242,14 @@ onBeforeUnmount(() => { active = false; ++epoch })
           <p v-if="!row.matchResult.candidates.length">{{ row.matchResult.status === 'FAILED' ? '候选识别失败，请检查上述原因后重试，或继续人工查找。' : '当前没有可核实候选，请继续人工查找或核对新品。' }}</p>
           <article v-for="candidate in row.matchResult.candidates" :key="candidate.productId" class="candidate-card">
             <div><strong>{{ candidate.product.productCode }} · {{ candidate.product.name }}</strong><span>规格：{{ candidate.product.spec || '待核实' }}</span></div>
+            <div v-for="(evidence, index) in candidate.visualEvidence" :key="`${evidence.queryAssetId}-${evidence.imageId}-${index}`" class="candidate-comparison">
+              <figure :data-query-image-id="evidence.queryAssetId"><figcaption>用于识别的导入原图</figcaption><div class="comparison-original">
+                <el-image v-if="imageUrls[evidence.queryAssetId]" :src="imageUrls[evidence.queryAssetId]" :preview-src-list="[imageUrls[evidence.queryAssetId]!]" preview-teleported fit="contain" :alt="`用于识别的原图${evidence.queryAssetId}`" />
+                <span v-else class="review-hint">{{ imageErrors[evidence.queryAssetId] || (imageLoading[evidence.queryAssetId] ? '原图加载中' : '对应原图不再关联，请重新核对') }}</span>
+              </div><el-button v-if="imageErrors[evidence.queryAssetId]" link type="primary" @click="page.images.load(evidence.queryAssetId)">重试加载原图</el-button></figure>
+              <figure><figcaption>本次实际命中照片</figcaption><PurchaseImportProductPhoto :catalog="catalogImages" :image-id="evidence.imageId" :label="`${candidate.product.name}实际命中照片${index + 1}`" /><span class="review-hint">外观相似度 {{ evidence.score.toFixed(4) }}</span></figure>
+            </div>
+            <div v-if="!candidate.visualEvidence.length" class="text-candidate-photo"><PurchaseImportProductPhoto :catalog="catalogImages" :product-id="candidate.productId" :label="`${candidate.product.name}资料照片`" /><span class="review-hint">文字匹配 · 商品资料照片</span></div>
             <p v-if="candidate.visualScore !== null">外观相似度 {{ candidate.visualScore.toFixed(4) }}（排序分数，非正确概率）</p><p v-for="(evidence, index) in candidate.textEvidence" :key="index">{{ evidence.reason }}</p>
             <p v-for="conflict in candidate.conflicts" :key="conflict" class="review-warning">{{ conflict }}</p>
             <el-button :disabled="locked || !currentMatch" @click="chooseCandidate(candidate)">选择此候选后核对单位</el-button>
@@ -236,4 +290,12 @@ onBeforeUnmount(() => { active = false; ++epoch })
 .match-task { margin-top: 10px; }
 .candidate-card { background: var(--el-bg-color); padding: 12px; margin: 10px 0; border-left: 3px solid var(--el-color-primary-light-5); p { margin: 6px 0; } }
 .new-review { max-width: 600px; margin-top: 18px; }
+.review-product-option { display:flex; align-items:center; gap:12px; height:auto; min-height:82px; line-height:1.5; padding:10px 16px; max-width:min(540px, calc(100vw - 40px)); }
+.product-option-text { display:flex; flex-direction:column; min-width:0; white-space:normal; overflow-wrap:anywhere; font-size:12px; > strong { font-size:13px; } > span { color:var(--el-text-color-secondary); } }
+.product-source-photos { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0; }
+.source-photo { display:flex; flex-direction:column; max-width:136px; .el-image { width:88px; height:76px; } }
+.selected-product-photo, .text-candidate-photo { display:flex; align-items:center; gap:12px; width:100%; }
+.candidate-card > .candidate-comparison { display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap; margin:12px 0; }
+.candidate-comparison figure { margin:0; width:136px; max-width:100%; figcaption { margin-bottom:6px; font-size:12px; } }
+.comparison-original { display:flex; align-items:center; justify-content:center; width:136px; max-width:100%; height:120px; background:var(--el-fill-color-extra-light); border:1px solid var(--el-border-color-light); border-radius:4px; overflow:hidden; .el-image { width:100%; height:100%; } }
 </style>

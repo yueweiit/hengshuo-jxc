@@ -42,5 +42,12 @@ export function createPurchaseImportImages(read: (batchId: string, imageId: numb
     pending.set(imageId, result)
     return result
   }
-  return { urls, errors, loading, load, reset }
+  function reload(imageId: number) {
+    const running = pending.get(imageId)
+    if (running) return running
+    if (urls.value[imageId]) URL.revokeObjectURL(urls.value[imageId])
+    delete urls.value[imageId]; delete errors.value[imageId]
+    return load(imageId)
+  }
+  return { urls, errors, loading, load, reload, reset }
 }

@@ -41,6 +41,19 @@ app.use(createPinia()); app.use(ElementPlus)
 const country = useCountryStore(); country.available = [{ id: 101, name: '测试国家' }]; country.currentId = 101
 const router = createRouter({ history: createWebHistory(), routes: [{ path: '/:pathMatch(.*)*', component: { render: () => h('div') } }] })
 app.use(router); await router.isReady(); app.mount('#app')
-window.reviewFixture = { page, releaseImage, visible }
+function addMatches() {
+  const runId = '33333333-2222-4333-8444-555555555555'
+  Object.assign(page.state.rows[0], {
+    suppliedProductCode: 'SOURCE-001', suppliedProductName: '原表商品名称', matchTaskId: runId,
+    matchResult: { format: 'MatchRunV1', runId, inputRevision: 1, status: 'OK', text: { status: 'FOUND', reason: '真实目录文字命中' }, image: { status: 'FOUND', reason: '正式图库照片命中' }, explanation: { status: 'NOT_REQUESTED', message: '隔离测试未调用模型' }, candidates: [
+      { productId: 501, product: { id: 501, productCode: 'SKU-501', name: '图片候选商品', spec: '测试规格', status: 'ENABLED', baseUnit: '件', units: [{ unit: '件' }] }, visualScore: 0.91, textEvidence: [], conflicts: [], visualEvidence: [{ queryAssetId: 11, imageId: 701, featureId: 801, score: 0.91 }, { queryAssetId: 12, imageId: 702, featureId: 802, score: 0.85 }] },
+      { productId: 502, product: { id: 502, productCode: 'SKU-502', name: '文字候选商品', spec: '测试规格', status: 'ENABLED', baseUnit: '件', units: [{ unit: '件' }] }, visualScore: null, textEvidence: [{ reason: '商品名称命中' }], conflicts: [], visualEvidence: [] },
+    ] },
+  })
+  // 本夹具注入新来源，使用真实版本观察器同步新品表单。
+  page.state.rows[0].version = 2; page.state.rows[0].matchResult.inputRevision = 2
+  releaseImage()
+}
+window.reviewFixture = { page, releaseImage, visible, testImage, addMatches }
 </script>
 </html>

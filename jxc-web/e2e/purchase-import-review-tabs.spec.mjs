@@ -16,12 +16,18 @@ before(async () => {
   browser = await chromium.launch({ headless: true })
 })
 after(async () => { await browser?.close(); await server?.close() })
-async function fixture(t, viewport = { width: 1280, height: 900 }) {
+async function fixture(t, viewport = { width: 1280, height: 900 }, photos = false) {
   const context = await browser.newContext({ viewport, locale: 'zh-CN' }), page = await context.newPage(), errors = [], forbidden = []
   t.after(async () => { await context.close(); assert.deepEqual(errors, []); assert.deepEqual(forbidden, []) })
   page.on('pageerror', error => errors.push(error.message))
   await page.route('**/api/v1/**', route => {
     if (route.request().method() === 'GET' && route.request().url().endsWith('/pur/order-imports/capabilities')) return route.fulfill({ json: { code: 'OK', data: { recognitionEnabled: true } } })
+    if (photos && route.request().method() === 'GET') {
+      const path = new URL(route.request().url()).pathname
+      if (path === '/api/v1/md/products') return route.fulfill({ json: { code: 'OK', data: { records: [{ id: 501, productCode: 'SKU-501', name: '目录重复商品', spec: '测试规格', status: 'ENABLED', baseUnit: '件', units: [{ unit: '件' }] }, { id: 503, productCode: 'SKU-503', name: '人工目录商品', spec: 'L', status: 'ENABLED', baseUnit: '件', units: [{ unit: '件' }] }] } } })
+      if (/\/md\/products\/\d+\/images$/.test(path)) return route.fulfill({ json: { code: 'OK', data: path.endsWith('/503/images') ? [{ id: 999, productId: 503, isPrimary: true, sortOrder: 0 }] : [] } })
+      if (/\/md\/product-images\/\d+\/content$/.test(path)) return page.evaluate(async () => Array.from(new Uint8Array(await (await window.reviewFixture.testImage()).arrayBuffer()))).then(body => route.fulfill({ contentType: 'image/png', body: Buffer.from(body) }))
+    }
     forbidden.push(route.request().url()); return route.abort()
   })
   await page.goto(origin + '/e2e/fixtures/purchase-import-review-tabs.html')
@@ -92,4 +98,66 @@ test('窄屏可进入原图页，固定图片加载范围不撑开页面', async
   await expect(dialog.locator('.original-image-frame .el-loading-mask').first()).toBeVisible()
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
   await page.screenshot({ path: evidence + '/narrow.png', animations: 'disabled' })
+})
+
+test('新品表单显示原值，带图下拉合并实际候选和目录且保留识别来源', async t => {
+  const { page, dialog } = await fixture(t, undefined, true)
+  await page.evaluate(() => window.reviewFixture.addMatches())
+  await tab(dialog, '商品与单位').click(); await dialog.getByText('确认新品', { exact: true }).click()
+  await expect(dialog.locator('.new-review input').nth(0)).toHaveValue('SOURCE-001')
+  await expect(dialog.locator('.new-review input').nth(1)).toHaveValue('原表商品名称')
+  await expect(dialog.locator('.new-review input').nth(2)).toHaveValue('')
+  await dialog.getByText('选择已有商品', { exact: true }).click(); await dialog.getByRole('button', { name: '查询商品', exact: true }).click()
+  await dialog.getByRole('combobox', { name: '已有商品', exact: true }).click()
+  const hit = page.getByRole('option').filter({ hasText: 'SKU-501' })
+  await expect(hit).toHaveCount(1); await expect(hit).toContainText('图片匹配'); await expect(hit).toContainText('0.9100')
+  await expect(hit.locator('[data-image-id="701"] .el-image__inner')).toBeVisible()
+  await expect(page.getByRole('option').filter({ hasText: 'SKU-502' })).toContainText('文字匹配')
+  await expect(page.getByRole('option').filter({ hasText: 'SKU-503' })).toContainText('目录查询')
+  await expect(page.getByRole('option').filter({ hasText: 'SKU-503' }).locator('[data-image-id="999"] .el-image__inner')).toBeVisible()
+  await page.screenshot({ path: evidence + '/image-options.png', animations: 'disabled' })
+  await hit.locator('.el-image__inner').click(); await expect(page.locator('.el-image-viewer__wrapper')).toBeVisible()
+  await page.keyboard.press('Escape'); await expect(page.locator('.el-image-viewer__wrapper')).toHaveCount(0)
+  await expect(dialog).toBeVisible()
+  await expect(hit).toBeHidden()
+  await dialog.getByRole('combobox', { name: '已有商品', exact: true }).click()
+  await hit.getByText('图片候选商品', { exact: true }).click()
+  await expect(dialog.locator('.existing-review > .el-select').first()).toContainText('SKU-501')
+  await expect(dialog.locator('.selected-product-photo [data-image-id="701"] .el-image__inner')).toBeVisible()
+  await page.screenshot({ path: evidence + '/selected-product.png', animations: 'disabled' })
+})
+
+test('实际命中照片逐张对照对应原图，读取失败可重试且不替换为商品其他照片', async t => {
+  const { page, dialog } = await fixture(t, undefined, true)
+  let state = 'unavailable'
+  await page.route('**/md/product-images/701/content', async route => {
+    if (state === 'unavailable') return route.fulfill({ status: 503, json: { code: 'PHOTO_UNAVAILABLE', message: '隔离测试：命中照片暂不可用' } })
+    if (state === 'invalid') return route.fulfill({ contentType: 'image/png', body: 'invalid-image-bytes' })
+    const body = await page.evaluate(async () => Array.from(new Uint8Array(await (await window.reviewFixture.testImage()).arrayBuffer())))
+    return route.fulfill({ contentType: 'image/png', body: Buffer.from(body) })
+  })
+  await page.evaluate(() => window.reviewFixture.addMatches()); await tab(dialog, '辅助识别').click()
+  const comparisons = dialog.locator('.candidate-comparison')
+  await expect(comparisons).toHaveCount(2)
+  await expect(comparisons.nth(0).locator('[data-query-image-id="11"]')).toBeVisible()
+  await expect(comparisons.nth(1).locator('[data-query-image-id="12"]')).toBeVisible()
+  await expect(comparisons.nth(0)).toContainText('隔离测试：命中照片暂不可用')
+  await expect(comparisons.nth(1).locator('[data-image-id="702"] .el-image__inner')).toBeVisible()
+  state = 'invalid'; await comparisons.nth(0).getByRole('button', { name: '重试加载商品照片', exact: true }).click()
+  await expect(comparisons.nth(0)).toContainText('商品照片显示失败，请重试')
+  state = 'ready'; await comparisons.nth(0).getByRole('button', { name: '重试加载商品照片', exact: true }).click()
+  await expect(comparisons.nth(0).locator('[data-image-id="701"] .el-image__inner')).toBeVisible()
+  await dialog.locator('.text-candidate-photo').scrollIntoViewIfNeeded()
+  await expect(dialog.getByText('暂无商品照片', { exact: true })).toBeVisible()
+  await page.screenshot({ path: evidence + '/candidate-comparison.png', animations: 'disabled' })
+})
+
+test('窄屏图片候选对照不撑开页面，过期识别结果不能确认', async t => {
+  const { page, dialog } = await fixture(t, { width: 390, height: 844 }, true)
+  await page.evaluate(() => window.reviewFixture.addMatches()); await tab(dialog, '辅助识别').click()
+  await expect(dialog.locator('.candidate-comparison')).toHaveCount(2)
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+  await page.evaluate(() => { window.reviewFixture.page.state.rows[0].version++ })
+  await expect(dialog.getByRole('button', { name: '选择此候选后核对单位', exact: true }).first()).toBeDisabled()
+  await page.screenshot({ path: evidence + '/candidate-narrow.png', animations: 'disabled' })
 })
