@@ -192,8 +192,9 @@ try{
 }catch(error){state.lastError={branch:active,message:error.message,at:new Date().toISOString()};save();await page.screenshot({path:dir+'/page-first-failure.png',fullPage:true});throw error}
 finally{
   if(new URL(page.url()).pathname !== '/login')try{
+    const drawerClose=page.locator('.el-drawer__close-btn:visible');if(await drawerClose.count())await drawerClose.last().click()
     await page.locator('.header .el-dropdown').last().getByRole('button').click()
-    await page.getByRole('menuitem',{name:'退出登录',exact:true}).click();await page.waitForURL(url=>url.pathname==='/login');state.technicalSessionClosed=true;save()
+    await page.getByRole('menuitem',{name:'退出登录',exact:true}).click();await page.waitForURL(url=>url.pathname==='/login');state.technicalSessionClosed=true;if(state.sessionCloseError){(state.recoveredSessionCloseErrors??=[]).push(state.sessionCloseError);delete state.sessionCloseError}save()
   }catch(error){state.sessionCloseError=error.message;save()}
   await context.close();await browser.close()
 }
