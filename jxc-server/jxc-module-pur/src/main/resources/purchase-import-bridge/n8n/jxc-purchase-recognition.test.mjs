@@ -70,3 +70,34 @@ test('同款但规格冲突可回传，未同款就声称规格一致必须失�
   assert.equal(run('Validate explanation',reply(check),{'Prepare explanation':prepared})[0].json.explanation.status,'READY')
   assert.equal(run('Validate explanation',reply({...check,imageMatch:'DIFFERENT',specMatch:'MATCH'}),{'Prepare explanation':prepared})[0].json.explanation.status,'FAILED')
 })
+
+test('没有候选时仍把来源图送去识别实际类别，不凭档案占位名命名',()=>{
+  const evidence={...evidenceFixture(),candidates:[]},input={...picturesFixture(),images:[picturesFixture().images[0]],pairs:[]}
+  const prepared=run('Prepare explanation',{statusCode:200,body:{code:'OK',data:input}},{'Resolve real products':{statusCode:200,body:{code:'OK',data:evidence}}})[0].json
+  assert.equal(prepared.needsExplanation,true)
+  assert.equal(prepared.prompt.messages[1].content.filter(v=>v.type==='image_url').length,1)
+})
+
+test('图片命名返回开放类别，杯垫和餐垫不被服装规则拒绝',()=>{
+  const prepared={evidence:{...evidenceFixture(),candidates:[]},reviewInput:{...picturesFixture(),pairs:[]},needsExplanation:true}
+  for(const [category,baseName] of [['裤子','黑色条纹裤子'],['杯垫','蓝色圆形杯垫'],['餐垫','绿色长方形餐垫']]){
+    const suggestion={status:'READY',category,baseName,sourceKeys:['SOURCE:7'],reason:'来源图可辨认该类别及颜色形状'}
+    const content={status:'READY',message:'名称建议待确认',candidateIds:[],candidateChecks:[],productNameSuggestion:suggestion}
+    const out=run('Validate explanation',{statusCode:200,body:{choices:[{message:{content:JSON.stringify(content)}}]}},{'Prepare explanation':prepared})[0].json
+    assert.equal(out.explanation.status,'READY');assert.equal(out.explanation.productNameSuggestion.baseName,baseName)
+  }
+})
+
+test('用途不明保留待确认，不能用候选图或验收序号伪造来源名称',()=>{
+  const prepared={evidence:{...evidenceFixture(),candidates:[]},reviewInput:picturesFixture(),needsExplanation:true}
+  const suggestion={status:'NEEDS_REVIEW',category:null,baseName:null,sourceKeys:['SOURCE:7'],reason:'无法确定是杯垫还是餐垫，请核对用途'}
+  const reply=name=>({statusCode:200,body:{choices:[{message:{content:JSON.stringify({status:'READY',message:'已检查',candidateIds:[],candidateChecks:[],productNameSuggestion:name})}}]}})
+  assert.equal(run('Validate explanation',reply(suggestion),{'Prepare explanation':prepared})[0].json.explanation.productNameSuggestion.status,'NEEDS_REVIEW')
+  for(const invalid of [{...suggestion,status:'READY',category:'杯垫',baseName:'蓝色杯垫',sourceKeys:['CANDIDATE:8']},{...suggestion,status:'READY',category:'商品',baseName:'NY-051验收商品08'}])assert.equal(run('Validate explanation',reply(invalid),{'Prepare explanation':prepared})[0].json.explanation.status,'FAILED')
+})
+
+test('来源图读取失败不能冒充正常缺图或成功空名称',()=>{
+  const prepared={needsExplanation:false,evidence:{candidates:[]},reviewInput:{images:[],pairs:[],errors:[{sourceKey:'SOURCE:7',reason:'原图读取超时'}]}}
+  const out=run('Validate explanation',{}, {'Prepare explanation':prepared})[0].json.explanation
+  assert.equal(out.status,'UNAVAILABLE');assert.match(out.message,/读取超时/);assert.equal(out.productNameSuggestion,undefined)
+})

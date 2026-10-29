@@ -9,6 +9,7 @@ import { renderToString } from '@vue/server-renderer'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 import { loadTsModule } from './contracts/load-ts-module.mjs'
 const { createPurchaseImportCatalogImages } = loadTsModule(new URL('../src/modules/purchase/purchaseImportCatalogImages.ts', import.meta.url))
+const naming = loadTsModule(new URL('../src/modules/purchase/purchaseImportDisplay.ts', import.meta.url))
 
 const file = new URL('../src/modules/purchase/PurchaseImportReviewDialog.vue', import.meta.url)
 const image = (id, status = 'UNCONFIRMED') => ({ id, status, sha256: 'a'.repeat(64) })
@@ -28,6 +29,7 @@ function dialog(rows = [row(1)], options = {}) {
     computed, ref, watch, onBeforeUnmount() {}, defineProps: () => props, defineEmits: () => () => {},
     useCountryStore: () => ({ current: { name: '测试国家' } }),
     createPurchaseImportCatalogImages,
+    ...naming,
     http: { async get() { return { recognitionEnabled: true } } }, ElMessageBox: { async confirm() {} },
   }, ['activeTab', 'selectedRow', 'row', 'todoItems', 'todoRowCount', 'openTodo', 'readyCount', 'needsProductSetup', 'needsCountrySetup', 'matchInputs', 'fresh', 'mode', 'chooseCandidate', 'productId', 'unit', 'confirmExisting', 'choices', 'products', 'manualSelection', 'productOptions', 'saveInputs', 'candidateGroups', 'showCached', 'cachedCandidates', 'candidateScore', 'percent', 'locked', 'inputsDirty', 'matchEnabled', 'capabilityError', 'currentMatch', 'routeLabel', 'catalogImages', 'imageUrls', 'imageErrors', 'imageLoading', 'candidateCheck', 'imageCheckLabel', 'specCheckLabel'])
   return { ...state, page, props, calls }
@@ -218,4 +220,22 @@ test('旧版缓存选择须标记人工确认，过期后人工目录选择不�
   d.page.state.rows[0].version = 2; await nextTick()
   d.productId.value = 501; d.unit.value = '件'; d.manualSelection(); await d.confirmExisting()
   assert.deepEqual(d.calls.at(-1), ['decide', 1, { decision: 'EXISTING', productId: 501, unit: '件' }])
+})
+
+test('同版本AI命名到达后预填新品，人工改名不会被后续轮询覆盖', async () => {
+  const source=rankedRow(),d=dialog([source]);d.page.state.rows[0].images=[image(7)];await nextTick()
+  d.mode.value='new'
+  d.page.state.rows[0].matchResult.explanation={status:'READY',message:'命名完成',productNameSuggestion:{status:'READY',category:'裤子',baseName:'黑色条纹裤子',productSpec:'S',name:'S码黑色条纹裤子',sourceKeys:['SOURCE:7'],reason:'来源图可辨认'}}
+  await nextTick();assert.equal(d.fresh.value.name,'S码黑色条纹裤子')
+  assert.equal(d.mode.value,'new')
+  d.fresh.value.name='人工确认黑色条纹裤子'
+  d.page.state.rows[0].matchResult.explanation.productNameSuggestion.name='S码条纹裤子';await nextTick()
+  assert.equal(d.fresh.value.name,'人工确认黑色条纹裤子')
+  assert.equal(d.page.state.rows[0].suppliedProductName,undefined)
+})
+
+test('不同物品按各自行规格和类别预填，切行不串用裤子名称',async()=>{
+  const one=rankedRow(),two=row(2,{productSpec:null,matchTaskId:'second',images:[image(8)],matchResult:{runId:'second',inputRevision:1,candidates:[],explanation:{status:'READY',productNameSuggestion:{status:'READY',category:'杯垫',baseName:'蓝色圆形杯垫',name:'蓝色圆形杯垫',productSpec:null,sourceKeys:['SOURCE:8'],reason:'来源图是杯垫'}}}})
+  const d=dialog([one,two]);d.selectedRow.value=2;await nextTick()
+  assert.equal(d.fresh.value.name,'蓝色圆形杯垫');assert.equal(d.fresh.value.spec,'')
 })
