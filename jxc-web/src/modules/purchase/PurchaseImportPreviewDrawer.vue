@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { http } from '@/api/http'
+import { formatImportDecimal } from './purchaseImportDisplay'
 import type { FeeReviewInput, ImportDraftGroup, PurchaseImportModel } from './purchaseImportModel'
 
 const props = defineProps<{ modelValue: boolean; page: PurchaseImportModel; books: { id: number; name: string }[]; suppliers: { id: number; name: string }[]; currencies: { code: string }[] }>()
@@ -34,7 +35,7 @@ function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', R
 async function create(group: ImportDraftGroup) {
   if (locked.value || !enabled.value) return
   const context = epoch, batch = props.page.state.batchId, token = group.previewToken
-  try { await ElMessageBox.confirm(`确认按当前完整预览创建 ${group.sourceOrderNo} 的采购草稿？共${group.preview?.lines.length}行，金额${group.preview?.totalAmount} ${group.header.currency}。`, '确认创建采购草稿', { confirmButtonText: '确认创建草稿', cancelButtonText: '返回核对', type: 'warning' }) }
+  try { await ElMessageBox.confirm(`确认按当前完整预览创建 ${group.sourceOrderNo} 的采购草稿？共${group.preview?.lines.length}行，金额${formatImportDecimal(group.preview?.totalAmount ?? null)} ${group.header.currency}。`, '确认创建采购草稿', { confirmButtonText: '确认创建草稿', cancelButtonText: '返回核对', type: 'warning' }) }
   catch (error) { if (error !== 'cancel' && error !== 'close') props.page.failure(error); return }
   if (active && context === epoch && batch === props.page.state.batchId && token === group.previewToken && !locked.value) await props.page.createDraft(group)
 }
@@ -66,21 +67,21 @@ onBeforeUnmount(() => { active = false; ++epoch })
         <div><el-button type="primary" @click="save(group)">保存并重新核对</el-button><el-button @click="editing = null">取消</el-button></div>
       </el-form>
       <p class="hint">{{ books.find(item => item.id === group.header.bookId)?.name || '账套待核实' }} · {{ suppliers.find(item => item.id === group.header.supplierId)?.name || '供应商待核实' }} · {{ group.header.currency }} · {{ group.header.orderDate }}</p>
-      <p class="hint">预计交货 {{ group.header.expectedDate || '未填写' }}；预付比例 {{ group.header.prepayRatio ?? '待核实' }}；账期 {{ group.header.termDays ?? '待核实' }} 天；付款条件 {{ group.header.paymentTerms || '未填写' }}；税率 {{ group.header.taxRate ?? '待核实' }}；单价口径 {{ group.header.priceTaxBasis === 'EXCLUSIVE' ? '未含税' : '待核实' }}</p>
+      <p class="hint">预计交货 {{ group.header.expectedDate || '未填写' }}；预付比例 {{ formatImportDecimal(group.header.prepayRatio ?? null) }}；账期 {{ group.header.termDays ?? '待核实' }} 天；付款条件 {{ group.header.paymentTerms || '未填写' }}；税率 {{ formatImportDecimal(group.header.taxRate ?? null) }}；单价口径 {{ group.header.priceTaxBasis === 'EXCLUSIVE' ? '未含税' : '待核实' }}</p>
       <ul v-if="group.errors.length" class="issues"><li v-for="(error, n) in group.errors" :key="n"><span v-if="error.sourceRow">{{ error.sourceSheet }} 原第{{ error.sourceRow }}行：</span>{{ error.message }}</li></ul>
-      <div v-if="group.preview" class="preview-scroll"><table><thead><tr><th>行</th><th>商品／规格</th><th>数量与单位</th><th>原始采购单价</th><th>正式采购单价</th><th>舍入差额</th><th>税率</th><th>金额</th></tr></thead><tbody><tr v-for="line in group.preview.lines" :key="line.lineNo"><td>{{ line.lineNo }}</td><td>{{ productLabel(line.productId) }} · {{ line.productSpec || '规格待核实' }}</td><td>{{ line.qty }} {{ line.unit }}</td><td>{{ line.sourceUnitPrice }}</td><td>{{ line.unitPrice }}</td><td>{{ line.unitPriceDifference }}</td><td>{{ line.taxRate }}</td><td>{{ line.amount }}</td></tr></tbody></table><p>货款 {{ group.preview.totalAmount }} {{ group.header.currency }}；税额 {{ group.preview.taxAmount }} {{ group.header.currency }}</p></div>
+      <div v-if="group.preview" class="preview-scroll"><table><thead><tr><th>行</th><th>商品／规格</th><th>数量与单位</th><th>原始采购单价</th><th>正式采购单价</th><th>舍入差额</th><th>税率</th><th>金额</th></tr></thead><tbody><tr v-for="line in group.preview.lines" :key="line.lineNo"><td>{{ line.lineNo }}</td><td>{{ productLabel(line.productId) }} · {{ line.productSpec || '规格待核实' }}</td><td>{{ formatImportDecimal(line.qty) }} {{ line.unit }}</td><td :title="line.sourceUnitPrice">{{ formatImportDecimal(line.sourceUnitPrice) }}</td><td :title="line.unitPrice">{{ formatImportDecimal(line.unitPrice) }}</td><td :title="line.unitPriceDifference">{{ line.unitPriceDifference.startsWith('-') ? '-' : '' }}{{ formatImportDecimal(line.unitPriceDifference.replace(/^-/,'') ) }}</td><td :title="line.taxRate">{{ formatImportDecimal(line.taxRate) }}</td><td :title="line.amount">{{ formatImportDecimal(line.amount) }}</td></tr></tbody></table><p>货款 {{ formatImportDecimal(group.preview.totalAmount) }} {{ group.header.currency }}；税额 {{ formatImportDecimal(group.preview.taxAmount) }} {{ group.header.currency }}</p></div>
       <section class="fee-review" aria-label="费用来源核对">
         <h3>待后续登记的费用</h3><p class="hint">原表重复出现的运费不会自动相加。请核对整单或单行归属、原币和金额；此处只保存来源记录。</p>
-        <el-form v-for="(fee,index) in feeEdits[group.id]" :key="index" label-width="90px" :disabled="locked">
+        <el-form v-for="(fee,index) in feeEdits[group.id]" :key="index" label-width="90px" :disabled="locked || !!group.orderId">
           <p>费用来源 {{ fee.sourceRowIds.length }} 条明细 · {{ group.feeTodos?.[index]?.reviewStatus === 'CONFIRMED' ? '已核对' : group.feeTodos?.[index]?.reviewStatus === 'STALE' ? '来源已变化，需复核' : '待核对' }}</p>
           <el-form-item label="归属"><el-select v-model="fee.scope" aria-label="费用归属"><el-option value="ORDER" label="整单一次"/><el-option value="LINE" label="单行"/></el-select></el-form-item>
           <el-form-item label="来源明细"><el-select v-model="fee.sourceRowIds" multiple collapse-tags aria-label="费用来源明细"><el-option v-for="source in group.sourceEvidence" :key="source.rowId" :value="source.rowId" :label="`第${source.rowNo}行 · ${source.sourceSheet} 原${source.sourceRow}行`"/></el-select></el-form-item>
           <el-form-item label="费用原币"><el-select v-model="fee.currency" aria-label="费用原币"><el-option v-for="item in currencies" :key="item.code" :value="item.code" :label="item.code"/></el-select></el-form-item>
-          <el-form-item label="费用金额"><el-input v-model="fee.amount" aria-label="费用金额" inputmode="decimal" placeholder="未知请留空"/></el-form-item>
+          <el-form-item label="费用金额"><span v-if="group.orderId" :title="fee.amount ?? undefined">{{ formatImportDecimal(fee.amount) }}</span><el-input v-else v-model="fee.amount" aria-label="费用金额" inputmode="decimal" placeholder="未知请留空"/></el-form-item>
           <el-form-item label="核对原因"><el-input v-model="fee.reason" aria-label="费用核对原因" type="textarea"/></el-form-item>
           <el-checkbox v-model="fee.confirm" aria-label="确认费用来源">我已核对上述费用归属、金额及原币</el-checkbox>
         </el-form>
-        <el-button :disabled="locked" @click="page.saveFeeTodos(group,feeEdits[group.id]!)">保存费用核对</el-button>
+        <el-button :disabled="locked || !!group.orderId" @click="page.saveFeeTodos(group,feeEdits[group.id]!)">保存费用核对</el-button>
       </section>
       <el-collapse><el-collapse-item title="原文件、原单元格与公式来源"><div v-for="source in group.sourceEvidence" :key="source.rowId" class="source-evidence"><strong>第{{ source.rowNo }}行 · {{ source.fileName }} · {{ source.sourceSheet }} 原{{ source.sourceRow }}行</strong><p>原值：{{ JSON.stringify(source.originalValues) }}</p><p>公式及数量格：{{ JSON.stringify(source.formulaProvenance) }}</p></div></el-collapse-item></el-collapse>
       <el-alert v-if="group.errorMessage" :title="group.errorMessage" type="error" :closable="false" />

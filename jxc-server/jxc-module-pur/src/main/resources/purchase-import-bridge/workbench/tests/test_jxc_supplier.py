@@ -135,3 +135,19 @@ def test_unmapped_original_formulas_are_kept_for_review_not_recalculated(tmp_pat
     assert row['formulas']['G'] == '=C2*E2'
     assert row['cachedValues']['G'] is None
     assert row['rawNumericTexts']['C'] == '10'
+
+
+def test_original_summary_can_be_explicitly_excluded_without_becoming_purchase_detail(tmp_path):
+    from openpyxl import load_workbook
+    path, compact, mapping = supplier(tmp_path)
+    book = load_workbook(path); book.active.append(['合计', None, 10, 4]); book.save(path)
+    compact['source']['sha256'] = hashlib.sha256(path.read_bytes()).hexdigest()
+    mapping['fileSha256'] = compact['source']['sha256']
+    compact['rows'].append(dict(source_sheet='订单', source_row=3, row_kind='total', cells={'A': '合计'}))
+    mapping['ignoredRows'] = [dict(sourceRow=3, reason='合计行，非采购明细')]
+    result = build_supplier_document(path, compact, mapping)
+    assert [r['sourceRow'] for r in result['rows']] == [2, 2]
+    assert any(w['code'] == 'SUPPLIER_ROW_EXCLUDED' and w['sourceRow'] == 3 for w in result['warnings'])
+    mapping['ignoredRows'][0]['sourceRow'] = 999
+    with pytest.raises(SourceError):
+        build_supplier_document(path, compact, mapping)

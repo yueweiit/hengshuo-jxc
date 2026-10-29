@@ -109,11 +109,14 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
         values={ref:cell_value(cell,strings) for ref,cell in raw.items()}
         output=dict(format='SourceDocumentV1',source=dict(fileSha256=digest,fileName=source.name,bytes=source.stat().st_size,parserVersion='docling-n8n-supplier-v1'),
                     sheets=[],rows=[],images=[],associations=[],warnings=[],errors=[])
-        covered=set(); qty_cells=set()
+        source_rows = {int(re.search('[0-9]+', ref).group()) for ref in raw}
+        covered=set(); qty_cells=set(); ignored_source_rows=set()
         for item in ignored:
-            if not isinstance(item,dict) or set(item)!=set(('sourceRow','reason')) or type(item['sourceRow']) is not int or item['sourceRow'] not in detail or not isinstance(item['reason'],str) or not item['reason'].strip() or item['sourceRow'] in covered:
+            if not isinstance(item,dict) or set(item)!=set(('sourceRow','reason')) or type(item['sourceRow']) is not int or item['sourceRow'] not in source_rows or not isinstance(item['reason'],str) or not item['reason'].strip() or item['sourceRow'] in ignored_source_rows:
                 reject('被排除明细缺少有效来源或核对原因')
-            covered.add(item['sourceRow'])
+            ignored_source_rows.add(item['sourceRow'])
+            if item['sourceRow'] in detail:
+                covered.add(item['sourceRow'])
             output['warnings'].append(dict(code='SUPPLIER_ROW_EXCLUDED',sourceSheet=sheet_name,sourceRow=item['sourceRow'],message='识别为非采购明细，请核对：'+item['reason'][:500]))
         ignored_rows=set(covered)
         file_rows = len(detail - ignored_rows)

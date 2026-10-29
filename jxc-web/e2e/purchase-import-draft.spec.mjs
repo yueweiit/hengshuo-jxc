@@ -44,7 +44,8 @@ async function command(path,action){
   return body.data
 }
 async function select(locator,text){
-  await locator.click();const menu=page.locator('.el-select__popper:visible').last()
+  const selectRoot=locator.locator('xpath=ancestor-or-self::*[contains(concat(" ", normalize-space(@class), " "), " el-select ")][1]')
+  await selectRoot.click();const menu=page.locator('.el-select__popper:visible').last()
   await menu.getByRole('option').filter({hasText:text}).first().click()
 }
 async function refresh(){
@@ -140,10 +141,13 @@ async function previewAndDraft(){
   if(!g.feeTodos.every(t=>t.reviewStatus==='CONFIRMED')){
     await select(drawer.getByRole('combobox',{name:'费用归属',exact:true}),'整单一次');await select(drawer.getByRole('combobox',{name:'费用原币',exact:true}),/^USD$/)
     await drawer.getByLabel('费用金额',{exact:true}).fill('29.10');await drawer.getByLabel('费用核对原因',{exact:true}).fill('NY051测试口径：整单美元运费29.10一次，原行重复值不累加，后续另行登记')
-    await drawer.getByLabel('确认费用来源',{exact:true}).check()
+    await drawer.locator('.el-checkbox').click();await expect(drawer.getByRole('checkbox',{name:'确认费用来源',exact:true})).toBeChecked()
     const saved=await command(`/pur/order-imports/${state[active].batchId}/groups/${g.id}/fee-todos`,()=>drawer.getByRole('button',{name:'保存费用核对',exact:true}).click());assert.equal(saved.feeTodos[0].sourceRowIds.length,60);assert.equal(saved.feeTodos[0].reviewStatus,'CONFIRMED')
   }
   await expect(drawer.locator('.preview-scroll tbody tr')).toHaveCount(60)
+  const firstCells=drawer.locator('.preview-scroll tbody tr').first().locator('td')
+  await expect(firstCells.nth(2)).toHaveText(/^\d+\.\d{2} PCS$/)
+  for(const index of [3,4,5,6,7])await expect(firstCells.nth(index)).toHaveText(/^-?\d+\.\d{2}$/)
   await page.screenshot({path:dir+`/${active}-preview.png`,fullPage:true})
   if(!state[active].orderId){
     await drawer.getByRole('button',{name:/确认创建采购草稿|继续原创建请求/}).click()
@@ -170,15 +174,20 @@ try{
     if(label==='supplier'&&latest.status!=='REVIEW'){
       const task=latest.tasks.find(t=>t.kind==='PARSE'&&t.result?.mapping);assert.ok(task,'供应商解析失败且没有字段核对建议')
       await page.getByRole('button',{name:'核对原列与规格',exact:true}).click();const d=page.getByRole('dialog',{name:'核对供应商原列与规格',exact:true})
+      assert.ok(task.result.sourceCells.some(c=>c.cell==='A1'&&c.value==='NY-051'),'原A1采购单号不一致')
+      for(const [index,line] of task.result.mapping.lines.entries())if(!line.cells.sourceOrderNo)await d.getByLabel(`原${line.sourceRow}行采购单号来源${index}`,{exact:true}).fill('A1')
       for(const [col,spec] of [['B','S'],['C','M'],['D','L']])await d.getByLabel(`${col}列规格`,{exact:true}).fill(spec)
-      await d.getByLabel('确认原列与规格',{exact:true}).check()
+      await d.locator('.el-checkbox').click();await expect(d.getByRole('checkbox',{name:'确认原列与规格',exact:true})).toBeChecked()
       await command(`/pur/order-imports/tasks/${task.id}/retry`,()=>d.getByRole('button',{name:'确认字段并重试原任务',exact:true}).click());await waitParsed()
     }
     assert.equal(latest.status,'REVIEW');assert.equal(latest.rows.length,60);assert.equal(latest.rows.reduce((s,r)=>s+Number(r.purchaseQty),0),480)
-    assert.equal(new Set(latest.rows.flatMap(r=>r.images.map(i=>i.id))).size,label==='template'?20:21)
+    assert.equal(new Set(latest.rows.flatMap(r=>r.images.map(i=>i.id))).size,20)
+    assert.equal(latest.rows.reduce((sum,r)=>sum+r.images.length,0),label==='template'?60:63)
+    if(label==='supplier')assert.ok(latest.rows.filter(r=>r.sourceRow===11).every(r=>r.images.length===2),'原第11行两张图必须关联所有拆分规格')
     if(!state[label].orderId){await header();await photos();await match();await products()}
     await previewAndDraft();assert.deepEqual(forbidden,[])
   }
+  if(state.lastError){(state.recoveredErrors??=[]).push({...state.lastError,resolvedAt:new Date().toISOString()});delete state.lastError}
   state.status='VERIFIED';save();announce('两份Excel页面草稿均通过')
 }catch(error){state.lastError={branch:active,message:error.message,at:new Date().toISOString()};save();await page.screenshot({path:dir+'/page-first-failure.png',fullPage:true});throw error}
 finally{

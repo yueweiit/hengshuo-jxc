@@ -77,6 +77,7 @@ test('取消照片编辑不上传，普通字段保存不因两位显示改变�
   page.state.edit.values.productSpec = 'M'
   assert.equal(await page.saveEdit(), true)
   assert.equal(page.state.rows[0].purchaseUnitPrice, '53.0606250000')
+
 })
 
 test('整行上传失败保留文件和草稿，相同请求重试复用key并采用保存后的图片和版本', async () => {
@@ -184,7 +185,7 @@ test('多张照片中部分读取失败仍显示可用图片，并明确失败�
   assert.match(html, /重试加载/)
 })
 
-test('表格实际输出两位数字，编辑其他字段时原数值仍是十位精度', async () => {
+test('表格与完整预览输出两位数字，编辑和提交仍保留原精度', async () => {
   const page = setup(); await page.loadBatch(batchId)
   const file = new URL('../src/modules/purchase/PurchaseImportTable.vue', import.meta.url)
   const { importColumns } = feature('purchaseImportModel'), { formatImportDecimal } = feature('purchaseImportDisplay')
@@ -199,6 +200,17 @@ test('表格实际输出两位数字，编辑其他字段时原数值仍是十�
   assert.match(html, />53\.06</); assert.match(html, />10\.00</)
   assert.doesNotMatch(html, /53\.0606250000/)
   assert.equal(page.state.rows[0].purchaseUnitPrice, '53.0606250000')
+  const previewLine={lineNo:1,productId:501,productSpec:'S',qty:'10.0000',unit:'PCS',sourceUnitPrice:'53.0606250000',unitPrice:'53.0606',unitPriceDifference:'-0.0000250000',taxRate:'0.0000000000',amount:'530.6060'}
+  page.state.groups=[{id:7,version:1,sourceOrderNo:'PO',createStatus:'CREATED',orderId:8,header:{...header,taxRate:'0.0000000000'},preview:{lines:[previewLine],totalAmount:'530.6060',taxAmount:'0.0000'},errors:[],feeTodos:[],sourceEvidence:[]}]
+  const previewSource=new URL('../src/modules/purchase/PurchaseImportPreviewDrawer.vue',import.meta.url)
+  const props={page,modelValue:true,books:[],suppliers:[],currencies:[]}
+  const bindings=loadVueScript(previewSource,{ref,computed,watch,onBeforeUnmount(){},defineProps:()=>props,defineEmits:()=>()=>{},formatImportDecimal,http:{async get(){return {draftCreationEnabled:true}}}},['editingVersion','editing','header','split','feeEdits','enabled','capabilityError','capabilityLoading','locked','edit','save','productLabel','groupRows','status','create'])
+  const previewTemplate=readFileSync(previewSource,'utf8').match(/<template>([\s\S]*)<\/template>/)[1].replaceAll('feeEdits[group.id]!','feeEdits[group.id]')
+  const previewApp=createSSRApp({setup:()=>({...bindings,...props,formatImportDecimal}),render:compile(previewTemplate)})
+  for(const name of ['ElDrawer','ElAlert','ElButton','ElForm','ElFormItem','ElSelect','ElOption','ElInput','ElCheckbox','ElCollapse','ElCollapseItem','RouterLink'])previewApp.component(name,slot)
+  const previewHtml=await renderToString(previewApp)
+  assert.match(previewHtml,/>53\.06</);assert.match(previewHtml,/>10\.00 PCS</);assert.match(previewHtml,/>-0\.00</);assert.match(previewHtml,/货款 530\.61/)
+  assert.equal(previewLine.sourceUnitPrice,'53.0606250000');assert.equal(previewLine.unitPriceDifference,'-0.0000250000')
 })
 
 test('照片适配器发送文件、行版本、原数值及重试key，并通过受权接口读取原图', async () => {
