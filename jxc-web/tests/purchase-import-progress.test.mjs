@@ -110,4 +110,8 @@ test('总量未知时真实等待条可见且无虚构百分比，缺步骤不�
   assert.match(html,/进度待统计/)
   assert.match(html,/<li class="active">读取文件/)
   assert.doesNotMatch(html,/<li class="active">保存明细/)
+  page.state.tasks[0].status='FAILED'
+  const failed=await renderProgress(page)
+  assert.doesNotMatch(failed,/处理中，进度待统计|inner--indeterminate/)
+  assert.match(failed,/导入未完成/)
 })

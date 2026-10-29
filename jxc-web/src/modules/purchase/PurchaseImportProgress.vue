@@ -11,8 +11,8 @@ const steps = ['上传文件', '读取文件', '解析明细', '校验与照片'
     <div class="progress-heading"><strong>{{ display.title }}</strong><span>{{ display.fileName }}</span></div>
     <ol class="progress-steps"><li v-for="(step, index) in steps" :key="step" :class="{ active: display.step === index, done: display.step > index }">{{ step }}</li></ol>
     <!-- 未知总量时条宽只承载等待动画，不向用户或辅助技术声称完成百分比。 -->
-    <el-progress :percentage="display.percentage ?? 100" :aria-valuenow="display.percentage ?? undefined" :indeterminate="display.percentage === null" :show-text="display.percentage !== null" :status="display.failed ? 'exception' : display.complete ? 'success' : undefined" :aria-label="page.state.upload ? '文件上传进度' : '当前步骤进度'" />
-    <p v-if="display.percentage === null">处理中，进度待统计</p>
+    <el-progress :percentage="display.percentage ?? 100" :aria-valuenow="display.percentage ?? undefined" :indeterminate="display.percentage === null && !display.failed" :show-text="display.percentage !== null" :status="display.failed ? 'exception' : display.complete ? 'success' : undefined" :aria-label="page.state.upload ? '文件上传进度' : '当前步骤进度'" />
+    <p v-if="display.percentage === null && !display.failed">处理中，进度待统计</p>
     <div class="progress-counts"><span>{{ page.state.upload ? '文件传输进度' : '当前步骤进度' }}</span><span>{{ display.rows }}<template v-if="display.images"> · {{ display.images }}</template></span></div>
     <p :class="{ 'progress-error': display.failed }">{{ display.message }}</p>
     <div v-if="page.state.progressError" class="progress-error">进度查询中断：{{ page.state.progressError }}。将继续重连。<el-button link type="primary" :disabled="page.state.progressReading" @click="page.refreshTasks()">重新查询</el-button></div>
