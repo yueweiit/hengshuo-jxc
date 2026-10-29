@@ -134,12 +134,18 @@ const candidateCheck = (productId: number) => row.value?.matchResult?.explanatio
 const routeLabel = (status: string) => ({ FOUND: '已找到候选', NOT_FOUND: '未查到', NO_INPUT: '无输入', UNAVAILABLE: '暂不可用', FAILED: '执行失败' }[status] || status)
 async function search() {
   if (catalogLoading.value) return
+  const selected = row.value
   const context = ++epoch; catalogLoading.value = true; catalogError.value = ''
   try {
     const result = await http.get<{ records: Product[] }>('/md/products', { keyword: keyword.value.trim(), page: 1, size: 50 }, { silent: true })
     if (!active || context !== epoch) return
     if (!Array.isArray(result.records)) throw new Error('商品目录响应格式不正确')
     products.value = result.records; catalogLoaded.value = true
+    const first = result.records[0]
+    if (first && selected && row.value?.id === selected.id && row.value.version === selected.version && !locked.value) {
+      candidateRun.value = null; candidateProduct.value = null; manualCandidate.value = false; productId.value = first.id
+      await props.page.decideProduct(selected, { decision: 'EXISTING', productId: first.id })
+    }
   } catch (error) { if (active && context === epoch) catalogError.value = error instanceof Error ? error.message : '商品目录读取失败，请重试' }
   finally { if (active && context === epoch) catalogLoading.value = false }
 }
@@ -256,7 +262,7 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
         <el-tab-pane label="辅助识别" name="match">
           <template v-if="row">
       <div class="match-panel">
-        <div class="match-title"><strong>图文候选辅助核对</strong><span>候选不会自动确认商品，也不会自动判定新品。</span></div>
+        <div class="match-title"><strong>商品自动匹配</strong><span>符合条件时自动选定商品与单位并就绪；未找到才需人工核对或确认新品。</span></div>
         <div class="match-inputs"><el-input v-model="matchInputs.suppliedProductCode" placeholder="系统商品编码（未知留空）" aria-label="补充系统商品编码" :disabled="locked" maxlength="200" /><el-input v-model="matchInputs.suppliedProductName" placeholder="商品名称（未知留空）" aria-label="补充商品名称" :disabled="locked" maxlength="200" /><el-input v-model="matchInputs.supplierProductCode" placeholder="供应商编码（未知留空）" aria-label="补充供应商编码" :disabled="locked" maxlength="200" /></div>
         <div class="match-actions"><el-button :disabled="locked || !inputsDirty" @click="saveInputs">保存补充文字</el-button><el-button :disabled="locked || !matchEnabled || inputsDirty" @click="page.startMatches([row.id])">重新核对本行</el-button><span v-if="!matchEnabled && !capabilityError">当前环境尚未启用候选识别</span><span v-if="inputsDirty">请先保存补充文字</span></div>
         <p v-if="capabilityError" class="review-warning">{{ capabilityError }}</p>
@@ -268,7 +274,7 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
           <p v-if="!row.matchResult.candidates.length">{{ row.matchResult.status === 'FAILED' ? '候选识别失败，请检查上述原因后重试，或继续人工查找。' : '当前没有可核实候选，请继续人工查找或核对新品。' }}</p>
           <p v-if="row.matchResult.ranking" :class="{ 'review-warning': !row.matchResult.ranking.recommendedIds.length }">{{ row.matchResult.ranking.reason }}</p>
           <p v-else class="review-warning">这是旧版缓存，尚无加权评分，请人工核对或重新核对本行。</p>
-          <p class="review-hint">照片至少80%，只取最高分组；文字至少80%，编号40% · 规格40% · 商品名20%。{{ row.matchResult.cacheReused ? '本次已复用照片缓存并重新计算文字分。' : '' }}</p>
+          <p class="review-hint">图片相似度大于80%时取最高分，同分取第一条；文字评分仅供参考。仅有文字目录命中时默认取第一条。{{ row.matchResult.cacheReused ? '本次已复用照片缓存。' : '' }}</p>
           <el-button v-if="cachedCandidates.length" link type="primary" @click="showCached = !showCached">{{ showCached ? '收起' : '查看' }}缓存候选（{{ cachedCandidates.length }}）</el-button>
           <section v-for="group in candidateGroups" :key="group.title" class="candidate-group">
           <h4>{{ group.title }}</h4>

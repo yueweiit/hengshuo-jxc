@@ -38,10 +38,10 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     if (!api.startMatches || busy() || state.edit) return false
     const tasks = new Map(state.tasks.map(task => [task.id,task]))
     const ids = imageReviewRows(state).filter(row => {
-      if (row.readiness === 'READY') return false
+      if (row.readiness === 'READY' || row.decision === 'DEFERRED') return false
       if (!row.matchTaskId) return true
       const task = tasks.get(row.matchTaskId)
-      return task?.status === 'SUCCEEDED' && row.matchResult && row.matchResult.inputRevision !== row.version
+      return task?.status === 'SUCCEEDED' && row.matchResult && (row.matchResult.inputRevision !== row.version || row.matchResult.ranking?.policyVersion !== 'photo-best-or-first-text-v2')
         || task?.status === 'STALE' && task.errorCode === 'INPUT_CHANGED'
     }).map(row => row.id)
     if (!ids.length) return false

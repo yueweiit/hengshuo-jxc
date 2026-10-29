@@ -8,7 +8,7 @@ import vue from '@vitejs/plugin-vue'
 import { chromium, expect } from '@playwright/test'
 
 const root=fileURLToPath(new URL('../',import.meta.url)),evidence=`${root}/../runtime/purchase-auto-review`
-for(const width of [1280,390])test(`自动逐行核对与单一人工入口，${width}宽度`,async()=>{
+for(const width of [1280,390])test(`商品自动就绪与未命中人工入口，${width}宽度`,async()=>{
   await mkdir(evidence,{recursive:true})
   const server=await createServer({configFile:false,root,cacheDir:`${evidence}/vite-cache`,plugins:[vue()],optimizeDeps:{entries:['e2e/fixtures/purchase-import-auto-review.html']},resolve:{alias:{'@':`${root}/src`}},server:{host:'127.0.0.1',port:0,fs:{allow:[root,'C:/project/jxc/jxc-web/node_modules']}}})
   await server.listen();let browser
@@ -38,7 +38,7 @@ for(const width of [1280,390])test(`自动逐行核对与单一人工入口，${
         matchRequests++;assert.deepEqual(request.postDataJSON(),{batchVersion:1,rowIds:[1,2],topK:5});assert.ok(request.headers()['idempotency-key'])
         data={...data,rows:rows.map((row,index)=>({...row,matchTaskId:runIds[index]})),tasks:[...data.tasks,...runIds.map((id,index)=>({id,kind:'MATCH',status:'RUNNING',result:{rowId:index+1}}))]};return ok({...data,taskIds:runIds})
       }
-      if(method==='PUT'&&path===`/pur/order-imports/${batchId}/rows/1/decision`){decisions++;const body=request.postDataJSON();assert.equal(body.productId,501);assert.equal(body.unit,'件');data.rows[0]={...data.rows[0],version:2,readiness:'READY',matchedProductId:501,purchaseUnit:'件',decision:'EXISTING'};return ok(data.rows[0])}
+      if(method==='PUT'&&path===`/pur/order-imports/${batchId}/rows/1/decision`){decisions++;return route.abort()}
       if(method==='GET'&&/\/images\/\d+\/content$|\/product-images\/\d+\/content$/.test(path))return route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5mUAAAAASUVORK5CYII=','base64')})
       unexpected.push(`${method} ${path}`);return route.abort()
     })
@@ -53,23 +53,25 @@ for(const width of [1280,390])test(`自动逐行核对与单一人工入口，${
     const entry=page.getByRole('button',{name:'待确定是否为新商品，2行待确认',exact:true});await expect(entry).toHaveClass(/el-button--danger/)
     await expect(page.locator('.pending-product-trigger .el-badge__content')).toHaveText('2')
     await expect(page.locator('.workflow-actions button')).toHaveCount(2)
-    data.tasks=data.tasks.map(task=>({...task,status:'SUCCEEDED'}));data.rows=data.rows.map((row,index)=>({...row,matchResult:{format:'MatchRunV1',runId:runIds[index],inputRevision:1,status:'OK',text:{status:'FOUND',reason:'隔离文字候选'},image:{status:'FOUND',reason:'隔离图片候选'},candidates:[{productId:501,product:{id:501,productCode:'TEST-501',name:'隔离候选商品',spec:'S',units:[{unit:'件'}]},visualScore:0.91,textEvidence:[],visualEvidence:[{queryAssetId:row.images[0].id,imageId:701,featureId:801,score:0.91}],conflicts:[]}],ranking:{format:'CandidateRankingV1',policyVersion:'photo-first-text-40-40-20-v1',completePhotoGroup:true,status:'RECOMMENDED',reason:'达到推荐门槛',photoThreshold:0.8,textThreshold:0.8,weights:{productCode:40,spec:40,name:20},highestPhotoIds:[501],recommendedIds:[501],scores:[{productId:501,photoScore:0.91,textScore:1,reason:'达到推荐门槛',fields:[{field:'productCode',label:'商品编号',weight:40,source:null,target:'TEST-501',score:null},{field:'spec',label:'规格',weight:40,source:'S',target:'S',score:1},{field:'name',label:'商品名',weight:20,source:null,target:'隔离候选商品',score:null}]}]},explanation:{status:'NOT_REQUESTED',message:'未调用真实算法'}}}))
+    const product={id:501,productCode:'TEST-501',name:'隔离候选商品',spec:'S',baseUnit:'件',units:[{unit:'件'}]}
+    const candidate={productId:501,product,visualScore:0.91,textEvidence:[],visualEvidence:[{queryAssetId:11,imageId:701,featureId:801,score:0.91}],conflicts:[]}
+    const score={productId:501,photoScore:0.91,textScore:1,reason:'相似度最高',fields:[{field:'productCode',label:'商品编号',weight:40,source:null,target:'TEST-501',score:null},{field:'spec',label:'规格',weight:40,source:'S',target:'S',score:1},{field:'name',label:'商品名',weight:20,source:null,target:'隔离候选商品',score:null}]}
+    data={...data,version:2,tasks:data.tasks.map(task=>({...task,status:'SUCCEEDED'})),rows:data.rows.map((row,index)=>({...row,...(index===0?{version:2,readiness:'READY',decision:'EXISTING',matchedProductId:501,purchaseUnit:'件',productSnapshot:product}:{}),matchResult:{format:'MatchRunV1',runId:runIds[index],inputRevision:index===0?2:1,status:'OK',text:{status:'NO_INPUT',reason:'无文字'},image:{status:index===0?'FOUND':'NOT_FOUND',reason:'隔离图片匹配'},candidates:index===0?[candidate]:[],ranking:{format:'CandidateRankingV1',policyVersion:'photo-best-or-first-text-v2',completePhotoGroup:true,status:index===0?'RECOMMENDED':'NEEDS_REVIEW',reason:index===0?'已自动选定商品':'没有符合条件的商品',photoThreshold:0.8,textThreshold:null,weights:{productCode:40,spec:40,name:20},highestPhotoIds:index===0?[501]:[],recommendedIds:index===0?[501]:[],scores:index===0?[score]:[]},explanation:{status:'NOT_REQUESTED',message:'隔离夹具不调用真实算法'}}}))}
     await expect(page.getByRole('region',{name:'采购明细',exact:true}).locator('.import-progress')).toContainText('AI已处理 2 / 2 行')
     await expect(page.getByRole('button',{name:'编辑第1行商品名',exact:true})).toContainText('隔离候选商品')
-    await expect(page.getByRole('button',{name:'编辑第1行商品名',exact:true})).toContainText('AI推荐、待确认')
-    assert.equal(data.rows[0].suppliedProductName,undefined);assert.equal(data.rows[0].matchedProductId,undefined);assert.equal(data.rows[0].images[0].status,'UNCONFIRMED');assert.equal(decisions,0)
+    await expect(page.getByRole('button',{name:'编辑第1行商品名',exact:true})).toContainText('已核对商品')
+    assert.equal(data.rows[0].suppliedProductName,undefined);assert.equal(data.rows[0].matchedProductId,501);assert.equal(data.rows[0].images[0].status,'UNCONFIRMED');assert.equal(decisions,0)
     await page.getByRole('button',{name:'切换到粘贴模板视图',exact:true}).click()
     await expect(page.locator('revo-grid').getByText('隔离候选商品',{exact:true}).first()).toBeVisible()
-    await expect(page.locator('revo-grid').getByText('AI推荐、待确认',{exact:true}).first()).toBeVisible()
+    await expect(page.locator('revo-grid').getByText('已核对商品',{exact:true}).first()).toBeVisible()
     await page.getByRole('button',{name:'完成编辑',exact:true}).click()
-    // 暂存保留页面表头草稿；人工确认商品仍遵守原有“先保存基础信息”约束。
+    // 后台已自动就绪，前端不能再次请求人工确认；仅第二行留在人工入口。
     await page.getByRole('combobox',{name:'币种',exact:true}).click();await page.getByRole('option',{name:'USD · 美元',exact:true}).click()
     const saveHeader=page.getByRole('button',{name:'保存基础信息',exact:true})
     if(await saveHeader.isEnabled())await saveHeader.click()
-    await expect(dialog).toBeHidden();await entry.click();await expect(dialog.getByRole('tab',{name:'辅助识别',exact:true})).toHaveAttribute('aria-selected','true')
-    await expect(dialog).toContainText('外观相似度 0.9100');assert.equal(matchRequests,1)
-    await dialog.getByRole('button',{name:'选择此候选后核对单位',exact:true}).click();await dialog.getByRole('combobox',{name:'确认采购单位',exact:true}).click();await page.getByRole('option',{name:'件',exact:true}).click()
-    await dialog.getByRole('button',{name:'确认商品与单位',exact:true}).click();await expect.poll(()=>decisions).toBe(1)
+    await expect(dialog).toBeHidden();await page.getByRole('button',{name:'待确定是否为新商品，1行待确认',exact:true}).click();await expect(dialog.getByRole('tab',{name:'辅助识别',exact:true})).toHaveAttribute('aria-selected','true')
+    await expect(dialog).toContainText('当前没有可核实候选');assert.equal(matchRequests,1);assert.equal(decisions,0)
+    await dialog.getByRole('tab',{name:'商品与单位',exact:true}).click();await expect(dialog.getByText('确认新品',{exact:true})).toBeVisible()
     await dialog.getByRole('button',{name:'返回待确认事项',exact:true}).click();await expect(dialog.getByRole('region',{name:'来源资料核对',exact:true})).toBeVisible()
     await dialog.getByRole('button',{name:'返回明细',exact:true}).click();await expect(page.locator('.pending-product-trigger .el-badge__content')).toHaveText('1')
     await page.locator('.workflow-actions').scrollIntoViewIfNeeded();await page.screenshot({path:`${evidence}/entry-${width}.png`,animations:'disabled'})

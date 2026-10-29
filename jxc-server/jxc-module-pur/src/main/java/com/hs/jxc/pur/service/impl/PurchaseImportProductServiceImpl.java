@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.springframework.stereotype.Service;
 
-/** 人工决定是唯一READY入口；模型候选和图片不具有确认权限。 */
+/** 商品人工决定与已授权自动选定共用同一商品、单位和READY校验。 */
 @Service
 public class PurchaseImportProductServiceImpl implements PurchaseImportProductService {
     private final PurchaseImportProductMapper mapper;private final ProductImageApi images;
@@ -25,19 +25,37 @@ public class PurchaseImportProductServiceImpl implements PurchaseImportProductSe
         else if("EXISTING".equals(decision)){long product=Inputs.id(body.get("productId"));if(body.get("runId")!=null){if(row.get("match_result")==null)throw Inputs.conflict();var matched=imports.map(row.get("match_result"));if(!Objects.equals(Objects.toString(row.get("match_task_id"),null),body.get("runId"))||!Objects.equals(matched.get("runId"),body.get("runId"))||Inputs.id(matched.get("inputRevision"))!=number(row,"version")||list(matched.get("candidates")).stream().noneMatch(c->Inputs.id(c.get("productId"))==product))throw new ApiException(409,"MATCH_CANDIDATE_STALE","候选不存在或版本已变化，请重新核对");var task=mapper.selectTaskResult(a.requireCountry(),UUID.fromString(body.get("runId").toString()));if(task.size()!=1)throw Inputs.conflict();var snapshots=imports.map(imports.map(task.getFirst().get("result")).get("snapshots"));if(!PurchaseImportPhotoCache.sameSnapshot(imports.json,snapshots.get(Long.toString(product)),master.inspect(ctx,product)))throw new ApiException(409,"MATCH_CANDIDATE_STALE","候选主数据已变化，请重新核对");
                 var ranking=PurchaseImportCandidateRanking.rank(PurchaseImportCandidateRanking.sourceInput(row),list(matched.get("candidates")),!Boolean.TRUE.equals(matched.get("photoGroupIncomplete")));
                 if(!Boolean.TRUE.equals(body.get("confirmCandidate"))&&(matched.get("ranking")==null||((List<?>)ranking.get("recommendedIds")).stream().noneMatch(id->Inputs.id(id)==product)))throw new ApiException(409,"MATCH_MANUAL_CONFIRM_REQUIRED","此缓存候选未通过推荐门槛，请明确人工核对后再确认");
-                if(!Boolean.TRUE.equals(body.get("confirmCandidate"))){
+                var selected=list(matched.get("candidates")).stream().filter(c->Inputs.id(c.get("productId"))==product).findFirst().orElseThrow(Inputs::conflict);
+                if(!Boolean.TRUE.equals(body.get("confirmCandidate"))&&selected.get("visualScore")!=null){
                     var gallery=images.gallery(ctx);
                     if(!Set.of("READY","PARTIAL").contains(gallery.get("status"))||gallery.get("manifest")==null||!Objects.equals(imports.map(gallery.get("manifest")).get("generation"),imports.map(matched.get("image")).get("generation")))throw new ApiException(409,"MATCH_CANDIDATE_STALE","图库已变化，请重新核对候选");
-                    var selected=list(matched.get("candidates")).stream().filter(c->Inputs.id(c.get("productId"))==product).findFirst().orElseThrow(Inputs::conflict);
                     var hits=list(selected.get("visualEvidence"));if(hits.isEmpty())throw new ApiException(409,"MATCH_CANDIDATE_STALE","候选照片依据缺失，请重新核对");
                     if(!PurchaseImportPhotoCache.matches(images,ctx,matched))throw new ApiException(409,"MATCH_CANDIDATE_STALE","照片关联的候选集合已变化，请重新核对");
                     for(Object id:(List<?>)ranking.get("highestPhotoIds"))if(Inputs.id(id)!=product&&!PurchaseImportPhotoCache.sameSnapshot(imports.json,snapshots.get(Long.toString(Inputs.id(id))),master.inspect(ctx,Inputs.id(id))))throw new ApiException(409,"MATCH_CANDIDATE_STALE","同照片候选的商品资料已变化，请重新核对");
-                }}String unit=Inputs.required(body,"unit");saveDecision(ctx,a,rowId,product,unit,"EXISTING");}
+                }}String unit=body.containsKey("unit")?Inputs.required(body,"unit"):defaultUnit(master.inspect(ctx,product),row);saveDecision(ctx,a,rowId,product,unit,"EXISTING");}
         else throw Inputs.bad("请选择已有商品、暂缓或待确认；新增商品须明确提交新品请求");
         imports.touch(a,batch);var out=result(a,batch,rowId);var details=new LinkedHashMap<String,Object>();for(String field:List.of("version","decision","readiness"))details.put(field,out.get(field));
         if(body.get("runId")!=null){details.put("runId",body.get("runId"));details.put("manualCandidate",Boolean.TRUE.equals(body.get("confirmCandidate")));}
         audit.append(ctx,"PUR_IMPORT_PRODUCT_DECISION","PURCHASE_IMPORT",rowId,Map.of("version",row.get("version")),details);return out;
     });}
+    long selectAutomatically(RequestContext ctx,UUID batch,Map<String,Object> row,Map<String,Object> match){
+        long version=number(row,"version");
+        if(!"UNRESOLVED".equals(row.get("decision"))||row.get("target_order_line_id")!=null)return version;
+        var ids=(List<?>)imports.map(match.get("ranking")).get("recommendedIds");if(ids.isEmpty())return version;
+        long product=Inputs.id(ids.getFirst());
+        var saved=decide(ctx,batch,number(row,"id"),Map.of("version",version,"decision","EXISTING","productId",product,"runId",match.get("runId")));
+        audit.append(ctx,"PUR_IMPORT_PRODUCT_AUTO_SELECTED","PURCHASE_IMPORT",number(row,"id"),Map.of("version",version),Map.of("runId",match.get("runId"),"productId",product,"unit",saved.get("purchaseUnit"),"readiness",saved.get("readiness"),"policyVersion",imports.map(match.get("ranking")).get("policyVersion")));
+        return number(saved,"version");
+    }
+    private String defaultUnit(Map<String,Object> product,Map<String,Object> row){
+        var units=list(product.get("units"));Object previous=row.get("purchase_unit");
+        if(previous!=null&&units.stream().anyMatch(u->previous.equals(u.get("unit"))))return previous.toString();
+        var preferred=units.stream().filter(u->Boolean.TRUE.equals(u.get("isPurchaseDefault"))).findFirst();
+        if(preferred.isPresent())return Inputs.required(preferred.get(),"unit");
+        String base=Inputs.required(product,"baseUnit");
+        if(units.stream().anyMatch(u->base.equals(u.get("unit")))||units.isEmpty())return base;
+        return Inputs.required(units.getFirst(),"unit");
+    }
     private Map<String,Object> saveDecision(RequestContext ctx,Access a,long rowId,long product,String unit,String decision){
         var snapshot=master.inspect(ctx,product);var reasons=new ArrayList<String>();
         if(!"ENABLED".equals(snapshot.get("status")))reasons.add("全局商品已停用");

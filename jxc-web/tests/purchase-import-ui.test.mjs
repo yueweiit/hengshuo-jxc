@@ -334,7 +334,7 @@ test('真实来源组件呈现解析失败、工作表选择和逐规格原图�
   const page = state.page
   Object.assign(page.state, { batchId, tasks: [{ id: batchId, status: 'FAILED', errorCode: 'SHEET_SELECTION_REQUIRED', errorMessage: '请选择采购表', result: { sheets: ['采购A', '采购B'] } }], sources: [{ id: 8, fileName: '采购.xlsx', fileSha256: 'a'.repeat(64), status: 'FAILED' }], rows: [{ ...row, sourceSheet: '采购A', sourceRow: 2, images: [{ id: 9, sha256: 'b'.repeat(64), status: 'UNCONFIRMED' }] }] })
   const source = new URL('../src/modules/purchase/PurchaseImportSources.vue', import.meta.url)
-  const bindings = loadVueScript(source, { ref, watch, onBeforeUnmount() {}, defineProps: () => ({ page }), ElMessageBox: { async confirm() { throw 'cancel' } }, http: {} }, ['sheets', 'imageUrls', 'imageErrors', 'downloading', 'download', 'view', 'retry', 'publish'])
+  const bindings = loadVueScript(source, { ref, watch, onBeforeUnmount() {}, defineProps: () => ({ page }), defineEmits: () => () => {}, ElMessageBox: { async confirm() { throw 'cancel' } }, http: {} }, ['sheets', 'imageUrls', 'imageErrors', 'downloading', 'download', 'view', 'retry', 'publish'])
   let publications = 0
   page.publishPhotos = async () => { publications++; return true }
   page.state.rows[0].matchedProductId = 501

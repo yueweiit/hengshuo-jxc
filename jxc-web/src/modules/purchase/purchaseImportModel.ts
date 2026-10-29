@@ -39,7 +39,7 @@ export interface CandidateCheck { productId: number; imageMatch: 'SAME' | 'DIFFE
 export interface MatchCandidate { productId: number; product: { id: number; productCode: string; name: string; spec: string | null; status?: string; units: { unit: string }[] }; visualScore: number | null; textEvidence: { reason: string }[]; visualEvidence: VisualMatchEvidence[]; conflicts: string[] }
 export interface CandidateTextField { field: 'productCode' | 'spec' | 'name'; label: string; weight: number; source: string | null; target: string | null; score: number | null }
 export interface CandidateScore { productId: number; photoScore: number | null; textScore: number | null; fields: CandidateTextField[]; reason: string }
-export interface CandidateRanking { format: 'CandidateRankingV1'; policyVersion: string; status: 'RECOMMENDED' | 'NEEDS_REVIEW'; reason: string; completePhotoGroup: boolean; photoThreshold: number; textThreshold: number; weights: { productCode: number; spec: number; name: number }; highestPhotoIds: number[]; recommendedIds: number[]; scores: CandidateScore[] }
+export interface CandidateRanking { format: 'CandidateRankingV1'; policyVersion: string; status: 'RECOMMENDED' | 'NEEDS_REVIEW'; reason: string; completePhotoGroup: boolean; photoThreshold: number; textThreshold: number | null; weights: { productCode: number; spec: number; name: number }; highestPhotoIds: number[]; recommendedIds: number[]; scores: CandidateScore[] }
 export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: number; status: string; ranking?: CandidateRanking; cacheReused?: boolean; text: { status: string; reason: string }; image: { status: string; reason: string; errors?: { reason: string }[] }; candidates: MatchCandidate[]; explanation: { status: string; message: string; candidateNotes?: { productId: number; message: string }[]; candidateChecks?: CandidateCheck[] } }
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; sourceItemKey?: string; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface SupplierMapping { format: string; fileSha256: string; sheet: string; needsReview: boolean; reasons: string[]; ignoredRows: { sourceRow:number; reason:string }[]; lines: { sourceRow:number; cells: Record<string,string | string[] | null> }[] }
@@ -119,15 +119,23 @@ function normalizeValues(values: ImportValues): ImportValues {
 
 function validRanking(value: unknown, candidates: Record<string, unknown>[]) {
   if (!record(value)) return false
+  // 已保存批次仍可能携带旧评分；只读兼容，重新匹配后统一使用新版。
+  const automatic = value.policyVersion === 'photo-best-or-first-text-v2'
   const score = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1
   const ids = (v: unknown) => Array.isArray(v) && new Set(v).size === v.length && v.every(id => candidates.some(c => c.productId === id))
-  if (value.format !== 'CandidateRankingV1' || value.policyVersion !== 'photo-first-text-40-40-20-v1' || !['RECOMMENDED', 'NEEDS_REVIEW'].includes(String(value.status)) || typeof value.reason !== 'string' || value.photoThreshold !== 0.8 || value.textThreshold !== 0.8 || !record(value.weights) || value.weights.productCode !== 40 || value.weights.spec !== 40 || value.weights.name !== 20 || !ids(value.highestPhotoIds) || !ids(value.recommendedIds) || !Array.isArray(value.scores)) return false
+  if (value.format !== 'CandidateRankingV1' || !automatic && value.policyVersion !== 'photo-first-text-40-40-20-v1' || !['RECOMMENDED', 'NEEDS_REVIEW'].includes(String(value.status)) || typeof value.reason !== 'string' || value.photoThreshold !== 0.8 || value.textThreshold !== (automatic ? null : 0.8) || !record(value.weights) || value.weights.productCode !== 40 || value.weights.spec !== 40 || value.weights.name !== 20 || !ids(value.highestPhotoIds) || !ids(value.recommendedIds) || !Array.isArray(value.scores)) return false
   const highest = value.highestPhotoIds as number[], recommended = value.recommendedIds as number[], scores = value.scores
-  if (typeof value.completePhotoGroup !== 'boolean' || recommended.length > 1 || recommended.length && !value.completePhotoGroup || (value.status === 'RECOMMENDED') !== (recommended.length === 1) || scores.length !== candidates.length || new Set(scores.map(s => record(s) ? s.productId : null)).size !== candidates.length) return false
+  if (typeof value.completePhotoGroup !== 'boolean' || recommended.length > 1 || !automatic && recommended.length && !value.completePhotoGroup || (value.status === 'RECOMMENDED') !== (recommended.length === 1) || scores.length !== candidates.length || new Set(scores.map(s => record(s) ? s.productId : null)).size !== candidates.length) return false
+  if (automatic) {
+    const photos = candidates.filter(c => typeof c.visualScore === 'number' && c.visualScore > 0.8)
+    const top = photos.reduce<Record<string, unknown> | undefined>((best, c) => !best || Number(c.visualScore) > Number(best.visualScore) ? c : best, undefined)
+    const first = top ?? (candidates.every(c => c.visualScore === null) ? candidates.find(c => Array.isArray(c.textEvidence) && c.textEvidence.length) : undefined)
+    if (recommended.length !== (first ? 1 : 0) || first && recommended[0] !== first.productId) return false
+  }
   return scores.every(s => {
     if (!record(s) || !candidates.some(c => c.productId === s.productId && c.visualScore === s.photoScore) || s.textScore !== null && !score(s.textScore) || typeof s.reason !== 'string' || !Array.isArray(s.fields) || s.fields.length !== 3 || new Set(s.fields.map(f => record(f) ? f.field : null)).size !== 3) return false
     if (s.fields.some(f => !record(f) || !['productCode', 'spec', 'name'].includes(String(f.field)) || f.weight !== (value.weights as Record<string, unknown>)[String(f.field)] || typeof f.label !== 'string' || f.source !== null && typeof f.source !== 'string' || f.target !== null && typeof f.target !== 'string' || f.score !== null && !score(f.score))) return false
-    return !recommended.includes(s.productId as number) || highest.includes(s.productId as number) && typeof s.photoScore === 'number' && s.photoScore >= 0.8 && typeof s.textScore === 'number' && s.textScore >= 0.8
+    return automatic || !recommended.includes(s.productId as number) || highest.includes(s.productId as number) && typeof s.photoScore === 'number' && s.photoScore >= 0.8 && typeof s.textScore === 'number' && s.textScore >= 0.8
   })
 }
 function readRow(value: unknown): ImportRow {

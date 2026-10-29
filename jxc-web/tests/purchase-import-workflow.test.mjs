@@ -33,6 +33,29 @@ test('后台把不足门槛或照片组不完整的候选标成推荐时拒绝�
   }
 })
 
+test('图片自动选择采用新规则，低文字分不阻止就绪并保留匹配来源',async()=>{
+  const run=scoredRun(0)
+  run.ranking.policyVersion='photo-best-or-first-text-v2';run.ranking.textThreshold=null;run.ranking.completePhotoGroup=false
+  const page=await setup({}, {rows:[{...row,readiness:'READY',decision:'EXISTING',matchedProductId:501,purchaseUnit:'PCS',matchTaskId:batchId,matchResult:run}]})
+  assert.equal(page.state.error,'');assert.equal(page.state.rows[0].readiness,'READY')
+  assert.deepEqual(page.state.rows[0].matchResult.ranking.recommendedIds,[501])
+})
+
+test('新图片选择规则拒绝恰好80%的自动推荐',async()=>{
+  const run=scoredRun(0)
+  run.ranking.policyVersion='photo-best-or-first-text-v2';run.ranking.textThreshold=null
+  run.candidates[0].visualScore=0.8;run.ranking.scores[0].photoScore=0.8
+  const page=await setup({}, {rows:[{...row,matchResult:run}]})
+  assert.match(page.state.error,/评分/);assert.equal(page.state.rows.length,0)
+})
+
+test('重新进入旧规则待确认批次沿原匹配入口升级，已就绪和新版未命中不重复处理',async()=>{
+  const task='22222222-2222-4333-8444-555555555555';let calls=0
+  const old={...row,matchTaskId:batchId,matchResult:scoredRun()}
+  const page=await setup({async startMatches(_id,_version,ids){calls++;assert.deepEqual(ids,[1]);return {batchId,version:1,status:'REVIEW',header,rows:[{...old,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED'}],taskIds:[task]}}},{rows:[old],tasks:[{id:batchId,kind:'MATCH',status:'SUCCEEDED'}]})
+  assert.equal(await page.startImageReview(),true);assert.equal(calls,1)
+})
+
 test('AI图文核对只登记未确认行且后台运行时重复点击不另建任务',async()=>{
   let calls=0
   const task='22222222-2222-4333-8444-555555555555'
