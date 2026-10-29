@@ -309,6 +309,26 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
         tasks.recover(101,100);assertThat(calls.get()).isEqualTo(2);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='SUCCEEDED'",Integer.class,id(b))).isEqualTo(6);
     }
     @Autowired com.hs.jxc.sys.integrations.ExternalServiceConfig externalServices;
+    @Test void workflowImageSearchUsesOnlyTheOriginalTaskPlanAndRejectsOtherRequests(){
+        var b=photoBatch(true);UUID task=start(b);var completed=new java.util.concurrent.atomic.AtomicInteger();
+        doReturn(Map.of("hits",List.of())).when(parser).search(any(),anyString(),anyMap());
+        doAnswer(call->{String credential=call.getArgument(1);var catalog=matches.catalogSearch(task,credential,Map.of("operation","TEXT"));
+            var request=map(((List<?>)map(catalog.get("imagePlan")).get("requests")).getFirst());
+            var reply=imageSearchHttp(task,credential,request);assertThat(reply.statusCode()).isEqualTo(200);
+            assertThat(codec.readMap(reply.body())).containsEntry("status","ok");assertThat(map(codec.readMap(reply.body()).get("search"))).containsEntry("hits",List.of());
+            var tampered=new LinkedHashMap<>(request);tampered.put("queryAssetId",999999);
+            assertThat(imageSearchHttp(task,credential,tampered).statusCode()).isEqualTo(403);
+            tampered=new LinkedHashMap<>(request);tampered.put("url","http://arbitrary.invalid");
+            assertThat(imageSearchHttp(task,credential,tampered).statusCode()).isEqualTo(403);
+            assertThat(imageSearchHttp(task,"101:"+"0".repeat(72),request).statusCode()).isEqualTo(403);
+            var evidence=matches.catalogSearch(task,credential,Map.of("operation","RESOLVE","imageResults",List.of(Map.of("queryAssetId",request.get("queryAssetId"),"status","NOT_FOUND","hits",List.of()))));
+            matches.result(task,credential,callback(task,evidence,List.of()));completed.incrementAndGet();return Map.of("taskId",task.toString());
+        }).when(parser).recognize(any(),anyString(),anyMap());
+        tasks.execute(101,task);assertThat(completed.get()).isEqualTo(1);verify(parser,times(1)).search(eq(task),anyString(),anyMap());
+    }
+    java.net.http.HttpResponse<String> imageSearchHttp(UUID task,String credential,Map<String,Object> request)throws Exception{
+        return java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:"+port+"/internal/purchase-import/tasks/"+task+"/image-search")).timeout(java.time.Duration.ofSeconds(10)).header("Content-Type","application/json").header("X-Purchase-Task",credential).POST(java.net.http.HttpRequest.BodyPublishers.ofString(codec.write(request))).build(),java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
     @Test void changingConnectionVersionDuringPreparationSeparatesModelRequests(){
         var b=queuedBatch(20);var prepared=new java.util.concurrent.atomic.AtomicInteger();var sizes=new ArrayList<Integer>();
         long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);

@@ -9,6 +9,20 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 
 class PurchaseImportRecognitionClientTest {
+    @Test void responseLimitStillRejectsOversizedContentWithItsSpecificReason()throws Exception{
+        var server=com.sun.net.httpserver.HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/large",exchange->{byte[] data=("{\"data\":\""+"a".repeat(10000)+"\"}").getBytes(StandardCharsets.UTF_8);exchange.sendResponseHeaders(200,data.length);exchange.getResponseBody().write(data);exchange.close();});server.start();
+        try{var transport=new com.hs.jxc.sys.integrations.ExternalServiceHttp(new JsonCodec());
+            assertThatThrownBy(()->transport.exchange("http://127.0.0.1:"+server.getAddress().getPort()+"/large","","GET",null,5,1024)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("INTEGRATION_RESPONSE_LIMIT");
+        }finally{server.stop(0);}
+    }
+    @Test void configuredTimeoutAlsoCoversAResponseThatStopsAfterHeaders()throws Exception{
+        var server=com.sun.net.httpserver.HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/slow",exchange->{exchange.sendResponseHeaders(200,0);exchange.getResponseBody().flush();try{Thread.sleep(1600);exchange.getResponseBody().write("{\"status\":\"ok\"}".getBytes(StandardCharsets.UTF_8));}catch(InterruptedException interrupted){Thread.currentThread().interrupt();}finally{exchange.close();}});server.start();
+        try{var transport=new com.hs.jxc.sys.integrations.ExternalServiceHttp(new JsonCodec());
+            assertThatThrownBy(()->transport.exchange("http://127.0.0.1:"+server.getAddress().getPort()+"/slow","","GET",null,1,1024)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("INTEGRATION_TIMEOUT");
+        }finally{server.stop(0);}
+    }
     @Test void managedBatchUsesPinnedConnectionAndKeepsRelayCredentialOutsideRowsAndImages()throws Exception{
         var server=com.sun.net.httpserver.HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);var captured=new java.util.concurrent.atomic.AtomicReference<Map<String,Object>>();var auth=new java.util.concurrent.atomic.AtomicReference<String>();var json=new JsonCodec();
         server.createContext("/webhook/jxc-purchase-recognition-v1",exchange->{auth.set(exchange.getRequestHeaders().getFirst("Authorization"));captured.set(json.readMap(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8)));byte[] out="{\"status\":\"ok\",\"result\":{\"format\":\"MatchReviewBatchResultV1\",\"items\":[]}}".getBytes(StandardCharsets.UTF_8);exchange.sendResponseHeaders(200,out.length);exchange.getResponseBody().write(out);exchange.close();});server.start();

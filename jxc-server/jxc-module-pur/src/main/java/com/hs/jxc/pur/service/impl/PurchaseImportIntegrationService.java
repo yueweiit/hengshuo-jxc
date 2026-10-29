@@ -1,6 +1,7 @@
 package com.hs.jxc.pur.service.impl;
 
 import com.hs.jxc.common.api.*;
+import com.hs.jxc.pur.service.PurchaseImportRecognitionClient;
 import com.hs.jxc.sys.integrations.*;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -8,11 +9,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** 仅为现有采购任务提供字段识别与模型通信；不暴露密钥或通用聊天接口。 */
+/** 仅为现有采购任务转发受限服务请求；不暴露密钥或通用聊天接口。 */
 @Service
 public class PurchaseImportIntegrationService {
     private final PurchaseImportTaskServiceImpl tasks;private final PurchaseImportConnections connections;private final ExternalServiceHttp http;private final JsonCodec json;private final JdbcTemplate jdbc;private final TransactionTemplate tx;
-    public PurchaseImportIntegrationService(PurchaseImportTaskServiceImpl tasks,PurchaseImportConnections connections,ExternalServiceHttp http,JsonCodec json,JdbcTemplate jdbc,PlatformTransactionManager manager){this.tasks=tasks;this.connections=connections;this.http=http;this.json=json;this.jdbc=jdbc;this.tx=new TransactionTemplate(manager);}
+    private final PurchaseImportMatchServiceImpl matches;private final PurchaseImportRecognitionClient client;
+    public PurchaseImportIntegrationService(PurchaseImportTaskServiceImpl tasks,PurchaseImportConnections connections,ExternalServiceHttp http,JsonCodec json,JdbcTemplate jdbc,PlatformTransactionManager manager,PurchaseImportMatchServiceImpl matches,PurchaseImportRecognitionClient client){this.tasks=tasks;this.connections=connections;this.http=http;this.json=json;this.jdbc=jdbc;this.tx=new TransactionTemplate(manager);this.matches=matches;this.client=client;}
+    public Map<String,Object> imageSearch(UUID id,String credential,Map<String,Object> request){
+        var scope=tasks.scoped(id,credential,false);
+        if(!Set.of("MATCH","EXPLAIN").contains(scope.task().get("kind")))throw ApiException.forbidden();
+        var catalog=matches.catalogSearch(id,credential,Map.of("operation","TEXT"));
+        var plan=ExternalServiceConfig.map(catalog.get("imagePlan"));
+        // 复用原固定计划，JSON往返统一数据库与HTTP的数字类型；不接受额外地址或参数。
+        var normalized=json.readMap(json.write(request));
+        if(!(plan.get("requests") instanceof List<?> allowed)||allowed.stream().noneMatch(value->json.readMap(json.write(value)).equals(normalized)))throw ApiException.forbidden();
+        var result=client.search(id,credential,request);tasks.scoped(id,credential,false);
+        return Map.of("status","ok","search",result);
+    }
     public Map<String,Object> fields(UUID id,String credential,Map<String,Object> document){
         var scope=tasks.scoped(id,credential,false);
         if(!"PARSE".equals(scope.task().get("kind")))throw ApiException.forbidden();

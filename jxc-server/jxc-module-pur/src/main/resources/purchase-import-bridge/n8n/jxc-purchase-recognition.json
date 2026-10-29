@@ -35,7 +35,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "const b=$input.first().json.body;\nif (!b || Object.keys(b).sort().join(',') !== ['credential','format','inputRevision','mode','rowId','sourceId','taskId'].sort().join(',') || b.format !== 'MatchTaskV1' || !['MATCH','EXPLAIN'].includes(b.mode) || !/^[0-9a-f-]{36}$/i.test(b.taskId) || !/^\\d+:[0-9a-f-]{64,}$/i.test(b.credential) || ![b.rowId,b.sourceId,b.inputRevision].every(v=>Number.isSafeInteger(v)&&v>0)) throw new Error('受限任务清单无效');\nconst origins={apiBase:'REPLACE_WITH_JXC_API_ORIGIN',pythonBase:'REPLACE_WITH_JXC_PYTHON_ORIGIN'};\nfor(const value of Object.values(origins)){const match=/^https?:\\/\\/[a-zA-Z0-9.-]+(?::([0-9]{1,5}))?$/.exec(value);if(!match||match[1]&&(Number(match[1])<1||Number(match[1])>65535))throw new Error('请在Validate task节点显式绑定受控服务根地址，不使用请求中的地址');}\nreturn [{json:{...b,...origins}}];",
+        "jsCode": "const b=$input.first().json.body;\nif (!b || Object.keys(b).sort().join(',') !== ['credential','format','inputRevision','mode','rowId','sourceId','taskId'].sort().join(',') || b.format !== 'MatchTaskV1' || !['MATCH','EXPLAIN'].includes(b.mode) || !/^[0-9a-f-]{36}$/i.test(b.taskId) || !/^\\d+:[0-9a-f-]{64,}$/i.test(b.credential) || ![b.rowId,b.sourceId,b.inputRevision].every(v=>Number.isSafeInteger(v)&&v>0)) throw new Error('受限任务清单无效');\nconst origins={apiBase:'REPLACE_WITH_JXC_API_ORIGIN'};\nfor(const value of Object.values(origins)){const match=/^https?:\\/\\/[a-zA-Z0-9.-]+(?::([0-9]{1,5}))?$/.exec(value);if(!match||match[1]&&(Number(match[1])<1||Number(match[1])>65535))throw new Error('请在Validate task节点显式绑定受控服务根地址，不使用请求中的地址');}\nreturn [{json:{...b,...origins}}];",
         "mode": "runOnceForAllItems"
       }
     },
@@ -140,10 +140,10 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Validate task').first().json.pythonBase + '/internal/jxc/search' }}",
+        "url": "={{ $('Validate task').first().json.apiBase + '/internal/purchase-import/tasks/' + $('Validate task').first().json.taskId + '/image-search' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { ...$json.request, taskId: $('Validate task').first().json.taskId, credential: $('Validate task').first().json.credential } }}",
+        "jsonBody": "={{ $json.request }}",
         "options": {
           "timeout": 180000,
           "redirect": {
@@ -159,13 +159,14 @@
             }
           }
         },
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "httpHeaderAuth"
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "REPLACE_WITH_EXISTING_CREDENTIAL_ID",
-          "name": "待管理员绑定已有凭据"
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Purchase-Task",
+              "value": "={{ $('Validate task').first().json.credential }}"
+            }
+          ]
         }
       },
       "onError": "continueRegularOutput"

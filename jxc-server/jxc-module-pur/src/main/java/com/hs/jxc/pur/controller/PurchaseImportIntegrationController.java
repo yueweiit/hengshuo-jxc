@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 public class PurchaseImportIntegrationController {
     private final PurchaseImportIntegrationService service;
     public PurchaseImportIntegrationController(PurchaseImportIntegrationService service){this.service=service;}
+    @PostMapping("/image-search") public Map<String,Object> imageSearch(@PathVariable UUID taskId,@RequestHeader(value="X-Purchase-Task",defaultValue="")String credential,@RequestBody Map<String,Object> body){return service.imageSearch(taskId,credential,body);}
     @PostMapping("/fields") public Map<String,Object> fields(@PathVariable UUID taskId,@RequestHeader(value="X-Purchase-Task",defaultValue="")String credential,@RequestBody Map<String,Object> body){return service.fields(taskId,credential,body);}
     @PostMapping("/model") public Map<String,Object> model(@PathVariable UUID taskId,@RequestHeader(value="X-Purchase-Task",defaultValue="")String credential,@RequestBody Map<String,Object> body){return service.model(taskId,credential,body);}
 }
