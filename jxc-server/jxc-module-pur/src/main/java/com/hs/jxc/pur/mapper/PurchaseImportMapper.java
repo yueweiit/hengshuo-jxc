@@ -5,6 +5,18 @@ import org.apache.ibatis.annotations.Param;
 
 /** 采购PurchaseImportMapper：SQL主体位于同名资源XML，参数全部绑定。 */
 public interface PurchaseImportMapper {
+    List<Map<String,Object>> selectClearTasks(@Param("countryId") long country,@Param("batchId") UUID batch);
+    List<Long> selectClearAssets(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int clearRows(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int clearProgress(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int clearTasks(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int clearGroups(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int clearImages(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int clearSources(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int clearBatch(@Param("countryId") long country,@Param("batchId") UUID batch);
+    int redactClearedSnapshots(@Param("countryId") long country,@Param("userId") long user,@Param("batchId") String batch,@Param("endpoint") String endpoint);
+    List<Map<String,Object>> selectClearReceipt(@Param("countryId") long country,@Param("userId") long user,@Param("endpoint") String endpoint);
+    List<Map<String,Object>> selectPendingClearReceipts(@Param("countryId") long country,@Param("limit") int limit);
     List<Map<String,Object>> selectBatch(@Param("countryId") Object countryId, @Param("batchId") Object batchId, @Param("lock") boolean lock);
     List<Map<String,Object>> selectGroupHeaders(@Param("countryId") Object countryId, @Param("batchId") Object batchId);
     List<Integer> countActiveBook(@Param("countryId") Object countryId, @Param("id") Object id);

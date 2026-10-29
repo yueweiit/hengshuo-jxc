@@ -31,7 +31,7 @@ function workspace(confirm = async () => {}, dependencies = {}) {
       async saveHeader(_batch, value) { savedHeaders.push(value); return { batchId, header: { ...value }, rows: [{ ...row }] } },
     },
     ...dependencies,
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming'])
   return { state, navigations, requests, removed, savedHeaders, country, user }
 }
 
@@ -67,6 +67,51 @@ test('预览仍有未保存修改时主保存返回核对，不创建使用旧�
   const {state}=workspace();await state.loadReferences();Object.assign(state.page.state,{batchId,header:{...header},rows:[row]});await state.loadCreationCapability()
   let calls=0;state.page.saveOrders=async()=>{calls++;return true};assert.ok(state.pendingReview,'缺少预览未保存修改的状态')
   state.pendingReview.value=true;assert.equal(await state.saveOrders(),false);assert.equal(calls,0);assert.match(state.page.state.error,/预览.*未保存/)
+})
+test('清空按钮取消或关闭确认框时保留页面数据，异常提示真实错误', async () => {
+  for (const reason of ['cancel', 'close', new Error('确认框异常')]) {
+    const { state } = workspace(async () => { throw reason })
+    await state.loadReferences(); state.selected.value = new File(['x'], '采购.xlsx')
+    await state.clearAll()
+    assert.equal(state.state.header.bookId, 1); assert.equal(state.selected.value.name, '采购.xlsx')
+    assert.equal(state.state.error, reason instanceof Error ? reason.message : '')
+  }
+})
+
+test('确认清空输入后异步选项读取不能重新填充默认值，仍可人工选择', async () => {
+  let resolve
+  const { state } = workspace(undefined, { http: { get() { return new Promise(done => resolve = done) } } })
+  const reading = state.loadReferences(); state.selected.value = new File(['x'], '采购.xlsx'); state.fileInput.value = { value: 'old.xlsx' }
+  await state.clearAll(); resolve([{ id: 1, status: 'ACTIVE', baseCurrency: 'USD' }]); await reading
+  assert.equal(state.state.header.bookId, null); assert.equal(state.state.header.supplierId, null); assert.equal(state.state.header.orderDate, null); assert.equal(state.selected.value, null); assert.equal(state.fileInput.value.value, '')
+  state.state.header.supplierId = 2; state.supplierChanged(); assert.equal(state.state.header.currency, 'USD')
+})
+
+test('确认框等待期间切换国家或文件时不清空新上下文', async () => {
+  for (const change of ['country', 'file']) {
+    let resolve
+    const { state, country } = workspace(() => new Promise(done => resolve = done))
+    state.state.header.paymentTerms = '原内容'; const confirming = state.clearAll()
+    if (change === 'country') { country.epoch++; state.state.header.paymentTerms = '新国家内容' }
+    else state.selected.value = new File(['new'], 'new.xlsx')
+    resolve(); await confirming
+    assert.notEqual(state.state.header.paymentTerms, '')
+  }
+})
+
+test('已保存批次确认清空后移除地址参数并关闭预览和旧保存草稿', async () => {
+  let message
+  const { state, navigations } = workspace(async text => { message = text }, { purchaseImportApi: {
+    async clearBatch(id, version, key) { return { cleared: true, batchId: id, version, requestKey: key, cleanupPending: false, pendingFiles: 0, counts: { rows: 1, sources: 1, images: 1, tasks: 1, groups: 0, progress: 1 } } },
+  } })
+  Object.assign(state.state, { batchId, version: 2, header: { ...header }, rows: [{ ...row }] }); state.route.query.batchId = batchId
+  state.pendingReview.value = true; state.previewVisible.value = true; state.dialogVisible.value = true
+  state.selected.value = new File(['x'], '采购.xlsx'); state.fileInput.value = { value: '采购.xlsx' }
+  await state.clearAll()
+  assert.match(message, /已暂存的明细/); assert.match(message, /永久删除/); assert.match(message, /审计记录/)
+  assert.equal(state.state.batchId, null); assert.equal(state.state.rows.length, 0); assert.equal(state.pendingReview.value, false); assert.equal(state.previewVisible.value, false); assert.equal(state.dialogVisible.value, false)
+  assert.deepEqual(navigations.at(-1), { query: { from: 'test', batchId: undefined } })
+  state.route.query.batchId = undefined; await nextTick(); assert.equal(state.state.header.orderDate, null); assert.equal(state.state.header.bookId, null)
 })
 
 test('基础选项读取失败不阻止导入文件和来源编辑，基础信息保存仍需有效选项', async () => {
@@ -289,6 +334,11 @@ test('接口适配器发送真实multipart和带版本的保存删除约定', as
   assert.deepEqual(calls[3][2].versions, [{ id: 10, version: 1 }])
   assert.equal(calls[4][1], `/pur/order-imports/${batchId}/rows/10`)
   assert.equal(calls[4][2].headers['If-Match'], '1')
+  await api.clearBatch(batchId, 2, batchId)
+  await api.clearStatus(batchId)
+  assert.equal(calls[5][0], 'delete'); assert.equal(calls[5][1], `/pur/order-imports/${batchId}`)
+  assert.deepEqual(calls[5][2].headers, { 'If-Match': '2', 'Idempotency-Key': batchId })
+  assert.equal(calls[6][1], `/pur/order-imports/${batchId}/clear-status`)
 })
 
 test('本地编辑使任务读取暂缓时仍会接续轮询，网络错误明确保留', async () => {

@@ -13,6 +13,8 @@ export const purchaseImportApi: PurchaseImportApi = {
   },
   readTask: id => http.get(`${base}/tasks/${encodeURIComponent(id)}`, undefined, { silent: true }),
   load: id => http.get(batchPath(id), undefined, { silent: true }),
+  clearBatch: (id, version, key) => http.delete(batchPath(id), { headers: { 'If-Match': String(version), 'Idempotency-Key': key }, timeout: 120000, silent: true }),
+  clearStatus: id => http.get(`${batchPath(id)}/clear-status`, undefined, { silent: true }),
   saveHeader: (id, header, versions, batchVersion) => http.put(batchPath(id), { header, versions, batchVersion }, { silent: true }),
   saveRow: (id, row, values, matchInputs) => http.put(`${batchPath(id)}/rows/${row.id}`, { version: row.version, values, ...(matchInputs ? { matchInputs } : {}) }, { silent: true }),
   uploadPhoto(id, row, file, values, key) {

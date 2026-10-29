@@ -25,6 +25,7 @@ const books = ref<{ id: number; name: string; baseCurrency: string; status: stri
 const suppliers = ref<{ id: number; name: string; settleCurrency?: string; paymentTerms?: string }[]>([])
 const currencies = ref<{ code: string; name: string }[]>([])
 const refsLoading = ref(false), refsError = ref(''), dialogVisible = ref(false), selected = ref<File | null>(null)
+const clearConfirming = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const importDisabled = computed(() => page.busy() || !!state.edit)
 const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value)
@@ -34,7 +35,7 @@ const creationEnabled = ref(false), creationLoading = ref(false), creationError 
 const pendingReview = ref(false)
 function review(row?: ImportRow) { reviewRow.value = row?.id ?? null; reviewVisible.value = true }
 async function preview() { if(await page.previewDrafts()) previewVisible.value = true }
-let active = true, refsSequence = 0, creationSequence = 0
+let active = true, refsSequence = 0, creationSequence = 0, defaultsAllowed = true
 async function loadCreationCapability() {
   const request = ++creationSequence, batch = state.batchId
   creationEnabled.value = false; creationError.value = ''; creationLoading.value = false
@@ -77,7 +78,7 @@ async function loadReferences() {
 }
 function applyHeaderDefaults() {
   // 旧批次即使尚未读取完成也保留其原值；无可用选项代表合法空白。
-  if (state.batchId !== null || route.query.batchId !== undefined) return
+  if (!defaultsAllowed || state.batchId !== null || route.query.batchId !== undefined) return
   const book = books.value.find(item => item.status === 'ACTIVE')
   if (state.header.bookId === null && book) state.header.bookId = book.id
   if (state.header.supplierId === null && suppliers.value[0]) state.header.supplierId = suppliers.value[0].id
@@ -135,20 +136,43 @@ async function remove(row: ImportRow) {
   if (active && !importDisabled.value && context === JSON.stringify([country.currentId, country.epoch, user.token, state.batchId])) await page.removeRow(row)
 }
 function errorLabel(field?: string) { return importColumns.find(column => column.key === field)?.label ?? field }
+async function syncClearedUi(confirmed = false) {
+  if (!confirmed && !state.clearedBatchId && state.errorCode !== 'PUR_IMPORT_FILES_PENDING') return
+  defaultsAllowed = false; selected.value = null; dialogVisible.value = false; reviewVisible.value = false; previewVisible.value = false; reviewRow.value = null
+  pendingReview.value = false; ++creationSequence; creationEnabled.value = false; creationLoading.value = false; creationError.value = ''
+  if (fileInput.value) fileInput.value.value = ''
+  if (state.clearedBatchId && route.query.batchId !== undefined) {
+    try { await router.replace({ query: { ...route.query, batchId: undefined } }) }
+    catch (error) { if (active) page.failure(new Error(`数据已清空，但批次地址移除失败：${error instanceof Error ? error.message : '请重试'}`)) }
+  }
+}
+async function clearAll() {
+  if (!page.canClear() || clearConfirming.value) return
+  const context = JSON.stringify([country.currentId, country.epoch, user.token, state.batchId, state.version]), file = selected.value
+  clearConfirming.value = true
+  try {
+    await ElMessageBox.confirm(state.clearPending ? '继续按原请求清空当前批次，并重试尚未完成的文件清理？' : '确定清空当前导入批次及页面全部数据？当前批次已暂存的明细、来源文件和独占照片将永久删除，未保存的编辑也会丢弃。其他批次、正式采购单和被其他记录引用的照片会保留，必要审计记录也会保留。此操作不可撤销。', '清空当前导入', { type: 'warning', confirmButtonText: state.clearPending ? '重试清空' : '确认清空', cancelButtonText: '取消', distinguishCancelAndClose: true })
+  } catch (error) { if (error !== 'cancel' && error !== 'close') page.failure(error); return }
+  finally { clearConfirming.value = false }
+  if (!active || !page.canClear() || selected.value !== file || context !== JSON.stringify([country.currentId, country.epoch, user.token, state.batchId, state.version])) return
+  const cleared = await page.clearAll()
+  await syncClearedUi(cleared)
+}
 async function loadRouteBatch() {
   const id = route.query.batchId
-  if (typeof id === 'string' && id !== state.batchId) await page.loadBatch(id)
+  if (typeof id === 'string' && id !== state.batchId) { await page.loadBatch(id); await syncClearedUi() }
   else if (id !== undefined && typeof id !== 'string') page.failure(new Error('批次编号格式不正确'))
 }
 onMounted(() => { void loadReferences(); void loadRouteBatch() })
 watch(() => route.query.batchId, () => {
-  if (route.query.batchId === state.batchId) return
+  if ((route.query.batchId ?? null) === state.batchId) return
   reviewVisible.value = false; previewVisible.value = false; page.invalidate(); selected.value = null; dialogVisible.value = false
   state.header.orderDate = todayIn(country.timezone)
   applyHeaderDefaults()
   void loadRouteBatch()
 })
 watch(() => [country.currentId, country.epoch, user.token], () => {
+  defaultsAllowed = true
   reviewVisible.value = false; previewVisible.value = false; page.invalidate(); selected.value = null; dialogVisible.value = false
   state.header.orderDate = todayIn(country.timezone)
   books.value = []; suppliers.value = []; currencies.value = []
@@ -179,11 +203,12 @@ onBeforeUnmount(() => { active = false; ++refsSequence; ++creationSequence; clea
 
     <section class="import-section import-command" aria-label="文件导入">
       <div><h2>导入采购明细</h2><p>支持系统模板与供应商原始Excel；可先导入，再核对字段、商品与基础信息。</p></div>
-      <el-button type="primary" :disabled="importDisabled" @click="dialogVisible = true"><el-icon><Upload /></el-icon>导入文件</el-button>
+      <div class="import-command-actions"><el-button type="primary" :disabled="importDisabled" @click="dialogVisible = true"><el-icon><Upload /></el-icon>导入文件</el-button>
+      <el-button type="danger" plain :title="page.clearBlockReason()" :disabled="!page.canClear() || clearConfirming" :loading="state.clearing" @click="clearAll">{{ state.clearPending ? '重试清空' : '清空' }}</el-button></div>
     </section>
 
     <section class="import-section import-details" aria-labelledby="import-details-title">
-      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
+      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || state.clearing || state.clearPending || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
       <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细已独立暂存，请补齐后保存基础信息。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />

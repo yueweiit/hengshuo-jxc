@@ -1,6 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportMapper">
+  <select id="selectClearTasks" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT id,status FROM pur_order_import_task WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id FOR UPDATE
+  </select>
+  <select id="selectClearAssets" resultType="java.lang.Long" useCache="false">
+    SELECT attachment_id FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId}
+    UNION SELECT i.attachment_id FROM pur_order_import_image i JOIN pur_order_import_source s ON s.country_id=i.country_id AND s.id=i.source_id WHERE s.country_id=#{countryId} AND s.batch_id=#{batchId}
+  </select>
+  <delete id="clearRows">DELETE FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
+  <delete id="clearProgress">DELETE FROM pur_order_import_task_progress p USING pur_order_import_task t WHERE t.country_id=#{countryId} AND t.batch_id=#{batchId} AND p.country_id=t.country_id AND p.task_id=t.id</delete>
+  <delete id="clearTasks">DELETE FROM pur_order_import_task WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
+  <delete id="clearGroups">DELETE FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
+  <delete id="clearImages">DELETE FROM pur_order_import_image i USING pur_order_import_source s WHERE s.country_id=#{countryId} AND s.batch_id=#{batchId} AND i.country_id=s.country_id AND i.source_id=s.id</delete>
+  <delete id="clearSources">DELETE FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
+  <delete id="clearBatch">DELETE FROM pur_order_import_batch WHERE country_id=#{countryId} AND batch_id=#{batchId}</delete>
+  <update id="redactClearedSnapshots">
+    UPDATE sys_idempotency SET response=jsonb_build_object('cleared',true,'batchId',#{batchId}),resource_refs='[]'::jsonb
+    WHERE country_id=#{countryId} AND user_id=#{userId} AND response IS NOT NULL AND NOT (method='DELETE' AND endpoint=#{endpoint})
+      AND (endpoint=#{endpoint} OR endpoint LIKE #{endpoint}||'/%' OR ((endpoint='/api/v1/pur/order-imports' OR endpoint LIKE '/api/v1/pur/order-imports?%') AND response->>'batchId'=#{batchId}))
+  </update>
+  <select id="selectClearReceipt" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT response FROM sys_idempotency WHERE country_id=#{countryId} AND user_id=#{userId} AND method='DELETE' AND endpoint=#{endpoint} AND response->>'cleared'='true' ORDER BY id DESC LIMIT 1
+  </select>
+  <select id="selectPendingClearReceipts" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT response FROM sys_idempotency c WHERE c.country_id=#{countryId} AND c.method='DELETE' AND c.endpoint LIKE '/api/v1/pur/order-imports/%'
+      AND c.response->>'cleared'='true' AND jsonb_typeof(c.response->'_assetIds')='array'
+      AND EXISTS(SELECT 1 FROM jsonb_array_elements_text(c.response->'_assetIds') ids(id) JOIN sys_attachment a ON a.id=ids.id::bigint AND a.country_id=c.country_id WHERE a.object_status='QUARANTINED')
+    ORDER BY c.id LIMIT #{limit}
+  </select>
 
   <select id="selectBatch" resultType="java.util.LinkedHashMap" useCache="false">
     SELECT * FROM pur_order_import_batch WHERE country_id=#{countryId} AND batch_id=#{batchId}<if test="lock"> FOR UPDATE</if>

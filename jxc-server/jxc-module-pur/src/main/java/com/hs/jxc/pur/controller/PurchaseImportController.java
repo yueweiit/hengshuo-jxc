@@ -12,8 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/pur/order-imports")
 public class PurchaseImportController {
+    private final com.hs.jxc.pur.service.impl.PurchaseImportClearService clearing;
     private final PurchaseImportTraceService trace;private final PurchaseImportMatchService matches;private final PurchaseImportDraftService drafts;private final PurchaseImportPhotoService photos;private final com.hs.jxc.md.api.ProductImageApi images;private final PurchaseImportProductService products;private final PurchaseImportService imports;private final PurchaseImportTaskService tasks;private final JsonCodec json;
-    public PurchaseImportController(PurchaseImportService imports,PurchaseImportTaskService tasks,JsonCodec json,PurchaseImportProductService products,PurchaseImportDraftService drafts,PurchaseImportPhotoService photos,com.hs.jxc.md.api.ProductImageApi images,PurchaseImportMatchService matches,PurchaseImportTraceService trace){this.trace=trace;this.matches=matches;this.drafts=drafts;this.photos=photos;this.images=images;this.products=products;this.imports=imports;this.tasks=tasks;this.json=json;}
+    public PurchaseImportController(PurchaseImportService imports,PurchaseImportTaskService tasks,JsonCodec json,PurchaseImportProductService products,PurchaseImportDraftService drafts,PurchaseImportPhotoService photos,com.hs.jxc.md.api.ProductImageApi images,PurchaseImportMatchService matches,PurchaseImportTraceService trace,com.hs.jxc.pur.service.impl.PurchaseImportClearService clearing){this.clearing=clearing;this.trace=trace;this.matches=matches;this.drafts=drafts;this.photos=photos;this.images=images;this.products=products;this.imports=imports;this.tasks=tasks;this.json=json;}
     private RequestContext ctx(){return RequestContextHolder.require();}
     private ApiEnvelope ok(Object data){return ApiEnvelope.ok(data,ctx().traceId());}
     @GetMapping("/capabilities") public ApiEnvelope capabilities(){return ok(imports.capabilities(ctx()));}
@@ -23,6 +24,8 @@ public class PurchaseImportController {
         return ResponseEntity.accepted().body(ok(imports.upload(ctx(),file.getOriginalFilename(),file.getBytes(),header==null?Map.of():json.readMap(header),batchId,key)));
     }
     @GetMapping("/{batchId}") public ApiEnvelope get(@PathVariable UUID batchId){return ok(imports.get(ctx(),batchId));}
+    @DeleteMapping("/{batchId}") public ApiEnvelope clear(@PathVariable UUID batchId,@RequestHeader("If-Match")long version,@RequestHeader("Idempotency-Key")String key){return ok(clearing.clear(ctx(),batchId,Inputs.id(version),key));}
+    @GetMapping("/{batchId}/clear-status") public ApiEnvelope clearStatus(@PathVariable UUID batchId){return ok(clearing.status(ctx(),batchId));}
     @PutMapping("/{batchId}") public ApiEnvelope header(@PathVariable UUID batchId,@RequestBody Map<String,Object> body){return ok(imports.saveHeader(ctx(),batchId,body));}
     @PutMapping("/{batchId}/rows/{rowId}") public ApiEnvelope row(@PathVariable UUID batchId,@PathVariable long rowId,@RequestBody Map<String,Object> body){return ok(imports.saveRow(ctx(),batchId,Inputs.id(rowId),body));}
     @PostMapping(consumes=MediaType.MULTIPART_FORM_DATA_VALUE,params="imageRowId")

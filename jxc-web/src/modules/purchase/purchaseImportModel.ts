@@ -53,6 +53,8 @@ export interface PurchaseImportApi {
   uploadPhoto?(batchId: string, row: ImportRow, file: File, values: ImportValues, key: string): Promise<unknown>
   readImage?(batchId: string, imageId: number, signal: AbortSignal): Promise<Blob>
   deleteRow(batchId: string, row: ImportRow): Promise<unknown>
+  clearBatch?(batchId: string, version: number, key: string): Promise<unknown>
+  clearStatus?(batchId: string): Promise<unknown>
   retryTask?(taskId: string, key: string, sheet: string | null, mappingOverrides?: MappingOverrides): Promise<unknown>
   associate?(batchId: string, row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED'): Promise<unknown>
   decide?(batchId: string, row: ImportRow, input: Record<string, unknown>): Promise<unknown>
@@ -146,6 +148,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
     activeTaskId: null as string | null, upload: null as ImportUpload | null, progressError: '', progressReading: false, progressReloadNeeded: false,
     groups: [] as ImportDraftGroup[],
+    clearing: false, clearPending: false, clearedBatchId: null as string | null,
   })
   const images = createPurchaseImportImages((id, imageId, signal) => {
     if (!api.readImage) return Promise.reject(new Error('原图读取接口尚未接入'))
@@ -153,8 +156,9 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }, () => state.batchId)
   let photoFile: File | null = null, photoSignature = '', photoKey = ''
   let epoch = 0, readSequence = 0, progressSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
-  const busy = () => state.loading || state.importing || state.saving || state.status === 'PARSING'
-  const headerDirty = () => state.batchId !== null && JSON.stringify(state.header) !== savedHeader
+  let clearIntent: { id: string; version: number; key: string } | null = null
+  const busy = () => state.loading || state.importing || state.saving || state.clearing || state.clearPending || state.status === 'PARSING'
+  const headerDirty = () => !state.clearPending && state.batchId !== null && JSON.stringify(state.header) !== savedHeader
   function failure(error: unknown) {
     state.success = ''
     state.error = error instanceof Error ? error.message : '操作失败，未收到有效响应，请重试'
@@ -207,7 +211,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     }
   }
   async function loadBatch(id: string, preserveDraft = false) {
-    if (state.importing || state.saving || state.edit) return false
+    if (state.importing || state.saving || state.clearing || state.clearPending || state.edit) return false
     const context = epoch, sequence = ++readSequence
     clearFeedback()
     if (!isBatchId(id)) { state.loading = false; failure(new Error('批次编号格式不正确')); return false }
@@ -221,6 +225,14 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       applyBatch(batch, preserveDraft)
       return true
     } catch (error) {
+      if (context === epoch && sequence === readSequence && record(error) && error.code === 'NOT_FOUND' && api.clearStatus) {
+        try {
+          const receipt = readClear(await api.clearStatus(id), id)
+          if (context !== epoch || sequence !== readSequence) return false
+          applyClear(receipt)
+          return true
+        } catch (statusError) { if (context === epoch && sequence === readSequence) failure(statusError); return false }
+      }
       if (context === epoch && sequence === readSequence) failure(error)
       return false
     } finally {
@@ -322,7 +334,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function refreshTasks() {
-    if (!state.batchId || state.edit || state.saving || state.importing) return false
+    if (!state.batchId || state.edit || state.saving || state.importing || state.clearing || state.clearPending) return false
     const id = state.batchId, current = state.tasks.find(task => task.id === state.activeTaskId)
     // 历史任务或旧接口没有逐任务读取时，继续使用原批次恢复入口。
     if (current && api.readTask && (['QUEUED', 'RUNNING'].includes(current.status) || state.progressReloadNeeded)) {
@@ -385,6 +397,54 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     return write('saving', () => api.publishPhotos!(state.batchId!, row, imageIds, photoKeys.get(signature)!), response => { applyBatch(readBatch(response)); photoKeys.delete(signature); state.success = '商品照片已关联，特征和索引在后台处理' })
   }
   const workflow = createPurchaseImportWorkflow({ state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
+  function clearBlockReason() {
+    if (state.loading || state.importing || state.saving || state.clearing || state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) return '当前批次正在处理，请等待处理结束后清空'
+    if (state.upload?.status === 'UNKNOWN') return '文件接收结果尚未确认，请先按原上传请求重试核实'
+    if (state.status === 'COMPLETED' || state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => !!group.orderId || ['CREATED', 'CREATING', 'UNKNOWN'].includes(group.createStatus))) return '当前批次已关联采购草稿或创建结果尚未核实，不能清空'
+    return ''
+  }
+  const canClear = () => clearBlockReason() === ''
+  function readClear(value: unknown, id: string) {
+    if (!record(value) || value.cleared !== true || value.batchId !== id || !positiveId(value.version) || !isBatchId(value.requestKey) || typeof value.cleanupPending !== 'boolean' || !Number.isSafeInteger(value.pendingFiles) || Number(value.pendingFiles) < 0 || !record(value.counts) || ['rows', 'sources', 'images', 'tasks', 'groups', 'progress'].some(field => !Number.isSafeInteger(value.counts && (value.counts as Record<string, unknown>)[field]) || Number((value.counts as Record<string, unknown>)[field]) < 0) || !value.cleanupPending && value.pendingFiles !== 0) throw new Error('后端返回的清空回执不完整，请使用原请求重试核实')
+    return value as unknown as { batchId: string; version: number; requestKey: string; cleanupPending: boolean }
+  }
+  function applyClear(receipt: ReturnType<typeof readClear>) {
+    invalidate(); state.header.orderDate = null
+    if (receipt.cleanupPending) {
+      clearIntent = { id: receipt.batchId, version: receipt.version, key: receipt.requestKey }
+      state.batchId = receipt.batchId; state.version = receipt.version; state.clearPending = true
+      failure(new Error('暂存数据已清空，文件清理尚未完成，请点击重试清空'))
+      state.errorCode = 'PUR_IMPORT_FILES_PENDING'
+    } else { state.clearedBatchId = receipt.batchId; state.success = '当前导入数据和独占文件已清空' }
+  }
+  async function clearAll() {
+    if (!canClear()) return false
+    if (!state.batchId) { invalidate(); state.header.orderDate = null; state.success = '页面数据已清空'; return true }
+    if (!api.clearBatch) { failure(new Error('批次清空接口尚未接入')); return false }
+    if (!clearIntent) clearIntent = { id: state.batchId, version: state.version, key: newKey() }
+    const intent = clearIntent, context = epoch
+    state.clearing = true; clearFeedback()
+    try {
+      const response = await api.clearBatch(intent.id, intent.version, intent.key)
+      if (context !== epoch) return false
+      const receipt = readClear(response, intent.id)
+      if (receipt.version !== intent.version || receipt.requestKey !== intent.key) throw new Error('后端清空回执与原请求不一致，请重试核实')
+      applyClear(receipt)
+      return !receipt.cleanupPending
+    } catch (error) {
+      if (context !== epoch) return false
+      if (record(error) && error.code === 'PUR_IMPORT_FILES_PENDING') {
+        try { const receipt = readClear(error.data, intent.id); if (receipt.version !== intent.version || receipt.requestKey !== intent.key) throw new Error('清空回执与原请求不一致'); applyClear(receipt); if (error instanceof Error) state.error = error.message }
+        catch (invalid) { state.clearPending = true; failure(invalid) }
+      } else {
+        const rejected = record(error) && ['SYS_VERSION_CONFLICT', 'SYS_FORBIDDEN', 'NOT_FOUND', 'PUR_IMPORT_CLEAR_BUSY', 'PUR_IMPORT_CLEAR_LINKED', 'SYS_COUNTRY_REQUIRED', 'PUR_IMPORT_ASSET_SCOPE', 'PUR_IMPORT_ASSET_HELD'].includes(String(error.code))
+        state.clearPending = !rejected
+        if (rejected) clearIntent = null
+        failure(error)
+      }
+      return false
+    } finally { if (context === epoch) state.clearing = false }
+  }
   function invalidate() {
     workflow.reset()
     ++epoch; ++readSequence; ++progressSequence
@@ -395,8 +455,9 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
     state.groups = []; photoKeys.clear()
+    clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate }
+  return { ...workflow, state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>
 
