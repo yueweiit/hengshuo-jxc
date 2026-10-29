@@ -17,9 +17,9 @@ const emit = defineEmits<{ download: [] }>()
 const country = useCountryStore(), user = useUserStore(), route = useRoute(), router = useRouter()
 const page = createPurchaseImportModel(purchaseImportApi, todayIn(country.timezone))
 const state = page.state
-const books = ref<{ id: number; name: string; baseCurrency: string }[]>([])
+const books = ref<{ id: number; name: string; baseCurrency: string; status: string }[]>([])
 const suppliers = ref<{ id: number; name: string; settleCurrency?: string; paymentTerms?: string }[]>([])
-const currencies = ref<{ code: string }[]>([])
+const currencies = ref<{ code: string; name: string }[]>([])
 const refsLoading = ref(false), refsError = ref(''), dialogVisible = ref(false), selected = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement>()
 const importDisabled = computed(() => page.busy() || !!state.edit)
@@ -40,20 +40,30 @@ async function loadReferences() {
     const [availableBooks, availableSuppliers, availableCurrencies] = await Promise.all([
       http.get<typeof books.value>('/org/books'),
       allRecords<typeof suppliers.value[number]>('/md/partners', { partnerType: 'SUPPLIER', status: 'ENABLED' }),
-      allRecords<typeof currencies.value[number]>('/md/currencies'),
+      allRecords<typeof currencies.value[number]>('/md/currencies', { status: 'ENABLED' }),
     ])
     if (!active || request !== refsSequence) return
     if (!Array.isArray(availableBooks)) throw new Error('账套选项返回格式不正确')
     books.value = availableBooks; suppliers.value = availableSuppliers; currencies.value = availableCurrencies
+    applyHeaderDefaults()
   } catch (error) {
     if (active && request === refsSequence) refsError.value = error instanceof Error ? error.message : '基础数据读取失败，请重试'
   } finally {
     if (active && request === refsSequence) refsLoading.value = false
   }
 }
+function applyHeaderDefaults() {
+  // 旧批次即使尚未读取完成也保留其原值；无可用选项代表合法空白。
+  if (state.batchId !== null || route.query.batchId !== undefined) return
+  const book = books.value.find(item => item.status === 'ACTIVE')
+  if (state.header.bookId === null && book) state.header.bookId = book.id
+  if (state.header.supplierId === null && suppliers.value[0]) state.header.supplierId = suppliers.value[0].id
+  supplierChanged()
+  if (!state.header.currency && currencies.value.some(item => item.code === country.currency)) state.header.currency = country.currency
+}
 function supplierChanged() {
   const supplier = suppliers.value.find(item => item.id === state.header.supplierId)
-  if (supplier && !state.header.currency && supplier.settleCurrency) state.header.currency = supplier.settleCurrency
+  if (supplier && !state.header.currency && supplier.settleCurrency && currencies.value.some(item => item.code === supplier.settleCurrency)) state.header.currency = supplier.settleCurrency
   if (supplier && !state.header.paymentTerms && supplier.paymentTerms) state.header.paymentTerms = supplier.paymentTerms
 }
 function selectedRefsValid() {
@@ -102,6 +112,8 @@ onMounted(() => { void loadReferences(); void loadRouteBatch() })
 watch(() => route.query.batchId, () => {
   if (route.query.batchId === state.batchId) return
   page.invalidate(); selected.value = null; dialogVisible.value = false
+  state.header.orderDate = todayIn(country.timezone)
+  applyHeaderDefaults()
   void loadRouteBatch()
 })
 watch(() => [country.currentId, country.epoch, user.token], () => {
@@ -121,9 +133,9 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <el-alert v-if="refsError" type="error" :closable="false" show-icon class="import-alert"><template #title>基础数据读取失败：{{ refsError }}</template><el-button link type="primary" @click="loadReferences">重新读取</el-button></el-alert>
       <el-form :model="state.header" :disabled="disabled || !!state.edit || headerLocked" label-width="90px" class="import-header-form" @submit.prevent>
         <div class="header-grid">
-          <el-form-item label="账套" required><el-select v-model="state.header.bookId" filterable placeholder="请选择账套" aria-label="账套"><el-option v-for="book in books" :key="book.id" :value="book.id" :label="`${book.name} · ${book.baseCurrency}`" /></el-select></el-form-item>
+          <el-form-item label="账套" required><el-select v-model="state.header.bookId" filterable placeholder="请选择账套" aria-label="账套"><el-option v-for="book in books" :key="book.id" :value="book.id" :label="`${book.name} · ${book.baseCurrency}`" :disabled="book.status !== 'ACTIVE'" /></el-select></el-form-item>
           <el-form-item label="供应商" required><el-select v-model="state.header.supplierId" filterable placeholder="请选择供应商" aria-label="供应商" @change="supplierChanged"><el-option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id" :label="supplier.name" /></el-select></el-form-item>
-          <el-form-item label="币种" required><el-select v-model="state.header.currency" filterable placeholder="请选择币种" aria-label="币种"><el-option v-for="currency in currencies" :key="currency.code" :value="currency.code" :label="currency.code" /></el-select></el-form-item>
+          <el-form-item label="币种" required><el-select v-model="state.header.currency" filterable placeholder="请选择币种" aria-label="币种"><el-option v-for="currency in currencies" :key="currency.code" :value="currency.code" :label="`${currency.code} · ${currency.name}`" /></el-select></el-form-item>
           <el-form-item label="下单日期" required><el-date-picker v-model="state.header.orderDate" type="date" value-format="YYYY-MM-DD" placeholder="请选择日期" aria-label="下单日期" /></el-form-item>
           <el-form-item label="预计交货"><el-date-picker v-model="state.header.expectedDate" type="date" value-format="YYYY-MM-DD" placeholder="请选择日期" aria-label="预计交货" /></el-form-item>
           <el-form-item label="付款条件"><el-input v-model="state.header.paymentTerms" maxlength="200" placeholder="填写付款条件" aria-label="付款条件" /></el-form-item>

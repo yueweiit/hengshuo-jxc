@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { ref, computed, watch, compile, createSSRApp, defineComponent, h } from 'vue'
+import { ref, reactive, computed, watch, nextTick, compile, createSSRApp, defineComponent, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 import { loadTsModule } from './contracts/load-ts-module.mjs'
@@ -11,22 +11,27 @@ const model = loadTsModule(new URL('../src/modules/purchase/purchaseImportModel.
 const batchId = '11111111-2222-4333-8444-555555555555'
 const header = { bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2026-10-28', expectedDate: null, paymentTerms: '', prepayRatio: '0', termDays: null }
 const row = { id: 10, version: 1, rowNo: 1, sourceOrderNo: 'NY-051', photo: null, productSpec: 'S', purchaseQty: '10', saleUnitPrice: null, saleTotal: null, purchaseUnitPrice: '53', freight: null, landedUnitCost: null, usdUnitCost: null, usdTotal: null }
-function workspace(confirm = async () => {}, timerDependencies = {}) {
-  const navigations = [], requests = [], removed = []
+function workspace(confirm = async () => {}, dependencies = {}) {
+  const navigations = [], requests = [], removed = [], savedHeaders = []
+  const country = reactive({ timezone: 'Asia/Shanghai', currentId: 101, epoch: 0, currency: 'MXN' })
+  const user = reactive({ token: 'test' })
+  const route = reactive({ query: { from: 'test' } })
   const state = loadVueScript(file, {
     ref, computed, watch, onMounted() {}, onBeforeUnmount() {}, defineProps: () => ({ downloading: false, downloadError: '' }), defineEmits: () => () => {},
-    useCountryStore: () => ({ timezone: 'Asia/Shanghai', currentId: 101, epoch: 0 }), useUserStore: () => ({ token: 'test' }),
-    useRoute: () => ({ query: { from: 'test' } }), useRouter: () => ({ async replace(target) { navigations.push(target) } }),
+    useCountryStore: () => country, useUserStore: () => user,
+    useRoute: () => route, useRouter: () => ({ async replace(target) { navigations.push(target) } }),
     todayIn: () => '2026-10-28', ...model,
-    ElMessageBox: { confirm }, ...timerDependencies,
-    http: { async get(path) { assert.equal(path, '/org/books'); return [{ id: 1, name: '账套', baseCurrency: 'USD' }] } },
-    allRecords: async path => path === '/md/partners' ? [{ id: 2, name: '供应商' }] : [{ code: 'USD' }],
+    ElMessageBox: { confirm },
+    http: { async get(path) { assert.equal(path, '/org/books'); return [{ id: 5, name: '未启用账套', baseCurrency: 'MXN', status: 'DRAFT' }, { id: 1, name: '账套', baseCurrency: 'MXN', status: 'ACTIVE' }, { id: 3, name: '另一账套', baseCurrency: 'MXN', status: 'ACTIVE' }] } },
+    allRecords: async path => path === '/md/partners' ? [{ id: 2, name: '供应商', settleCurrency: 'USD', paymentTerms: '月结' }, { id: 4, name: '另一供应商', settleCurrency: 'MXN', paymentTerms: '现结' }] : [{ code: 'MXN', name: '墨西哥比索', status: 'ENABLED' }, { code: 'USD', name: '美元', status: 'ENABLED' }],
     purchaseImportApi: {
       async upload(selected, fields) { requests.push([selected, fields]); return { batchId, header: { ...header }, rows: [{ ...row }] } },
       async deleteRow(_batch, selected) { removed.push(selected.id); return { deleted: true, id: selected.id } },
+      async saveHeader(_batch, value) { savedHeaders.push(value); return { batchId, header: { ...value }, rows: [{ ...row }] } },
     },
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks'])
-  return { state, navigations, requests, removed }
+    ...dependencies,
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks'])
+  return { state, navigations, requests, removed, savedHeaders, country, user }
 }
 
 async function render(state) {
@@ -34,7 +39,8 @@ async function render(state) {
   const app = createSSRApp({ setup: () => ({ ...state, downloading: false, downloadError: '' }), render: compile(template) })
   // 测试真实工作区模板与操作；Element控件外观和明细表内部行为由构建及模型测试分别覆盖。
   const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) })
-  for (const name of ['ElForm', 'ElFormItem', 'ElSelect', 'ElOption', 'ElDatePicker', 'ElInput', 'ElInputNumber', 'ElIcon', 'ElAlert', 'Upload', 'Download', 'Refresh']) app.component(name, slot)
+  for (const name of ['ElForm', 'ElFormItem', 'ElSelect', 'ElDatePicker', 'ElInput', 'ElInputNumber', 'ElIcon', 'ElAlert', 'Upload', 'Download', 'Refresh']) app.component(name, slot)
+  app.component('ElOption', defineComponent({ props: ['label', 'value', 'disabled'], setup: props => () => h('option', { value: props.value, disabled: props.disabled }, props.label) }))
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
   app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
   app.component('PurchaseImportTable', { render: () => null })
@@ -43,8 +49,8 @@ async function render(state) {
 }
 
 test('基础选项读取失败不阻止导入文件和来源编辑，基础信息保存仍需有效选项', async () => {
-  const { state, requests, removed } = workspace()
-  state.refsError.value = '基础选项读取失败'
+  const { state, requests, removed } = workspace(undefined, { allRecords: async () => { throw new Error('基础选项读取失败') } })
+  await state.loadReferences()
   state.selected.value = new File(['xlsx'], '采购.xlsx')
   assert.equal(state.state.header.bookId, null)
   await state.submitImport()
@@ -56,6 +62,127 @@ test('基础选项读取失败不阻止导入文件和来源编辑，基础信�
   state.page.cancelEdit()
   await state.remove(state.state.rows[0])
   assert.deepEqual(removed, [10])
+})
+
+test('新建时跳过草稿账套预选首个可用项，供应商币种优先且已知付款条件跨上传保留', async () => {
+  const { state } = workspace(undefined, { purchaseImportApi: { async upload() { return { batchId, header: { ...header, bookId: null, supplierId: null, currency: null, orderDate: null, paymentTerms: '', prepayRatio: null }, rows: [{ ...row }] } } } })
+  await state.loadReferences()
+  assert.deepEqual({ ...state.state.header }, { bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2026-10-28', expectedDate: null, paymentTerms: '月结', prepayRatio: null, termDays: null })
+  assert.match(await render(state), /<option value="5" disabled>/)
+  state.selected.value = new File(['xlsx'], '采购.xlsx')
+  await state.submitImport()
+  assert.equal(state.state.header.currency, 'USD')
+  assert.equal(state.state.header.paymentTerms, '月结')
+  assert.equal(state.state.header.bookId, 1)
+  assert.equal(state.page.headerDirty(), true)
+})
+
+test('供应商币种不可用时回退当前国家已启用币种', async () => {
+  const { state } = workspace(undefined, { allRecords: async path => path === '/md/partners' ? [{ id: 2, name: '供应商', settleCurrency: 'EUR' }] : [{ code: 'MXN', name: '墨西哥比索', status: 'ENABLED' }] })
+  await state.loadReferences()
+  assert.equal(state.state.header.supplierId, 2)
+  assert.equal(state.state.header.currency, 'MXN')
+})
+
+test('没有可用币种依据时保留空值，不虚构美元选项或结算币种', async () => {
+  const { state } = workspace(undefined, { allRecords: async path => path === '/md/partners' ? [{ id: 2, name: '供应商', settleCurrency: 'EUR' }] : [] })
+  await state.loadReferences()
+  assert.equal(state.state.header.currency, '')
+  assert.deepEqual(state.currencies.value, [])
+  assert.equal(state.refsError.value, '')
+})
+
+test('账套供应商和币种可以切换，重新读取不覆盖人工修改', async () => {
+  const { state } = workspace()
+  await state.loadReferences()
+  Object.assign(state.state.header, { bookId: 3, supplierId: 4, currency: 'USD', paymentTerms: '人工约定', orderDate: '2026-10-01' })
+  state.supplierChanged()
+  await state.loadReferences()
+  assert.equal(state.state.header.bookId, 3)
+  assert.equal(state.state.header.supplierId, 4)
+  assert.equal(state.state.header.currency, 'USD')
+  assert.equal(state.state.header.paymentTerms, '人工约定')
+  assert.equal(state.state.header.orderDate, '2026-10-01')
+})
+
+test('基础选项晚返回只补空字段，不覆盖等待期间填写的基础信息', async () => {
+  let finish
+  const books = new Promise(resolve => { finish = resolve })
+  const { state } = workspace(undefined, { http: { get: () => books } })
+  const loading = state.loadReferences()
+  Object.assign(state.state.header, { bookId: 3, supplierId: 4, currency: 'MXN', paymentTerms: '人工约定' })
+  finish([{ id: 1, name: '账套', baseCurrency: 'MXN', status: 'ACTIVE' }, { id: 3, name: '另一账套', baseCurrency: 'MXN', status: 'ACTIVE' }])
+  await loading
+  assert.equal(state.state.header.bookId, 3)
+  assert.equal(state.state.header.supplierId, 4)
+  assert.equal(state.state.header.currency, 'MXN')
+  assert.equal(state.state.header.paymentTerms, '人工约定')
+})
+
+test('打开旧批次时不预填空字段，返回新建页才使用当前默认值', async () => {
+  const oldHeader = { bookId: null, supplierId: null, currency: null, orderDate: null, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null }
+  const { state } = workspace(undefined, { purchaseImportApi: { async load() { return { batchId, header: oldHeader, rows: [{ ...row }] } } } })
+  state.route.query.batchId = batchId
+  await state.loadReferences()
+  assert.equal(state.state.header.bookId, null)
+  await state.loadRouteBatch()
+  await state.loadReferences()
+  assert.deepEqual({ ...state.state.header }, oldHeader)
+  delete state.route.query.batchId
+  await nextTick()
+  assert.equal(state.state.header.bookId, 1)
+  assert.equal(state.state.header.supplierId, 2)
+  assert.equal(state.state.header.currency, 'USD')
+  assert.equal(state.state.header.orderDate, '2026-10-28')
+})
+
+test('国家账号切换重置默认信息，旧上下文延迟响应不能回填', async () => {
+  let finish, reads = 0
+  const staleBooks = new Promise(resolve => { finish = resolve })
+  const { state, country, user } = workspace(undefined, { http: { get: () => ++reads === 1 ? staleBooks : Promise.resolve([{ id: 3, name: '新国家账套', baseCurrency: 'MXN', status: 'ACTIVE' }]) } })
+  const oldLoading = state.loadReferences()
+  Object.assign(state.state.header, { bookId: 1, supplierId: 4, currency: 'MXN', paymentTerms: '旧国家人工值' })
+  country.currentId = 202
+  await state.loadReferences()
+  finish([{ id: 1, name: '旧国家账套', baseCurrency: 'MXN', status: 'ACTIVE' }])
+  await oldLoading
+  assert.equal(state.state.header.bookId, 3)
+  assert.equal(state.state.header.supplierId, 2)
+  assert.equal(state.state.header.currency, 'USD')
+  assert.equal(state.state.header.paymentTerms, '月结')
+  state.state.header.currency = 'MXN'
+  user.token = 'another-account'
+  await state.loadReferences()
+  assert.equal(state.state.header.currency, 'USD')
+})
+
+test('合法无选项保持空白且与读取失败区分', async () => {
+  const { state } = workspace(undefined, { http: { async get() { return [{ id: 5, name: '未启用账套', baseCurrency: 'MXN', status: 'DRAFT' }] } }, allRecords: async () => [] })
+  await state.loadReferences()
+  assert.equal(state.state.header.bookId, null)
+  assert.equal(state.state.header.supplierId, null)
+  assert.equal(state.state.header.currency, '')
+  assert.equal(state.refsError.value, '')
+  assert.equal(state.disabled.value, false)
+})
+
+test('读取启用币种并显示美元中文名，切换USD后按原保存入口提交', async () => {
+  const currencyQueries = []
+  const { state, savedHeaders } = workspace(undefined, { allRecords: async (path, query) => {
+    if (path === '/md/partners') return [{ id: 2, name: '供应商', settleCurrency: 'MXN' }]
+    currencyQueries.push(query)
+    return [{ code: 'MXN', name: '墨西哥比索', status: 'ENABLED' }, { code: 'USD', name: '美元', status: 'ENABLED' }]
+  } })
+  await state.loadReferences()
+  assert.deepEqual(currencyQueries, [{ status: 'ENABLED' }])
+  assert.match(await render(state), /USD · 美元/)
+  state.selected.value = new File(['xlsx'], '采购.xlsx')
+  await state.submitImport()
+  state.state.header.currency = 'USD'
+  await state.saveHeader()
+  assert.equal(savedHeaders.length, 1)
+  assert.equal(savedHeaders[0].currency, 'USD')
+  assert.equal(state.page.headerDirty(), false)
 })
 
 test('工作区实际呈现三块区域，导入弹窗包含模板下载和三条注意事项', async () => {
