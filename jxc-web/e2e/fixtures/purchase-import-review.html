@@ -1,0 +1,13 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>采购核对组件隔离验证</title><div id="app"></div>
+<script type="module">
+import {createApp,h} from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import Assistant from '@/modules/purchase/PurchaseImportReviewAssistant.vue'
+import {createPurchaseImportModel,importColumns} from '@/modules/purchase/purchaseImportModel'
+const batch='11111111-2222-4333-8444-555555555555',calls=[]
+let data={batchId:batch,version:1,header:{bookId:null,supplierId:null,currency:null,orderDate:null,expectedDate:null,paymentTerms:'',prepayRatio:null,termDays:null},sources:[{id:7,fileName:'隔离测试.xlsx',fileSha256:'a'.repeat(64),status:'READY',sheets:[{name:'Sheet1',role:'PURCHASE',reviewContext:{format:'SourceReviewContextV1',imageCount:0,columns:[{key:'B',header:'Talla',examples:['10'],fields:['purchaseQty']}],subjects:[{id:'title:A1',kind:'IDENTIFIER',label:'TEST-ORDER',examples:['TEST-ORDER']},{id:'column:K',kind:'USD_AMOUNT',label:'cost usd',examples:['12.2537313432836']}]}}]}],rows:[1,2].map(id=>({...Object.fromEntries(importColumns.map(c=>[c.key,null])),id,rowNo:id,version:1,sourceId:7,sourceRow:id+2,sourceItemKey:`B${id+2}`}))}
+const model=createPurchaseImportModel({async load(){return structuredClone(data)},async confirmReview(id,body,key){calls.push({id,body,key});data={...data,version:data.version+Math.max(1,body.changes.length),sources:data.sources.map(s=>body.interpretation?{...s,sheets:s.sheets.map(t=>({...t,reviewAnswers:{...t.reviewAnswers,[body.interpretation.subjectId.slice(t.name.length+1)]:{meaning:body.interpretation.meaning}}}))}:s),rows:data.rows.map(r=>{const change=body.changes.find(c=>c.rowId===r.id);return change?{...r,...change.values,version:r.version+1}:r})};return structuredClone(data)}},'2026-10-29')
+await model.loadBatch(batch);window.reviewFixture={model,calls}
+createApp({render:()=>h('main',{style:'max-width:760px;margin:16px auto;padding:0 8px'},h(Assistant,{page:model}))}).use(ElementPlus).mount('#app')
+</script></html>

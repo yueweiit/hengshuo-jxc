@@ -14,6 +14,37 @@ import com.hs.jxc.pur.service.impl.PurchaseImportDraftServiceImpl;
 class PurchaseImportStagingIT extends PurchaseImportFixture {
     @Autowired PurchaseImportDraftServiceImpl drafts;
 
+    @Test void realSupplierMappingStagesAllReliableRowsBeforeBusinessConfirmation() throws Exception {
+        String source=System.getProperty("jxc.test.partial-source"),document=System.getProperty("jxc.test.partial-document");
+        org.junit.jupiter.api.Assumptions.assumeTrue(source!=null&&document!=null,"真实来源验证需要指定原文件和已留存模型映射的解析结果");
+        byte[] bytes=java.nio.file.Files.readAllBytes(java.nio.file.Path.of(source));
+        assertThat(com.hs.jxc.attachment.AttachmentObjectStore.sha256(bytes)).isEqualTo("b3c7c78b3aa07852e37045d47e136dd5387cbe6075234c064313b05c3b3fd626");
+        var doc=new com.hs.jxc.common.api.JsonCodec().readMap(java.nio.file.Files.readString(java.nio.file.Path.of(document),java.nio.charset.StandardCharsets.UTF_8));
+        var b=imports.upload(actor,"NY-051.xlsx",bytes,Map.of(),null,UUID.randomUUID().toString());
+        doReturn(doc).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));
+        var saved=imports.get(actor,id(b));assertThat(rows(saved)).hasSize(60);assertThat(rows(saved)).allSatisfy(r->assertThat(r).containsEntry("sourceOrderNo",null).containsEntry("productSpec",null));
+        assertThat(owner.queryForObject("SELECT sum(purchase_qty) FROM pur_order_import",java.math.BigDecimal.class)).isEqualByComparingTo("480");
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_image",Integer.class)).isEqualTo(20);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_row_image",Integer.class)).isEqualTo(63);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+        var preview=drafts.previews(actor,id(b),Map.of("batchVersion",saved.get("version")));assertThat(groups(preview)).isEmpty();
+        var sourceDto=((List<Map<String,Object>>)saved.get("sources")).getFirst();var meaning=new LinkedHashMap<String,Object>();meaning.put("subjectId","Sheet1:title:A1");meaning.put("meaning","ORDER_NUMBER");meaning.put("previousMeaning",null);
+        var changes=rows(saved).stream().map(r->Map.of("rowId",r.get("id"),"version",r.get("version"),"values",Map.of("sourceOrderNo","NY-051"))).toList();
+        var confirmed=imports.confirmReview(actor,id(b),Map.of("sourceId",sourceDto.get("id"),"fileSha256",sourceDto.get("fileSha256"),"batchVersion",saved.get("version"),"changes",changes,"confirm",true,"interpretation",meaning),UUID.randomUUID().toString());
+        assertThat(rows(confirmed)).allSatisfy(r->assertThat(r).containsEntry("sourceOrderNo","NY-051").containsEntry("productSpec",null));assertThat(confirmed.get("header")).isEqualTo(saved.get("header"));
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+    }
+
+    @Test void incompleteSourcePersistsAndUnknownOrderDoesNotCreateAGroup() {
+        var b=unconfigured();var doc=document();var v=(Map<String,Object>)rows(doc).getFirst().get("normalizedValues");
+        v.put("sourceOrderNo",null);v.put("productSpec",null);v.put("purchaseQty",null);
+        doReturn(doc).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));
+        var saved=imports.get(actor,id(b));assertThat(rows(saved)).hasSize(1);
+        assertThat(rows(saved).getFirst()).containsEntry("purchaseQty",null).containsEntry("sourceOrderNo",null);
+        var preview=drafts.previews(actor,id(b),Map.of("batchVersion",saved.get("version")));
+        assertThat(groups(preview)).isEmpty();assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+    }
+
     Map<String,Object> unconfigured() {
         return imports.upload(actor,"采购.xlsx",file,Map.of(),null,UUID.randomUUID().toString());
     }

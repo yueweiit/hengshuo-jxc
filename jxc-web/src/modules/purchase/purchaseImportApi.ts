@@ -5,6 +5,7 @@ import type { PurchaseImportApi } from './purchaseImportModel'
 const base = '/pur/order-imports'
 const batchPath = (id: string) => `${base}/${encodeURIComponent(id)}`
 export const purchaseImportApi: PurchaseImportApi = {
+  confirmReview: (id, input, key) => http.post(`${batchPath(id)}/review`, input, { headers: { 'Idempotency-Key': key }, silent: true }),
   upload(file, batchId, key, progress) {
     const data = new FormData()
     data.append('file', file)

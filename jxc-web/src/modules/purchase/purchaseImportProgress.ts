@@ -28,6 +28,6 @@ export function importProgressView(state: { tasks: ImportTask[]; activeTaskId?: 
   const result = task.result
   const imageStep = phase === 'EXTRACTING_IMAGES' || phase === 'PREPARING_IMAGES'
   const percentage = complete ? 100 : imageStep ? p?.totalImages ? Math.floor(p.processedImages / p.totalImages * 100) : null : p?.totalRows ? Math.floor(p.processedRows / p.totalRows * 100) : null
-  const message = complete ? (state.progressReloadNeeded ? '后台已完成，正在重新读取明细' : result?.rows !== undefined && result.images !== undefined ? `本次导入暂存完成：明细 ${result.rows} 条，图片 ${result.images} 张` : '本次文件已处理完成，明细数量待核对') : failed ? `本次未保存明细。${task.errorMessage || '任务未完成，请核对后重试'}` : '行数仅表示当前步骤已处理的数量，提交成功后才完成暂存'
+  const message = complete ? (state.progressReloadNeeded ? '后台已完成，正在重新读取明细' : result?.rows !== undefined && result.images !== undefined ? `本次导入暂存完成：明细 ${result.rows} 条，图片 ${result.images} 张${result.reviewRows ? `；解析时 ${result.reviewRows} 条来源字段待补充` : ''}${result.unstagedCandidates ? `；另有 ${result.unstagedCandidates} 条候选未能导入，请查看来源记录` : ''}` : '本次文件已处理完成，明细数量待核对') : failed ? `本次未保存明细。${task.errorMessage || '任务未完成，请核对后重试'}` : '行数仅表示当前步骤已处理的数量，提交成功后才完成暂存'
   return { title: complete ? '导入暂存完成' : failed ? `导入未完成（${labels[phase ?? 'READING']!.replace(/^正在/, '')}）` : task.status === 'QUEUED' ? '文件已接收，等待后台处理' : labels[phase ?? 'READING']!, fileName: task.fileName || '采购文件', message, percentage, complete, failed, rows, images: p ? `原图 ${p.processedImages} / ${p.totalImages === null ? '待统计' : p.totalImages} 张` : '', step: complete ? 5 : step }
 }

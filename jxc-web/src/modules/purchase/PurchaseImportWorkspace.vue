@@ -12,6 +12,7 @@ import PurchaseImportPreviewDrawer from './PurchaseImportPreviewDrawer.vue'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
 import PurchaseImportProgress from './PurchaseImportProgress.vue'
+import PurchaseImportReviewAssistant from './PurchaseImportReviewAssistant.vue'
 import { createPurchaseImportModel, consumeImportClearNavigation, rememberImportClearNavigation, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
@@ -223,7 +224,12 @@ onBeforeUnmount(() => { active = false; ++refsSequence; ++creationSequence; clea
       <p v-if="state.rows.length" class="table-hint">保存后生成对应采购单草稿及明细，并保留商品、原文件和费用来源关联。资料待核对时会提示具体原因。</p>
       <el-alert v-if="creationError" type="error" :closable="false" class="import-alert"><template #title>采购单保存暂不可用：{{ creationError }}</template><el-button link @click="loadCreationCapability">重新读取保存能力</el-button></el-alert>
       <p v-else-if="state.batchId && !creationEnabled && !creationLoading" class="table-hint">当前环境尚未启用保存采购单，可先完成资料核对。</p>
+      <div class="import-review-layout">
+        <div class="import-table-region">
       <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" @review="review" />
+        </div>
+        <PurchaseImportReviewAssistant v-if="state.rows.length" :page="page" @products="review()" @preview="preview" />
+      </div>
       <section v-if="state.groups.length" class="saved-orders" aria-label="采购单保存结果"><h3>采购单保存结果</h3><div v-for="group in state.groups" :key="group.id"><strong>{{ group.sourceOrderNo }}</strong><router-link v-if="group.orderId" :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || `采购单 ${group.orderId}` }}</router-link><span>{{ purchaseOrderSaveStatus(group) }}</span><el-button v-if="group.orderId || group.createIntent" link :disabled="page.busy()" @click="page.refreshCreation(group)">查询原保存结果</el-button><span v-if="group.errorMessage">{{ group.errorMessage }}</span></div></section>
     </section>
 
@@ -253,6 +259,7 @@ h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 24px; }
 .field-hint, .table-hint { color: var(--el-text-color-secondary); font-size: 12px; line-height: 20px; }
 .import-command { display: flex; justify-content: space-between; align-items: center; gap: 20px; p { margin: 5px 0 0; color: var(--el-text-color-secondary); font-size: 13px; } }
 .workflow-actions { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0; }
+.import-review-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,360px);gap:16px;align-items:start; }.import-table-region { min-width:0; }@media(max-width:1100px){.import-review-layout{grid-template-columns:minmax(0,1fr)}}
 .save-orders-button { margin-left:auto; }
 .saved-orders { margin-top:14px;border-top:1px solid var(--el-border-color-light);padding-top:12px;font-size:13px; }
 .saved-orders h3 { margin:0 0 8px;font-size:14px; }

@@ -50,7 +50,7 @@ onBeforeUnmount(clean)
     <div v-for="source in page.state.sources" :id="`import-source-${source.id}`" :key="source.id" class="source-file">
       <div><strong>{{ source.fileName }}</strong><small>{{ source.origin === 'MANUAL_UPLOAD' ? '手工上传照片' : '原文件' }} SHA256：{{ source.fileSha256 }}</small></div>
       <el-button link type="primary" :loading="downloading === source.id" @click="download(source.id, source.fileName)">下载原文件</el-button>
-      <p v-for="(warning, index) in source.warnings" :key="index" class="source-warning">{{ warning.sourceRow ? `原第${warning.sourceRow}行：` : '' }}{{ warning.message }}</p>
+      <el-collapse v-if="source.warnings?.length"><el-collapse-item :title="`导入时的来源核对记录（${source.warnings.length}项）`"><p v-for="(warning, index) in source.warnings" :key="index" class="source-warning">{{ warning.sourceRow ? `原第${warning.sourceRow}行：` : '' }}{{ warning.message }}</p></el-collapse-item></el-collapse>
     </div>
     <el-collapse v-if="page.state.rows.some(row => row.images?.length)">
       <el-collapse-item title="原图与来源位置 · 请逐行确认归属" name="images">

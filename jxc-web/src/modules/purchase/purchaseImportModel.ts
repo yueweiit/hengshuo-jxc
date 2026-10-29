@@ -2,6 +2,7 @@ import { reactive } from 'vue'
 import { createPurchaseImportWorkflow } from '@/modules/purchase/purchaseImportWorkflow'
 import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
 import { readImportTask, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
+import { reviewProposalCurrent, type ReviewProposal, type SourceReviewSheet } from '@/modules/purchase/purchaseImportReview'
 
 export interface ImportHeader {
   bookId: number | null
@@ -35,8 +36,8 @@ export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: 
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; sourceItemKey?: string; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface SupplierMapping { format: string; fileSha256: string; sheet: string; needsReview: boolean; reasons: string[]; ignoredRows: { sourceRow:number; reason:string }[]; lines: { sourceRow:number; cells: Record<string,string | string[] | null> }[] }
 export interface MappingOverrides { mapping:SupplierMapping; specLabels:Record<string,string>; confirm:boolean }
-export interface ImportTask { id: string; sourceId?: number | null; fileName?: string | null; kind?: string; phase?: string; progress?: ImportProgress | null; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number; mapping?: SupplierMapping; sourceCells?: { sheet: string; cell: string; value: string }[]; rows?: number; images?: number } }
-export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; origin?: 'MANUAL_UPLOAD' | 'XLSX'; warnings?: { sourceRow?: number; message: string }[] }
+export interface ImportTask { id: string; sourceId?: number | null; fileName?: string | null; kind?: string; phase?: string; progress?: ImportProgress | null; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number; mapping?: SupplierMapping; sourceCells?: { sheet: string; cell: string; value: string }[]; rows?: number; images?: number; reviewRows?: number; unstagedCandidates?: number } }
+export interface ImportSource { sheets?: SourceReviewSheet[]; id: number; fileName: string; fileSha256: string; status: string; origin?: 'MANUAL_UPLOAD' | 'XLSX'; warnings?: { sourceRow?: number; message: string }[] }
 export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE' | null; amount: string | null; currency: string | null; reason: string; confirm: boolean }
 export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
 export interface FeeTodo extends Omit<FeeReviewInput, 'confirm'> { format: 'FeeTodoV1'; todoId: string; sourceRows: ImportSourceRef[]; status: 'PENDING'; reviewStatus: 'UNRESOLVED' | 'CONFIRMED' | 'STALE'; registeredReference: null; targetOrderId: number | null; targetDocNo: string | null; targetReferenceStatus: string }
@@ -45,6 +46,7 @@ export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: numb
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
+  confirmReview?(batchId: string, input: Omit<ReviewProposal, 'batchId'>, key: string): Promise<unknown>
   upload(file: File, batchId: string | null, key: string, progress?: (loaded: number, total: number | null) => void): Promise<unknown>
   readTask?(id: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
@@ -93,11 +95,11 @@ function normalizeValues(values: ImportValues): ImportValues {
     if (value !== null && typeof value !== 'string') throw new Error(`${column.label}应为文本或精确小数字符串`)
     result[column.key] = value === null || value.trim() === '' ? null : value.trim()
   }
-  if (!result.sourceOrderNo || result.sourceOrderNo.length > 100) throw new Error('采购单号不能为空且不能超过100个字符')
+  if (result.sourceOrderNo !== null && result.sourceOrderNo.length > 100) throw new Error('采购单号不能超过100个字符')
   for (const column of importColumns) {
     if (!('numeric' in column)) continue
     const value = result[column.key]
-    if (column.key === 'purchaseQty' && (value === null || !decimalValid(value, true) || !/[1-9]/.test(value))) throw new Error('采购数量须大于0，最多4位小数和16位整数')
+    if (column.key === 'purchaseQty' && value !== null && (!decimalValid(value, true) || !/[1-9]/.test(value))) throw new Error('采购数量须大于0，最多4位小数和16位整数')
     if (value !== null && !decimalValid(value, column.key === 'purchaseQty')) throw new Error(`${column.label}须为非负数字，最多${column.key === 'purchaseQty' ? 4 : 10}位小数`)
   }
   return result
@@ -213,6 +215,21 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     } finally {
       if (context === epoch) { state[flag] = false; state.deletingId = null }
     }
+  }
+  const reviewKeys = new Map<string, string>()
+  async function confirmReview(proposal: ReviewProposal) {
+    if (!api.confirmReview || state.edit || !reviewProposalCurrent(proposal, state.batchId, state.version, state.rows, state.sources)) { failure(new Error('补充预览已失效，请按当前文件重新核对')); return false }
+    try {
+      for (const change of proposal.changes) {
+        const row = state.rows.find(r => r.id === change.rowId)!
+        normalizeValues({ ...Object.fromEntries(importColumns.map(c => [c.key, row[c.key]])), ...change.values } as ImportValues)
+      }
+    } catch (error) { failure(error); return false }
+    const { batchId, ...input } = proposal, signature = JSON.stringify(proposal)
+    if (!reviewKeys.has(signature)) reviewKeys.set(signature, newKey())
+    return write('saving', () => api.confirmReview!(batchId, input, reviewKeys.get(signature)!), response => {
+      applyBatch(readBatch(response), true); reviewKeys.delete(signature); state.success = proposal.interpretation ? `已保存原文含义确认${proposal.changes.length ? `并补充 ${proposal.changes.length} 条空白单号` : ''}，请继续核对剩余事项` : `已补充 ${proposal.changes.length} 条明细，请继续核对剩余事项`
+    })
   }
   async function loadBatch(id: string, preserveDraft = false) {
     if (state.importing || state.saving || state.clearing || state.clearPending || state.edit) return false
@@ -458,10 +475,11 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''; clearFeedback()
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
-    state.groups = []; photoKeys.clear()
+    state.groups = []; photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason }
+  return { ...workflow, state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview }
+
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>
 

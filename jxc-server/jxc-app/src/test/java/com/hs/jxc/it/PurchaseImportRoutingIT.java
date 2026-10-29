@@ -10,7 +10,7 @@ import static org.mockito.ArgumentMatchers.*;
 
 class PurchaseImportRoutingIT extends PurchaseImportFixture {
     @Test void templateRunsLocallyEvenWhenWorkerIsUnavailable() throws Exception {
-        var bytes=Files.readAllBytes(Path.of("D:/downlaoad/NY-051-采购导入.xlsx"));
+        var bytes=Files.readAllBytes(Path.of(System.getProperty("jxc.test.purchase-source","D:/downlaoad/NY-051-采购导入.xlsx")));
         var b=imports.upload(actor,"renamed.xlsx",bytes,Map.of(),null,UUID.randomUUID().toString());
         tasks.execute(101,task(b));
         assertThat(tasks.get(actor,task(b)).get("status")).isEqualTo("SUCCEEDED");

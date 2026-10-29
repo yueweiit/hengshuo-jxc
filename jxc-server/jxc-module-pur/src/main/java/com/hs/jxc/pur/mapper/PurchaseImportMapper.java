@@ -50,4 +50,5 @@ public interface PurchaseImportMapper {
     int updateImageAssociation(@Param("associationStatus") Object associationStatus, @Param("confirmedBy") Object confirmedBy, @Param("countryId") Object countryId, @Param("rowId") Object rowId, @Param("imageId") Object imageId);
     int incrementRowVersion(@Param("countryId") Object countryId, @Param("id") Object id);
     List<Integer> selectBatchVersion(@Param("countryId") Object countryId, @Param("batchId") Object batchId);
+    int updateSourceReview(@Param("sheets") String sheets,@Param("countryId") Object countryId,@Param("batchId") Object batchId,@Param("id") Object id);
 }

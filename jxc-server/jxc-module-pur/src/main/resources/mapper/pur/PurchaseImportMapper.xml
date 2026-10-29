@@ -162,4 +162,7 @@
   <select id="selectBatchVersion" resultType="java.lang.Integer" useCache="false">
     SELECT version FROM pur_order_import_batch WHERE country_id=#{countryId} AND batch_id=#{batchId}
   </select>
+  <update id="updateSourceReview">
+    UPDATE pur_order_import_source SET sheets=#{sheets}::jsonb WHERE country_id=#{countryId} AND batch_id=#{batchId} AND id=#{id} AND status='READY'
+  </update>
 </mapper>

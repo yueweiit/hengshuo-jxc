@@ -26,6 +26,7 @@ public class PurchaseImportController {
     @GetMapping("/{batchId}") public ApiEnvelope get(@PathVariable UUID batchId){return ok(imports.get(ctx(),batchId));}
     @DeleteMapping("/{batchId}") public ApiEnvelope clear(@PathVariable UUID batchId,@RequestHeader("If-Match")long version,@RequestHeader("Idempotency-Key")String key){return ok(clearing.clear(ctx(),batchId,Inputs.id(version),key));}
     @GetMapping("/{batchId}/clear-status") public ApiEnvelope clearStatus(@PathVariable UUID batchId){return ok(clearing.status(ctx(),batchId));}
+    @PostMapping("/{batchId}/review") public ApiEnvelope review(@PathVariable UUID batchId,@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key")String key){return ok(imports.confirmReview(ctx(),batchId,body,key));}
     @PutMapping("/{batchId}") public ApiEnvelope header(@PathVariable UUID batchId,@RequestBody Map<String,Object> body){return ok(imports.saveHeader(ctx(),batchId,body));}
     @PutMapping("/{batchId}/rows/{rowId}") public ApiEnvelope row(@PathVariable UUID batchId,@PathVariable long rowId,@RequestBody Map<String,Object> body){return ok(imports.saveRow(ctx(),batchId,Inputs.id(rowId),body));}
     @PostMapping(consumes=MediaType.MULTIPART_FORM_DATA_VALUE,params="imageRowId")

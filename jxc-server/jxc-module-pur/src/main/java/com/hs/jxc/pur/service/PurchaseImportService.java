@@ -10,6 +10,7 @@ public interface PurchaseImportService {
     Map<String,Object> upload(RequestContext ctx,String name,byte[] bytes,Map<String,Object> input,UUID existing,String key);
     Map<String,Object> get(RequestContext ctx,UUID id);
     Map<String,Object> saveRow(RequestContext ctx,UUID id,long rowId,Map<String,Object> input);
+    Map<String,Object> confirmReview(RequestContext ctx,UUID id,Map<String,Object> input,String key);
     Map<String,Object> uploadPhoto(RequestContext ctx,UUID id,long rowId,String name,String mime,byte[] bytes,Map<String,Object> input,String key);
     Map<String,Object> saveHeader(RequestContext ctx,UUID id,Map<String,Object> input);
     Map<String,Object> deleteRow(RequestContext ctx,UUID id,long rowId,long version);
