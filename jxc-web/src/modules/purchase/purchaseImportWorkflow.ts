@@ -3,9 +3,14 @@ import { importColumns, isBatchId, importRecord as record, importPositiveId as p
 interface Dependencies {
   state: { batchId: string | null; rows: ImportRow[]; groups: ImportDraftGroup[]; tasks: import('./purchaseImportModel').ImportTask[]; version: number; success: string; edit: unknown }; api: PurchaseImportApi; busy: () => boolean; headerDirty: () => boolean; rowLocked: (row: ImportRow) => boolean
   failure: (error: unknown) => void; newKey: () => string; loadBatch: (id: string) => Promise<boolean>
+  saveHeader: () => Promise<boolean>
   write: (flag: 'saving', request: () => Promise<unknown>, apply: (response: unknown) => void) => Promise<boolean>
   readRow: (value: unknown) => ImportRow; readGroup: (value: unknown) => ImportDraftGroup
   readBatch: (value: unknown) => Parameters<Dependencies['applyBatch']>[0]; applyBatch: (batch: import('./purchaseImportModel').ImportBatch) => void
+}
+export function purchaseOrderSaveStatus(group: ImportDraftGroup) {
+  if (group.orderId) return ({ VERIFIED:'已保存，读回核对一致', DIFFERENT:'已保存，采购单与确认内容有差异，请核对', READ_FAILED:'已保存，读回核对失败，请重试读取' } as Record<string,string>)[group.verifyStatus] ?? '已保存，读回待核实'
+  return ({ READY:'待保存', DRAFT:'资料待核对', CREATING:'原保存请求处理中，请稍后重试', UNKNOWN:'原保存结果待核实，请继续原请求', FAILED:'保存失败，请继续原请求' } as Record<string,string>)[group.createStatus] ?? '保存结果待核实'
 }
 export function createPurchaseImportWorkflow(deps: Dependencies) {
   const { state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,write,readRow,readGroup,readBatch,applyBatch } = deps
@@ -72,9 +77,9 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     let intent = group.createIntent || creationIntents.get(group.id)
     if (!intent || (!group.createIntent && intent.request.previewToken !== group.previewToken)) intent = { key: newKey(), request: { groupVersion: group.version, previewToken: group.previewToken, confirm: true } }
     creationIntents.set(group.id, intent)
-    const saved = await write('saving', () => api.createDraft!(state.batchId!, group, intent.request, intent.key), response => applyCreation(group, response))
-    if (saved) await loadBatch(state.batchId!)
-    return saved
+    const batch = state.batchId
+    const saved = await write('saving', () => api.createDraft!(batch, group, intent.request, intent.key), response => applyCreation(group, response))
+    return saved && state.batchId === batch ? await loadBatch(batch) : false
   }
   async function refreshCreation(group: ImportDraftGroup) {
     if (!api.creation || !state.batchId || busy() || state.edit) return false
@@ -91,6 +96,64 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     })
   }
 
-  function reset() { creationIntents.clear(); matchKeys.clear() }
-  return { decideProduct,createProduct,saveMatchInputs,startMatches,explainMatch,previewDrafts,saveGroup,createDraft,refreshCreation,saveFeeTodos,reset }
+  let saveRun: object | null = null
+  async function saveOrders() {
+    if (saveRun || busy()) return false
+    if (!state.batchId || !state.rows.length) { failure(new Error('请先导入并核对采购明细')); return false }
+    if (state.edit) { failure(new Error('请先保存或取消正在编辑的明细，再保存采购单')); return false }
+    if (!api.previews || !api.createDraft || !api.creation) { failure(new Error('采购单保存或结果查询接口尚未接入')); return false }
+    const batch = state.batchId, run = {}
+    saveRun = run
+    const current = () => saveRun === run && state.batchId === batch
+    const unassigned = () => state.rows.some(row => !row.groupId && !row.targetOrderLineId)
+    const originalIntent = (group: ImportDraftGroup) => !!group.createIntent || creationIntents.has(group.id)
+    const stop = (message: string) => { if (current()) failure(new Error(message)); return false }
+    async function savePreparedGroups() {
+      if (!state.groups.length) return stop('没有可保存的采购分组，请核对采购单号与明细')
+      for (const group of state.groups) {
+        if (group.orderId) {
+          if (group.verifyStatus !== 'VERIFIED') return stop(`${group.docNo || group.sourceOrderNo}：${purchaseOrderSaveStatus(group)}`)
+          continue
+        }
+        if (group.createStatus === 'CREATING') return stop(`${group.sourceOrderNo}：${purchaseOrderSaveStatus(group)}`)
+        if (['UNKNOWN','FAILED'].includes(group.createStatus) && !originalIntent(group)) return stop(`${group.sourceOrderNo}：原保存请求信息缺失，请查询原结果并核对`)
+        if (group.errors.length || !group.previewToken || !group.preview) return stop(`${group.sourceOrderNo}：${group.errors.map(issue => issue.message).join('；') || '请核对完整预览后再保存'}`)
+        if (group.feeTodos?.some(todo => todo.reviewStatus !== 'CONFIRMED')) return stop(`${group.sourceOrderNo}：请先核对费用来源、金额与币种`)
+      }
+      for (const id of state.groups.map(group => group.id)) {
+        const group = state.groups.find(item => item.id === id)
+        if (!group) return stop('采购分组已变化，请重新读取后核对')
+        if (group.orderId) continue
+        if (!await createDraft(group) || !current()) return false
+        const created = state.groups.find(item => item.id === id)
+        if (!created?.orderId) return stop(`${group.sourceOrderNo}：采购单创建结果尚未确认，请继续原保存请求`)
+        if (!await refreshCreation(created) || !current()) return false
+        const verified = state.groups.find(item => item.id === id)
+        if (!verified || verified.verifyStatus !== 'VERIFIED') return stop(`${group.sourceOrderNo}：${verified ? purchaseOrderSaveStatus(verified) : '读回分组不存在'}`)
+      }
+      return true
+    }
+    try {
+      if (headerDirty() && (!await deps.saveHeader() || !current())) return false
+      for (const group of [...state.groups]) {
+        if (!group.orderId && !originalIntent(group) && !['CREATING','UNKNOWN','FAILED'].includes(group.createStatus)) continue
+        if (!await refreshCreation(group) || !current()) return false
+      }
+      const recovering = state.groups.some(group => !group.orderId && originalIntent(group))
+      if (!recovering && (unassigned() || !state.groups.length || state.groups.some(group => !group.orderId))) {
+        if (!await previewDrafts() || !current()) return false
+      }
+      if (!await savePreparedGroups() || !current()) return false
+      // 原请求先完成，再为其后新增、尚未分组的来源建立预览，避免刷新原意图的凭证。
+      if (unassigned()) {
+        if (!await previewDrafts() || !current() || !await savePreparedGroups() || !current()) return false
+      }
+      if (unassigned()) return stop('仍有未归入采购单的明细，请核对来源分组')
+      state.success = `已保存 ${state.groups.length} 张采购单草稿，已读回核对一致`
+      return true
+    } finally { if (saveRun === run) saveRun = null }
+  }
+
+  function reset() { saveRun = null; creationIntents.clear(); matchKeys.clear() }
+  return { decideProduct,createProduct,saveMatchInputs,startMatches,explainMatch,previewDrafts,saveGroup,createDraft,refreshCreation,saveFeeTodos,saveOrders,reset }
 }

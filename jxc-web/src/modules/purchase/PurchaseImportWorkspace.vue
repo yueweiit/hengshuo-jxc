@@ -14,6 +14,7 @@ import PurchaseImportSources from './PurchaseImportSources.vue'
 import PurchaseImportProgress from './PurchaseImportProgress.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
+import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
 
 defineProps<{ downloading: boolean; downloadError: string }>()
 const emit = defineEmits<{ download: [] }>()
@@ -29,9 +30,25 @@ const importDisabled = computed(() => page.busy() || !!state.edit)
 const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value)
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 const reviewVisible = ref(false), previewVisible = ref(false), reviewRow = ref<number | null>(null)
+const creationEnabled = ref(false), creationLoading = ref(false), creationError = ref('')
+const pendingReview = ref(false)
 function review(row?: ImportRow) { reviewRow.value = row?.id ?? null; reviewVisible.value = true }
 async function preview() { if(await page.previewDrafts()) previewVisible.value = true }
-let active = true, refsSequence = 0
+let active = true, refsSequence = 0, creationSequence = 0
+async function loadCreationCapability() {
+  const request = ++creationSequence, batch = state.batchId
+  creationEnabled.value = false; creationError.value = ''; creationLoading.value = false
+  if (!batch) return
+  creationLoading.value = true
+  try {
+    const result = await http.get<{ draftCreationEnabled: boolean }>('/pur/order-imports/capabilities', {}, { silent: true })
+    if (!active || request !== creationSequence || state.batchId !== batch) return
+    if (typeof result.draftCreationEnabled !== 'boolean') throw new Error('采购单保存能力返回格式不正确')
+    creationEnabled.value = result.draftCreationEnabled
+  } catch (error) { if (active && request === creationSequence) creationError.value = error instanceof Error ? error.message : '读取采购单保存能力失败' }
+  finally { if (active && request === creationSequence) creationLoading.value = false }
+}
+watch(() => state.batchId, loadCreationCapability, { immediate:true })
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleTasks() {
   clearTimeout(taskTimer)
@@ -97,6 +114,15 @@ async function submitImport() {
   }
 }
 async function saveHeader() { if (!disabled.value && selectedRefsValid()) await page.saveHeader() }
+async function saveOrders() {
+  if (disabled.value || state.edit || creationLoading.value) return false
+  if (pendingReview.value) { page.failure(new Error('预览中还有未保存的表头或费用修改，请先完成核对')); previewVisible.value = true; return false }
+  if (!creationEnabled.value) { page.failure(new Error(creationError.value || '当前环境尚未启用保存采购单')); return false }
+  if (!selectedRefsValid()) return false
+  const saved = await page.saveOrders()
+  if (!saved && state.groups.some(group => group.errors.length || group.feeTodos?.some(todo => todo.reviewStatus !== 'CONFIRMED'))) previewVisible.value = true
+  return saved
+}
 async function remove(row: ImportRow) {
   if (importDisabled.value) return
   const context = JSON.stringify([country.currentId, country.epoch, user.token, state.batchId])
@@ -129,7 +155,7 @@ watch(() => [country.currentId, country.epoch, user.token], () => {
   void loadReferences()
   if (route.query.batchId !== undefined) void router.replace({ query: { ...route.query, batchId: undefined } }).catch(error => { if (active) page.failure(error) })
 }, { flush: 'sync' })
-onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer); page.invalidate() })
+onBeforeUnmount(() => { active = false; ++refsSequence; ++creationSequence; clearTimeout(taskTimer); page.invalidate() })
 </script>
 
 <template>
@@ -164,12 +190,16 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <PurchaseImportSources :page="page" />
       <PurchaseImportProgress v-if="!dialogVisible" :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
-      <div v-if="state.rows.length" class="workflow-actions"><el-button :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="page.startMatches(state.rows.filter(row => !page.rowLocked(row)).map(row => row.id))">识别商品</el-button><el-button :disabled="page.busy() || !!state.edit" @click="review()">核对商品</el-button><el-button type="primary" :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span></div>
+      <div v-if="state.rows.length" class="workflow-actions"><el-button :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="page.startMatches(state.rows.filter(row => !page.rowLocked(row)).map(row => row.id))">识别商品</el-button><el-button :disabled="page.busy() || !!state.edit" @click="review()">核对商品</el-button><el-button :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>
+      <p v-if="state.rows.length" class="table-hint">保存后生成对应采购单草稿及明细，并保留商品、原文件和费用来源关联。资料待核对时会提示具体原因。</p>
+      <el-alert v-if="creationError" type="error" :closable="false" class="import-alert"><template #title>采购单保存暂不可用：{{ creationError }}</template><el-button link @click="loadCreationCapability">重新读取保存能力</el-button></el-alert>
+      <p v-else-if="state.batchId && !creationEnabled && !creationLoading" class="table-hint">当前环境尚未启用保存采购单，可先完成资料核对。</p>
       <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" @review="review" />
+      <section v-if="state.groups.length" class="saved-orders" aria-label="采购单保存结果"><h3>采购单保存结果</h3><div v-for="group in state.groups" :key="group.id"><strong>{{ group.sourceOrderNo }}</strong><router-link v-if="group.orderId" :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || `采购单 ${group.orderId}` }}</router-link><span>{{ purchaseOrderSaveStatus(group) }}</span><el-button v-if="group.orderId || group.createIntent" link :disabled="page.busy()" @click="page.refreshCreation(group)">查询原保存结果</el-button><span v-if="group.errorMessage">{{ group.errorMessage }}</span></div></section>
     </section>
 
     <PurchaseImportReviewDialog v-if="state.batchId" v-model="reviewVisible" :page="page" :row-id="reviewRow" />
-    <PurchaseImportPreviewDrawer v-if="state.batchId" v-model="previewVisible" :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" />
+    <PurchaseImportPreviewDrawer v-if="state.batchId" v-model="previewVisible" :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" :creation-enabled="creationEnabled" :creation-loading="creationLoading" :creation-error="creationError" @save="saveOrders" @pending-review="pendingReview = $event" />
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
       <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件。</li><li>系统模板直接读取；供应商原表识别后如有歧义，请核对原列与规格。</li><li>导入后先暂存明细；基础信息在保存时核验，原图归属需人工确认。</li></ol>
@@ -194,6 +224,10 @@ h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 24px; }
 .field-hint, .table-hint { color: var(--el-text-color-secondary); font-size: 12px; line-height: 20px; }
 .import-command { display: flex; justify-content: space-between; align-items: center; gap: 20px; p { margin: 5px 0 0; color: var(--el-text-color-secondary); font-size: 13px; } }
 .workflow-actions { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0; }
+.save-orders-button { margin-left:auto; }
+.saved-orders { margin-top:14px;border-top:1px solid var(--el-border-color-light);padding-top:12px;font-size:13px; }
+.saved-orders h3 { margin:0 0 8px;font-size:14px; }
+.saved-orders > div { display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:6px 0; }
 .detail-title { display: flex; align-items: baseline; gap: 12px; }
 .import-details .section-heading { margin-bottom: 10px; }
 .table-hint { margin: 0 0 10px; }

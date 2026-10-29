@@ -8,6 +8,7 @@ import { loadTsModule } from './contracts/load-ts-module.mjs'
 
 const file = new URL('../src/modules/purchase/PurchaseImportWorkspace.vue', import.meta.url)
 const model = loadTsModule(new URL('../src/modules/purchase/purchaseImportModel.ts', import.meta.url))
+const { purchaseOrderSaveStatus } = loadTsModule(new URL('../src/modules/purchase/purchaseImportWorkflow.ts', import.meta.url))
 const batchId = '11111111-2222-4333-8444-555555555555'
 const header = { bookId: 1, supplierId: 2, currency: 'USD', orderDate: '2026-10-28', expectedDate: null, paymentTerms: '', prepayRatio: '0', termDays: null }
 const row = { id: 10, version: 1, rowNo: 1, sourceOrderNo: 'NY-051', photo: null, productSpec: 'S', purchaseQty: '10', saleUnitPrice: null, saleTotal: null, purchaseUnitPrice: '53', freight: null, landedUnitCost: null, usdUnitCost: null, usdTotal: null }
@@ -20,9 +21,9 @@ function workspace(confirm = async () => {}, dependencies = {}) {
     ref, computed, watch, onMounted() {}, onBeforeUnmount() {}, defineProps: () => ({ downloading: false, downloadError: '' }), defineEmits: () => () => {},
     useCountryStore: () => country, useUserStore: () => user,
     useRoute: () => route, useRouter: () => ({ async replace(target) { navigations.push(target) } }),
-    todayIn: () => '2026-10-28', ...model,
+    todayIn: () => '2026-10-28', ...model, purchaseOrderSaveStatus,
     ElMessageBox: { confirm },
-    http: { async get(path) { assert.equal(path, '/org/books'); return [{ id: 5, name: '未启用账套', baseCurrency: 'MXN', status: 'DRAFT' }, { id: 1, name: '账套', baseCurrency: 'MXN', status: 'ACTIVE' }, { id: 3, name: '另一账套', baseCurrency: 'MXN', status: 'ACTIVE' }] } },
+    http: { async get(path) { if(path==='/pur/order-imports/capabilities')return {draftCreationEnabled:true};assert.equal(path, '/org/books'); return [{ id: 5, name: '未启用账套', baseCurrency: 'MXN', status: 'DRAFT' }, { id: 1, name: '账套', baseCurrency: 'MXN', status: 'ACTIVE' }, { id: 3, name: '另一账套', baseCurrency: 'MXN', status: 'ACTIVE' }] } },
     allRecords: async path => path === '/md/partners' ? [{ id: 2, name: '供应商', settleCurrency: 'USD', paymentTerms: '月结' }, { id: 4, name: '另一供应商', settleCurrency: 'MXN', paymentTerms: '现结' }] : [{ code: 'MXN', name: '墨西哥比索', status: 'ENABLED' }, { code: 'USD', name: '美元', status: 'ENABLED' }],
     purchaseImportApi: {
       async upload(selected, fields) { requests.push([selected, fields]); return { batchId, header: { ...header }, rows: [{ ...row }] } },
@@ -30,7 +31,7 @@ function workspace(confirm = async () => {}, dependencies = {}) {
       async saveHeader(_batch, value) { savedHeaders.push(value); return { batchId, header: { ...value }, rows: [{ ...row }] } },
     },
     ...dependencies,
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible'])
   return { state, navigations, requests, removed, savedHeaders, country, user }
 }
 
@@ -48,6 +49,25 @@ async function render(state) {
   app.component('PurchaseImportSources', { render: () => null })
   return renderToString(app)
 }
+
+test('主页面提供保存入口并直接展示已生成采购单号与读回状态',async()=>{
+  const {state}=workspace();await state.loadReferences()
+  Object.assign(state.page.state,{batchId,rows:[row],groups:[{id:8,sourceOrderNo:'NY-051',createStatus:'CREATED',orderId:708,docNo:'PO-SAVE-8',verifyStatus:'VERIFIED',errors:[]}]})
+  const html=await render(state)
+  assert.match(html,/>保存<\/button>/);assert.match(html,/PO-SAVE-8/);assert.match(html,/读回核对一致/)
+})
+test('保存能力读取失败保留原因且不建单，重试成功后主按钮调用统一保存',async()=>{
+  let unavailable=true,calls=0
+  const {state}=workspace(async()=>{}, {http:{async get(path){if(path==='/pur/order-imports/capabilities'){if(unavailable)throw new Error('读取保存能力连接失败');return {draftCreationEnabled:true}}return [{id:1,name:'账套',baseCurrency:'MXN',status:'ACTIVE'}]}}})
+  await state.loadReferences();Object.assign(state.page.state,{batchId,header:{...header},rows:[row]});state.page.saveOrders=async()=>{calls++;return true}
+  await state.loadCreationCapability();assert.match(state.creationError.value,/连接失败/);assert.equal(await state.saveOrders(),false);assert.equal(calls,0)
+  unavailable=false;await state.loadCreationCapability();assert.equal(await state.saveOrders(),true);assert.equal(calls,1)
+})
+test('预览仍有未保存修改时主保存返回核对，不创建使用旧资料的采购单',async()=>{
+  const {state}=workspace();await state.loadReferences();Object.assign(state.page.state,{batchId,header:{...header},rows:[row]});await state.loadCreationCapability()
+  let calls=0;state.page.saveOrders=async()=>{calls++;return true};assert.ok(state.pendingReview,'缺少预览未保存修改的状态')
+  state.pendingReview.value=true;assert.equal(await state.saveOrders(),false);assert.equal(calls,0);assert.match(state.page.state.error,/预览.*未保存/)
+})
 
 test('基础选项读取失败不阻止导入文件和来源编辑，基础信息保存仍需有效选项', async () => {
   const { state, requests, removed } = workspace(undefined, { allRecords: async () => { throw new Error('基础选项读取失败') } })

@@ -1,45 +1,27 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { ElMessageBox } from 'element-plus'
-import { http } from '@/api/http'
+import { computed, ref, watch } from 'vue'
 import { formatImportDecimal } from './purchaseImportDisplay'
+import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
 import type { FeeReviewInput, ImportDraftGroup, PurchaseImportModel } from './purchaseImportModel'
 
-const props = defineProps<{ modelValue: boolean; page: PurchaseImportModel; books: { id: number; name: string }[]; suppliers: { id: number; name: string }[]; currencies: { code: string }[] }>()
-const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
+const props = defineProps<{ modelValue: boolean; page: PurchaseImportModel; books: { id: number; name: string }[]; suppliers: { id: number; name: string }[]; currencies: { code: string }[]; creationEnabled:boolean; creationLoading:boolean; creationError:string }>()
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save:[]; 'pending-review':[value:boolean] }>()
 const editingVersion = ref<number | null>(null)
 const editing = ref<number | null>(null), header = ref<Record<string, any>>({}), split = ref<number[]>([])
 const feeEdits = ref<Record<number, FeeReviewInput[]>>({})
+function feeReviewItems(group:ImportDraftGroup):FeeReviewInput[] { return (group.feeTodos ?? []).map(t => ({ sourceRowIds:[...t.sourceRowIds],scope:t.scope,amount:t.amount,currency:t.currency,reason:t.reason,confirm:t.reviewStatus === 'CONFIRMED' })) }
 watch(() => props.page.state.groups.map(g => `${g.id}:${g.feeTodosVersion}:${g.sourceBasisHash}`).join(','), () => {
-  feeEdits.value = Object.fromEntries(props.page.state.groups.map(g => [g.id, (g.feeTodos ?? []).map(t => ({ sourceRowIds:[...t.sourceRowIds],scope:t.scope,amount:t.amount,currency:t.currency,reason:t.reason,confirm:t.reviewStatus === 'CONFIRMED' }))]))
+  feeEdits.value = Object.fromEntries(props.page.state.groups.map(g => [g.id, feeReviewItems(g)]))
 }, { immediate:true })
-const enabled = ref(false), capabilityError = ref(''), capabilityLoading = ref(false)
+const pendingReview = computed(() => editing.value !== null || props.page.state.groups.some(group => JSON.stringify(feeEdits.value[group.id]) !== JSON.stringify(feeReviewItems(group))))
+watch(pendingReview, value => emit('pending-review',value), { immediate:true,flush:'sync' })
 const locked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.headerDirty())
-let active = true, epoch = 0
-watch(() => props.page.state.batchId, async () => {
-  editing.value = null; editingVersion.value = null; enabled.value = false; capabilityError.value = ''
-  const context = ++epoch
-  if (!props.page.state.batchId) return
-  capabilityLoading.value = true
-  try {
-    const result = await http.get<{ draftCreationEnabled: boolean }>('/pur/order-imports/capabilities', {}, { silent: true })
-    if (active && context === epoch) { if (typeof result.draftCreationEnabled !== 'boolean') throw new Error('创建开关返回格式不正确'); enabled.value = result.draftCreationEnabled }
-  } catch (error) { if (active && context === epoch) capabilityError.value = error instanceof Error ? error.message : '读取创建权限失败' }
-  finally { if (active && context === epoch) capabilityLoading.value = false }
-}, { immediate: true })
+watch(() => props.page.state.batchId, () => { editing.value = null; editingVersion.value = null })
 function edit(group: ImportDraftGroup) { editing.value = group.id; editingVersion.value = group.version; header.value = { ...group.header }; split.value = [] }
 async function save(group: ImportDraftGroup) { if (editing.value !== group.id || editingVersion.value === null) return; if (await props.page.saveGroup({ ...group, version: editingVersion.value }, header.value, split.value)) { editing.value = null; editingVersion.value = null } }
 function productLabel(id:number) { const product=props.page.state.rows.find(row=>row.matchedProductId===id)?.productSnapshot; return `${product?.productCode ?? '编码待核对'} · ${product?.name ?? '名称待核对'}` }
 function groupRows(group: ImportDraftGroup) { return props.page.state.rows.filter(row => row.groupId === group.id) }
 function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', READY: '可确认建单', CREATING: '创建处理中', CREATED: '已创建草稿', FAILED: '创建失败', UNKNOWN: '创建结果待核实' } as Record<string, string>)[group.createStatus] }
-async function create(group: ImportDraftGroup) {
-  if (locked.value || !enabled.value) return
-  const context = epoch, batch = props.page.state.batchId, token = group.previewToken
-  try { await ElMessageBox.confirm(`确认按当前完整预览创建 ${group.sourceOrderNo} 的采购草稿？共${group.preview?.lines.length}行，金额${formatImportDecimal(group.preview?.totalAmount ?? null)} ${group.header.currency}。`, '确认创建采购草稿', { confirmButtonText: '确认创建草稿', cancelButtonText: '返回核对', type: 'warning' }) }
-  catch (error) { if (error !== 'cancel' && error !== 'close') props.page.failure(error); return }
-  if (active && context === epoch && batch === props.page.state.batchId && token === group.previewToken && !locked.value) await props.page.createDraft(group)
-}
-onBeforeUnmount(() => { active = false; ++epoch })
 </script>
 
 <template>
@@ -48,8 +30,8 @@ onBeforeUnmount(() => { active = false; ++epoch })
     <el-alert v-if="page.state.error" :title="page.state.error" type="error" :closable="false" />
     <div class="draft-heading"><h3>完整采购预览</h3><el-button :disabled="locked || editing !== null" @click="page.previewDrafts">核对并生成预览</el-button></div>
     <p class="hint">同一采购单号的全部明细确认后才能创建草稿。表头不同的明细可以明确拆单，原单号仍保留用于追溯。</p>
-    <el-alert v-if="capabilityError" :title="capabilityError" type="error" :closable="false" />
-    <p v-else-if="!enabled && !capabilityLoading" class="hint">当前环境尚未启用创建采购草稿，可先完成资料核对和预览。</p>
+    <el-alert v-if="creationError" :title="creationError" type="error" :closable="false" />
+    <p v-else-if="!creationEnabled && !creationLoading" class="hint">当前环境尚未启用保存采购单，可先完成资料核对和预览。</p>
     <article v-for="group in page.state.groups" :key="group.id" class="draft-group">
       <div class="draft-heading"><strong>{{ group.sourceOrderNo }} · {{ status(group) }}</strong><el-button v-if="!group.orderId && !['CREATING', 'UNKNOWN'].includes(group.createStatus)" :disabled="locked" @click="edit(group)">核对表头／拆单</el-button></div>
       <el-form v-if="editing === group.id" :model="header" :disabled="locked" label-width="100px" class="group-form" @submit.prevent>
@@ -85,10 +67,11 @@ onBeforeUnmount(() => { active = false; ++epoch })
       </section>
       <el-collapse><el-collapse-item title="原文件、原单元格与公式来源"><div v-for="source in group.sourceEvidence" :key="source.rowId" class="source-evidence"><strong>第{{ source.rowNo }}行 · {{ source.fileName }} · {{ source.sourceSheet }} 原{{ source.sourceRow }}行</strong><p>原值：{{ JSON.stringify(source.originalValues) }}</p><p>公式及数量格：{{ JSON.stringify(source.formulaProvenance) }}</p></div></el-collapse-item></el-collapse>
       <el-alert v-if="group.errorMessage" :title="group.errorMessage" type="error" :closable="false" />
-      <p v-if="group.orderId">采购草稿：<router-link :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || group.orderId }}</router-link> · {{ group.verifyStatus === 'VERIFIED' ? '读回核对一致' : group.verifyStatus === 'DIFFERENT' ? '读回内容有差异，请核对原采购单' : '已保存，读回待核实' }}</p>
-      <div class="draft-actions"><el-button v-if="!group.orderId && ['READY', 'FAILED', 'UNKNOWN'].includes(group.createStatus) && group.previewToken" type="primary" :disabled="locked || !enabled || editing !== null || group.feeTodos?.some(todo => todo.reviewStatus !== 'CONFIRMED')" @click="create(group)">{{ group.createIntent ? '继续原创建请求' : '确认创建采购草稿' }}</el-button><el-button v-if="group.orderId || group.createIntent" :disabled="locked" @click="page.refreshCreation(group)">查询原创建结果</el-button></div>
+      <p v-if="group.orderId">采购草稿：<router-link :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || group.orderId }}</router-link> · {{ purchaseOrderSaveStatus(group) }}</p>
+      <div class="draft-actions"><el-button v-if="group.orderId || group.createIntent" :disabled="locked" @click="page.refreshCreation(group)">查询原保存结果</el-button></div>
     </article>
   </div>
+  <template #footer><span class="hint">{{ pendingReview ? '请先保存表头修改及费用核对，再保存采购单' : '保存后生成采购单草稿及关联明细' }}</span><el-button type="primary" :disabled="locked || !creationEnabled || pendingReview" :loading="page.state.saving" @click="emit('save')">保存</el-button></template>
 </el-drawer>
 </template>
 

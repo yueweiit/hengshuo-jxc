@@ -110,13 +110,8 @@ class PurchaseImportPhotoUploadIT extends PurchaseImportFixture {
         try(var input=java.nio.file.Files.newInputStream(java.nio.file.Path.of(certs,"certificate.pem"))){trust.setCertificateEntry("local-test",certificate.generateCertificate(input));}
         var manager=javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());manager.init(trust);var ssl=javax.net.ssl.SSLContext.getInstance("TLS");ssl.init(null,manager.getTrustManagers(),null);photoClient=HttpClient.newBuilder().sslContext(ssl).build();
         var b=upload(UUID.randomUUID().toString());parse(b);long rowId=((Number)rows(imports.get(actor,id(b))).getFirst().get("id")).longValue();
-        try(var network=org.testcontainers.containers.Network.newNetwork();var app=featureContainer(appImage,false).withNetwork(network).withNetworkAliases("application")){
-            app.start();
-            try(var web=new org.testcontainers.containers.GenericContainer<>(org.testcontainers.utility.DockerImageName.parse(webImage)).withNetwork(network)
-                .withCopyFileToContainer(org.testcontainers.utility.MountableFile.forHostPath(java.nio.file.Path.of(certs,"certificate.pem")),"/run/secrets/tls_certificate")
-                .withCopyFileToContainer(org.testcontainers.utility.MountableFile.forHostPath(java.nio.file.Path.of(certs,"key.pem")),"/run/secrets/tls_key")
-                .withExposedPorts(8443).waitingFor(org.testcontainers.containers.wait.strategy.Wait.forListeningPort())){
-                web.start();String base="https://"+web.getHost()+":"+web.getMappedPort(8443);
+        try(var gateway=featureGateway(appImage,webImage,certs,false)){
+            var app=gateway.app();String base=gateway.base();
                 var picture=new BufferedImage(1024,1024,BufferedImage.TYPE_INT_RGB);var random=new Random(123);
                 for(int y=0;y<1024;y++)for(int x=0;x<1024;x++)picture.setRGB(x,y,random.nextInt());
                 var out=new ByteArrayOutputStream();ImageIO.write(picture,"png",out);byte[] bytes=out.toByteArray();assertThat(bytes.length).isGreaterThan(2*1024*1024);
@@ -135,7 +130,6 @@ class PurchaseImportPhotoUploadIT extends PurchaseImportFixture {
                 }
                 assertThat(checked).isGreaterThan(10);System.out.println("PHOTO_GATEWAY_VERIFIED bytes="+bytes.length+" staticFiles="+checked);
                 String expected=AttachmentObjectStore.sha256(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("target/jxc-app-0.1.0-SNAPSHOT.jar")));assertThat(app.execInContainer("sha256sum","/app/app.jar").getStdout()).startsWith(expected+" ");
-            }
         }
     }
     @SuppressWarnings("unchecked") List<Map<String,Object>> list(Object value){return (List<Map<String,Object>>)value;}

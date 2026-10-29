@@ -384,7 +384,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!photoKeys.has(signature)) photoKeys.set(signature, newKey())
     return write('saving', () => api.publishPhotos!(state.batchId!, row, imageIds, photoKeys.get(signature)!), response => { applyBatch(readBatch(response)); photoKeys.delete(signature); state.success = '商品照片已关联，特征和索引在后台处理' })
   }
-  const workflow = createPurchaseImportWorkflow({ state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,write,readRow,readGroup,readBatch,applyBatch })
+  const workflow = createPurchaseImportWorkflow({ state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
   function invalidate() {
     workflow.reset()
     ++epoch; ++readSequence; ++progressSequence

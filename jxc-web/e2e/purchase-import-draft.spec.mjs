@@ -6,15 +6,17 @@ const dir=process.env.JXC_DUAL_DRAFT_EVIDENCE ?? 'C:/project/jxc/runtime/purchas
 const origin=process.env.JXC_DUAL_DRAFT_ORIGIN ?? 'http://127.0.0.1:60'
 const file=dir+'/page-state.private.json'
 const state=existsSync(file)?JSON.parse(readFileSync(file,'utf8')):{template:{},supplier:{}}
+const resumeOnly=!!state.template?.orderId&&!!state.supplier?.orderId
 const save=()=>writeFileSync(file,JSON.stringify(state,null,2),'utf8')
 const accounts=JSON.parse(readFileSync('C:/project/jxc/runtime/jxc-env/jxc-test-01.accounts.secret.json','utf8'))
 const account=accounts.find(a=>a.username==='mx02_admin');assert.ok(account,'缺少已有测试账号')
 const browser=await chromium.launch({headless:true})
 const context=await browser.newContext({viewport:{width:1600,height:1000},locale:'zh-CN',timezoneId:'Asia/Shanghai'})
 const page=await context.newPage();page.setDefaultTimeout(20000)
-let active='',latest=null,books=[],suppliers=[];const forbidden=[]
+let active='',latest=null,books=[],suppliers=[],createdDrafts=0;const forbidden=[]
 page.on('request',request=>{
   const path=new URL(request.url()).pathname
+  if(request.method()==='POST'&&path.endsWith('/drafts'))createdDrafts++
   if(request.method()!=='GET' && /\/api\/v1\/(lgs|inv|cst)\//.test(path) || request.method()!=='GET' && /\/(submit|approve)(\/|$)/.test(path))forbidden.push({method:request.method(),path})
 })
 page.on('response',async response=>{
@@ -150,14 +152,23 @@ async function previewAndDraft(){
   for(const index of [3,4,5,6,7])await expect(firstCells.nth(index)).toHaveText(/^-?\d+\.\d{2}$/)
   await page.screenshot({path:dir+`/${active}-preview.png`,fullPage:true})
   if(!state[active].orderId){
-    await drawer.getByRole('button',{name:/确认创建采购草稿|继续原创建请求/}).click()
-    const created=await command(`/pur/order-imports/${state[active].batchId}/groups/${g.id}/drafts`,()=>page.getByRole('button',{name:'确认创建草稿',exact:true}).click())
+    const created=await command(`/pur/order-imports/${state[active].batchId}/groups/${g.id}/drafts`,()=>drawer.getByRole('button',{name:'保存',exact:true}).click())
     assert.equal(created.createStatus,'CREATED');state[active].orderId=created.orderId;save()
   }
   const reading=page.waitForResponse(r=>new URL(r.url()).pathname===`/api/v1/pur/order-imports/${state[active].batchId}/groups/${g.id}/creation`&&r.request().method()==='GET')
-  await drawer.getByRole('button',{name:'查询原创建结果',exact:true}).click();const verified=(await (await reading).json()).data
+  await drawer.getByRole('button',{name:'查询原保存结果',exact:true}).click();const verified=(await (await reading).json()).data
   assert.equal(verified.verifyStatus,'VERIFIED');assert.equal(verified.actualOrder.status,'DRAFT');assert.equal(verified.actualOrder.lines.length,60)
   state[active].docNo=verified.actualOrder.docNo;state[active].verified=verified;save();await page.screenshot({path:dir+`/${active}-created.png`,fullPage:true});announce(`草稿已核对 ${state[active].docNo}`)
+}
+async function repeatSavedOrder(){
+  const expected=state[active].orderId,g=latest.groups.find(group=>group.orderId===expected);assert.ok(g,'未找到原已建采购单分组')
+  for(let n=0;n<2;n++){
+    const reading=page.waitForResponse(r=>new URL(r.url()).pathname===`/api/v1/pur/order-imports/${state[active].batchId}/groups/${g.id}/creation`&&r.request().method()==='GET')
+    await page.getByRole('button',{name:'保存',exact:true}).click();const body=await(await reading).json();assert.equal(body.code,'OK');assert.equal(body.data.orderId,expected);assert.equal(body.data.verifyStatus,'VERIFIED')
+    await expect(page.getByText('已保存 1 张采购单草稿，已读回核对一致',{exact:true})).toBeVisible()
+  }
+  const result=page.getByRole('region',{name:'采购单保存结果',exact:true});await expect(result).toContainText(state[active].docNo);await result.scrollIntoViewIfNeeded();await page.screenshot({path:dir+`/${active}-main-saved.png`,fullPage:true})
+  announce('主页面重复保存两次，仅回读原采购单')
 }
 try{
   await page.goto(origin+'/login');await page.locator('#login-language').selectOption('zh-CN');await page.locator('#account').fill(account.username);await page.locator('#password').fill(account.password)
@@ -184,11 +195,12 @@ try{
     assert.equal(new Set(latest.rows.flatMap(r=>r.images.map(i=>i.id))).size,20)
     assert.equal(latest.rows.reduce((sum,r)=>sum+r.images.length,0),label==='template'?60:63)
     if(label==='supplier')assert.ok(latest.rows.filter(r=>r.sourceRow===11).every(r=>r.images.length===2),'原第11行两张图必须关联所有拆分规格')
-    if(!state[label].orderId){await header();await photos();await match();await products()}
+    if(!state[label].orderId){await header();await photos();await match();await products()}else await repeatSavedOrder()
     await previewAndDraft();assert.deepEqual(forbidden,[])
   }
   if(state.lastError){(state.recoveredErrors??=[]).push({...state.lastError,resolvedAt:new Date().toISOString()});delete state.lastError}
-  state.status='VERIFIED';save();announce('两份Excel页面草稿均通过')
+  if(resumeOnly)assert.equal(createdDrafts,0)
+  state.status='VERIFIED';state.createdDraftRequests=createdDrafts;save();announce('两份Excel页面草稿均通过')
 }catch(error){state.lastError={branch:active,message:error.message,at:new Date().toISOString()};save();await page.screenshot({path:dir+'/page-first-failure.png',fullPage:true});throw error}
 finally{
   if(new URL(page.url()).pathname !== '/login')try{
