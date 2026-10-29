@@ -2,23 +2,23 @@
 import { nextTick, ref } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import type { InputInstance } from 'element-plus'
-import { importColumns, type ImportField, type ImportRow, type PurchaseImportModel } from './purchaseImportModel'
+import { importTableColumns, type ImportEditField, type ImportRow, type PurchaseImportModel } from './purchaseImportModel'
 import { formatImportDecimal } from './purchaseImportDisplay'
 import PurchaseImportPhoto from './PurchaseImportPhoto.vue'
 
 const props = defineProps<{ page: PurchaseImportModel; disabled: boolean }>()
 const emit = defineEmits<{ review: [row: ImportRow]; remove: [row: ImportRow] }>()
-const columns = importColumns.map(column => ({ ...column, numeric: 'numeric' in column }))
+const columns = importTableColumns.map(column => ({ ...column, numeric: 'numeric' in column }))
 const editor = ref<InputInstance | null>(null)
-function setEditor(instance: Element | ComponentPublicInstance | null, field: ImportField) {
+function setEditor(instance: Element | ComponentPublicInstance | null, field: ImportEditField) {
   if (props.page.state.edit?.field === field || props.page.state.edit?.field === null && field === 'sourceOrderNo') editor.value = instance as InputInstance | null
 }
-async function begin(row: ImportRow, field: ImportField | null) {
+async function begin(row: ImportRow, field: ImportEditField | null) {
   if (props.disabled || !props.page.startEdit(row, field)) return
   await nextTick()
   editor.value?.focus()
 }
-function editing(row: ImportRow, field: ImportField) {
+function editing(row: ImportRow, field: ImportEditField) {
   const edit = props.page.state.edit
   return edit?.id === row.id && (edit.field === null || edit.field === field)
 }
@@ -26,7 +26,7 @@ function saveCell() { if (props.page.state.edit?.field != null) return props.pag
 </script>
 
 <template>
-  <el-table :data="page.state.rows" row-key="id" border stripe max-height="560" class="import-detail-table" :empty-text="page.state.loading ? '正在读取明细' : '暂无明细，请导入采购文件'">
+  <el-table :data="page.grid.rows()" row-key="id" border stripe max-height="560" class="import-detail-table" :empty-text="page.state.loading ? '正在读取明细' : '暂无明细，请导入采购文件或点击编辑粘贴'">
     <el-table-column prop="rowNo" label="序号" width="64" fixed="left" align="center" />
     <el-table-column v-for="column in columns" :key="column.key" :prop="column.key" :label="column.label" :min-width="column.width" :align="column.numeric ? 'right' : 'left'">
       <template #default="{ row }">

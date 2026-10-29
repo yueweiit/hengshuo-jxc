@@ -114,7 +114,8 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
         var v=values(map(input.get("values")));long version=Inputs.version(input);
         // 复用附件的两阶段保存：对象I/O在事务外，事务内重新核实权限、行版本及绑定。
         var prepared=assets.prepare(ctx,AttachmentAssetService.Policy.PURCHASE_IMAGE,name,image.mime(),bytes);
-        var intent=Map.<String,Object>of("fileName",name,"fileSha256",AttachmentObjectStore.sha256(bytes),"mime",image.mime(),"version",version,"values",valueIntent(v));
+        var intent=new LinkedHashMap<String,Object>(Map.<String,Object>of("fileName",name,"fileSha256",AttachmentObjectStore.sha256(bytes),"mime",image.mime(),"version",version,"values",valueIntent(v)));
+        if(input.containsKey("matchInputs"))intent.put("matchInputs",matchInputs(map(input.get("matchInputs"))));
         return tx.execute(s->{Access a=access(ctx,true);var b=batch(a,id,true);var current=row(a,id,rowId);
             return commands.execute(ctx,"POST",BASE+"?batchId="+id+"&imageRowId="+rowId,key,intent,bookId(map(b.get("header"))),()->{
                 requireEditable(current);if(number(current,"version")!=version)throw Inputs.conflict();
@@ -172,8 +173,80 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
             },result->batch(a,id,false));
         });
     }
-    public Map<String,Object> saveRow(RequestContext ctx,UUID id,long rowId,Map<String,Object> input){return tx.execute(s->{Access a=access(ctx,true);var b=batch(a,id,true);var before=row(a,id,rowId);requireEditable(before);if(number(before,"version")!=Inputs.version(input))throw Inputs.conflict();var v=values(map(input.get("values")));var args=new ArrayList<Object>();FIELDS.forEach(field->args.add(v.get(field)));var origins=map(before.get("field_origins"));v.forEach((k,value)->{if(!Objects.equals(Objects.toString(before.get(COLUMNS.get(FIELDS.indexOf(k))),null),Objects.toString(value,null)))origins.put(k,"MANUAL");});args.add(json.write(origins));args.add(a.requireCountry());args.add(rowId);
-        mapper.updateRowValues(args.get(0),args.get(1),args.get(2),args.get(3),args.get(4),args.get(5),args.get(6),args.get(7),args.get(8),args.get(9),args.get(10),args.get(11),args.get(12),args.get(13));if(input.containsKey("matchInputs")){var supplied=map(input.get("matchInputs"));if(!supplied.keySet().equals(Set.of("suppliedProductCode","suppliedProductName","supplierProductCode")))throw Inputs.bad("补充文字字段不完整或包含不可修改字段");for(String field:List.of("suppliedProductCode","suppliedProductName","supplierProductCode")){Object raw=supplied.get(field);if(raw!=null&&!(raw instanceof String))throw Inputs.bad("补充编码和名称须为文字");String text=raw==null?null:raw.toString().trim();if(text!=null&&text.length()>200)throw Inputs.bad("补充编码或名称过长");supplied.put(field,text==null||text.isEmpty()?null:text);origins.put(field,"MANUAL");}mapper.updateMatchInputs(supplied.get("suppliedProductCode"),supplied.get("suppliedProductName"),supplied.get("supplierProductCode"),json.write(origins),a.requireCountry(),rowId);}touch(a,id);var out=rowDto(row(a,id,rowId));out.put("batchVersion",number(b,"version")+1);audit.append(ctx,"PUR_IMPORT_EDIT","PURCHASE_IMPORT",number(b,"id"),Map.of("rowId",rowId,"version",before.get("version")),Map.of("rowId",rowId,"version",out.get("version")));return out;});}
+    private Map<String,Object> matchInputs(Map<String,Object> input) {
+        if(!input.keySet().equals(Set.of("suppliedProductCode","suppliedProductName","supplierProductCode")))throw Inputs.bad("补充文字字段不完整或包含不可修改字段");
+        var result=new LinkedHashMap<String,Object>();
+        input.forEach((field,raw)->{
+            if(raw!=null&&!(raw instanceof String))throw Inputs.bad("补充编码和名称须为文字");
+            String text=raw==null?null:raw.toString().trim();
+            if(text!=null&&text.length()>200)throw Inputs.bad("补充编码或名称过长");
+            result.put(field,text==null||text.isEmpty()?null:text);
+        });
+        return result;
+    }
+    private void saveMatchInputs(Access a,long rowId,Map<String,Object> supplied,Map<String,Object> origins) {
+        supplied.keySet().forEach(field->origins.put(field,"MANUAL"));
+        mapper.updateMatchInputs(supplied.get("suppliedProductCode"),supplied.get("suppliedProductName"),supplied.get("supplierProductCode"),json.write(origins),a.requireCountry(),rowId);
+    }
+    public Map<String,Object> saveRow(RequestContext ctx,UUID id,long rowId,Map<String,Object> input) {
+        return tx.execute(s->{
+            Access a=access(ctx,true);var b=batch(a,id,true);var before=row(a,id,rowId);requireEditable(before);
+            if(number(before,"version")!=Inputs.version(input))throw Inputs.conflict();
+            var v=values(map(input.get("values")));var args=new ArrayList<Object>();FIELDS.forEach(field->args.add(v.get(field)));
+            var origins=map(before.get("field_origins"));
+            v.forEach((k,value)->{if(!Objects.equals(Objects.toString(before.get(COLUMNS.get(FIELDS.indexOf(k))),null),Objects.toString(value,null)))origins.put(k,"MANUAL");});
+            args.add(json.write(origins));args.add(a.requireCountry());args.add(rowId);
+            mapper.updateRowValues(args.get(0),args.get(1),args.get(2),args.get(3),args.get(4),args.get(5),args.get(6),args.get(7),args.get(8),args.get(9),args.get(10),args.get(11),args.get(12),args.get(13));
+            if(input.containsKey("matchInputs"))saveMatchInputs(a,rowId,matchInputs(map(input.get("matchInputs"))),origins);
+            touch(a,id);var out=rowDto(row(a,id,rowId));out.put("batchVersion",number(b,"version")+1);
+            audit.append(ctx,"PUR_IMPORT_EDIT","PURCHASE_IMPORT",number(b,"id"),Map.of("rowId",rowId,"version",before.get("version")),Map.of("rowId",rowId,"version",out.get("version")));return out;
+        });
+    }
+    /** 表格统一提交仅写原采购暂存；原行复用saveRow，新行复用解析暂存插入。 */
+    public Map<String,Object> saveGrid(RequestContext ctx,Map<String,Object> input,String key) {
+        return tx.execute(s->{
+            Access a=access(ctx,true);
+            if(!input.keySet().equals(Set.of("batchId","batchVersion","header","rows")))throw Inputs.bad("表格请求字段不完整或包含不可修改字段");
+            var edits=list(input.get("rows"));if(edits.isEmpty()||edits.size()>10000)throw Inputs.bad("请提供1至10000行表格修改");
+            return commands.execute(ctx,"POST",BASE+"/grid",key,input,null,()->{
+                UUID id;
+                try{id=input.get("batchId")==null?null:UUID.fromString(input.get("batchId").toString());}catch(IllegalArgumentException e){throw Inputs.bad("批次编号无效");}
+                boolean created=id==null;
+                if(created){id=UUID.randomUUID();var h=stagingHeader(map(input.get("header")));requireHeaderAccess(a,h);mapper.insertBatch(a.requireCountry(),id,json.write(h),a.userId());}
+                var b=batch(a,id,true);
+                if(!created&&number(b,"version")!=Inputs.id(input.get("batchVersion")))throw Inputs.conflict();
+                if(!created&&Set.of("PARSING","CANCELLED").contains(b.get("status")))throw new ApiException(409,"PUR_IMPORT_GRID_BUSY","当前批次正在解析或已取消，不能保存表格");
+                requireResolvedBatch(a,id);
+                if(mapper.selectClearTasks(a.requireCountry(),id).stream().anyMatch(task->Set.of("QUEUED","RUNNING").contains(task.get("status"))))throw new ApiException(409,"PUR_IMPORT_GRID_BUSY","当前批次任务尚未结束，请稍后保存表格");
+                var h=map(b.get("header"));long next=number(b,"next_row_no");var saved=new LinkedHashMap<String,Object>();var rowIds=new HashSet<Long>();
+                for(var item:edits) {
+                    if(!item.keySet().equals(Set.of("clientId","id","version","values","matchInputs")))throw Inputs.bad("表格明细包含不可修改字段");
+                    String clientId=Inputs.required(item,"clientId");
+                    if(!clientId.matches("-?[1-9][0-9]{0,15}")||saved.containsKey(clientId))throw Inputs.bad("表格明细临时编号无效或重复");
+                    var v=values(map(item.get("values")));var supplied=matchInputs(map(item.get("matchInputs")));long rowId;
+                    if(item.get("id")!=null) {
+                        rowId=Inputs.id(item.get("id"));if(!rowIds.add(rowId))throw Inputs.bad("表格包含重复的明细编号");
+                        var old=row(a,id,rowId);
+                        if(!Objects.equals(old.get("photo"),v.get("photo")))throw Inputs.bad("商品照片须通过原照片上传与核对入口修改");
+                        saveRow(ctx,id,rowId,Map.of("version",Inputs.version(item),"values",map(item.get("values")),"matchInputs",supplied));
+                    } else {
+                        if(v.get("photo")!=null)throw Inputs.bad("新行照片须通过原照片上传入口补充");
+                        var origins=new LinkedHashMap<String,Object>();FIELDS.forEach(field->origins.put(field,"MANUAL"));
+                        var original=Map.of("format","ManualGridV1","values",map(item.get("values")),"matchInputs",map(item.get("matchInputs")));
+                        rowId=PurchaseRows.one(sourceMapper.insertSourceRow(a.requireCountry(),id,next++,h.get("bookId"),h.get("supplierId"),h.get("currency"),h.get("orderDate"),h.get("expectedDate"),h.get("paymentTerms"),h.get("prepayRatio"),h.get("termDays"),v.get("sourceOrderNo"),v.get("photo"),v.get("productSpec"),v.get("purchaseQty"),v.get("saleUnitPrice"),v.get("saleTotal"),v.get("purchaseUnitPrice"),v.get("freight"),v.get("landedUnitCost"),v.get("usdUnitCost"),v.get("usdTotal"),a.userId(),null,null,null,json.write(original),"{}",json.write(origins),"GRID:"+key+":"+clientId));
+                        saveMatchInputs(a,rowId,supplied,origins);
+                    }
+                    saved.put(clientId,rowId);
+                }
+                mapper.invalidatePreviews(a.requireCountry(),id);sourceMapper.completeBatch(next,a.requireCountry(),id);
+                audit.append(ctx,"PUR_IMPORT_GRID","PURCHASE_IMPORT",number(b,"id"),null,Map.of("rows",saved.size()));
+                var result=snapshot(a,id);result.put("gridSaved",saved);return result;
+            },result->{
+                Object value=result.get("batchId");if(value==null||Boolean.TRUE.equals(result.get("cleared")))throw ApiException.notFound();
+                batch(a,UUID.fromString(value.toString()),false);
+            });
+        });
+    }
     public Map<String,Object> saveHeader(RequestContext ctx,UUID id,Map<String,Object> input){return tx.execute(s->{Access a=access(ctx,true);var b=batch(a,id,true);requireResolvedBatch(a,id);if(PurchaseRows.one(mapper.countCreatedRows(a.requireCountry(),id))>0)throw new ApiException(409,"PUR_IMPORT_CREATED_READ_ONLY","已创建草稿的来源基础信息不能整体修改");if(number(b,"version")!=Inputs.id(input.get("batchVersion")))throw Inputs.conflict();var current=mapper.selectRowVersionsForUpdate(a.requireCountry(),id);var versions=list(input.get("versions"));if(current.size()!=versions.size()||current.stream().anyMatch(r->versions.stream().noneMatch(v->Inputs.id(v.get("id"))==number(r,"id")&&Inputs.id(v.get("version"))==number(r,"version"))))throw Inputs.conflict();var h=header(a,map(input.get("header")));mapper.updateBatchHeader(json.write(h),a.requireCountry(),id);mapper.updateRowsHeader(h.get("bookId"),h.get("supplierId"),h.get("currency"),h.get("orderDate"),h.get("expectedDate"),h.get("paymentTerms"),h.get("prepayRatio"),h.get("termDays"),a.requireCountry(),id);mapper.updateInheritedGroupHeaders(json.write(h),a.requireCountry(),id);touch(a,id);audit.append(ctx,"PUR_IMPORT_HEADER","PURCHASE_IMPORT",number(b,"id"),map(b.get("header")),h);return snapshot(a,id);});}
     public Map<String,Object> deleteRow(RequestContext ctx,UUID id,long rowId,long version){return tx.execute(s->{Access a=access(ctx,true);var b=batch(a,id,true);var r=row(a,id,rowId);requireEditable(r);if(number(r,"version")!=version)throw Inputs.conflict();mapper.deleteRow(a.requireCountry(),rowId);touch(a,id);audit.append(ctx,"PUR_IMPORT_DELETE","PURCHASE_IMPORT",number(b,"id"),Map.of("rowId",rowId),null);return Map.of("deleted",true,"id",rowId,"batchVersion",number(b,"version")+1);});}
     void requireResolvedBatch(Access a,UUID id){if(PurchaseRows.one(mapper.countUnresolvedBatchGroups(a.requireCountry(),id))>0)throw new ApiException(409,"PUR_IMPORT_CREATE_UNRESOLVED","请先按原请求核实采购创建结果");}

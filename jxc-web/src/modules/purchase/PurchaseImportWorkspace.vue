@@ -9,7 +9,7 @@ import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
 import PurchaseImportReviewDialog from './PurchaseImportReviewDialog.vue'
 import PurchaseImportPreviewDrawer from './PurchaseImportPreviewDrawer.vue'
-import PurchaseImportTable from './PurchaseImportTable.vue'
+import PurchaseImportEditor from './PurchaseImportEditor.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
 import PurchaseImportProgress from './PurchaseImportProgress.vue'
 import PurchaseImportReviewAssistant from './PurchaseImportReviewAssistant.vue'
@@ -35,8 +35,8 @@ const currencies = ref<{ code: string; name: string }[]>([])
 const refsLoading = ref(false), refsError = ref(''), dialogVisible = ref(false), selected = ref<File | null>(null)
 const clearConfirming = ref(false)
 const fileInput = ref<HTMLInputElement>()
-const importDisabled = computed(() => page.busy() || !!state.edit)
-const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value)
+const importDisabled = computed(() => page.busy() || !!state.edit || page.grid.hasChanges())
+const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value || page.grid.hasChanges())
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 const reviewVisible = ref(false), previewVisible = ref(false), reviewRow = ref<number | null>(null)
 const creationEnabled = ref(false), creationLoading = ref(false), creationError = ref('')
@@ -218,19 +218,19 @@ onBeforeUnmount(() => { active = false; ++refsSequence; ++creationSequence; clea
     </section>
 
     <section class="import-section import-details" aria-labelledby="import-details-title">
-      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || state.clearing || state.clearPending || !!state.edit || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
+      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ state.rows.length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || state.clearing || state.clearPending || !!state.edit || page.grid.hasChanges() || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
       <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细已独立暂存，请补齐后保存基础信息。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
       <PurchaseImportSources :page="page" />
       <PurchaseImportProgress v-if="!dialogVisible" :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
-      <div v-if="state.rows.length" class="workflow-actions"><el-button :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="page.startMatches(state.rows.filter(row => !page.rowLocked(row)).map(row => row.id))">识别商品</el-button><el-button :disabled="page.busy() || !!state.edit" @click="review()">核对商品</el-button><el-button :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>
+      <div v-if="state.rows.length" class="workflow-actions"><el-button :disabled="importDisabled || page.headerDirty()" @click="page.startMatches(state.rows.filter(row => !page.rowLocked(row)).map(row => row.id))">识别商品</el-button><el-button :disabled="importDisabled" @click="review()">核对商品</el-button><el-button :disabled="importDisabled || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>
       <p v-if="state.rows.length" class="table-hint">保存后生成对应采购单草稿及明细，并保留商品、原文件和费用来源关联。资料待核对时会提示具体原因。</p>
       <el-alert v-if="creationError" type="error" :closable="false" class="import-alert"><template #title>采购单保存暂不可用：{{ creationError }}</template><el-button link @click="loadCreationCapability">重新读取保存能力</el-button></el-alert>
       <p v-else-if="state.batchId && !creationEnabled && !creationLoading" class="table-hint">当前环境尚未启用保存采购单，可先完成资料核对。</p>
       <div class="import-review-layout">
         <div class="import-table-region">
-      <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" @review="review" />
+      <PurchaseImportEditor :page="page" :disabled="page.busy()" @remove="remove" @review="review" />
         </div>
         <PurchaseImportReviewAssistant v-if="state.rows.length" :page="page" @products="review()" @preview="preview" />
       </div>

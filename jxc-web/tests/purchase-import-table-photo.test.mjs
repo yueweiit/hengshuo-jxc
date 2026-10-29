@@ -209,8 +209,8 @@ test('预览中表头和费用的未保存修改上报给主保存，保存或�
 test('表格与完整预览输出两位数字，编辑和提交仍保留原精度', async () => {
   const page = setup(); await page.loadBatch(batchId)
   const file = new URL('../src/modules/purchase/PurchaseImportTable.vue', import.meta.url)
-  const { importColumns } = feature('purchaseImportModel'), { formatImportDecimal } = feature('purchaseImportDisplay')
-  const state = loadVueScript(file, { nextTick, ref, importColumns, formatImportDecimal, defineProps: () => ({ page, disabled: false }), defineEmits: () => () => {} }, ['columns', 'editor', 'setEditor', 'begin', 'editing', 'saveCell'])
+  const { importTableColumns } = feature('purchaseImportModel'), { formatImportDecimal } = feature('purchaseImportDisplay')
+  const state = loadVueScript(file, { nextTick, ref, importTableColumns, formatImportDecimal, defineProps: () => ({ page, disabled: false }), defineEmits: () => () => {} }, ['columns', 'editor', 'setEditor', 'begin', 'editing', 'saveCell'])
   const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1].replaceAll('(instance: Element | ComponentPublicInstance | null)', '(instance)')
   const app = createSSRApp({ setup: () => ({ ...state, formatImportDecimal, page, disabled: false }), render: compile(template) })
   const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
@@ -234,11 +234,12 @@ test('照片适配器发送文件、行版本、原数值及重试key，并通�
     async post(...args) { calls.push(['post', ...args]) }, async attachmentBlob(...args) { calls.push(['blob', ...args]); return new Blob() },
   } }]])).purchaseImportApi
   const file = imageFile(), key = '11111111-2222-4333-8444-555555555555'
-  await api.uploadPhoto(batchId, row, file, row, key)
+  await api.uploadPhoto(batchId, row, file, row, key, {suppliedProductName:'同次上传名称',suppliedProductCode:null,supplierProductCode:null})
   assert.equal(calls[0][1], `/pur/order-imports?batchId=${batchId}&imageRowId=1`)
   assert.equal(calls[0][2].get('file'), file)
   assert.equal(calls[0][2].get('version'), '1')
   assert.equal(JSON.parse(calls[0][2].get('values')).purchaseUnitPrice, '53.0606250000')
+  assert.equal(JSON.parse(calls[0][2].get('matchInputs')).suppliedProductName, '同次上传名称')
   assert.equal(calls[0][3].headers['Idempotency-Key'], key)
   await api.readImage(batchId, 8, new AbortController().signal)
   assert.equal(calls[1][1], `/api/v1/pur/order-imports/${batchId}/images/8/content`)

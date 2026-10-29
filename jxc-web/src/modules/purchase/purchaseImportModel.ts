@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { createPurchaseImportWorkflow } from '@/modules/purchase/purchaseImportWorkflow'
 import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
+import { createPurchaseImportGrid, type GridField, type GridSaveInput } from '@/modules/purchase/purchaseImportGrid'
 import { readImportTask, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
 import { reviewProposalCurrent, type ReviewProposal, type SourceReviewSheet } from '@/modules/purchase/purchaseImportReview'
 
@@ -27,6 +28,8 @@ export const importColumns = [
   { key: 'usdUnitCost', label: '美元单位成本', width: 160, numeric: true },
   { key: 'usdTotal', label: '美元成本合计', width: 160, numeric: true },
 ] as const
+export const importTableColumns = [importColumns[0], { key: 'suppliedProductName', label: '商品名', width: 180 }, ...importColumns.slice(1)] as const
+export type ImportEditField = GridField
 export type ImportField = typeof importColumns[number]['key']
 export type ImportValues = Record<ImportField, string | null>
 export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED' | 'CONFIRMED' | 'REJECTED'; origin?: 'MANUAL_UPLOAD' | 'XLSX'; publishStatus?: string; publishedProductId?: number | null; productImageId?: number | null }
@@ -46,13 +49,14 @@ export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: numb
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
+  saveGrid?(input: GridSaveInput, key: string): Promise<unknown>
   confirmReview?(batchId: string, input: Omit<ReviewProposal, 'batchId'>, key: string): Promise<unknown>
   upload(file: File, batchId: string | null, key: string, progress?: (loaded: number, total: number | null) => void): Promise<unknown>
   readTask?(id: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
   saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
   saveRow(batchId: string, row: ImportRow, values: ImportValues, matchInputs?: MatchInputs): Promise<unknown>
-  uploadPhoto?(batchId: string, row: ImportRow, file: File, values: ImportValues, key: string): Promise<unknown>
+  uploadPhoto?(batchId: string, row: ImportRow, file: File, values: ImportValues, key: string, matchInputs?: MatchInputs): Promise<unknown>
   readImage?(batchId: string, imageId: number, signal: AbortSignal): Promise<Blob>
   deleteRow(batchId: string, row: ImportRow): Promise<unknown>
   clearBatch?(batchId: string, version: number, key: string): Promise<unknown>
@@ -148,7 +152,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   const emptyHeader = (): ImportHeader => ({ bookId: null, supplierId: null, currency: '', orderDate: clearedOnEntry ? null : today, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null })
   const state = reactive({
     header: emptyHeader(), batchId: null as string | null, rows: [] as ImportRow[],
-    edit: null as { id: number; field: ImportField | null; values: ImportValues; photoFile: File | null } | null,
+    edit: null as { id: number; field: ImportEditField | null; values: ImportValues & { suppliedProductName?: string | null }; photoFile: File | null } | null,
     loading: false, importing: false, saving: false, deletingId: null as number | null,
     partialResult: null as Record<string, unknown> | null, error: '', errorCode: '', errors: [] as ImportIssue[], success: '',
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
@@ -218,6 +222,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   const reviewKeys = new Map<string, string>()
   async function confirmReview(proposal: ReviewProposal) {
+    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再确认来源核对')); return false }
     if (!api.confirmReview || state.edit || !reviewProposalCurrent(proposal, state.batchId, state.version, state.rows, state.sources)) { failure(new Error('补充预览已失效，请按当前文件重新核对')); return false }
     try {
       for (const change of proposal.changes) {
@@ -232,6 +237,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function loadBatch(id: string, preserveDraft = false) {
+    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，重新读取会覆盖编辑草稿')); return false }
     if (state.importing || state.saving || state.clearing || state.clearPending || state.edit) return false
     const context = epoch, sequence = ++readSequence
     clearFeedback()
@@ -261,6 +267,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     }
   }
   async function importFile(file: File) {
+    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再导入文件')); return false }
     if (busy()) return false
     if (state.edit) { failure(new Error('请先保存或取消正在编辑的明细')); return false }
     if (!/\.xlsx$/i.test(file.name) || !file.size) { failure(new Error('请选择非空的.xlsx模板文件')); return false }
@@ -287,11 +294,12 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     return saved
   }
   function rowLocked(row: ImportRow) { return !!row.targetOrderLineId || state.groups.some(group => group.id === row.groupId && ['CREATING', 'UNKNOWN'].includes(group.createStatus)) }
-  function startEdit(row: ImportRow, field: ImportField | null) {
+  function startEdit(row: ImportRow, field: ImportEditField | null) {
+    if (grid.hasChanges() || grid.view.mode === 'excel') return false
     if (rowLocked(row)) { failure(new Error('本行已建单或创建结果待核实，不能修改来源')); return false }
     if (busy() || state.edit || !state.rows.some(item => item.id === row.id)) return false
     clearFeedback()
-    state.edit = { id: row.id, field, values: Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues, photoFile: null }
+    state.edit = { id: row.id, field, values: { ...Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues, suppliedProductName: row.suppliedProductName ?? null }, photoFile: null }
     return true
   }
   function selectPhoto(file: File) {
@@ -308,12 +316,15 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!row) { failure(new Error('待保存的记录已不存在，请刷新')); return false }
     let values: ImportValues
     try { values = normalizeValues(state.edit.values) } catch (error) { failure(error); return false }
+    const suppliedProductName = state.edit.values.suppliedProductName?.trim() || null
+    if ((suppliedProductName?.length ?? 0) > 200) { failure(new Error('商品名最多200个字符')); return false }
+    const matchInputs = suppliedProductName !== (row.suppliedProductName ?? null) ? { suppliedProductName, suppliedProductCode: row.suppliedProductCode ?? null, supplierProductCode: row.supplierProductCode ?? null } : undefined
     const file = state.edit.photoFile, id = state.batchId
     if (file) {
       if (!api.uploadPhoto) { failure(new Error('照片上传接口尚未接入')); return false }
-      const signature = JSON.stringify([id, row.id, row.version, values])
+      const signature = JSON.stringify([id, row.id, row.version, values, matchInputs])
       if (photoFile !== file || photoSignature !== signature) { photoFile = file; photoSignature = signature; photoKey = newKey() }
-      return write('saving', () => api.uploadPhoto!(id, { ...row }, file, values, photoKey), response => {
+      return write('saving', () => api.uploadPhoto!(id, { ...row }, file, values, photoKey, matchInputs), response => {
         const batch = readBatch(response), updated = batch.rows.find(item => item.id === row.id)
         if (batch.batchId !== id || !updated || updated.rowNo !== row.rowNo || updated.version <= row.version || !updated.images?.some(image => image.status === 'CONFIRMED' && image.origin === 'MANUAL_UPLOAD' && !row.images?.some(old => old.id === image.id))) throw new Error('后端返回的照片保存结果与当前记录不一致')
         applyBatch(batch, true)
@@ -322,7 +333,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       })
     }
     if (state.edit.field === 'photo') { failure(new Error('请先选择要上传的照片，或取消编辑')); return false }
-    return write('saving', () => api.saveRow(state.batchId!, { ...row }, values), response => {
+    return write('saving', () => api.saveRow(state.batchId!, { ...row }, values, matchInputs), response => {
       const updated = readRow(response)
       if (updated.id !== row.id || updated.rowNo !== row.rowNo || updated.version <= row.version) throw new Error('后端返回的保存记录编号或版本不正确')
       state.rows.splice(state.rows.findIndex(item => item.id === row.id), 1, updated)
@@ -332,6 +343,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function saveHeader() {
+    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再保存基础信息')); return false }
     if (busy() || state.edit || !state.batchId) return false
     const invalid = validateImportHeader(state.header)
     if (invalid) { failure(new Error(invalid)); return false }
@@ -344,6 +356,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function removeRow(row: ImportRow) {
+    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再删除明细')); return false }
     if (busy() || state.edit || !state.batchId || rowLocked(row)) return false
     if (!state.rows.some(item => item.id === row.id && item.version === row.version)) { failure(new Error('删除目标已变化，请刷新核对')); return false }
     state.deletingId = row.id
@@ -355,6 +368,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function refreshTasks() {
+    if (grid.hasChanges()) return false
     if (!state.batchId || state.edit || state.saving || state.importing || state.clearing || state.clearPending) return false
     const id = state.batchId, current = state.tasks.find(task => task.id === state.activeTaskId)
     // 历史任务或旧接口没有逐任务读取时，继续使用原批次恢复入口。
@@ -417,7 +431,15 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!photoKeys.has(signature)) photoKeys.set(signature, newKey())
     return write('saving', () => api.publishPhotos!(state.batchId!, row, imageIds, photoKeys.get(signature)!), response => { applyBatch(readBatch(response)); photoKeys.delete(signature); state.success = '商品照片已关联，特征和索引在后台处理' })
   }
-  const workflow = createPurchaseImportWorkflow({ state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
+  const grid = createPurchaseImportGrid({
+    state, columns: importTableColumns, normalize: normalizeValues, busy, locked: rowLocked, editing: () => !!state.edit,
+    failure, feedback: clearFeedback, newKey, readBatch, applyBatch: batch => applyBatch(batch, true),
+    save: (input, key, check) => {
+      if (!api.saveGrid) { failure(new Error('表格保存接口尚未接入')); return Promise.resolve(false) }
+      return write('saving', () => api.saveGrid!(input, key), value => { check(value); state.success = '表格修改已保存' })
+    },
+  })
+  const workflow = createPurchaseImportWorkflow({ state,api,busy: () => busy() || grid.hasChanges(),headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
   function clearBlockReason() {
     if (state.loading || state.importing || state.saving || state.clearing || state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) return '当前批次正在处理，请等待处理结束后清空'
     if (state.upload?.status === 'UNKNOWN') return '文件接收结果尚未确认，请先按原上传请求重试核实'
@@ -468,6 +490,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   function invalidate() {
     clearFeedback()
+    grid.reset()
     workflow.reset()
     ++epoch; ++readSequence; ++progressSequence
     images.reset(); photoFile = null; photoKey = ''; photoSignature = ''
@@ -479,7 +502,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.groups = []; photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview }
+  return { ...workflow, state, grid, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview }
 
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

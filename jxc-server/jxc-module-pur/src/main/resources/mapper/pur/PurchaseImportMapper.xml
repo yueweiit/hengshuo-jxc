@@ -18,7 +18,7 @@
   <update id="redactClearedSnapshots">
     UPDATE sys_idempotency SET response=jsonb_build_object('cleared',true,'batchId',#{batchId}),resource_refs='[]'::jsonb
     WHERE country_id=#{countryId} AND user_id=#{userId} AND response IS NOT NULL AND NOT (method='DELETE' AND endpoint=#{endpoint})
-      AND (endpoint=#{endpoint} OR endpoint LIKE #{endpoint}||'/%' OR ((endpoint='/api/v1/pur/order-imports' OR endpoint LIKE '/api/v1/pur/order-imports?%') AND response->>'batchId'=#{batchId}))
+      AND (endpoint=#{endpoint} OR endpoint LIKE #{endpoint}||'/%' OR ((endpoint IN ('/api/v1/pur/order-imports','/api/v1/pur/order-imports/grid') OR endpoint LIKE '/api/v1/pur/order-imports?%') AND response->>'batchId'=#{batchId}))
   </update>
   <select id="selectClearReceipt" resultType="java.util.LinkedHashMap" useCache="false">
     SELECT response FROM sys_idempotency WHERE country_id=#{countryId} AND user_id=#{userId} AND method='DELETE' AND endpoint=#{endpoint} AND response->>'cleared'='true' ORDER BY id DESC LIMIT 1

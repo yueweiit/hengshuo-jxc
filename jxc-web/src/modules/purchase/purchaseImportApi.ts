@@ -5,6 +5,7 @@ import type { PurchaseImportApi } from './purchaseImportModel'
 const base = '/pur/order-imports'
 const batchPath = (id: string) => `${base}/${encodeURIComponent(id)}`
 export const purchaseImportApi: PurchaseImportApi = {
+  saveGrid: (input, key) => http.post('/pur/order-imports/grid', input, { headers: { 'Idempotency-Key': key }, silent: true }),
   confirmReview: (id, input, key) => http.post(`${batchPath(id)}/review`, input, { headers: { 'Idempotency-Key': key }, silent: true }),
   upload(file, batchId, key, progress) {
     const data = new FormData()
@@ -18,11 +19,12 @@ export const purchaseImportApi: PurchaseImportApi = {
   clearStatus: id => http.get(`${batchPath(id)}/clear-status`, undefined, { silent: true }),
   saveHeader: (id, header, versions, batchVersion) => http.put(batchPath(id), { header, versions, batchVersion }, { silent: true }),
   saveRow: (id, row, values, matchInputs) => http.put(`${batchPath(id)}/rows/${row.id}`, { version: row.version, values, ...(matchInputs ? { matchInputs } : {}) }, { silent: true }),
-  uploadPhoto(id, row, file, values, key) {
+  uploadPhoto(id, row, file, values, key, matchInputs) {
     const data = new FormData()
     data.append('file', file)
     data.append('version', String(row.version))
     data.append('values', JSON.stringify(values))
+    if (matchInputs) data.append('matchInputs', JSON.stringify(matchInputs))
     return http.post(`${base}?batchId=${encodeURIComponent(id)}&imageRowId=${row.id}`, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true })
   },
   readImage: (id, imageId, signal) => http.attachmentBlob(`/api/v1${batchPath(id)}/images/${imageId}/content`, { signal, silent: true }),

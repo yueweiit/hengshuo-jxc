@@ -18,6 +18,8 @@ public class PurchaseImportController {
     private RequestContext ctx(){return RequestContextHolder.require();}
     private ApiEnvelope ok(Object data){return ApiEnvelope.ok(data,ctx().traceId());}
     @GetMapping("/capabilities") public ApiEnvelope capabilities(){return ok(imports.capabilities(ctx()));}
+    @PostMapping("/grid")
+    public ApiEnvelope grid(@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key")String key){return ok(imports.saveGrid(ctx(),body,key));}
     @PostMapping(consumes=MediaType.MULTIPART_FORM_DATA_VALUE,params="!imageRowId")
     public ResponseEntity<ApiEnvelope> upload(@RequestPart MultipartFile file,@RequestParam(required=false) String header,@RequestParam(required=false)UUID batchId,@RequestHeader("Idempotency-Key")String key)throws java.io.IOException{
         if(file.getSize()>100L*1024*1024)throw new ApiException(413,"PUR_IMPORT_ASSET_LIMIT","采购文件不能超过100MiB");
@@ -30,9 +32,10 @@ public class PurchaseImportController {
     @PutMapping("/{batchId}") public ApiEnvelope header(@PathVariable UUID batchId,@RequestBody Map<String,Object> body){return ok(imports.saveHeader(ctx(),batchId,body));}
     @PutMapping("/{batchId}/rows/{rowId}") public ApiEnvelope row(@PathVariable UUID batchId,@PathVariable long rowId,@RequestBody Map<String,Object> body){return ok(imports.saveRow(ctx(),batchId,Inputs.id(rowId),body));}
     @PostMapping(consumes=MediaType.MULTIPART_FORM_DATA_VALUE,params="imageRowId")
-    public ApiEnvelope uploadPhoto(@RequestParam UUID batchId,@RequestParam long imageRowId,@RequestPart MultipartFile file,@RequestParam long version,@RequestParam String values,@RequestHeader("Idempotency-Key")String key)throws java.io.IOException {
+    public ApiEnvelope uploadPhoto(@RequestParam UUID batchId,@RequestParam long imageRowId,@RequestPart MultipartFile file,@RequestParam long version,@RequestParam String values,@RequestParam(required=false)String matchInputs,@RequestHeader("Idempotency-Key")String key)throws java.io.IOException {
         if(file.getSize()>10L*1024*1024)throw new ApiException(413,"PUR_IMPORT_ASSET_LIMIT","照片不能超过10MiB");
-        return ok(imports.uploadPhoto(ctx(),batchId,Inputs.id(imageRowId),file.getOriginalFilename(),file.getContentType(),file.getBytes(),Map.of("version",Inputs.id(version),"values",json.readMap(values)),key));
+        var input=new LinkedHashMap<String,Object>();input.put("version",Inputs.id(version));input.put("values",json.readMap(values));if(matchInputs!=null)input.put("matchInputs",json.readMap(matchInputs));
+        return ok(imports.uploadPhoto(ctx(),batchId,Inputs.id(imageRowId),file.getOriginalFilename(),file.getContentType(),file.getBytes(),input,key));
     }
     @DeleteMapping("/{batchId}/rows/{rowId}") public ApiEnvelope delete(@PathVariable UUID batchId,@PathVariable long rowId,@RequestHeader("If-Match")long version){return ok(imports.deleteRow(ctx(),batchId,Inputs.id(rowId),Inputs.id(version)));}
     @GetMapping("/{batchId}/sources/{sourceId}/content") public ResponseEntity<byte[]> source(@PathVariable UUID batchId,@PathVariable long sourceId){return binary(imports.content(ctx(),batchId,Inputs.id(sourceId),false));}
