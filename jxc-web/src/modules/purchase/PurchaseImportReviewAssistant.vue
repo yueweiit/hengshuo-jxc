@@ -5,7 +5,7 @@ import { reviewQuestions, reviewProposal, reviewProposalCurrent, type ReviewProp
 const props = defineProps<{ page: PurchaseImportModel }>()
 const emit = defineEmits<{ products: []; preview: [] }>()
 const {urls:imageUrls,errors:imageErrors}=props.page.images
-const open = ref(false), selected = ref(''), answer = ref(''), feedback = ref('')
+const selected = ref(''), answer = ref(''), feedback = ref('')
 const groupAnswers = ref<Record<string,string>>({}), includeAnswered = ref(false)
 const proposal = ref<ReviewProposal | null>(null)
 const questions = computed(() => reviewQuestions(props.page.state.rows, props.page.state.sources, includeAnswered.value))
@@ -13,7 +13,7 @@ const question = computed(() => questions.value.find(q => q.id === selected.valu
 const locked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.grid.hasChanges())
 const pendingQuestions = computed(() => questions.value.filter(q=>!q.subject?.previousMeaning).length)
 const sampleImages = computed(() => question.value?.subject?.kind==='PHOTO'?[...new Set(props.page.state.rows.filter(r=>r.sourceId===question.value!.sourceId).flatMap(r=>(r.images??[]).map(i=>i.id)))].slice(0,2):[])
-watch(() => props.page.state.batchId, () => { open.value = false; proposal.value = null; answer.value = ''; feedback.value = ''; selected.value = ''; groupAnswers.value={};includeAnswered.value=false })
+watch(() => props.page.state.batchId, () => { proposal.value = null; answer.value = ''; feedback.value = ''; selected.value = ''; groupAnswers.value={};includeAnswered.value=false })
 watch(() => question.value?.id, () => { proposal.value = null; answer.value = ''; feedback.value = '';groupAnswers.value={} })
 watch(() => props.page.state.version, () => {
   if (proposal.value && !current(proposal.value)) { proposal.value = null; feedback.value = '明细已变化，原补充预览失效，请重新核对。' }
@@ -33,11 +33,7 @@ async function confirm() {
 function later(){const i=questions.value.findIndex(q=>q.id===question.value?.id);selected.value=questions.value[(i+1)%questions.value.length]?.id??'';proposal.value=null;feedback.value='这项仍保留为待核对，没有补造业务值。'}
 </script>
 <template>
-  <el-badge :value="pendingQuestions" :hidden="pendingQuestions === 0" :max="99" class="review-assistant-trigger">
-    <el-button type="primary" plain :aria-label="pendingQuestions ? `核对助手，${pendingQuestions}项待核对` : '核对助手'" :aria-expanded="open" aria-haspopup="dialog" @click="open = true">核对助手</el-button>
-  </el-badge>
-  <el-drawer v-model="open" title="核对助手" direction="rtl" size="min(480px, 100vw)" append-to-body>
-    <div class="assistant-body">
+    <section class="assistant-body" aria-label="来源资料核对">
       <p class="assistant-summary">已暂存 {{ page.state.rows.length }} 条 · 待核对 {{ pendingQuestions }} 项</p>
       <el-alert v-if="page.state.error" :title="page.state.error" type="error" :closable="false" show-icon />
       <el-alert v-if="page.grid.hasChanges()" title="请先保存或撤销表格修改，再进行核对。" type="warning" :closable="false" show-icon />
@@ -62,12 +58,11 @@ function later(){const i=questions.value.findIndex(q=>q.id===question.value?.id)
         <el-button type="primary" :disabled="locked" :loading="page.state.saving" @click="confirm">确认本次核对</el-button><el-button :disabled="locked" @click="proposal = null">取消本次建议</el-button>
       </div>
       <p v-if="feedback" role="status">{{ feedback }}</p>
-      <footer><el-button :disabled="locked" @click="open = false; emit('products')">核对商品与单位</el-button><el-button :disabled="locked || page.headerDirty()" @click="open = false; emit('preview')">核对采购预览与价税</el-button></footer>
-    </div>
-  </el-drawer>
+      <footer><el-button :disabled="locked" @click="emit('products')">核对商品与单位</el-button><el-button :disabled="locked || page.headerDirty()" @click="emit('preview')">核对采购预览与价税</el-button></footer>
+    </section>
 </template>
 <style scoped>
-.review-assistant-trigger{margin-right:8px}.assistant-summary{margin:0;color:var(--el-text-color-secondary);font-size:13px}
+.assistant-summary{margin:0;color:var(--el-text-color-secondary);font-size:13px}
 .meaning-choices{display:flex;flex-wrap:wrap;gap:8px}.meaning-choices .el-button+.el-button{margin-left:0}details{font-size:13px;color:var(--el-text-color-secondary)}label{line-height:1.7}
-.assistant-body{display:grid;gap:12px}.assistant-note{margin:0;color:var(--el-text-color-secondary);font-size:13px;line-height:1.6}.assistant-question{background:var(--el-fill-color-light);border-left:3px solid var(--el-color-warning);padding:12px;line-height:1.6}.assistant-question p{margin:6px 0;font-size:13px;overflow-wrap:anywhere;max-height:110px;overflow:auto}.proposal-scroll{max-height:220px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--el-border-color-lighter);overflow-wrap:anywhere}.review-proposal{display:grid;gap:10px}footer{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid var(--el-border-color-lighter)}footer .el-button+.el-button{margin-left:0}
+.assistant-body{display:grid;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--el-border-color-lighter)}.assistant-note{margin:0;color:var(--el-text-color-secondary);font-size:13px;line-height:1.6}.assistant-question{background:var(--el-fill-color-light);border-left:3px solid var(--el-color-warning);padding:12px;line-height:1.6}.assistant-question p{margin:6px 0;font-size:13px;overflow-wrap:anywhere;max-height:110px;overflow:auto}.proposal-scroll{max-height:220px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--el-border-color-lighter);overflow-wrap:anywhere}.review-proposal{display:grid;gap:10px}footer{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid var(--el-border-color-lighter)}footer .el-button+.el-button{margin-left:0}
 </style>

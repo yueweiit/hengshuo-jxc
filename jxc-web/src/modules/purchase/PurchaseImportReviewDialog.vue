@@ -7,9 +7,10 @@ import { useCountryStore } from '@/stores/country'
 import type { PurchaseImportModel, ImportRow, MatchCandidate, VisualMatchEvidence } from './purchaseImportModel'
 import { createPurchaseImportCatalogImages } from './purchaseImportCatalogImages'
 import PurchaseImportProductPhoto from './PurchaseImportProductPhoto.vue'
+import PurchaseImportReviewAssistant from './PurchaseImportReviewAssistant.vue'
 
 const props = defineProps<{ page: PurchaseImportModel; modelValue: boolean; rowId?: number | null; initialTab?: 'todos' | 'match' }>()
-const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; preview: [] }>()
 interface Product { id: number; productCode: string; name: string; spec: string; baseUnit: string; status: string; units: { unit: string }[] }
 type ReviewTab = 'todos' | 'product' | 'images' | 'match'
 interface ReviewTodo { key: string; row: ImportRow; reason: string; tab: ReviewTab; imageId?: number }
@@ -156,6 +157,7 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
       </div>
       <el-tabs v-model="activeTab" class="review-tabs">
         <el-tab-pane label="待确认事项" name="todos">
+          <PurchaseImportReviewAssistant :page="page" @products="activeTab = 'product'" @preview="emit('preview')" />
           <div class="todo-summary" role="status">待处理 {{ todoRowCount }} 行，共 {{ todoItems.length }} 项待办</div>
           <p class="review-hint">按事项进入对应标签页处理，确认成功后这里会更新。原图归属与商品就绪状态分别核对。</p>
           <el-table v-if="todoItems.length" :data="todoItems" row-key="key" max-height="400" class="review-todos" aria-label="待确认事项列表">

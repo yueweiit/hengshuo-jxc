@@ -165,6 +165,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     partialResult: null as Record<string, unknown> | null, error: '', errorCode: '', errors: [] as ImportIssue[], success: '',
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
     activeTaskId: null as string | null, upload: null as ImportUpload | null, progressError: '', progressReading: false, progressReloadNeeded: false,
+    imageReviewEnabled: !!api.startMatches, imageReviewError: '',
     groups: [] as ImportDraftGroup[],
     clearing: false, clearPending: false, clearedBatchId: null as string | null,
   })
@@ -298,7 +299,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       if (batch.status !== 'PARSING') state.success = '文件明细已暂存，请核对无误'
     })
     if (!saved && context === epoch && state.upload) state.upload.status = /连接中断|Network Error|超时/.test(state.error) ? 'UNKNOWN' : 'ERROR'
-    return saved
+    if (saved && context === epoch && state.status === 'REVIEW') await workflow.startImageReview()
+    return saved && context === epoch
   }
   function rowLocked(row: ImportRow) { return !!row.targetOrderLineId || state.groups.some(group => group.id === row.groupId && ['CREATING', 'UNKNOWN'].includes(group.createStatus)) }
   function startEdit(row: ImportRow, field: ImportEditField | null) {
@@ -374,7 +376,10 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
           if (!await loadBatch(id, true)) { if (context === epoch) state.progressError = state.error || '明细读取失败，请重试'; return false }
           state.progressReloadNeeded = false
         }
-        if (context === epoch) state.progressError = ''
+        if (context === epoch) {
+          state.progressError = ''
+          if (state.status === 'REVIEW') await workflow.startImageReview()
+        }
         return true
       } catch (error) { if (context === epoch && sequence === progressSequence) state.progressError = error instanceof Error ? error.message : '进度读取失败，请重试'; return false }
       finally { if (context === epoch && sequence === progressSequence) state.progressReading = false }
@@ -382,6 +387,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     const pending = state.status === 'PARSING'
     const saved = await loadBatch(state.batchId, true)
     if (saved && pending && state.status === 'REVIEW') state.success = '文件明细已暂存，请核对无误'
+    if (saved && state.status === 'REVIEW' && !state.imageReviewError) await workflow.startImageReview()
     return saved
   }
   const retryKeys = new Map<string, string>()
@@ -506,7 +512,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     workflow.reset()
     ++epoch; ++readSequence; ++progressSequence
     images.reset()
-    state.activeTaskId = null; state.upload = null; state.progressError = ''; state.progressReading = false; state.progressReloadNeeded = false
+    state.activeTaskId = null; state.upload = null; state.progressError = ''; state.progressReading = false; state.progressReloadNeeded = false; state.imageReviewError = ''
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''

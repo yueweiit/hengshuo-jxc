@@ -16,7 +16,7 @@ async function save() {
   if (grid.value && !await grid.value.commit()) return
   await nextTick()
   if (props.persist && !await props.persist()) return
-  if (await props.page.grid.save()) props.page.state.success = '上传完成，请继续核对商品'
+  if (await props.page.grid.save()) { props.page.state.success = '明细已上传，请查看核对进度'; await props.page.startImageReview() }
 }
 </script>
 <template>

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { ref, reactive, computed, watch, nextTick, compile, createSSRApp, defineComponent, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
+import { ElBadge } from 'element-plus'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 import { loadTsModule } from './contracts/load-ts-module.mjs'
 
@@ -35,7 +36,7 @@ async function workspace(confirm = async () => {}, dependencies = {}) {
       async saveHeader(_batch, value) { savedHeaders.push(value); return { batchId, header: { ...value }, rows: [{ ...row }] } },
     },
     ...dependencies,
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming', 'localDraft', 'openLocalDraft','reviewVisible','reviewRow','reviewTab','review','startImageReview','imageReviewProgress','imageReviewAvailable'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming', 'localDraft', 'openLocalDraft','reviewVisible','reviewRow','reviewTab','review','pendingProductCount'])
   const initialDate = state.state.header.orderDate
   await state.localDraft.open(draft.purchaseImportDraftKey(7, 101, null))
   state.state.header.orderDate = initialDate
@@ -50,6 +51,7 @@ async function render(state) {
   for (const name of ['ElForm', 'ElFormItem', 'ElSelect', 'ElDatePicker', 'ElInput', 'ElInputNumber', 'ElIcon', 'ElAlert', 'Upload', 'Download', 'Refresh']) app.component(name, slot)
   app.component('ElOption', defineComponent({ props: ['label', 'value', 'disabled'], setup: props => () => h('option', { value: props.value, disabled: props.disabled }, props.label) }))
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
+  app.component('ElBadge', ElBadge)
   app.component('ElDialog', defineComponent({ props: ['modelValue'], setup: (props, ctx) => () => props.modelValue ? h('aside', [ctx.slots.title?.(), ctx.slots.default?.(), ctx.slots.footer?.()]) : null }))
   app.component('PurchaseImportTable', { render: () => null })
   app.component('PurchaseImportProgress', { render: () => null })
@@ -395,10 +397,15 @@ test('本地编辑使任务读取暂缓时仍会接续轮询，网络错误明�
 })
 
 
-test('AI图文核对按钮显示真实任务进度，登记后进入原商品图片对照标签',async()=>{
-  const task='22222222-2222-4333-8444-555555555555'
-  const {state}=await workspace(undefined,{purchaseImportApi:{async load(){return {batchId,version:1,header,rows:[{...row}]}},async startMatches(){return {batchId,version:1,header,rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:10}}],taskIds:[task]}}}})
-  await state.page.loadBatch(batchId);await state.startImageReview()
-  assert.equal(state.reviewVisible.value,true);assert.equal(state.reviewTab.value,'match');assert.equal(state.reviewRow.value,10)
-  const html=await render(state);assert.match(html,/AI图文核对/);assert.match(html,/核对处理中 0 \/ 1 行/);assert.doesNotMatch(html,/>识别商品<\/button>/)
+test('红色新品待确认入口按未确认行显示角标，点击只打开原窗口不重启任务',async()=>{
+  let requests=0
+  const {state}=await workspace(undefined,{purchaseImportApi:{async load(){return {batchId,version:1,header,rows:[{...row,readiness:'UNRESOLVED'},{...row,id:11,rowNo:2,readiness:'READY'},{...row,id:12,rowNo:3,readiness:'UNRESOLVED'},{...row,id:13,rowNo:4,readiness:'UNRESOLVED',targetOrderLineId:99}]}},async startMatches(){requests++;throw new Error('仅打开窗口不能创建任务')}}})
+  await state.page.loadBatch(batchId)
+  assert.equal(state.reviewVisible.value,false)
+  let html=await render(state)
+  assert.match(html,/<button[^>]*type="danger"[^>]*aria-label="待确定是否为新商品，2行待确认"[^>]*>待确定是否为新商品<\/button>/)
+  assert.doesNotMatch(html,/>AI图文核对<\/button>|>核对商品<\/button>|>核对助手<\/button>|>预览采购草稿<\/button>/)
+  state.review(undefined,'match');assert.equal(state.reviewVisible.value,true);assert.equal(state.reviewTab.value,'match');assert.equal(state.reviewRow.value,10);assert.equal(requests,0)
+  state.state.rows[0].readiness='READY';await nextTick();html=await render(state);assert.match(html,/待确定是否为新商品，1行待确认/)
+  state.state.rows[2].readiness='READY';await nextTick();html=await render(state);assert.match(html,/待确定是否为新商品，0行待确认/);assert.match(html,/el-badge__content[^>]*>(?:<!--.*?-->)*0(?:<!--.*?-->)*<\/sup>/)
 })

@@ -1,7 +1,8 @@
 import test from 'node:test'
-import { watch } from 'vue'
+import { watch, ref, nextTick } from 'vue'
 import assert from 'node:assert/strict'
 import { loadTsModule } from './contracts/load-ts-module.mjs'
+import { loadVueScript } from './contracts/load-vue-script.mjs'
 const { createPurchaseImportModel } = loadTsModule(new URL('../src/modules/purchase/purchaseImportModel.ts', import.meta.url))
 const batchId='11111111-2222-4333-8444-555555555555'
 const header={bookId:1,supplierId:2,currency:'USD',orderDate:'2026-10-29',expectedDate:null,paymentTerms:'',prepayRatio:'0',termDays:0}
@@ -18,14 +19,60 @@ test('AI图文核对只登记未确认行且后台运行时重复点击不另建
   const task='22222222-2222-4333-8444-555555555555'
   const page=await setup({async startMatches(_id,_version,ids){calls++;assert.deepEqual(ids,[1]);return {batchId,version:1,status:'REVIEW',header,rows:[{...row,matchTaskId:task},{...row,id:2,rowNo:2,readiness:'READY'}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:1}}],taskIds:[task]}}},{rows:[row,{...row,id:2,rowNo:2,readiness:'READY'}]})
   assert.equal(await page.startImageReview(),true);assert.equal(await page.startImageReview(),false);assert.equal(calls,1)
-  assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,running:true})
-  page.state.tasks[0].status='SUCCEEDED';assert.deepEqual(page.imageReviewProgress(),{total:1,completed:1,running:false})
+  assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,succeeded:0,failed:0,attention:0,pending:1,running:true})
+  page.state.tasks[0].status='SUCCEEDED';assert.deepEqual(page.imageReviewProgress(),{total:1,completed:1,succeeded:0,failed:0,attention:1,pending:0,running:false})
 })
 
 test('重新打开已有运行任务的批次能恢复按钮进度，不重启自动化',async()=>{
   const task='22222222-2222-4333-8444-555555555555'
   const page=await setup({}, {rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'RUNNING',result:{rowId:1}}]})
-  assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,running:true});assert.equal(await page.startImageReview(),false)
+  assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,succeeded:0,failed:0,attention:0,pending:1,running:true});assert.equal(await page.startImageReview(),false)
+})
+
+test('文件暂存成功后自动核对已保存行，保留未保存的表头草稿',async()=>{
+  const task='22222222-2222-4333-8444-555555555555', calls=[]
+  const saved={batchId,version:1,status:'REVIEW',header,rows:[row],tasks:[]}
+  const page=await setup({async upload(){return structuredClone(saved)},async startMatches(id,version,ids,key){calls.push({id,version,ids,key});return {...saved,rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:1}}],taskIds:[task]}}})
+  page.state.header.paymentTerms='尚未保存的账期'
+  assert.equal(await page.importFile(new File(['xlsx'],'采购.xlsx')),true)
+  assert.deepEqual(calls.map(call=>[call.id,call.version,call.ids]),[[batchId,1,[1]]])
+  assert.equal(page.state.header.paymentTerms,'尚未保存的账期');assert.equal(page.headerDirty(),true)
+  assert.equal(page.state.tasks[0].kind,'MATCH')
+})
+
+test('自动核对仅提交没有当前任务的行，失败行保留原任务供人工重试',async()=>{
+  const task='22222222-2222-4333-8444-555555555555', next='33333333-2222-4333-8444-555555555555', calls=[]
+  const rows=[{...row,matchTaskId:task},{...row,id:2,rowNo:2},{...row,id:3,rowNo:3,readiness:'READY'}]
+  const page=await setup({async startMatches(_id,_version,ids){calls.push(ids);return {batchId,version:1,status:'REVIEW',header,rows:rows.map(r=>r.id===2?{...r,matchTaskId:next}:r),tasks:[{id:task,kind:'MATCH',status:'FAILED',result:{rowId:1}},{id:next,kind:'MATCH',status:'QUEUED',result:{rowId:2}}],taskIds:[next]}}},{rows,tasks:[{id:task,kind:'MATCH',status:'FAILED',errorMessage:'图片服务连接失败',result:{rowId:1}}]})
+  assert.equal(await page.startImageReview(),true);assert.deepEqual(calls,[[2]])
+  assert.equal(await page.startImageReview(),false);assert.equal(calls.length,1)
+})
+
+test('自动核对请求失败保留已暂存行及明确错误，不显示导入失败',async()=>{
+  const page=await setup({async upload(){return {batchId,version:1,status:'REVIEW',header,rows:[row]}},async startMatches(){throw new Error('核对服务不可用')}})
+  assert.equal(await page.importFile(new File(['xlsx'],'采购.xlsx')),true)
+  assert.equal(page.state.rows.length,1);assert.equal(page.state.status,'REVIEW')
+  assert.match(page.state.imageReviewError,/核对服务不可用/)
+})
+
+test('编辑器上传所有草稿后再核对，提交的是后台返回的新行版本',async()=>{
+  const task='22222222-2222-4333-8444-555555555555', calls=[]
+  let saved={batchId,version:1,status:'REVIEW',header,rows:[row]}
+  const page=await setup({async saveGrid(input){calls.push('upload');assert.equal(input.rows[0].matchInputs.suppliedProductName,'已上传名称');saved={...saved,version:2,rows:[{...row,version:2,suppliedProductName:'已上传名称'}]};return structuredClone(saved)},async startMatches(_id,version,ids){calls.push('match');assert.equal(version,2);assert.deepEqual(ids,[1]);return {...saved,rows:saved.rows.map(r=>({...r,matchTaskId:task})),tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:1}}],taskIds:[task]}}})
+  page.grid.setMode('excel');page.grid.applyPaste(0,'suppliedProductName',[['已上传名称']]);page.grid.setMode('table')
+  assert.equal(await page.startImageReview(),false);assert.deepEqual(calls,[])
+  const editor=loadVueScript(new URL('../src/modules/purchase/PurchaseImportEditor.vue',import.meta.url),{ref,nextTick,defineProps:()=>({page,disabled:false}),defineEmits:()=>()=>{}},['save'])
+  await editor.save();assert.deepEqual(calls,['upload','match']);assert.equal(page.grid.hasChanges(),false);assert.equal(page.state.rows[0].version,2)
+})
+
+test('自动核对响应迟到时不能恢复已清空页面或发布旧错误',async()=>{
+  const task='22222222-2222-4333-8444-555555555555';let release
+  const saved={batchId,version:1,status:'REVIEW',header,rows:[row]}
+  const page=await setup({async upload(){return structuredClone(saved)},async startMatches(){return new Promise(resolve=>{release=resolve})}})
+  const pending=page.importFile(new File(['xlsx'],'采购.xlsx'));await new Promise(resolve=>setTimeout(resolve,0))
+  assert.equal(typeof release,'function');page.invalidate()
+  release({...saved,rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:1}}],taskIds:[task]})
+  assert.equal(await pending,false);assert.equal(page.state.batchId,null);assert.deepEqual(page.state.rows,[]);assert.equal(page.state.imageReviewError,'');assert.equal(page.state.success,'')
 })
 
 test('图片尚未确认同款时拒绝声称规格已经一致的响应',async()=>{
