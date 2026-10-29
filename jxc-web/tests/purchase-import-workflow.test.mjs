@@ -78,6 +78,16 @@ test('人工补规格保存后沿原自动入口重算候选，不预确认照�
   assert.deepEqual(calls,['review','match']);assert.equal(page.state.rows[0].images[0].status,'UNCONFIRMED')
 })
 
+test('核对中修改资料等旧任务明确过期后补发，真实失败不自动循环重试',async()=>{
+  const next='33333333-2222-4333-8444-555555555555',calls=[],run=scoredRun()
+  const saved={batchId,version:2,status:'REVIEW',header,rows:[{...row,version:2,matchTaskId:batchId,matchResult:null}],tasks:[{id:batchId,kind:'MATCH',status:'RUNNING'}]}
+  const page=await setup({async startMatches(_id,version,ids){calls.push(ids);assert.equal(version,2);return {...saved,rows:[{...saved.rows[0],matchTaskId:next}],tasks:[{id:next,kind:'MATCH',status:'QUEUED'}],taskIds:[next]}}},saved)
+  assert.equal(await page.startImageReview(),false)
+  page.state.tasks[0].status='FAILED';page.state.rows[0].matchResult=run;assert.equal(await page.startImageReview(),false)
+  page.state.rows[0].matchResult=null;page.state.tasks[0].status='STALE';page.state.tasks[0].errorCode='INPUT_CHANGED'
+  assert.equal(await page.startImageReview(),true);assert.deepEqual(calls,[[1]]);assert.equal(await page.startImageReview(),false)
+})
+
 test('确认照片归属后沿原自动入口重算当前行，保留最终商品未确认',async()=>{
   const calls=[],next='33333333-2222-4333-8444-555555555555'
   let saved={batchId,version:1,status:'REVIEW',header,rows:[{...row,sourceId:7,matchTaskId:batchId,matchResult:scoredRun(),images:[{id:8,status:'UNCONFIRMED',sha256:'b'.repeat(64)}]}],tasks:[{id:batchId,kind:'MATCH',status:'SUCCEEDED'}]}

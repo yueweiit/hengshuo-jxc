@@ -36,9 +36,14 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
   const imageReviewProgress = () => reviewProgress(state)
   async function startImageReview() {
     if (!api.startMatches || busy() || state.edit) return false
-    const ids = imageReviewRows(state).filter(row => row.readiness !== 'READY'
-      && (!row.matchTaskId || row.matchResult && row.matchResult.inputRevision !== row.version)
-      && !state.tasks.some(task => task.id === row.matchTaskId && ['QUEUED', 'RUNNING'].includes(task.status))).map(row => row.id)
+    const tasks = new Map(state.tasks.map(task => [task.id,task]))
+    const ids = imageReviewRows(state).filter(row => {
+      if (row.readiness === 'READY') return false
+      if (!row.matchTaskId) return true
+      const task = tasks.get(row.matchTaskId)
+      return task?.status === 'SUCCEEDED' && row.matchResult && row.matchResult.inputRevision !== row.version
+        || task?.status === 'STALE' && task.errorCode === 'INPUT_CHANGED'
+    }).map(row => row.id)
     if (!ids.length) return false
     const batch = state.batchId
     state.imageReviewError = ''
