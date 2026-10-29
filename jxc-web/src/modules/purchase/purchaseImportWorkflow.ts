@@ -3,7 +3,7 @@ import type { ImportRow, ImportValues, MatchInputs, ImportDraftGroup, FeeReviewI
 import { importColumns, isBatchId, importRecord as record, importPositiveId as positiveId } from '@/modules/purchase/purchaseImportModel'
 import { imageReviewProgress as reviewProgress, imageReviewRows } from '@/modules/purchase/purchaseImportProgress'
 interface Dependencies {
-  state: { batchId: string | null; rows: ImportRow[]; groups: ImportDraftGroup[]; tasks: import('./purchaseImportModel').ImportTask[]; version: number; success: string; error: string; imageReviewError: string; edit: unknown }; api: PurchaseImportApi; busy: () => boolean; headerDirty: () => boolean; rowLocked: (row: ImportRow) => boolean
+  state: { batchId: string | null; rows: ImportRow[]; groups: ImportDraftGroup[]; tasks: import('./purchaseImportModel').ImportTask[]; version: number; success: string; error: string; imageReviewError: string; edit: unknown }; api: PurchaseImportApi; busy: () => boolean; reviewing?: () => boolean; headerDirty: () => boolean; rowLocked: (row: ImportRow) => boolean
   failure: (error: unknown) => void; newKey: () => string; loadBatch: (id: string) => Promise<boolean>
   saveHeader: () => Promise<boolean>
   write: (flag: 'saving', request: () => Promise<unknown>, apply: (response: unknown) => void) => Promise<boolean>
@@ -16,6 +16,7 @@ export function purchaseOrderSaveStatus(group: ImportDraftGroup) {
 }
 export function createPurchaseImportWorkflow(deps: Dependencies) {
   const { state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,write,readRow,readGroup,readBatch,applyBatch } = deps
+  const operationBusy = () => busy() || !!deps.reviewing?.()
   function applyReview(row: ImportRow, response: unknown) {
     const saved = readRow(response)
     if (saved.id !== row.id || saved.rowNo !== row.rowNo || saved.version <= row.version) throw new Error('后端返回的商品确认记录或版本不正确')
@@ -24,11 +25,11 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     state.success = saved.readiness === 'READY' ? '本行商品与单位已确认' : saved.readiness === 'NEEDS_SETUP' ? '已保存真实商品，请完成所需配置后重新核对' : '本行已保存为待确认'
   }
   async function decideProduct(row: ImportRow, input: Record<string, unknown>) {
-    if (!api.decide || !state.batchId || busy() || state.edit || rowLocked(row)) return false
+    if (!api.decide || !state.batchId || operationBusy() || state.edit || rowLocked(row)) return false
     return write('saving', () => api.decide!(state.batchId!, { ...row }, input), response => applyReview(row, response))
   }
   async function createProduct(row: ImportRow, input: Record<string, unknown>, key: string) {
-    if (!api.createProduct || !state.batchId || busy() || state.edit || rowLocked(row)) return false
+    if (!api.createProduct || !state.batchId || operationBusy() || state.edit || rowLocked(row)) return false
     const request = JSON.parse(JSON.stringify(input)) as Record<string, unknown>
     return write('saving', () => api.createProduct!(state.batchId!, { ...row }, request, key), response => applyReview(row, response))
   }
@@ -52,7 +53,7 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     return saved
   }
   async function saveMatchInputs(row: ImportRow, input: MatchInputs) {
-    if (!state.batchId || busy() || state.edit || headerDirty() || rowLocked(row)) return false
+    if (!state.batchId || operationBusy() || state.edit || headerDirty() || rowLocked(row)) return false
     const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, value?.trim() || null])) as unknown as MatchInputs
     if (Object.values(normalized).some(value => value !== null && value.length > 200)) { failure(new Error('补充文字最多200个字符')); return false }
     const values = Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues
@@ -69,7 +70,7 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     })
   }
   async function explainMatch(row: ImportRow) {
-    if (!api.explain || !state.batchId || busy() || state.edit || headerDirty() || rowLocked(row) || !row.matchResult || row.matchResult.inputRevision !== row.version) return false
+    if (!api.explain || !state.batchId || operationBusy() || state.edit || headerDirty() || rowLocked(row) || !row.matchResult || row.matchResult.inputRevision !== row.version) return false
     const signature = JSON.stringify([row.id, row.version, row.matchResult.runId, 'EXPLAIN'])
     if (!matchKeys.has(signature)) matchKeys.set(signature, newKey())
     return write('saving', () => api.explain!(state.batchId!, row, matchKeys.get(signature)!), response => {
@@ -78,11 +79,11 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     })
   }
   async function previewDrafts() {
-    if (!api.previews || !state.batchId || busy() || state.edit || headerDirty()) return false
+    if (!api.previews || !state.batchId || operationBusy() || state.edit || headerDirty()) return false
     return write('saving', () => api.previews!(state.batchId!, state.version), response => applyBatch(readBatch(response)))
   }
   async function saveGroup(group: ImportDraftGroup, header: Record<string, unknown>, splitRowIds?: number[]) {
-    if (!api.saveGroup || !state.batchId || busy() || state.edit) return false
+    if (!api.saveGroup || !state.batchId || operationBusy() || state.edit) return false
     return write('saving', () => api.saveGroup!(state.batchId!, group, header, splitRowIds), response => applyBatch(readBatch(response)))
   }
   const creationIntents = new Map<number, { key: string; request: Record<string, unknown> }>()
@@ -94,7 +95,7 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
   }
   async function createDraft(group: ImportDraftGroup) {
     if (group.feeTodos?.some(todo => todo.reviewStatus !== 'CONFIRMED')) return false
-    if (!api.createDraft || !state.batchId || busy() || state.edit || group.orderId || !['READY', 'FAILED', 'UNKNOWN'].includes(group.createStatus) || !group.previewToken) return false
+    if (!api.createDraft || !state.batchId || operationBusy() || state.edit || group.orderId || !['READY', 'FAILED', 'UNKNOWN'].includes(group.createStatus) || !group.previewToken) return false
     let intent = group.createIntent || creationIntents.get(group.id)
     if (!intent || (!group.createIntent && intent.request.previewToken !== group.previewToken)) intent = { key: newKey(), request: { groupVersion: group.version, previewToken: group.previewToken, confirm: true } }
     creationIntents.set(group.id, intent)
@@ -103,11 +104,11 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     return saved && state.batchId === batch ? await loadBatch(batch) : false
   }
   async function refreshCreation(group: ImportDraftGroup) {
-    if (!api.creation || !state.batchId || busy() || state.edit) return false
+    if (!api.creation || !state.batchId || operationBusy() || state.edit) return false
     return write('saving', () => api.creation!(state.batchId!, group), response => applyCreation(group, response))
   }
   async function saveFeeTodos(group: ImportDraftGroup, items: FeeReviewInput[]) {
-    if (!api.saveFeeTodos || !state.batchId || busy() || state.edit || headerDirty()) return false
+    if (!api.saveFeeTodos || !state.batchId || operationBusy() || state.edit || headerDirty()) return false
     return write('saving', () => api.saveFeeTodos!(state.batchId!, group, JSON.parse(JSON.stringify(items))), response => {
       const saved = readGroup(response)
       if (saved.id !== group.id || saved.version < group.version || !positiveId(saved.feeTodosVersion) || !positiveId(group.feeTodosVersion) || saved.feeTodosVersion <= group.feeTodosVersion) throw new Error('后端未确认费用核对版本，请刷新核对')
@@ -119,7 +120,7 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
 
   const saveRun: ShallowRef<object | null> = shallowRef(null)
   async function saveOrders() {
-    if (saveRun.value || busy()) return false
+    if (saveRun.value || operationBusy()) return false
     if (!state.batchId || !state.rows.length) { failure(new Error('请先导入并核对采购明细')); return false }
     if (state.edit) { failure(new Error('请先保存或取消正在编辑的明细，再保存采购单')); return false }
     if (!api.previews || !api.createDraft || !api.creation) { failure(new Error('采购单保存或结果查询接口尚未接入')); return false }

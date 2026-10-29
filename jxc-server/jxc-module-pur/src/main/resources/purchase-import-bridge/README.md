@@ -21,3 +21,13 @@ Resolve real products后增加REVIEW工具调用：后台从固定FAISS命中选
 deepseek-flash接收实际image_url内容，先判照片同款，再核对来源productSpec与候选spec内真实的尺码、颜色、型号等属性。candidateChecks逐候选返回图片与规格状态；缺图/不确定/规格缺失不能伪装成一致，模型失败保留原候选。原确认商品与单位入口保留，候选及模型结果不自动创建商品或采购单。
 
 旧版本外部文件C:/project/docling-demo/n8n/jxc-purchase-recognition.json暂保留：当前在线工作流或其他运维脚本是否仍引用该文件不确定；保留到新版本完成授权发布且旧任务结束，核实无入口引用并归档旧发布包后再删除或同步。旧MatchRunV1文字解释仍可读；历史持久化结果是兼容对象，尚在运行的其他旧回调调用方不确定。全部工作流升级、旧任务结束且历史读取策略明确后才可收紧旧合同，不承诺删除日期。
+
+## 每批20行、最多3批图文核对
+
+MATCH恢复任务现在按同国家、同导入批次每组最多20行组织模型请求，采购专用执行器最多3组并行；其他任务沿原单行流程。每行仍使用原租约、版本、固定候选和结果回写校验。按需要逐行领取任务，超限时及时发送已准备的小批，避免未开始行提前耗尽租约。
+
+批量请求格式MatchReviewBatchV1只含rows与images；图片以内容SHA256去重，来源／候选配对仍逐行保留。完整UTF-8 JSON请求不超过40MiB，超过则拆小批；单行仍超限明确IMAGE_REVIEW_LIMIT，不丢图或降画质。工作流将多行放入一次模型请求，输出MatchReviewBatchResultV1.items；Java按runId、rowId、inputRevision和evidenceHash逐行核对，乱序可接受，缺行／重复／无效身份不能当成功。网络／解析失败不自动无限重试，已保存行不会被失败回执覆盖。
+
+同一webhook、Prepare explanation、模型HTTP节点和Validate explanation兼容原MatchTaskV1；旧入口仍用于EXPLAIN和直接单任务调用，已有部署客户端是否全部升级不确定。保留到协调升级及旧任务结束，核实无单行调用并确定历史读取策略后再收紧，未指定删除日期。
+
+交付JSON保持未激活；启用批量需要协调更新Java、此工作流及前端，并核实n8n请求体限制至少48MiB、模型访问凭据仍有效。仓库文件通过测试不代表运行工作流已更新。3批上限覆盖单应用实例；多实例部署需另行提供共享并发控制。未引入公开图片URL、Files API存储、数据库迁移或新的商品／采购写入口。

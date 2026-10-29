@@ -138,14 +138,14 @@ test('上传成功响应缺少新照片时不能清除草稿或声称保存成�
   assert.equal(page.state.rows[0].images[0].id, 8)
 })
 
-async function renderPhoto(page, editing = false) {
+async function renderPhoto(page, editing = false, disabled = false) {
   const source = new URL('../src/modules/purchase/PurchaseImportPhoto.vue', import.meta.url)
   assert.ok(existsSync(source), '缺少照片列上传/预览组件')
-  const props = { page, row: page.state.rows[0], editing, disabled: false }
+  const props = { page, row: page.state.rows[0], editing, disabled }
   const state = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => props, defineEmits: () => () => {} }, ['input', 'selectedUrl', 'legacyFailed', 'photos', 'first', 'thumbnail', 'failed', 'legacy', 'preview', 'file', 'urls', 'errors', 'loading', 'choose'])
   const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
   const app = createSSRApp({ setup: () => ({ ...state, ...props }), render: compile(template) })
-  app.component('ElImage', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('img', ctx.attrs) }))
+  app.component('ElImage', defineComponent({ inheritAttrs: false, props: ['previewSrcList'], setup: (props, ctx) => () => h('img', { ...ctx.attrs, 'data-preview-count': props.previewSrcList?.length ?? 0 }) }))
   app.component('ElButton', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('button', ctx.attrs, ctx.slots.default?.()) }))
   return { html: await renderToString(app), state }
 }
@@ -161,6 +161,13 @@ test('真实照片模板显示受权原图、待核实状态和上传控件，�
   assert.match(html, /type="file"/)
   assert.match(html, /选择替换照片/)
   assert.doesNotMatch(html, /type="text"|blob:rejected/)
+})
+
+test('核对锁定时照片继续显示，但预览与替换入口均不可操作', async () => {
+  const page=setup();await page.loadBatch(batchId);page.images.urls.value[8]='blob:original'
+  const {html}=await renderPhoto(page,false,true)
+  assert.match(html,/src="blob:original"/);assert.match(html,/data-preview-count="0"/)
+  assert.match(html,/disabled[^>]*>替换照片/)
 })
 
 test('真实照片模板区分无图和读取失败，未保存选图可取消且不发送请求', async () => {

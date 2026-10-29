@@ -193,7 +193,7 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
       <div v-if="activeTab === 'product'" class="product-source-photos">
         <span class="review-hint">本行导入原图</span>
         <div v-for="(image, index) in sourceImages" :key="image.id" class="source-photo">
-          <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" :preview-src-list="[imageUrls[image.id]!]" preview-teleported fit="contain" :alt="`本行导入原图${index + 1}`" />
+          <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" :preview-src-list="page.busy() ? [] : [imageUrls[image.id]!]" preview-teleported fit="contain" :alt="`本行导入原图${index + 1}`" />
           <span v-else class="review-hint">{{ imageErrors[image.id] || (imageLoading[image.id] ? '原图加载中' : '原图待加载') }}</span>
           <el-button v-if="imageErrors[image.id]" link type="primary" @click="page.images.load(image.id)">重试加载原图</el-button>
         </div>
@@ -213,14 +213,14 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
         <p v-if="catalogLoaded && !products.length && !catalogError" class="review-hint">当前检索没有商品，请核对编码、名称和规格。无结果不会自动创建新品。</p>
         <el-select v-model="productId" filterable placeholder="从识别候选或查询结果选择商品" aria-label="已有商品" :disabled="locked" @change="manualSelection">
           <el-option v-for="item in productOptions" :key="item.product.id" :value="item.product.id" :label="`${item.product.productCode} · ${item.product.name} · ${item.product.spec || '规格未填写'}`" class="review-product-option">
-            <PurchaseImportProductPhoto :catalog="catalogImages" :image-id="item.candidate ? bestVisual(item.candidate)?.imageId : undefined" :product-id="item.product.id" :label="`${item.product.name}照片`" compact />
+            <PurchaseImportProductPhoto :disabled="page.busy()" :catalog="catalogImages" :image-id="item.candidate ? bestVisual(item.candidate)?.imageId : undefined" :product-id="item.product.id" :label="`${item.product.name}照片`" compact />
             <div class="product-option-text"><strong>{{ item.product.productCode }} · <span>{{ item.product.name }}</span></strong><span>规格：{{ item.product.spec || '规格未填写' }}{{ item.product.status && item.product.status !== 'ENABLED' ? ' · 已停用' : '' }}</span><span>{{ item.manual ? '人工选择的缓存参考' : item.candidate ? item.candidate.visualEvidence.length ? '图片匹配' : '文字匹配' : '目录查询' }}<template v-if="item.candidate?.visualScore != null"> · 外观相似度 {{ item.candidate.visualScore.toFixed(4) }}</template></span></div>
           </el-option>
         </el-select>
         <el-select v-model="unit" filterable allow-create default-first-option placeholder="选择采购单位，缺少时填写后核对" aria-label="确认采购单位" :disabled="locked"><el-option v-for="item in selectedProduct?.units" :key="item.unit" :value="item.unit" :label="item.unit" /></el-select>
         <p v-if="manualCandidate" class="review-warning">已人工选择缓存参考候选，请核对照片、商品资料和采购单位后再确认。</p>
         <el-button type="primary" :disabled="locked" @click="confirmExisting">{{ row.readiness === 'NEEDS_SETUP' ? '重新核对商品与单位' : '确认商品与单位' }}</el-button><el-button :disabled="locked" @click="page.decideProduct(row, { decision: 'DEFERRED' })">暂缓本行</el-button>
-        <div v-if="selectedProduct" class="selected-product-photo"><PurchaseImportProductPhoto :catalog="catalogImages" :image-id="selectedCandidate ? bestVisual(selectedCandidate)?.imageId : undefined" :product-id="selectedProduct.id" :label="`已选商品${selectedProduct.name}照片`" /><span class="review-hint">{{ selectedCandidate?.visualEvidence.length ? '本次实际命中照片，可与上方原图对照' : '已选商品资料照片' }}</span></div>
+        <div v-if="selectedProduct" class="selected-product-photo"><PurchaseImportProductPhoto :disabled="page.busy()" :catalog="catalogImages" :image-id="selectedCandidate ? bestVisual(selectedCandidate)?.imageId : undefined" :product-id="selectedProduct.id" :label="`已选商品${selectedProduct.name}照片`" /><span class="review-hint">{{ selectedCandidate?.visualEvidence.length ? '本次实际命中照片，可与上方原图对照' : '已选商品资料照片' }}</span></div>
       </div>
       <div v-else class="new-review">
         <template v-if="choices[row.id] || row.productOperation"><p class="review-hint">已有新品操作，继续处理原请求。已成功建立的商品将保留。</p><el-button type="primary" :disabled="locked || row.readiness === 'READY'" @click="createNew">继续原新品操作</el-button></template>
@@ -237,7 +237,7 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
             <div v-if="row.images?.length" class="review-originals">
               <article v-for="(image, index) in row.images" :key="`${row.id}-${image.id}`" class="review-original" :class="{ 'is-focused': focusedImage === image.id }">
                 <div v-loading="imageLoading[image.id] === true" class="original-image-frame" :aria-busy="imageLoading[image.id] === true" :aria-label="`第${row.rowNo}行原图${index + 1}`" element-loading-text="原图加载中">
-                  <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" fit="contain" :preview-src-list="[imageUrls[image.id]!]" preview-teleported :alt="`第${row.rowNo}行原图${index + 1}`">
+                  <el-image v-if="imageUrls[image.id]" :src="imageUrls[image.id]" fit="contain" :preview-src-list="page.busy() ? [] : [imageUrls[image.id]!]" preview-teleported :alt="`第${row.rowNo}行原图${index + 1}`">
                     <template #placeholder><el-icon class="is-loading" aria-label="原图显示中"><Loading /></el-icon></template>
                     <template #error><span class="review-warning">原图显示失败，请核对图片文件。</span></template>
                   </el-image>
@@ -276,12 +276,12 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
             <div><strong>{{ candidate.product.productCode }} · {{ candidate.product.name }}</strong><span>规格：{{ candidate.product.spec || '待核实' }}</span></div>
             <div v-for="(evidence, index) in candidate.visualEvidence" :key="`${evidence.queryAssetId}-${evidence.imageId}-${index}`" class="candidate-comparison">
               <figure :data-query-image-id="evidence.queryAssetId"><figcaption>用于识别的导入原图</figcaption><div class="comparison-original">
-                <el-image v-if="imageUrls[evidence.queryAssetId]" :src="imageUrls[evidence.queryAssetId]" :preview-src-list="[imageUrls[evidence.queryAssetId]!]" preview-teleported fit="contain" :alt="`用于识别的原图${evidence.queryAssetId}`" />
+                <el-image v-if="imageUrls[evidence.queryAssetId]" :src="imageUrls[evidence.queryAssetId]" :preview-src-list="page.busy() ? [] : [imageUrls[evidence.queryAssetId]!]" preview-teleported fit="contain" :alt="`用于识别的原图${evidence.queryAssetId}`" />
                 <span v-else class="review-hint">{{ imageErrors[evidence.queryAssetId] || (imageLoading[evidence.queryAssetId] ? '原图加载中' : '对应原图不再关联，请重新核对') }}</span>
               </div><el-button v-if="imageErrors[evidence.queryAssetId]" link type="primary" @click="page.images.load(evidence.queryAssetId)">重试加载原图</el-button></figure>
-              <figure><figcaption>本次实际命中照片</figcaption><PurchaseImportProductPhoto :catalog="catalogImages" :image-id="evidence.imageId" :label="`${candidate.product.name}实际命中照片${index + 1}`" /><span class="review-hint">外观相似度 {{ evidence.score.toFixed(4) }}</span></figure>
+              <figure><figcaption>本次实际命中照片</figcaption><PurchaseImportProductPhoto :disabled="page.busy()" :catalog="catalogImages" :image-id="evidence.imageId" :label="`${candidate.product.name}实际命中照片${index + 1}`" /><span class="review-hint">外观相似度 {{ evidence.score.toFixed(4) }}</span></figure>
             </div>
-            <div v-if="!candidate.visualEvidence.length" class="text-candidate-photo"><PurchaseImportProductPhoto :catalog="catalogImages" :product-id="candidate.productId" :label="`${candidate.product.name}资料照片`" /><span class="review-hint">文字匹配 · 商品资料照片</span></div>
+            <div v-if="!candidate.visualEvidence.length" class="text-candidate-photo"><PurchaseImportProductPhoto :disabled="page.busy()" :catalog="catalogImages" :product-id="candidate.productId" :label="`${candidate.product.name}资料照片`" /><span class="review-hint">文字匹配 · 商品资料照片</span></div>
             <p v-if="candidate.visualScore !== null">外观相似度 {{ candidate.visualScore.toFixed(4) }}（排序分数，非正确概率）</p><p v-for="(evidence, index) in candidate.textEvidence" :key="index">{{ evidence.reason }}</p>
             <p v-for="conflict in candidate.conflicts" :key="conflict" class="review-warning">{{ conflict }}</p>
             <template v-if="candidateScore(candidate.productId)">

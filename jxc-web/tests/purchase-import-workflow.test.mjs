@@ -48,6 +48,21 @@ test('重新打开已有运行任务的批次能恢复按钮进度，不重启�
   assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,succeeded:0,failed:0,attention:0,pending:1,running:true});assert.equal(await page.startImageReview(),false)
 })
 
+test('核对排队时锁住编辑照片与确认，但仍能读回后台进度',async()=>{
+  const task='22222222-2222-4333-8444-555555555555';let reads=0,decisions=0
+  const running={batchId,version:1,status:'REVIEW',header,rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:1}}]}
+  const page=await setup({async load(){reads++;return structuredClone(running)},async decide(){decisions++;throw new Error('不应确认')}},running)
+  assert.equal(page.busy(),true)
+  assert.equal(page.startEdit(page.state.rows[0]),false)
+  assert.equal(page.grid.edit(1,'productSpec','M'),false)
+  assert.equal(page.grid.selectPhoto(1,new File(['image'],'照片.png',{type:'image/png'})),false)
+  assert.equal(await page.decideProduct(page.state.rows[0],{decision:'NEW'}),false)
+  assert.equal(decisions,0)
+  assert.equal(await page.refreshTasks(),true);assert.ok(reads>=2)
+  page.state.tasks[0].status='FAILED'
+  assert.equal(page.busy(),false)
+})
+
 test('文件暂存成功后自动核对已保存行，保留未保存的表头草稿',async()=>{
   const task='22222222-2222-4333-8444-555555555555', calls=[]
   const saved={batchId,version:1,status:'REVIEW',header,rows:[row],tasks:[]}

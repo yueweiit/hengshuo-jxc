@@ -64,7 +64,7 @@ watch(() => state.batchId, loadCreationCapability, { immediate:true })
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleTasks() {
   clearTimeout(taskTimer)
-  if (active && (state.status === 'PARSING' || state.progressReloadNeeded || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) && state.batchId) taskTimer = setTimeout(async () => { await page.refreshTasks(); if (active) scheduleTasks() }, 2000)
+  if (active && (state.status === 'PARSING' || state.progressReloadNeeded || page.imageReviewBusy() || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) && state.batchId) taskTimer = setTimeout(async () => { await page.refreshTasks(); if (active) scheduleTasks() }, 2000)
 }
 watch(() => [state.batchId, state.status, state.progressReloadNeeded, state.tasks.map(task => `${task.id}:${task.status}`).join(',')], scheduleTasks)
 
@@ -246,7 +246,7 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
       <p v-if="state.rows.length" class="table-hint">保存后生成对应采购单草稿及明细，并保留商品、原文件和费用来源关联。资料待核对时会提示具体原因。</p>
       <el-alert v-if="creationError" type="error" :closable="false" class="import-alert"><template #title>采购单保存暂不可用：{{ creationError }}</template><el-button link @click="loadCreationCapability">重新读取保存能力</el-button></el-alert>
       <p v-else-if="state.batchId && !creationEnabled && !creationLoading" class="table-hint">当前环境尚未启用保存采购单，可先完成资料核对。</p>
-      <PurchaseImportEditor :page="page" :disabled="page.busy() || !localDraft.view.ready" :persist="localDraft.flush" @remove="remove" @review="review" />
+      <div v-loading="page.imageReviewBusy()" :inert="page.imageReviewBusy()" :aria-disabled="page.imageReviewBusy()" element-loading-text="AI图文核对中，请稍候"><PurchaseImportEditor :page="page" :disabled="page.busy() || !localDraft.view.ready" :persist="localDraft.flush" @remove="remove" @review="review" /></div>
       <section v-if="state.groups.length" class="saved-orders" aria-label="采购单保存结果"><h3>采购单保存结果</h3><div v-for="group in state.groups" :key="group.id"><strong>{{ group.sourceOrderNo }}</strong><router-link v-if="group.orderId" :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || `采购单 ${group.orderId}` }}</router-link><span>{{ purchaseOrderSaveStatus(group) }}</span><el-button v-if="group.orderId || group.createIntent" link :disabled="page.busy()" @click="page.refreshCreation(group)">查询原保存结果</el-button><span v-if="group.errorMessage">{{ group.errorMessage }}</span></div></section>
     </section>
 

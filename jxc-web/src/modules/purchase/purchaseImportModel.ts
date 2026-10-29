@@ -2,7 +2,7 @@ import { reactive } from 'vue'
 import { createPurchaseImportWorkflow } from '@/modules/purchase/purchaseImportWorkflow'
 import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
 import { createPurchaseImportGrid, type GridField, type GridSaveInput } from '@/modules/purchase/purchaseImportGrid'
-import { readImportTask, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
+import { readImportTask, imageReviewProgress, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
 import { reviewProposalCurrent, type ReviewProposal, type SourceReviewSheet } from '@/modules/purchase/purchaseImportReview'
 
 export interface ImportHeader {
@@ -195,7 +195,9 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }, () => state.batchId)
   let epoch = 0, readSequence = 0, progressSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
   let clearIntent: { id: string; version: number; key: string } | null = null
-  const busy = () => state.loading || state.importing || state.saving || state.clearing || state.clearPending || state.status === 'PARSING'
+  const requestBusy = () => state.loading || state.importing || state.saving || state.clearing || state.clearPending || state.status === 'PARSING'
+  const imageReviewBusy = () => state.tasks.some(task => ['MATCH', 'EXPLAIN'].includes(task.kind || '') && ['QUEUED', 'RUNNING'].includes(task.status)) || state.imageReviewEnabled && !state.imageReviewError && state.status === 'REVIEW' && state.tasks.some(task => (!task.kind || task.kind === 'PARSE') && task.status === 'SUCCEEDED') && imageReviewProgress(state).pending > 0
+  const busy = () => requestBusy() || imageReviewBusy()
   const headerDirty = () => !state.clearPending && state.batchId !== null && JSON.stringify(state.header) !== savedHeader
   function failure(error: unknown) {
     state.success = ''
@@ -232,7 +234,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.edit = null
   }
   async function write(flag: 'importing' | 'saving', request: () => Promise<unknown>, apply: (response: unknown) => void) {
-    if (busy()) return false
+    if (requestBusy()) return false
     const context = epoch
     clearFeedback()
     state[flag] = true
@@ -250,6 +252,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   const reviewKeys = new Map<string, string>()
   async function confirmReview(proposal: ReviewProposal) {
+    if (busy()) return false
     if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，再确认来源核对')); return false }
     if (!api.confirmReview || state.edit || !reviewProposalCurrent(proposal, state.batchId, state.version, state.rows, state.sources)) { failure(new Error('补充预览已失效，请按当前文件重新核对')); return false }
     try {
@@ -502,7 +505,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.clearPending = raw.clearPending === true
     state.clearedBatchId = isBatchId(raw.clearedBatchId) ? raw.clearedBatchId : null
   }
-  const workflow = createPurchaseImportWorkflow({ state,api,busy: () => busy() || grid.hasChanges(),headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
+  const workflow = createPurchaseImportWorkflow({ state,api,busy: () => requestBusy() || grid.hasChanges(),reviewing: imageReviewBusy,headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
   function clearBlockReason() {
     if (state.loading || state.importing || state.saving || state.clearing || state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) return '当前批次正在处理，请等待处理结束后清空'
     if (state.upload?.status === 'UNKNOWN') return '文件接收结果尚未确认，请先按原上传请求重试核实'
@@ -565,7 +568,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.groups = []; photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, grid, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, sourceMapping, correctSource, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
+  return { ...workflow, state, grid, images, busy, imageReviewBusy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, sourceMapping, correctSource, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
 
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>
