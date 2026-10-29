@@ -211,7 +211,7 @@ public class PurchaseImportMatchServiceImpl implements PurchaseImportTaskHandler
                 completeEvidence(lease,evidence,Map.of("status","NOT_REQUESTED","message","没有可读图片配对，尚未进行图文核对","candidateIds",List.of(),"candidateChecks",checks));continue;
             }
             var row=batchRow(evidence,review);
-            if(!current.add(row)){reviewPrepared(current.request(),pending,runtime);pending.clear();current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);current.add(row);}
+            if(!current.add(row)){reviewPrepared(current.request(),pending,runtime);pending.clear();current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return null;});current.add(row);}
             pending.put(lease.id().toString(),lease);
         }catch(RuntimeException failure){runtime.fail(lease,failure);}}
         if(!current.empty())reviewPrepared(current.request(),pending,runtime);

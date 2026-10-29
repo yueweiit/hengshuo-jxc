@@ -210,11 +210,16 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @Test void catalogDatabaseCallFailureIsExplicitAndCannotBecomeSuccessfulNoMatch(){var b=source("SKU");UUID task=start(b);var unavailable=mock(com.hs.jxc.md.api.MasterProductMaintenanceApi.class);doThrow(new org.springframework.dao.DataAccessResourceFailureException("fixture database unavailable")).when(unavailable).queryProductCandidates(any(),anyString(),anyBoolean(),anyInt());var tool=new PurchaseImportMatchServiceImpl(imports,tasks,parser,unavailable,mock(com.hs.jxc.md.api.ProductImageApi.class),mock(com.hs.jxc.common.idempotency.IdempotencyExecutor.class),mock(com.hs.jxc.common.audit.AuditWriter.class),matchMapper,review);doAnswer(call->{tool.catalogSearch(task,call.getArgument(1),Map.of("operation","TEXT"));return Map.of("taskId",task.toString());}).when(parser).recognize(any(),anyString(),anyMap());tasks.execute(101,task);assertThat(tasks.get(actor,task)).containsEntry("status","FAILED").containsEntry("errorCode","TASK_FAILED");assertThat(matched(b)).isNull();assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_candidate",Integer.class)).isZero();}
 
     @SuppressWarnings("unchecked") List<Map<String,Object>> batchRows(Object value){return (List<Map<String,Object>>)value;}
-    Map<String,Object> queuedBatch(int count){
+    Map<String,Object> queuedBatch(int count){return queuedBatch(count,false);}
+    Map<String,Object> queuedBatch(int count,boolean largePhotos){
         photoBatch(true);owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=501");
         var b=upload(UUID.randomUUID().toString());var doc=photoDocument();var sourceRows=new ArrayList<Map<String,Object>>();var associations=new ArrayList<Map<String,Object>>();
         var prototype=map(((List<?>)doc.get("rows")).getFirst());var association=map(((List<?>)doc.get("associations")).getFirst());
-        for(int i=0;i<count;i++){var row=new LinkedHashMap<>(prototype);row.put("sourceRow",i+2);var values=new LinkedHashMap<>(map(row.get("normalizedValues")));values.put("productSpec",i%2==0?"S":"M");row.put("normalizedValues",values);sourceRows.add(row);var link=new LinkedHashMap<>(association);link.put("sourceRow",i+2);associations.add(link);}
+        var largeImages=new ArrayList<Map<String,Object>>();
+        for(int i=0;i<count;i++){var row=new LinkedHashMap<>(prototype);row.put("sourceRow",i+2);var values=new LinkedHashMap<>(map(row.get("normalizedValues")));values.put("productSpec",i%2==0?"S":"M");row.put("normalizedValues",values);sourceRows.add(row);var link=new LinkedHashMap<>(association);link.put("sourceRow",i+2);
+            if(largePhotos){var original=map(((List<?>)doc.get("images")).getFirst());byte[] png=Arrays.copyOf(Base64.getDecoder().decode(original.get("contentBase64").toString()),6*1024*1024);png[png.length-1]=(byte)i;String hash=com.hs.jxc.attachment.AttachmentObjectStore.sha256(png);largeImages.add(Map.of("imageId",hash,"sha256",hash,"mimeType","image/png","bytes",png.length,"width",1,"height",1,"mediaPart","xl/media/image"+i+".png","contentBase64",Base64.getEncoder().encodeToString(png)));link.put("imageId",hash);}
+            associations.add(link);}
+        if(largePhotos)doc.put("images",largeImages);
         doc.put("rows",sourceRows);doc.put("associations",associations);doReturn(doc).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));
         long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",1.0)))).when(parser).search(any(),anyString(),anyMap());
         var snapshot=imports.get(actor,id(b));matches.start(actor,id(b),Map.of("batchVersion",snapshot.get("version"),"rowIds",rows(snapshot).stream().map(row->row.get("id")).toList(),"topK",5),UUID.randomUUID().toString());return b;
@@ -241,5 +246,14 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='STALE'",Integer.class,id(b))).isEqualTo(1);
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='SUCCEEDED'",Integer.class,id(b))).isEqualTo(1);
         clearInvocations(parser);assertThat(tasks.recover(101,100)).isZero();verify(parser,never()).reviewBatch(anyMap());
+    }
+    @Test void oversizedRequestsRenewTheWaitingRowBeforeSendingItsNextBatch(){
+        var b=queuedBatch(6,true);var waiting=new java.util.concurrent.atomic.AtomicReference<UUID>();var calls=new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(call->{var request=map(call.getArgument(0));var input=batchRows(request.get("rows"));assertThat(codec.write(request).getBytes(java.nio.charset.StandardCharsets.UTF_8).length).isLessThanOrEqualTo(40*1024*1024);
+            if(calls.incrementAndGet()==1){var sent=input.stream().map(row->UUID.fromString(row.get("runId").toString())).toList();var remaining=owner.queryForList("SELECT id FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='RUNNING'",UUID.class,id(b)).stream().filter(id->!sent.contains(id)).toList();assertThat(remaining).hasSize(1);waiting.set(remaining.getFirst());owner.update("UPDATE pur_order_import_task SET lease_until=clock_timestamp()+interval '1 minute',expires_at=clock_timestamp()+interval '1 minute' WHERE id=?",waiting.get());}
+            else assertThat(owner.queryForObject("SELECT lease_until>clock_timestamp()+interval '14 minutes' FROM pur_order_import_task WHERE id=?",Boolean.class,waiting.get())).as("前一批等待结束后必须重新延长后续行有效期").isTrue();
+            return Map.of("format","MatchReviewBatchResultV1","items",input.stream().map(this::batchReply).toList());
+        }).when(parser).reviewBatch(anyMap());
+        tasks.recover(101,100);assertThat(calls.get()).isEqualTo(2);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='SUCCEEDED'",Integer.class,id(b))).isEqualTo(6);
     }
 }
