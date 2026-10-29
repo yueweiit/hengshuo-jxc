@@ -63,22 +63,25 @@ class PurchaseImportDraftIT extends PurchaseImportFixture {
         try(var app=featureContainer(image,true)){app.start();String base="http://"+app.getHost()+":"+app.getMappedPort(8080)+"/api/v1/pur/order-imports/"+id(b)+"/groups/"+groupId(g);var http=java.net.http.HttpClient.newHttpClient();var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/drafts")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Content-Type","application/json").header("Idempotency-Key",key).POST(java.net.http.HttpRequest.BodyPublishers.ofString(codec.write(confirmation(g)))).build();var result=http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString());assertThat(result.statusCode()).as(result.body()).isEqualTo(200);assertThat(result.body()).contains("CREATED","VERIFIED","DRAFT");assertThat(http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(200);var read=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/creation")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").GET().build();assertThat(http.send(read,java.net.http.HttpResponse.BodyHandlers.ofString()).body()).contains("VERIFIED");assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isEqualTo(1);String expected=com.hs.jxc.attachment.AttachmentObjectStore.sha256(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("target/jxc-app-0.1.0-SNAPSHOT.jar")));assertThat(app.execInContainer("sha256sum","/app/app.jar").getStdout()).startsWith(expected+" ");}
     }
 
-    @Test void realBrowserSaveCreatesTheNativeDraftAndRepeatedSaveOnlyReadsIt()throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(ints={1,2})
+    void realBrowserSaveCreatesTheNativeDraftAndRepeatedSaveOnlyReadsIt(int expectedOrders)throws Exception {
         String script=System.getProperty("jxc.test.purchase-save-ui"),appImage=System.getProperty("jxc.test.purchase-image"),webImage=System.getProperty("jxc.test.purchase-web-image"),certs=System.getProperty("jxc.test.photo-certs");
         Assumptions.assumeTrue(script!=null&&appImage!=null&&webImage!=null&&certs!=null,"显式提供页面脚本与本地镜像后运行隔离真实保存验收");
         owner.update("UPDATE sys_role SET permissions='[\"*\"]'::jsonb WHERE id=801");
-        var batch=prepared();readyGroup(batch);
+        var batch=prepared();
+        if(expectedOrders==2){var second=imports.upload(actor,"second.xlsx",file,header(),id(batch),UUID.randomUUID().toString());parse(second);var last=rows(imports.get(actor,id(batch))).getLast();review.decide(actor,id(batch),((Number)last.get("id")).longValue(),Map.of("version",last.get("version"),"decision","EXISTING","productId",501,"unit","PCS"));}
+        var ready=readyGroup(batch);
+        if(expectedOrders==2){var last=rows(imports.get(actor,id(batch))).getLast();drafts.saveGroup(actor,id(batch),groupId(ready),Map.of("groupVersion",ready.get("version"),"header",ready.get("header"),"splitRowIds",List.of(last.get("id"))));}
         try(var gateway=featureGateway(appImage,webImage,certs,true)){
             var log=java.nio.file.Path.of("target/purchase-import-save-browser.log").toAbsolutePath();
-            var process=new ProcessBuilder("node",script,gateway.base(),id(batch).toString(),java.nio.file.Path.of("target/purchase-import-save-browser.png").toAbsolutePath().toString()).redirectErrorStream(true).redirectOutput(log.toFile()).start();
+            var process=new ProcessBuilder("node",script,gateway.base(),id(batch).toString(),java.nio.file.Path.of("target/purchase-import-save-browser-"+expectedOrders+".png").toAbsolutePath().toString(),String.valueOf(expectedOrders)).redirectErrorStream(true).redirectOutput(log.toFile()).start();
             try{assertThat(process.waitFor(100,java.util.concurrent.TimeUnit.SECONDS)).as("浏览器保存超时，日志 %s",log).isTrue();assertThat(process.exitValue()).as(java.nio.file.Files.readString(log)).isZero();}
             finally{if(process.isAlive()){process.destroyForcibly();process.waitFor();}}
-            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isEqualTo(1);
-            assertThat(owner.queryForObject("SELECT status FROM pur_order",String.class)).isEqualTo("DRAFT");
-            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_line",Integer.class)).isEqualTo(1);
-            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import WHERE target_order_line_id IS NOT NULL",Integer.class)).isEqualTo(1);
-            assertThat(owner.queryForObject("SELECT fee_todos->0->>'reviewStatus' FROM pur_order_import_group",String.class)).isEqualTo("CONFIRMED");
-            assertThat(owner.queryForObject("SELECT (fee_todos->0->>'amount')::numeric FROM pur_order_import_group",java.math.BigDecimal.class)).isEqualByComparingTo("29.10");
+            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isEqualTo(expectedOrders);
+            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order WHERE status='DRAFT'",Integer.class)).isEqualTo(expectedOrders);
+            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_line",Integer.class)).isEqualTo(expectedOrders);
+            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import WHERE target_order_line_id IS NOT NULL",Integer.class)).isEqualTo(expectedOrders);
+            assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_group WHERE fee_todos->0->>'reviewStatus'='CONFIRMED' AND (fee_todos->0->>'amount')::numeric=29.10",Integer.class)).isEqualTo(expectedOrders);
             assertThat(owner.queryForObject("SELECT count(*) FROM lgs_fee",Integer.class)).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM cst_inbound_cost",Integer.class)).isZero();
             System.out.println(java.nio.file.Files.readString(log));
         }
