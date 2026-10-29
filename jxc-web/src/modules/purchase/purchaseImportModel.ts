@@ -166,7 +166,6 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!api.readImage) return Promise.reject(new Error('原图读取接口尚未接入'))
     return api.readImage(id, imageId, signal)
   }, () => state.batchId)
-  let photoFile: File | null = null, photoSignature = '', photoKey = ''
   let epoch = 0, readSequence = 0, progressSequence = 0, savedHeader = '', selectedFile: File | null = null, intentSignature = '', intentKey = ''
   let clearIntent: { id: string; version: number; key: string } | null = null
   const busy = () => state.loading || state.importing || state.saving || state.clearing || state.clearPending || state.status === 'PARSING'
@@ -224,7 +223,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   const reviewKeys = new Map<string, string>()
   async function confirmReview(proposal: ReviewProposal) {
-    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再确认来源核对')); return false }
+    if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，再确认来源核对')); return false }
     if (!api.confirmReview || state.edit || !reviewProposalCurrent(proposal, state.batchId, state.version, state.rows, state.sources)) { failure(new Error('补充预览已失效，请按当前文件重新核对')); return false }
     try {
       for (const change of proposal.changes) {
@@ -239,7 +238,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function loadBatch(id: string, preserveDraft = false) {
-    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，重新读取会覆盖编辑草稿')); return false }
+    if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，重新读取会覆盖编辑草稿')); return false }
     if (state.importing || state.saving || state.clearing || state.clearPending || state.edit) return false
     const context = epoch, sequence = ++readSequence
     clearFeedback()
@@ -269,7 +268,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     }
   }
   async function importFile(file: File) {
-    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再导入文件')); return false }
+    if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，再导入文件')); return false }
     if (busy()) return false
     if (state.edit) { failure(new Error('请先保存或取消正在编辑的明细')); return false }
     if (!/\.xlsx$/i.test(file.name) || !file.size) { failure(new Error('请选择非空的.xlsx模板文件')); return false }
@@ -297,55 +296,34 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
   }
   function rowLocked(row: ImportRow) { return !!row.targetOrderLineId || state.groups.some(group => group.id === row.groupId && ['CREATING', 'UNKNOWN'].includes(group.createStatus)) }
   function startEdit(row: ImportRow, field: ImportEditField | null) {
-    if (grid.hasChanges() || grid.view.mode === 'excel') return false
+    if (grid.view.pending || grid.view.mode === 'excel') return false
     if (rowLocked(row)) { failure(new Error('本行已建单或创建结果待核实，不能修改来源')); return false }
-    if (busy() || state.edit || !state.rows.some(item => item.id === row.id)) return false
+    if (busy() || state.edit || !grid.rows().some(item => item.id === row.id)) return false
     clearFeedback()
     state.edit = { id: row.id, field, values: { ...Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues, suppliedProductName: row.suppliedProductName ?? null }, photoFile: null }
     return true
   }
   function selectPhoto(file: File) {
     if (busy() || !state.edit || state.edit.field !== null && state.edit.field !== 'photo') return false
-    if (!file.size || file.size > 10 * 1024 * 1024) { failure(new Error('照片不能为空且不能超过10MiB')); return false }
-    if (!/\.(png|jpe?g|gif)$/i.test(file.name) || !['image/png', 'image/jpeg', 'image/gif'].includes(file.type)) { failure(new Error('请选择PNG、JPG或GIF照片')); return false }
+    if (!grid.validatePhoto(file)) return false
     clearFeedback(); state.edit.photoFile = file
     return true
   }
-  function cancelEdit() { if (!state.saving) { state.edit = null; photoFile = null; photoKey = ''; photoSignature = ''; clearFeedback() } }
+  function cancelEdit() { if (!state.saving) { state.edit = null; clearFeedback() } }
   async function saveEdit() {
-    if (busy() || !state.edit || !state.batchId) return false
-    const row = state.rows.find(item => item.id === state.edit!.id)
+    if (busy() || !state.edit) return false
+    const row = grid.rows().find(item => item.id === state.edit!.id)
     if (!row) { failure(new Error('待保存的记录已不存在，请刷新')); return false }
-    let values: ImportValues
-    try { values = normalizeValues(state.edit.values) } catch (error) { failure(error); return false }
-    const suppliedProductName = state.edit.values.suppliedProductName?.trim() || null
-    if ((suppliedProductName?.length ?? 0) > 200) { failure(new Error('商品名最多200个字符')); return false }
-    const matchInputs = suppliedProductName !== (row.suppliedProductName ?? null) ? { suppliedProductName, suppliedProductCode: row.suppliedProductCode ?? null, supplierProductCode: row.supplierProductCode ?? null } : undefined
-    const file = state.edit.photoFile, id = state.batchId
-    if (file) {
-      if (!api.uploadPhoto) { failure(new Error('照片上传接口尚未接入')); return false }
-      const signature = JSON.stringify([id, row.id, row.version, values, matchInputs])
-      if (photoFile !== file || photoSignature !== signature) { photoFile = file; photoSignature = signature; photoKey = newKey() }
-      return write('saving', () => api.uploadPhoto!(id, { ...row }, file, values, photoKey, matchInputs), response => {
-        const batch = readBatch(response), updated = batch.rows.find(item => item.id === row.id)
-        if (batch.batchId !== id || !updated || updated.rowNo !== row.rowNo || updated.version <= row.version || !updated.images?.some(image => image.status === 'CONFIRMED' && image.origin === 'MANUAL_UPLOAD' && !row.images?.some(old => old.id === image.id))) throw new Error('后端返回的照片保存结果与当前记录不一致')
-        applyBatch(batch, true)
-        photoFile = null; photoKey = ''; photoSignature = ''
-        state.success = '照片和明细已保存'
-      })
-    }
-    if (state.edit.field === 'photo') { failure(new Error('请先选择要上传的照片，或取消编辑')); return false }
-    return write('saving', () => api.saveRow(state.batchId!, { ...row }, values, matchInputs), response => {
-      const updated = readRow(response)
-      if (updated.id !== row.id || updated.rowNo !== row.rowNo || updated.version <= row.version) throw new Error('后端返回的保存记录编号或版本不正确')
-      state.rows.splice(state.rows.findIndex(item => item.id === row.id), 1, updated)
-      if (updated.batchVersion !== undefined) state.version = updated.batchVersion
-      state.edit = null
-      state.success = '明细已保存'
-    })
+    const edit = state.edit
+    if (edit.field === 'photo' && !edit.photoFile) { failure(new Error('请先选择照片，或取消编辑')); return false }
+    state.edit = null
+    if (!grid.applyRange({ [grid.rows().indexOf(row)]: edit.values })) { state.edit = edit; return false }
+    if (edit.photoFile && !grid.selectPhoto(row.id, edit.photoFile)) { state.edit = edit; return false }
+    state.success = '编辑已收妥为草稿，点击上传后提交'
+    return true
   }
   async function saveHeader() {
-    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再保存基础信息')); return false }
+    if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，再保存基础信息')); return false }
     if (busy() || state.edit || !state.batchId) return false
     const invalid = validateImportHeader(state.header)
     if (invalid) { failure(new Error(invalid)); return false }
@@ -358,7 +336,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     })
   }
   async function removeRow(row: ImportRow) {
-    if (grid.hasChanges()) { failure(new Error('请先保存表格修改，再删除明细')); return false }
+    if (grid.hasChanges()) { failure(new Error('请先上传草稿修改，再删除明细')); return false }
     if (busy() || state.edit || !state.batchId || rowLocked(row)) return false
     if (!state.rows.some(item => item.id === row.id && item.version === row.version)) { failure(new Error('删除目标已变化，请刷新核对')); return false }
     state.deletingId = row.id
@@ -438,9 +416,35 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     failure, feedback: clearFeedback, newKey, readBatch, applyBatch: batch => applyBatch(batch, true),
     save: (input, key, check) => {
       if (!api.saveGrid) { failure(new Error('表格保存接口尚未接入')); return Promise.resolve(false) }
-      return write('saving', () => api.saveGrid!(input, key), value => { check(value); state.success = '表格修改已保存' })
+      return write('saving', () => api.saveGrid!(input, key), check)
+    },
+    savePhoto: (row, file, key, check) => {
+      if (!api.uploadPhoto || !state.batchId) { failure(new Error('照片上传接口或批次尚未就绪')); return Promise.resolve(false) }
+      return write('saving', () => api.uploadPhoto!(state.batchId!, row, file, normalizeValues(row), key, { suppliedProductName: row.suppliedProductName ?? null, suppliedProductCode: row.suppliedProductCode ?? null, supplierProductCode: row.supplierProductCode ?? null }), check)
     },
   })
+  function exportLocalDraft() {
+    const draft = grid.snapshot()
+    if (state.edit) {
+      draft.draft ??= JSON.parse(JSON.stringify(grid.rows())) as ImportRow[]
+      const row = draft.draft.find(item => item.id === state.edit!.id)
+      if (row) Object.assign(row, state.edit.values)
+      if (state.edit.photoFile) draft.photos[state.edit.id] = { file: state.edit.photoFile }
+    }
+    return { schema: 1, batch: state.batchId ? JSON.parse(JSON.stringify({ batchId: state.batchId, version: state.version, status: state.status, header: state.header, rows: state.rows, sources: state.sources, tasks: state.tasks, groups: state.groups })) as ImportBatch : null,
+      header: JSON.parse(JSON.stringify(state.header)) as ImportHeader, baselineHeader: savedHeader, grid: draft, clearIntent: clearIntent ? { ...clearIntent } : null, clearPending: state.clearPending, clearedBatchId: state.clearedBatchId }
+  }
+  function restoreLocalDraft(raw: unknown) {
+    if (!record(raw) || raw.schema !== 1 || !record(raw.header) || !record(raw.grid)) throw new Error('本地采购草稿格式不正确，请保留数据后重试')
+    if (typeof raw.baselineHeader !== 'string' || raw.batch !== null && !raw.baselineHeader) throw new Error('本地草稿缺少已读取的批次基线，请保留数据后重试')
+    const batch = raw.batch === null ? null : readBatch({ ...(raw.batch as ImportBatch), header: JSON.parse(raw.baselineHeader) })
+    grid.restore(raw.grid as unknown as ReturnType<typeof grid.snapshot>)
+    if (batch) applyBatch(batch)
+    state.header = { ...raw.header } as unknown as ImportHeader
+    if (record(raw.clearIntent) && isBatchId(raw.clearIntent.id) && isBatchId(raw.clearIntent.key) && positiveId(raw.clearIntent.version)) clearIntent = raw.clearIntent as unknown as NonNullable<typeof clearIntent>
+    state.clearPending = raw.clearPending === true
+    state.clearedBatchId = isBatchId(raw.clearedBatchId) ? raw.clearedBatchId : null
+  }
   const workflow = createPurchaseImportWorkflow({ state,api,busy: () => busy() || grid.hasChanges(),headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
   function clearBlockReason() {
     if (state.loading || state.importing || state.saving || state.clearing || state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) return '当前批次正在处理，请等待处理结束后清空'
@@ -495,7 +499,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     grid.reset()
     workflow.reset()
     ++epoch; ++readSequence; ++progressSequence
-    images.reset(); photoFile = null; photoKey = ''; photoSignature = ''
+    images.reset()
     state.activeTaskId = null; state.upload = null; state.progressError = ''; state.progressReading = false; state.progressReloadNeeded = false
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
@@ -504,7 +508,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.groups = []; photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, grid, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview }
+  return { ...workflow, state, grid, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
 
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

@@ -20,6 +20,7 @@ function setup(overrides = {}) {
     async load(id) { calls.push(['load', id]); return batch() },
     async saveHeader(id, value, versions) { calls.push(['header', id, value, versions]); return { ...batch(), header: value } },
     async saveRow(id, item, values) { calls.push(['save', id, structuredClone(item), structuredClone(values)]); return { ...item, ...values, version: item.version + 1 } },
+    async saveGrid(input, key) { calls.push(['grid', input, key]); return { ...batch(), version: 2, rows: input.rows.map(change => ({ ...row(change.id), ...change.values, ...change.matchInputs, version: change.version + 1 })) } },
     async deleteRow(id, item) { calls.push(['delete', id, structuredClone(item)]); return { deleted: true, id: item.id } },
     ...overrides,
   }
@@ -61,7 +62,8 @@ test('无表头的暂存数据可以刷新和编辑来源明细', async () => {
   assert.equal(page.startEdit(page.state.rows[0], 'purchaseQty'), true)
   page.state.edit.values.purchaseQty = '11'
   assert.equal(await page.saveEdit(), true)
-  assert.equal(page.state.rows[0].purchaseQty, '11')
+  assert.equal(page.grid.rows()[0].purchaseQty, '11')
+  assert.equal(page.state.rows[0].purchaseQty, '10')
 })
 
 test('上传成功采用服务器保存后的批次和明细，不生成示例行', async () => {
@@ -169,9 +171,11 @@ test('单元格编辑保存精确数值及版本，取消不改变正式值', as
   page.state.edit.values.purchaseQty = '12.0001'
   assert.equal(page.state.rows[0].purchaseQty, '10')
   assert.equal(await page.saveEdit(), true)
+  assert.equal(page.state.rows[0].purchaseQty, '10')
+  assert.equal(await page.grid.save(), true)
   assert.equal(page.state.rows[0].purchaseQty, '12.0001')
   assert.equal(page.state.rows[0].version, 2)
-  assert.equal(calls.at(-1)[2].version, 1)
+  assert.equal(calls.at(-1)[1].rows[0].version, 1)
   page.startEdit(page.state.rows[0], null)
   page.state.edit.values.purchaseUnitPrice = '999'
   page.cancelEdit()
@@ -180,42 +184,46 @@ test('单元格编辑保存精确数值及版本，取消不改变正式值', as
 
 test('保存失败保留编辑草稿，可重试且不会开启另一份编辑', async () => {
   let failures = 1
-  const { page } = setup({ async saveRow(_batch, item, values) { if (failures--) throw new Error('版本冲突，请核对'); return { ...item, ...values, version: 2 } } })
+  const { page } = setup({ async saveGrid(input) { if (failures--) throw new Error('版本冲突，请核对'); return { ...batch(), rows: [{ ...row(), ...input.rows[0].values, version: 2 }] } } })
   await page.loadBatch(batchId)
   page.startEdit(page.state.rows[0], null)
   page.state.edit.values.purchaseQty = '12'
   assert.equal(page.startEdit(row(2), 'purchaseQty'), false)
-  assert.equal(await page.saveEdit(), false)
-  assert.match(page.state.error, /版本冲突/)
-  assert.equal(page.state.edit.values.purchaseQty, '12')
-  assert.equal(page.state.rows[0].purchaseQty, '10')
   assert.equal(await page.saveEdit(), true)
+  assert.equal(await page.grid.save(), false)
+  assert.match(page.state.error, /版本冲突/)
+  assert.equal(page.grid.rows()[0].purchaseQty, '12')
+  assert.equal(page.state.rows[0].purchaseQty, '10')
+  assert.equal(await page.grid.save(), true)
   assert.equal(page.state.rows[0].purchaseQty, '12')
 })
 
 test('数量和金额精度校验不把空值与未知价格自动转换成0', async () => {
   const { page, calls } = setup()
   await page.loadBatch(batchId)
-  page.startEdit(page.state.rows[0], null)
   for (const invalid of ['0', '-1', 'NaN', '1.00001']) {
+    page.startEdit(page.grid.rows()[0], null)
     page.state.edit.values.purchaseQty = invalid
-    assert.equal(await page.saveEdit(), false)
+    assert.equal(await page.saveEdit(), true)
+    assert.equal(await page.grid.save(), false)
   }
   assert.equal(calls.filter(item => item[0] === 'save').length, 0)
+  page.startEdit(page.grid.rows()[0], null)
   page.state.edit.values.purchaseQty = '1'
   page.state.edit.values.purchaseUnitPrice = ''
   assert.equal(await page.saveEdit(), true)
-  assert.equal(page.state.rows[0].purchaseUnitPrice, null)
+  assert.equal(page.grid.rows()[0].purchaseUnitPrice, null)
 })
 
 test('整行编辑与单元格编辑使用同一校验，错误保存响应不能覆盖原行', async () => {
-  const { page } = setup({ async saveRow() { return { ...row(2), version: 2 } } })
+  const { page } = setup({ async saveGrid() { return { ...batch(), rows: [{ ...row(2), version: 2 }] } } })
   await page.loadBatch(batchId)
   page.startEdit(page.state.rows[0], 'purchaseQty')
   page.state.edit.values.purchaseQty = '12'
-  assert.equal(await page.saveEdit(), false)
+  assert.equal(await page.saveEdit(), true)
+  assert.equal(await page.grid.save(), false)
   assert.equal(page.state.rows[0].id, 1)
-  assert.ok(page.state.edit)
+  assert.equal(page.grid.hasChanges(), true)
 })
 
 test('删除失败保留原行，明确成功后才删除，最后一行删除后为空', async () => {

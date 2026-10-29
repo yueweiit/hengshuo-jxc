@@ -13,7 +13,7 @@ const failed = computed(() => photos.value.filter(image => errors.value[image.id
 // 旧文本地址仅用于尚无原图关联的历史行；有过关联后不回退到已排除的照片。
 const legacy = computed(() => !props.row.images?.length && props.row.photo && /^(https?:\/\/|\/(?!\/)|data:image\/(?:png|jpeg|webp);base64,)/i.test(props.row.photo) ? props.row.photo : '')
 const preview = computed(() => photos.value.flatMap(image => urls.value[image.id] ? [urls.value[image.id]!] : []))
-const file = computed(() => props.editing && props.page.state.edit?.id === props.row.id ? props.page.state.edit.photoFile : null)
+const file = computed(() => props.editing && props.page.state.edit?.id === props.row.id ? props.page.state.edit.photoFile ?? props.page.grid.photo(props.row.id) : props.page.grid.photo(props.row.id))
 watch(() => [props.page.state.batchId, photos.value.map(image => image.id).join(',')], () => { photos.value.filter(image => !errors.value[image.id]).forEach(image => { void props.page.images.load(image.id) }) }, { immediate: true })
 watch(() => props.row.photo, () => { legacyFailed.value = false })
 function releaseSelected() { if (selectedUrl.value) URL.revokeObjectURL(selectedUrl.value); selectedUrl.value = '' }
@@ -38,7 +38,7 @@ function choose(event: Event) {
     <el-image v-else-if="legacy && !legacyFailed" :src="legacy" :preview-src-list="[legacy]" preview-teleported fit="contain" class="photo-thumbnail" :alt="`第${row.rowNo}行历史商品照片`" @error="legacyFailed = true" />
     <template v-else-if="legacyFailed"><span class="photo-error">历史照片加载失败</span><el-button link size="small" @click="legacyFailed = false">重试加载</el-button></template>
     <span v-else class="photo-status">未上传</span>
-    <span v-if="file" class="photo-status">{{ file.name }} · 待保存</span>
+    <span v-if="file" class="photo-status">{{ file.name }} · 草稿待上传</span>
     <span v-else-if="first" class="photo-status">{{ photos.every(image => image.status === 'CONFIRMED') ? '已确认' : '归属待核实' }}{{ photos.length > 1 ? ` · ${photos.length}张` : '' }}</span>
     <div v-for="image in failed" :key="image.id" class="photo-failure">
       <span class="photo-error" role="status">{{ errors[image.id] }}</span>
@@ -47,7 +47,7 @@ function choose(event: Event) {
     <template v-if="editing">
       <input ref="input" type="file" accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif" class="photo-file-input" :aria-label="`上传第${row.rowNo}行商品照片`" :disabled="page.state.saving" @change="choose" />
       <el-button type="primary" link size="small" :disabled="page.state.saving" @click="input?.click()">{{ first || legacy || file ? '选择替换照片' : '选择照片' }}</el-button>
-      <span class="photo-hint">PNG/JPG/GIF，最多10MiB，保存后生效</span>
+      <span class="photo-hint">PNG/JPG/GIF，最多10MiB，随上传按钮提交</span>
     </template>
     <el-button v-else type="primary" link size="small" :disabled="disabled" :aria-label="`编辑第${row.rowNo}行商品照片`" @click="emit('edit')">{{ first || legacy ? '替换照片' : '上传照片' }}</el-button>
   </div>

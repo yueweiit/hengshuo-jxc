@@ -10,6 +10,7 @@ const props = defineProps<{ page: PurchaseImportModel; disabled: boolean }>()
 const emit = defineEmits<{ review: [row: ImportRow]; remove: [row: ImportRow] }>()
 const columns = importTableColumns.map(column => ({ ...column, numeric: 'numeric' in column }))
 const editor = ref<InputInstance | null>(null)
+const displayNumber = (value: string | null) => value === null || /^\d+(\.\d+)?$/.test(value) ? formatImportDecimal(value) : value
 function setEditor(instance: Element | ComponentPublicInstance | null, field: ImportEditField) {
   if (props.page.state.edit?.field === field || props.page.state.edit?.field === null && field === 'sourceOrderNo') editor.value = instance as InputInstance | null
 }
@@ -52,11 +53,11 @@ function saveCell() { if (props.page.state.edit?.field != null) return props.pag
           :aria-label="`编辑第${row.rowNo}行${column.label}`"
           @click="begin(row, column.key)"
         >
-          <span :class="{ unverified: row[column.key] == null }">{{ column.numeric ? formatImportDecimal(row[column.key]) : row[column.key] ?? '待核实' }}</span>
+          <span :class="{ unverified: row[column.key] == null }">{{ column.numeric ? displayNumber(row[column.key]) : row[column.key] ?? '待核实' }}</span>
         </button>
       </template>
     </el-table-column>
-    <el-table-column label="商品核对" width="130" fixed="right"><template #default="{ row }"><el-button link :type="row.readiness === 'READY' ? 'success' : 'primary'" :disabled="disabled || !!page.state.edit" :aria-label="`核对第${row.rowNo}行商品`" @click="emit('review',row)">{{ row.readiness === 'READY' ? '就绪' : row.readiness === 'NEEDS_SETUP' ? '待补资料' : '未核对' }}</el-button></template></el-table-column>
+    <el-table-column label="商品核对" width="130" fixed="right"><template #default="{ row }"><el-button link :type="row.readiness === 'READY' ? 'success' : 'primary'" :disabled="disabled || !!page.state.edit || page.grid.hasChanges()" :aria-label="`核对第${row.rowNo}行商品`" @click="emit('review',row)">{{ row.readiness === 'READY' ? '就绪' : row.readiness === 'NEEDS_SETUP' ? '待补资料' : '未核对' }}</el-button></template></el-table-column>
     <el-table-column label="操作" width="112" fixed="right" align="center">
       <template #default="{ row }">
         <div class="import-row-actions">
@@ -66,7 +67,7 @@ function saveCell() { if (props.page.state.edit?.field != null) return props.pag
           </template>
           <template v-else>
             <el-tooltip content="编辑整行" placement="top"><el-button type="primary" link :disabled="disabled || !!page.state.edit || page.rowLocked(row)" :aria-label="`编辑第${row.rowNo}行`" @click="begin(row, null)"><el-icon><EditPen /></el-icon></el-button></el-tooltip>
-            <el-tooltip content="删除" placement="top"><el-button type="danger" link :disabled="disabled || !!page.state.edit || page.rowLocked(row)" :loading="page.state.deletingId === row.id" :aria-label="`删除第${row.rowNo}行`" @click="emit('remove', row)"><el-icon><Delete /></el-icon></el-button></el-tooltip>
+            <el-tooltip content="删除" placement="top"><el-button type="danger" link :disabled="disabled || !!page.state.edit || page.grid.hasChanges() || page.rowLocked(row)" :loading="page.state.deletingId === row.id" :aria-label="`删除第${row.rowNo}行`" @click="emit('remove', row)"><el-icon><Delete /></el-icon></el-button></el-tooltip>
           </template>
         </div>
       </template>

@@ -18,7 +18,7 @@ const batch = () => ({ batchId, header: { ...header }, version: 2, status: 'REVI
 function setup(uploadPhoto) {
   let sequence = 0
   const { createPurchaseImportModel } = feature('purchaseImportModel')
-  const page = createPurchaseImportModel({ load: async () => batch(), uploadPhoto, async saveRow(_id, current, values) { return { ...current, ...values, version: current.version + 1 } } }, '2026-10-29', () => `11111111-2222-4333-8444-${String(++sequence).padStart(12, '0')}`)
+  const page = createPurchaseImportModel({ load: async () => batch(), uploadPhoto, async saveGrid(input) { return { ...batch(), version: 3, rows: [{ ...row, ...input.rows[0].values, ...input.rows[0].matchInputs, version: 2 }] } } }, '2026-10-29', () => `11111111-2222-4333-8444-${String(++sequence).padStart(12, '0')}`)
   return page
 }
 const imageFile = () => new File(['fixture-image-bytes'], '商品.png', { type: 'image/png' })
@@ -85,7 +85,7 @@ test('整行上传失败保留文件和草稿，相同请求重试复用key并�
   const page = setup(async (...args) => {
     requests.push(args)
     if (fail) throw new Error('图片存储不可用')
-    return { ...batch(), version: 3, rows: [{ ...row, ...args[3], version: 2, images: [{ id: 9, sha256: 'b'.repeat(64), status: 'CONFIRMED', origin: 'MANUAL_UPLOAD' }] }] }
+    return { ...batch(), version: 4, rows: [{ ...row, ...args[3], version: args[1].version + 1, images: [{ id: 9, sha256: 'b'.repeat(64), status: 'CONFIRMED', origin: 'MANUAL_UPLOAD' }] }] }
   })
   await page.loadBatch(batchId)
   page.startEdit(page.state.rows[0], null)
@@ -93,21 +93,23 @@ test('整行上传失败保留文件和草稿，相同请求重试复用key并�
   const file = imageFile()
   page.selectPhoto(file)
   page.state.edit.values.productSpec = 'M'
-  assert.equal(await page.saveEdit(), false)
+  assert.equal(await page.saveEdit(), true)
+  assert.equal(requests.length, 0)
+  assert.equal(await page.grid.save(), false)
   assert.match(page.state.error, /存储不可用/)
-  assert.equal(page.state.edit.photoFile, file)
-  assert.equal(page.state.edit.values.productSpec, 'M')
+  assert.equal(page.grid.photo(1), file)
+  assert.equal(page.grid.rows()[0].productSpec, 'M')
   assert.equal(page.state.rows[0].images[0].id, 8)
   fail = false
-  assert.equal(await page.saveEdit(), true)
+  assert.equal(await page.grid.save(), true)
   assert.equal(requests[0][4], requests[1][4])
   assert.equal(requests[1][3].purchaseUnitPrice, '53.0606250000')
   assert.equal(page.state.rows[0].images[0].id, 9)
-  assert.equal(page.state.version, 3)
+  assert.equal(page.state.version, 4)
   assert.equal(page.state.edit, null)
 })
 
-test('文件或整行值变化后不复用旧上传key，非法文件不替换已选文件', async () => {
+test('非法文件不替换已选文件，未知上传结果锁定原请求直至核实', async () => {
   const keys = []
   const page = setup(async (...args) => { keys.push(args[4]); throw new Error('连接中断') })
   await page.loadBatch(batchId)
@@ -115,23 +117,23 @@ test('文件或整行值变化后不复用旧上传key，非法文件不替换�
   assert.equal(typeof page.selectPhoto, 'function', '照片编辑缺少文件选择能力')
   const selected = imageFile()
   page.selectPhoto(selected)
-  await page.saveEdit()
   assert.equal(page.selectPhoto(new File(['text'], '商品.svg', { type: 'image/svg+xml' })), false)
   assert.equal(page.state.edit.photoFile, selected)
-  page.state.edit.values.productSpec = 'L'
   await page.saveEdit()
-  assert.notEqual(keys[0], keys[1])
-  page.selectPhoto(imageFile())
-  await page.saveEdit()
-  assert.notEqual(keys[1], keys[2])
+  assert.equal(await page.grid.save(), false)
+  assert.equal(page.grid.selectPhoto(1, imageFile()), false)
+  assert.equal(page.startEdit(page.grid.rows()[0], null), false)
+  assert.equal(await page.grid.save(), false)
+  assert.equal(keys[0], keys[1])
 })
 
 test('上传成功响应缺少新照片时不能清除草稿或声称保存成功', async () => {
   const page = setup(async () => ({ ...batch(), rows: [{ ...row, version: 2 }] }))
   await page.loadBatch(batchId)
   page.startEdit(page.state.rows[0], 'photo'); page.selectPhoto(imageFile())
-  assert.equal(await page.saveEdit(), false)
-  assert.ok(page.state.edit?.photoFile)
+  assert.equal(await page.saveEdit(), true)
+  assert.equal(await page.grid.save(), false)
+  assert.ok(page.grid.photo(1))
   assert.match(page.state.error, /照片/)
   assert.equal(page.state.rows[0].images[0].id, 8)
 })
@@ -210,7 +212,7 @@ test('表格与完整预览输出两位数字，编辑和提交仍保留原精�
   const page = setup(); await page.loadBatch(batchId)
   const file = new URL('../src/modules/purchase/PurchaseImportTable.vue', import.meta.url)
   const { importTableColumns } = feature('purchaseImportModel'), { formatImportDecimal } = feature('purchaseImportDisplay')
-  const state = loadVueScript(file, { nextTick, ref, importTableColumns, formatImportDecimal, defineProps: () => ({ page, disabled: false }), defineEmits: () => () => {} }, ['columns', 'editor', 'setEditor', 'begin', 'editing', 'saveCell'])
+  const state = loadVueScript(file, { nextTick, ref, importTableColumns, formatImportDecimal, defineProps: () => ({ page, disabled: false }), defineEmits: () => () => {} }, ['columns', 'editor', 'setEditor', 'begin', 'editing', 'saveCell', 'displayNumber'])
   const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1].replaceAll('(instance: Element | ComponentPublicInstance | null)', '(instance)')
   const app = createSSRApp({ setup: () => ({ ...state, formatImportDecimal, page, disabled: false }), render: compile(template) })
   const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
