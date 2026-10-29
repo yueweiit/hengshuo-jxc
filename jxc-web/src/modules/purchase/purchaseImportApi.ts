@@ -19,7 +19,7 @@ export const purchaseImportApi: PurchaseImportApi = {
     data.append('file', file)
     data.append('version', String(row.version))
     data.append('values', JSON.stringify(values))
-    return http.post(`${batchPath(id)}/rows/${row.id}/image`, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true })
+    return http.post(`${base}?batchId=${encodeURIComponent(id)}&imageRowId=${row.id}`, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true })
   },
   readImage: (id, imageId, signal) => http.attachmentBlob(`/api/v1${batchPath(id)}/images/${imageId}/content`, { signal, silent: true }),
   deleteRow: (id, row) => http.delete(`${batchPath(id)}/rows/${row.id}`, { headers: { 'If-Match': String(row.version) }, silent: true }),

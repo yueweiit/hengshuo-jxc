@@ -115,7 +115,7 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
         var prepared=assets.prepare(ctx,AttachmentAssetService.Policy.PURCHASE_IMAGE,name,image.mime(),bytes);
         var intent=Map.<String,Object>of("fileName",name,"fileSha256",AttachmentObjectStore.sha256(bytes),"mime",image.mime(),"version",version,"values",valueIntent(v));
         return tx.execute(s->{Access a=access(ctx,true);var b=batch(a,id,true);var current=row(a,id,rowId);
-            return commands.execute(ctx,"POST",BASE+"/"+id+"/rows/"+rowId+"/image",key,intent,bookId(map(b.get("header"))),()->{
+            return commands.execute(ctx,"POST",BASE+"?batchId="+id+"&imageRowId="+rowId,key,intent,bookId(map(b.get("header"))),()->{
                 requireEditable(current);if(number(current,"version")!=version)throw Inputs.conflict();
                 var previous=mapper.selectRowImages(a.requireCountry(),rowId).stream().filter(old->!"REJECTED".equals(old.get("association_status"))).toList();
                 if(previous.stream().anyMatch(old->old.get("product_image_id")!=null))throw new ApiException(409,"PUR_IMPORT_PHOTO_PUBLISHED","照片已形成正式商品关系，导入区不能直接替换");

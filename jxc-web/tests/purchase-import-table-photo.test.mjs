@@ -139,7 +139,7 @@ async function renderPhoto(page, editing = false) {
   const source = new URL('../src/modules/purchase/PurchaseImportPhoto.vue', import.meta.url)
   assert.ok(existsSync(source), '缺少照片列上传/预览组件')
   const props = { page, row: page.state.rows[0], editing, disabled: false }
-  const state = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => props, defineEmits: () => () => {} }, ['input', 'selectedUrl', 'legacyFailed', 'photos', 'first', 'legacy', 'preview', 'file', 'urls', 'errors', 'loading', 'choose'])
+  const state = loadVueScript(source, { ref, computed, watch, onBeforeUnmount() {}, defineProps: () => props, defineEmits: () => () => {} }, ['input', 'selectedUrl', 'legacyFailed', 'photos', 'first', 'thumbnail', 'failed', 'legacy', 'preview', 'file', 'urls', 'errors', 'loading', 'choose'])
   const template = readFileSync(source, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
   const app = createSSRApp({ setup: () => ({ ...state, ...props }), render: compile(template) })
   app.component('ElImage', defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('img', ctx.attrs) }))
@@ -173,6 +173,17 @@ test('真实照片模板区分无图和读取失败，未保存选图可取消�
   page.cancelEdit()
 })
 
+test('多张照片中部分读取失败仍显示可用图片，并明确失败照片可重试', async () => {
+  const page = setup(); await page.loadBatch(batchId)
+  page.state.rows[0].images.push({ id: 9, sha256: 'b'.repeat(64), status: 'CONFIRMED' })
+  page.images.errors.value[8] = '第一张照片读取失败'
+  page.images.urls.value[9] = 'blob:second'
+  const { html } = await renderPhoto(page)
+  assert.match(html, /src="blob:second"/)
+  assert.match(html, /第一张照片读取失败/)
+  assert.match(html, /重试加载/)
+})
+
 test('表格实际输出两位数字，编辑其他字段时原数值仍是十位精度', async () => {
   const page = setup(); await page.loadBatch(batchId)
   const file = new URL('../src/modules/purchase/PurchaseImportTable.vue', import.meta.url)
@@ -197,7 +208,7 @@ test('照片适配器发送文件、行版本、原数值及重试key，并通�
   } }]])).purchaseImportApi
   const file = imageFile(), key = '11111111-2222-4333-8444-555555555555'
   await api.uploadPhoto(batchId, row, file, row, key)
-  assert.equal(calls[0][1], `/pur/order-imports/${batchId}/rows/1/image`)
+  assert.equal(calls[0][1], `/pur/order-imports?batchId=${batchId}&imageRowId=1`)
   assert.equal(calls[0][2].get('file'), file)
   assert.equal(calls[0][2].get('version'), '1')
   assert.equal(JSON.parse(calls[0][2].get('values')).purchaseUnitPrice, '53.0606250000')
