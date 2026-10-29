@@ -15,10 +15,11 @@ public class PurchaseImportRecognitionClient {
     public PurchaseImportRecognitionClient(String workerUrl,String workerKey,JsonCodec json){this(workerUrl,workerKey,"","",json);}
     @org.springframework.beans.factory.annotation.Autowired
     public PurchaseImportRecognitionClient(@Value("${jxc.purchase-import.worker-url:}")String workerUrl,@Value("${jxc.purchase-import.worker-key:}")String workerKey,@Value("${jxc.purchase-import.n8n-url:}")String n8nUrl,@Value("${jxc.purchase-import.n8n-key:}")String n8nKey,JsonCodec json){this.workerUrl=workerUrl;this.workerKey=workerKey;this.n8nUrl=n8nUrl;this.n8nKey=n8nKey;this.json=json;}
-    public Map<String,Object> parse(UUID taskId,String credential,long sourceId,String sha256,String sheet){
+    public Map<String,Object> parse(UUID taskId,String credential,long sourceId,String sha256,String sheet){return parse(taskId,credential,sourceId,sha256,sheet,null);}
+    public Map<String,Object> parse(UUID taskId,String credential,long sourceId,String sha256,String sheet,Map<String,Object> overrides){
         if(workerUrl.isBlank()||workerKey.isBlank())throw new ApiException(503,"PARSER_UNAVAILABLE","采购解析服务未配置，请联系管理员");
         var body=new LinkedHashMap<String,Object>();body.put("taskId",taskId.toString());body.put("credential",credential);body.put("sourceId",sourceId);body.put("sha256",sha256);body.put("sheet",sheet);
-        return invoke("parse",body,"document",160*1024*1024);
+        if(overrides!=null)body.put("mappingOverrides",overrides);return invoke("supplier-parse",body,"document",160*1024*1024);
     }
     public Map<String,Object> embed(UUID task,String credential,long asset,String sha){return invoke("embedding",Map.of("taskId",task.toString(),"credential",credential,"assetId",asset,"sha256",sha),"feature",1024*1024);}
     public Map<String,Object> index(UUID task,String credential,Map<String,Object> input){return invoke("index",Map.of("taskId",task.toString(),"credential",credential,"input",input),"index",256*1024*1024);}

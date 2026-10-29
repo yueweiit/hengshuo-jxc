@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { createPurchaseImportWorkflow } from '@/modules/purchase/purchaseImportWorkflow'
 import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
 
 export interface ImportHeader {
@@ -30,8 +31,10 @@ export interface ImportImage { id: number; sha256: string; status: 'UNCONFIRMED'
 export interface MatchInputs { suppliedProductCode: string | null; suppliedProductName: string | null; supplierProductCode: string | null }
 export interface MatchCandidate { productId: number; product: { id: number; productCode: string; name: string; spec: string | null; units: { unit: string }[] }; visualScore: number | null; textEvidence: { reason: string }[]; visualEvidence: unknown[]; conflicts: string[] }
 export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: number; status: string; text: { status: string; reason: string }; image: { status: string; reason: string; errors?: { reason: string }[] }; candidates: MatchCandidate[]; explanation: { status: string; message: string; candidateNotes?: { productId: number; message: string }[] } }
-export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
-export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number } }
+export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; sourceItemKey?: string; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
+export interface SupplierMapping { format: string; fileSha256: string; sheet: string; needsReview: boolean; reasons: string[]; ignoredRows: { sourceRow:number; reason:string }[]; lines: { sourceRow:number; cells: Record<string,string | string[] | null> }[] }
+export interface MappingOverrides { mapping:SupplierMapping; specLabels:Record<string,string>; confirm:boolean }
+export interface ImportTask { id: string; kind?: string; phase?: string; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number; mapping?: SupplierMapping; sourceCells?: { sheet: string; cell: string; value: string }[] } }
 export interface ImportSource { id: number; fileName: string; fileSha256: string; status: string; origin?: 'MANUAL_UPLOAD' | 'XLSX'; warnings?: { sourceRow?: number; message: string }[] }
 export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE' | null; amount: string | null; currency: string | null; reason: string; confirm: boolean }
 export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
@@ -44,12 +47,21 @@ export interface PurchaseImportApi {
   upload(file: File, batchId: string | null, key: string): Promise<unknown>
   load(batchId: string): Promise<unknown>
   saveHeader(batchId: string, header: ImportHeader, versions: { id: number; version: number }[], batchVersion?: number): Promise<unknown>
-  saveRow(batchId: string, row: ImportRow, values: ImportValues): Promise<unknown>
+  saveRow(batchId: string, row: ImportRow, values: ImportValues, matchInputs?: MatchInputs): Promise<unknown>
   uploadPhoto?(batchId: string, row: ImportRow, file: File, values: ImportValues, key: string): Promise<unknown>
   readImage?(batchId: string, imageId: number, signal: AbortSignal): Promise<Blob>
   deleteRow(batchId: string, row: ImportRow): Promise<unknown>
-  retryTask?(taskId: string, key: string, sheet: string | null): Promise<unknown>
+  retryTask?(taskId: string, key: string, sheet: string | null, mappingOverrides?: MappingOverrides): Promise<unknown>
   associate?(batchId: string, row: ImportRow, imageId: number, association: 'CONFIRMED' | 'REJECTED'): Promise<unknown>
+  decide?(batchId: string, row: ImportRow, input: Record<string, unknown>): Promise<unknown>
+  createProduct?(batchId: string, row: ImportRow, input: Record<string, unknown>, key: string): Promise<unknown>
+  startMatches?(batchId: string, batchVersion: number, rowIds: number[], key: string): Promise<unknown>
+  explain?(batchId: string, row: ImportRow, key: string): Promise<unknown>
+  previews?(batchId: string, batchVersion: number): Promise<unknown>
+  saveGroup?(batchId: string, group: ImportDraftGroup, header: Record<string, unknown>, splitRowIds?: number[]): Promise<unknown>
+  createDraft?(batchId: string, group: ImportDraftGroup, request: Record<string, unknown>, key: string): Promise<unknown>
+  saveFeeTodos?(batchId: string, group: ImportDraftGroup, items: FeeReviewInput[]): Promise<unknown>
+  creation?(batchId: string, group: ImportDraftGroup): Promise<unknown>
   publishPhotos?(batchId: string, row: ImportRow, imageIds: number[], key: string): Promise<unknown>
 }
 export const isBatchId = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)
@@ -128,7 +140,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     header: emptyHeader(), batchId: null as string | null, rows: [] as ImportRow[],
     edit: null as { id: number; field: ImportField | null; values: ImportValues; photoFile: File | null } | null,
     loading: false, importing: false, saving: false, deletingId: null as number | null,
-    error: '', errorCode: '', errors: [] as ImportIssue[], success: '',
+    partialResult: null as Record<string, unknown> | null, error: '', errorCode: '', errors: [] as ImportIssue[], success: '',
     version: 1, status: 'DRAFT', sources: [] as ImportSource[], tasks: [] as ImportTask[],
     groups: [] as ImportDraftGroup[],
   })
@@ -149,8 +161,15 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (record(error) && record(error.data) && Array.isArray(error.data.errors)) {
       state.errors = error.data.errors.filter((issue): issue is ImportIssue => record(issue) && typeof issue.message === 'string' && issue.message.trim().length > 0)
     }
+      if (record(error) && record(error.data) && record(error.data.partialResult)) {
+      const partial = error.data.partialResult; state.partialResult = partial
+      const row = state.rows.find(item => item.id === partial.rowId)
+      if (row && positiveId(partial.productId) && positiveId(partial.rowVersion) && partial.rowVersion >= row.version) {
+        row.matchedProductId = partial.productId; row.version = partial.rowVersion; row.readiness = 'NEEDS_SETUP'
+      }
+    }
   }
-  function clearFeedback() { state.error = ''; state.errorCode = ''; state.errors = []; state.success = '' }
+  function clearFeedback() { state.partialResult = null; state.error = ''; state.errorCode = ''; state.errors = []; state.success = '' }
   function applyBatch(batch: ImportBatch, preserveDraft = false) {
     const draft = preserveDraft && (state.batchId === null || headerDirty()) ? state.header : null
     savedHeader = JSON.stringify(batch.header)
@@ -296,11 +315,11 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     return saved
   }
   const retryKeys = new Map<string, string>()
-  async function retryTask(task: ImportTask, sheet: string | null = null) {
+  async function retryTask(task: ImportTask, sheet: string | null = null, mappingOverrides?: MappingOverrides) {
     if (!api.retryTask || busy() || state.edit) return false
-    const signature = JSON.stringify([task.id, sheet])
+    const signature = JSON.stringify([task.id, sheet, mappingOverrides])
     if (!retryKeys.has(signature)) retryKeys.set(signature, newKey())
-    return write('saving', () => api.retryTask!(task.id, retryKeys.get(signature)!, sheet), response => {
+    return write('saving', () => api.retryTask!(task.id, retryKeys.get(signature)!, sheet, mappingOverrides), response => {
       if (!record(response) || response.id !== task.id || response.status !== 'QUEUED') throw new Error('后端未确认任务重试')
       const saved = state.tasks.find(item => item.id === task.id)
       if (!saved) throw new Error('当前批次任务已变化，请重新读取')
@@ -326,7 +345,9 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     if (!photoKeys.has(signature)) photoKeys.set(signature, newKey())
     return write('saving', () => api.publishPhotos!(state.batchId!, row, imageIds, photoKeys.get(signature)!), response => { applyBatch(readBatch(response)); photoKeys.delete(signature); state.success = '商品照片已关联，特征和索引在后台处理' })
   }
+  const workflow = createPurchaseImportWorkflow({ state,api,busy,headerDirty,rowLocked,failure,newKey,loadBatch,write,readRow,readGroup,readBatch,applyBatch })
   function invalidate() {
+    workflow.reset()
     ++epoch; ++readSequence
     images.reset(); photoFile = null; photoKey = ''; photoSignature = ''
     state.header = emptyHeader(); state.batchId = null; state.rows = []; state.edit = null
@@ -335,6 +356,8 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
     state.groups = []; photoKeys.clear()
   }
-  return { state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate }
+  return { ...workflow, state, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate }
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>
+
+export { record as importRecord, positiveId as importPositiveId }

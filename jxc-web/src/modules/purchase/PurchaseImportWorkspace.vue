@@ -7,6 +7,8 @@ import { allRecords } from '@/api/pagination'
 import { useCountryStore } from '@/stores/country'
 import { useUserStore } from '@/stores/user'
 import { todayIn } from '@/utils/format'
+import PurchaseImportReviewDialog from './PurchaseImportReviewDialog.vue'
+import PurchaseImportPreviewDrawer from './PurchaseImportPreviewDrawer.vue'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
 import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
@@ -25,6 +27,9 @@ const fileInput = ref<HTMLInputElement>()
 const importDisabled = computed(() => page.busy() || !!state.edit)
 const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value)
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
+const reviewVisible = ref(false), previewVisible = ref(false), reviewRow = ref<number | null>(null)
+function review(row?: ImportRow) { reviewRow.value = row?.id ?? null; reviewVisible.value = true }
+async function preview() { if(await page.previewDrafts()) previewVisible.value = true }
 let active = true, refsSequence = 0
 let taskTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleTasks() {
@@ -111,13 +116,13 @@ async function loadRouteBatch() {
 onMounted(() => { void loadReferences(); void loadRouteBatch() })
 watch(() => route.query.batchId, () => {
   if (route.query.batchId === state.batchId) return
-  page.invalidate(); selected.value = null; dialogVisible.value = false
+  reviewVisible.value = false; previewVisible.value = false; page.invalidate(); selected.value = null; dialogVisible.value = false
   state.header.orderDate = todayIn(country.timezone)
   applyHeaderDefaults()
   void loadRouteBatch()
 })
 watch(() => [country.currentId, country.epoch, user.token], () => {
-  page.invalidate(); selected.value = null; dialogVisible.value = false
+  reviewVisible.value = false; previewVisible.value = false; page.invalidate(); selected.value = null; dialogVisible.value = false
   state.header.orderDate = todayIn(country.timezone)
   books.value = []; suppliers.value = []; currencies.value = []
   void loadReferences()
@@ -146,7 +151,7 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
     </section>
 
     <section class="import-section import-command" aria-label="文件导入">
-      <div><h2>导入采购明细</h2><p>使用采购模板填写，每个商品规格单独一行；可先导入，再补充基础信息。</p></div>
+      <div><h2>导入采购明细</h2><p>支持系统模板与供应商原始Excel；可先导入，再核对字段、商品与基础信息。</p></div>
       <el-button type="primary" :disabled="importDisabled" @click="dialogVisible = true"><el-icon><Upload /></el-icon>导入文件</el-button>
     </section>
 
@@ -157,12 +162,15 @@ onBeforeUnmount(() => { active = false; ++refsSequence; clearTimeout(taskTimer);
       <el-alert v-if="state.success" :title="state.success" type="success" :closable="false" show-icon class="import-alert" />
       <PurchaseImportSources :page="page" />
       <p class="table-hint">点击单元格编辑；铅笔按钮编辑整行。保存成功后才更新记录。</p>
-      <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" />
+      <div v-if="state.rows.length" class="workflow-actions"><el-button :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="page.startMatches(state.rows.filter(row => !page.rowLocked(row)).map(row => row.id))">识别商品</el-button><el-button :disabled="page.busy() || !!state.edit" @click="review()">核对商品</el-button><el-button type="primary" :disabled="page.busy() || !!state.edit || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span></div>
+      <PurchaseImportTable :page="page" :disabled="page.busy()" @remove="remove" @review="review" />
     </section>
 
+    <PurchaseImportReviewDialog v-if="state.batchId" v-model="reviewVisible" :page="page" :row-id="reviewRow" />
+    <PurchaseImportPreviewDrawer v-if="state.batchId" v-model="previewVisible" :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" />
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
-      <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件，保持模板列名和顺序。</li><li>请使用系统下载的采购模板填写数据。</li><li>导入后先暂存明细；基础信息在保存时核验，原图归属需人工确认。</li></ol>
+      <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件。</li><li>系统模板直接读取；供应商原表识别后如有歧义，请核对原列与规格。</li><li>导入后先暂存明细；基础信息在保存时核验，原图归属需人工确认。</li></ol>
       <div class="file-selector"><label for="purchase-import-file">选择采购文件</label><input id="purchase-import-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :disabled="state.importing" @change="selectFile" /><span v-if="selected" class="field-hint">已选择：{{ selected.name }}</span></div>
       <el-alert v-if="downloadError" :title="downloadError" type="error" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
@@ -182,6 +190,7 @@ h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 24px; }
 .ratio-field { width: 100%; }
 .field-hint, .table-hint { color: var(--el-text-color-secondary); font-size: 12px; line-height: 20px; }
 .import-command { display: flex; justify-content: space-between; align-items: center; gap: 20px; p { margin: 5px 0 0; color: var(--el-text-color-secondary); font-size: 13px; } }
+.workflow-actions { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0; }
 .detail-title { display: flex; align-items: baseline; gap: 12px; }
 .import-details .section-heading { margin-bottom: 10px; }
 .table-hint { margin: 0 0 10px; }

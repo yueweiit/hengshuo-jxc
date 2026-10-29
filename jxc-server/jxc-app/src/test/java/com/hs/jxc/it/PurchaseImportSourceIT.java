@@ -83,9 +83,11 @@ class PurchaseImportSourceIT extends PurchaseImportFixture {
         var b=upload(UUID.randomUUID().toString());parse(b);owner.update("UPDATE pur_order_import_batch SET header=jsonb_set(header,'{prepayRatio}','\"0.000000\"') WHERE batch_id=?",id(b));var appended=imports.upload(actor,"another.xlsx",file,header(),id(b),UUID.randomUUID().toString());parse(appended);tasks.execute(101,task(appended));var saved=imports.get(actor,id(b));assertThat(rows(saved)).extracting(r->r.get("rowNo")).containsExactly(1,2);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_source",Integer.class)).isEqualTo(2);
     }
     java.net.http.HttpResponse<String> httpUpload(String base)throws Exception {
-        String boundary="purchase-source-boundary";String body="--"+boundary+"\r\nContent-Disposition: form-data; name=\"header\"\r\n\r\n"+codec.write(header())+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"purchase.xlsx\"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\nPK-test-source\r\n--"+boundary+"--\r\n";
+        String boundary="purchase-source-boundary";
+        String prefix="--"+boundary+"\r\nContent-Disposition: form-data; name=\"header\"\r\n\r\n"+codec.write(header())+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"purchase.xlsx\"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n";
+        var body=java.net.http.HttpRequest.BodyPublishers.concat(java.net.http.HttpRequest.BodyPublishers.ofString(prefix),java.net.http.HttpRequest.BodyPublishers.ofByteArray(file),java.net.http.HttpRequest.BodyPublishers.ofString("\r\n--"+boundary+"--\r\n"));
         var http=java.net.http.HttpClient.newHttpClient();
-        var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/v1/pur/order-imports")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Idempotency-Key",UUID.randomUUID().toString()).header("Content-Type","multipart/form-data; boundary="+boundary).POST(java.net.http.HttpRequest.BodyPublishers.ofString(body)).build();
+        var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/v1/pur/order-imports")).header("Authorization","Bearer purchase-import-source-test").header("X-Country-Id","101").header("Idempotency-Key",UUID.randomUUID().toString()).header("Content-Type","multipart/form-data; boundary="+boundary).POST(body).build();
         return http.send(request,java.net.http.HttpResponse.BodyHandlers.ofString());
     }
     @Test void realHttpUploadIsAcceptedAsTaskAndOtherInternalRoutesRemainProtected()throws Exception {

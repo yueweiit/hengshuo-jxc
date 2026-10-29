@@ -9,6 +9,7 @@ public interface PurchaseImportTaskService {
     void execute(long country,UUID taskId);
     Map<String,Object> get(RequestContext ctx,UUID id);
     Map<String,Object> retry(RequestContext ctx,UUID id,String key,String sheet);
+    Map<String,Object> retry(RequestContext ctx,UUID id,String key,String sheet,Map<String,Object> overrides);
     int recover(long country,int limit);
     AttachmentService.Download taskAsset(UUID taskId,long sourceId,String token);
 }

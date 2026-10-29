@@ -2,9 +2,11 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { http } from '@/api/http'
+import PurchaseImportMappingReviewDialog from './PurchaseImportMappingReviewDialog.vue'
 import type { PurchaseImportModel, ImportTask, ImportRow } from './purchaseImportModel'
 
 const props = defineProps<{ page: PurchaseImportModel }>()
+const mappingTask = ref<ImportTask | null>(null), mappingVisible = ref(false)
 const sheets = ref<Record<string, string>>({})
 const { urls: imageUrls, errors: imageErrors } = props.page.images
 const downloading = ref<number | null>(null)
@@ -44,6 +46,7 @@ onBeforeUnmount(clean)
       <template v-else-if="['FAILED', 'NEEDS_REAUTH', 'STALE'].includes(task.status)">
         <span class="source-error">{{ task.errorMessage || '任务未完成，请重新读取原因' }}</span>
         <el-select v-if="task.errorCode === 'SHEET_SELECTION_REQUIRED'" v-model="sheets[task.id]" placeholder="请选择采购工作表" aria-label="采购工作表"><el-option v-for="sheet in task.result?.sheets" :key="sheet" :value="sheet" :label="sheet" /></el-select>
+        <el-button v-if="task.result?.mapping" :disabled="page.busy() || !!page.state.edit" @click="mappingTask=task;mappingVisible=true">核对原列与规格</el-button>
         <el-button :disabled="page.busy() || !!page.state.edit || (task.errorCode === 'SHEET_SELECTION_REQUIRED' && !sheets[task.id])" @click="retry(task)">重试解析</el-button>
       </template>
     </div>
@@ -70,6 +73,7 @@ onBeforeUnmount(clean)
         </div>
       </el-collapse-item>
     </el-collapse>
+    <PurchaseImportMappingReviewDialog v-if="mappingTask" v-model="mappingVisible" :page="page" :task="mappingTask"/>
   </div>
 </template>
 

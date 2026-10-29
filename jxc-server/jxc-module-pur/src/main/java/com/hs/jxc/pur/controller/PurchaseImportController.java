@@ -47,6 +47,10 @@ public class PurchaseImportController {
     @GetMapping("/gallery/status") public ApiEnvelope gallery(){return ok(images.gallery(ctx()));}
     @PostMapping("/gallery/rebuild") public ApiEnvelope rebuild(@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key")String key){return ok(photos.rebuild(ctx(),UUID.fromString(Inputs.required(body,"batchId")),key));}
     @GetMapping("/tasks/{taskId}") public ApiEnvelope task(@PathVariable UUID taskId){return ok(tasks.get(ctx(),taskId));}
-    @PostMapping("/tasks/{taskId}/retry") public ApiEnvelope retry(@PathVariable UUID taskId,@RequestHeader("Idempotency-Key")String key,@RequestBody(required=false) Map<String,Object> body){return ok(tasks.retry(ctx(),taskId,key,body==null?null:Inputs.text(body,"sheet",null)));}
+    @PostMapping("/tasks/{taskId}/retry") public ApiEnvelope retry(@PathVariable UUID taskId,@RequestHeader("Idempotency-Key")String key,@RequestBody(required=false) Map<String,Object> body){
+        var request=body==null?Map.<String,Object>of():body;
+        if(!Set.of("sheet","mappingOverrides").containsAll(request.keySet())||request.containsKey("mappingOverrides")&&!(request.get("mappingOverrides") instanceof Map<?,?>))throw Inputs.bad("只接受工作表和受限字段核对");
+        return ok(tasks.retry(ctx(),taskId,key,Inputs.text(request,"sheet",null),request.containsKey("mappingOverrides")?json.readMap(json.write(request.get("mappingOverrides"))):null));
+    }
     static ResponseEntity<byte[]> binary(AttachmentService.Download file){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header("X-Content-Type-Options","nosniff").header(HttpHeaders.CONTENT_DISPOSITION,ContentDisposition.attachment().filename(file.fileName(),java.nio.charset.StandardCharsets.UTF_8).build().toString()).contentType(MediaType.parseMediaType(file.contentType())).body(file.bytes());}
 }

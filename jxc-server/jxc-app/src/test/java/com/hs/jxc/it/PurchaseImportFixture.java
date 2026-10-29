@@ -25,7 +25,8 @@ abstract class PurchaseImportFixture extends BasePgIT {
     @MockitoBean PurchaseImportRecognitionClient parser;
     final String tokenHash=SessionService.digest("purchase-import-source-test");
     final RequestContext actor=new RequestContext(201,101L,"source-test",tokenHash);
-    final byte[] file="PK-test-source".getBytes(StandardCharsets.UTF_8);
+    final byte[] file=supplierFile();
+    static byte[] supplierFile(){try{var out=new java.io.ByteArrayOutputStream();try(var zip=new java.util.zip.ZipOutputStream(out)){for(var e:Map.of("xl/workbook.xml","<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"/>").entrySet()){zip.putNextEntry(new java.util.zip.ZipEntry(e.getKey()));zip.write(e.getValue().getBytes(StandardCharsets.UTF_8));zip.closeEntry();}}return out.toByteArray();}catch(java.io.IOException e){throw new IllegalStateException(e);}}
     @DynamicPropertySource static void storage(DynamicPropertyRegistry r) {
         r.add("jxc.purchase-import.worker-enabled",()->true);
         r.add("jxc.storage.endpoint",MinioTestStorage::endpoint);
