@@ -2,7 +2,7 @@ import type { ImportRow } from './purchaseImportModel'
 
 /** 已核对名称仅用于显示，不能写入来源字段或作为下一次匹配的文字证据。 */
 export function confirmedProductName(row: ImportRow): string | null {
-  if (row.suppliedProductName?.trim() || !row.matchedProductId || !['EXISTING', 'NEW'].includes(row.decision ?? '')) return null
+  if (row.suppliedProductName?.trim() || !row.matchedProductId || !['EXISTING', 'NEW_REQUESTED'].includes(row.decision ?? '')) return null
   const product = row.productSnapshot
   return product?.id === row.matchedProductId && typeof product.name === 'string' && product.name.trim() ? product.name : null
 }

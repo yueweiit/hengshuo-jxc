@@ -223,18 +223,21 @@ async function renderImportTable(page) {
 
 test('来源名称为空时显示已核对商品名和来源，编辑仍为空且不产生待上传内容', async () => {
   const page = setup(); await page.loadBatch(batchId)
-  Object.assign(page.state.rows[0], { suppliedProductName: null, matchedProductId: 501, decision: 'EXISTING', readiness: 'READY', productSnapshot: { id: 501, name: '库存商品甲' } })
-  const before = JSON.stringify(page.state.rows[0]), html = await renderImportTable(page)
-  assert.match(html, /库存商品甲/); assert.match(html, /已核对商品/)
-  assert.equal(JSON.stringify(page.state.rows[0]), before); assert.equal(page.grid.hasChanges(), false)
-  assert.equal(page.startEdit(page.state.rows[0], 'suppliedProductName'), true)
-  assert.equal(page.state.edit.values.suppliedProductName, null)
+  for (const decision of ['EXISTING', 'NEW_REQUESTED']) {
+    Object.assign(page.state.rows[0], { suppliedProductName: null, matchedProductId: 501, decision, readiness: 'READY', productSnapshot: { id: 501, name: '库存商品甲' } })
+    const before = JSON.stringify(page.state.rows[0]), html = await renderImportTable(page)
+    assert.match(html, /库存商品甲/); assert.match(html, /已核对商品/)
+    assert.equal(JSON.stringify(page.state.rows[0]), before); assert.equal(page.grid.hasChanges(), false)
+    assert.equal(page.startEdit(page.state.rows[0], 'suppliedProductName'), true)
+    assert.equal(page.state.edit.values.suppliedProductName, null)
+    page.cancelEdit()
+  }
 })
 
 test('来源名称优先，未确认、错绑与不完整快照不能冒充已核对商品名', async () => {
   const page = setup(); await page.loadBatch(batchId)
   const base = { suppliedProductName: null, matchedProductId: 501, decision: 'EXISTING', readiness: 'READY', productSnapshot: { id: 501, name: '库存商品甲' } }
-  for (const fields of [{ decision: 'UNRESOLVED' }, { matchedProductId: null }, { productSnapshot: { id: 999, name: '库存商品甲' } }, { productSnapshot: { id: 501 } }, { suppliedProductName: '原表名称' }]) {
+  for (const fields of [{ decision: 'UNRESOLVED' }, { decision: 'NEW' }, { matchedProductId: null }, { productSnapshot: { id: 999, name: '库存商品甲' } }, { productSnapshot: { id: 501 } }, { suppliedProductName: '原表名称' }]) {
     Object.assign(page.state.rows[0], base, fields)
     const html = await renderImportTable(page)
     assert.doesNotMatch(html, /库存商品甲|已核对商品/)
