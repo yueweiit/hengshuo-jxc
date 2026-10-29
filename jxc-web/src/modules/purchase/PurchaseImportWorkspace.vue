@@ -12,6 +12,7 @@ import PurchaseImportPreviewDrawer from './PurchaseImportPreviewDrawer.vue'
 import PurchaseImportEditor from './PurchaseImportEditor.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
 import PurchaseImportProgress from './PurchaseImportProgress.vue'
+import PurchaseImportFees from './PurchaseImportFees.vue'
 import { createPurchaseImportModel, consumeImportClearNavigation, rememberImportClearNavigation, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
@@ -25,7 +26,7 @@ const clearedOnEntry = consumeImportClearNavigation(clearContext())
 const page = createPurchaseImportModel(purchaseImportApi, todayIn(country.timezone), undefined, clearedOnEntry)
 const state = page.state
 const localDraft = createPurchaseImportDraftSession(page)
-watch(() => [state.success, page.saveOrdersPending()] as const, ([message, pending]) => {
+watch(() => [state.success, page.saveOrdersPending() || page.fees.view.saving] as const, ([message, pending]) => {
   if (!message || pending) return
   state.success = ''
   ElMessage.success({ message, duration: 3000 })
@@ -36,8 +37,9 @@ const currencies = ref<{ code: string; name: string }[]>([])
 const refsLoading = ref(false), refsError = ref(''), dialogVisible = ref(false), selected = ref<File | null>(null)
 const clearConfirming = ref(false)
 const fileInput = ref<HTMLInputElement>()
-const importDisabled = computed(() => page.busy() || !!state.edit || page.grid.hasChanges())
-const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value || page.grid.hasChanges())
+const feeBusy = computed(() => page.fees.view.saving || page.fees.view.preparing)
+const importDisabled = computed(() => page.busy() || feeBusy.value || !!state.edit || page.grid.hasChanges())
+const disabled = computed(() => page.busy() || feeBusy.value || refsLoading.value || !!refsError.value || page.grid.hasChanges())
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 const reviewVisible = ref(false), previewVisible = ref(false), reviewRow = ref<number | null>(null)
 const reviewTab = ref<'todos' | 'match' | 'product'>('todos')
@@ -48,6 +50,14 @@ function review(row?: ImportRow, tab: 'todos' | 'match' | 'product' = 'todos') {
 function reviewPreviewRow(row: ImportRow) { previewVisible.value = false; review(row, 'product') }
 async function preview() { if(await page.previewDrafts()) { reviewVisible.value = false; previewVisible.value = true } }
 let active = true, refsSequence = 0, creationSequence = 0, localSequence = 0, defaultsAllowed = !clearedOnEntry
+let feeTimer: ReturnType<typeof setTimeout> | undefined, preparedFeeKey = ''
+watch(() => [state.batchId, state.rows.map(row => `${row.id}:${row.version}:${row.sourceOrderNo}:${row.groupId}`).join(','), page.busy(), feeBusy.value, !!state.edit, page.grid.hasChanges()] as const, () => {
+  clearTimeout(feeTimer)
+  if (!active || !page.fees.canPrepare() || importDisabled.value || !page.fees.needsPreparation()) return
+  const key = JSON.stringify([state.batchId, state.rows.map(row => [row.id, row.version, row.sourceOrderNo, row.groupId])])
+  if (key === preparedFeeKey) return
+  feeTimer = setTimeout(() => { if (active && !importDisabled.value && page.fees.needsPreparation()) { preparedFeeKey = key; void page.fees.prepare() } }, 50)
+}, { immediate: true })
 async function loadCreationCapability() {
   const request = ++creationSequence, batch = state.batchId
   creationEnabled.value = false; creationError.value = ''; creationLoading.value = false
@@ -126,13 +136,16 @@ async function submitImport() {
     catch (error) { if (active) page.failure(new Error(`文件已接收，但批次地址更新失败：${error instanceof Error ? error.message : '请重试读取'}`)) }
   }
 }
-async function saveHeader() { if (!disabled.value && selectedRefsValid()) await page.saveHeader() }
+async function saveHeader() { if (!disabled.value && selectedRefsValid()) await page.fees.save() }
 async function correctedBatch(batchId:string){try{await router.replace({query:{...route.query,batchId}})}catch(error){page.failure(new Error(`纠正批次已创建，但地址更新失败：${error instanceof Error?error.message:'请重新读取'}`))}}
 async function saveOrders() {
   if (disabled.value || state.edit || creationLoading.value) return false
-  if (pendingReview.value) { page.failure(new Error('预览中还有未保存的表头或费用修改，请先完成核对')); previewVisible.value = true; return false }
+  if (pendingReview.value) { page.failure(new Error('预览中还有未保存的表头修改，请先完成核对')); previewVisible.value = true; return false }
   if (!creationEnabled.value) { page.failure(new Error(creationError.value || '当前环境尚未启用保存采购单')); return false }
   if (!selectedRefsValid()) return false
+  if ((page.headerDirty() || page.fees.dirty()) && !await page.fees.save()) return false
+  const feeIssue = page.fees.readyIssue()
+  if (feeIssue) { page.failure(new Error(feeIssue)); previewVisible.value = false; document.getElementById('import-fees')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return false }
   const saved = await page.saveOrders()
   if (!saved && state.groups.some(group => group.errors.length || group.feeTodos?.some(todo => todo.reviewStatus !== 'CONFIRMED'))) previewVisible.value = true
   return saved
@@ -206,13 +219,13 @@ watch(() => [country.currentId, country.epoch, user.token, user.user?.id], () =>
   void openLocalDraft()
   if (route.query.batchId !== undefined) void router.replace({ query: { ...route.query, batchId: undefined } }).catch(error => { if (active) page.failure(error) })
 }, { flush: 'sync' })
-onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++creationSequence; ++localSequence; clearTimeout(taskTimer); page.invalidate() })
+onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++creationSequence; ++localSequence; clearTimeout(taskTimer); clearTimeout(feeTimer); page.invalidate() })
 </script>
 
 <template>
   <main class="purchase-import-workspace" :aria-busy="page.busy() || refsLoading">
     <section class="import-section" aria-labelledby="import-header-title">
-      <div class="section-heading"><h2 id="import-header-title">基础信息</h2><el-button v-if="state.batchId" :disabled="disabled || !!state.edit || headerLocked || !page.headerDirty()" :loading="state.saving && !state.edit" @click="saveHeader">保存基础信息</el-button></div>
+      <div class="section-heading"><h2 id="import-header-title">基础信息</h2><el-button v-if="state.batchId" :disabled="disabled || !!state.edit || headerLocked || !(page.headerDirty() || page.fees.dirty())" :loading="(state.saving && !state.edit) || page.fees.view.saving" @click="saveHeader">保存基础信息</el-button></div>
       <el-alert v-if="refsError" type="error" :closable="false" show-icon class="import-alert"><template #title>基础数据读取失败：{{ refsError }}</template><el-button link type="primary" @click="loadReferences">重新读取</el-button></el-alert>
       <el-form :model="state.header" :disabled="disabled || !!state.edit || headerLocked" label-width="90px" class="import-header-form" @submit.prevent>
         <div class="header-grid">
@@ -228,6 +241,7 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
           <el-form-item label="单价口径"><el-select v-model="state.header.priceTaxBasis" placeholder="请核对供应商单价" aria-label="单价口径" clearable :value-on-clear="null"><el-option value="EXCLUSIVE" label="已核对：未含税单价" /></el-select></el-form-item>
         </div>
       </el-form>
+      <PurchaseImportFees :page="page" :disabled="disabled || !!state.edit || headerLocked" :currencies="currencies" />
     </section>
 
     <section class="import-section import-command" aria-label="文件导入">
@@ -237,7 +251,7 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
     </section>
 
     <section class="import-section import-details" aria-labelledby="import-details-title">
-      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ page.grid.dataRows().length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="state.importing || state.saving || state.loading || state.clearing || state.clearPending || !!state.edit || page.grid.hasChanges() || page.headerDirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
+      <div class="section-heading"><div class="detail-title"><h2 id="import-details-title">采购明细</h2><span class="field-hint">共 {{ page.grid.dataRows().length }} 条</span></div><el-button v-if="state.batchId || route.query.batchId" :disabled="importDisabled || page.headerDirty() || page.fees.dirty()" :loading="state.loading" @click="page.loadBatch(state.batchId || String(route.query.batchId))"><el-icon><Refresh /></el-icon>重新读取</el-button></div>
       <el-alert v-if="localDraft.view.error" type="error" :closable="false" :title="localDraft.view.error" class="import-alert"><el-button link @click="localDraft.view.ready ? localDraft.flush() : openLocalDraft()">重试草稿保存与恢复</el-button></el-alert>
       <p v-else class="table-hint" role="status">{{ !localDraft.view.ready ? '正在恢复此浏览器的草稿' : localDraft.view.saving ? '正在保存草稿' : localDraft.view.saved ? '草稿已保存在此浏览器' : '编辑内容会自动保存到此浏览器' }}</p>
       <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细已独立暂存，请补齐后保存基础信息。" :closable="false" show-icon class="import-alert" />

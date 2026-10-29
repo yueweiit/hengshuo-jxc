@@ -2,6 +2,7 @@ import { reactive } from 'vue'
 import { createPurchaseImportWorkflow } from '@/modules/purchase/purchaseImportWorkflow'
 import { createPurchaseImportImages } from '@/modules/purchase/purchaseImportImages'
 import { createPurchaseImportGrid, type GridField, type GridSaveInput } from '@/modules/purchase/purchaseImportGrid'
+import { createPurchaseImportFees } from '@/modules/purchase/purchaseImportFees'
 import { readImportTask, imageReviewProgress, type ImportProgress, type ImportUpload } from '@/modules/purchase/purchaseImportProgress'
 import { reviewProposalCurrent, type ReviewProposal, type SourceReviewSheet } from '@/modules/purchase/purchaseImportReview'
 
@@ -248,6 +249,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.tasks = batch.tasks === undefined ? [] : batch.tasks
     if (!state.tasks.some(task => task.id === state.activeTaskId)) state.activeTaskId = state.tasks.filter(task => !task.kind || task.kind === 'PARSE').at(-1)?.id ?? null
     state.groups = batch.groups === undefined ? [] : batch.groups
+    fees.loaded()
     state.edit = null
   }
   async function write(flag: 'importing' | 'saving', request: () => Promise<unknown>, apply: (response: unknown) => void) {
@@ -509,7 +511,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
       if (state.edit.photoFile) draft.photos[state.edit.id] = { file: state.edit.photoFile }
     }
     return { schema: 1, batch: state.batchId ? JSON.parse(JSON.stringify({ batchId: state.batchId, version: state.version, status: state.status, header: state.header, rows: state.rows, sources: state.sources, tasks: state.tasks, groups: state.groups })) as ImportBatch : null,
-      header: JSON.parse(JSON.stringify(state.header)) as ImportHeader, baselineHeader: savedHeader, grid: draft, clearIntent: clearIntent ? { ...clearIntent } : null, clearPending: state.clearPending, clearedBatchId: state.clearedBatchId }
+      header: JSON.parse(JSON.stringify(state.header)) as ImportHeader, baselineHeader: savedHeader, grid: draft, fees: fees.snapshot(), clearIntent: clearIntent ? { ...clearIntent } : null, clearPending: state.clearPending, clearedBatchId: state.clearedBatchId }
   }
   function restoreLocalDraft(raw: unknown) {
     if (!record(raw) || raw.schema !== 1 || !record(raw.header) || !record(raw.grid)) throw new Error('本地采购草稿格式不正确，请保留数据后重试')
@@ -518,11 +520,13 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     grid.restore(raw.grid as unknown as ReturnType<typeof grid.snapshot>)
     if (batch) applyBatch(batch)
     state.header = { ...raw.header } as unknown as ImportHeader
+    if (raw.fees !== undefined) fees.restore(raw.fees)
     if (record(raw.clearIntent) && isBatchId(raw.clearIntent.id) && isBatchId(raw.clearIntent.key) && positiveId(raw.clearIntent.version)) clearIntent = raw.clearIntent as unknown as NonNullable<typeof clearIntent>
     state.clearPending = raw.clearPending === true
     state.clearedBatchId = isBatchId(raw.clearedBatchId) ? raw.clearedBatchId : null
   }
   const workflow = createPurchaseImportWorkflow({ state,api,busy: () => requestBusy() || grid.hasChanges(),reviewing: imageReviewBusy,headerDirty,rowLocked,failure,newKey,loadBatch,saveHeader,write,readRow,readGroup,readBatch,applyBatch })
+  const fees = createPurchaseImportFees({ state, busy: () => busy() || grid.hasChanges(), headerDirty, saveHeader, previewDrafts: workflow.previewDrafts, saveFeeTodos: workflow.saveFeeTodos, canPrepare: () => !!api.previews, failure, feedback: clearFeedback })
   function clearBlockReason() {
     if (state.loading || state.importing || state.saving || state.clearing || state.status === 'PARSING' || state.tasks.some(task => ['QUEUED', 'RUNNING'].includes(task.status))) return '当前批次正在处理，请等待处理结束后清空'
     if (state.upload?.status === 'UNKNOWN') return '文件接收结果尚未确认，请先按原上传请求重试核实'
@@ -582,10 +586,10 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.loading = false; state.importing = false; state.saving = false; state.deletingId = null
     selectedFile = null; savedHeader = ''; intentKey = ''; intentSignature = ''
     state.version = 1; state.status = 'DRAFT'; state.sources = []; state.tasks = []; retryKeys.clear()
-    state.groups = []; photoKeys.clear(); reviewKeys.clear()
+    state.groups = []; fees.reset(); photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, grid, images, busy, imageReviewBusy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, sourceMapping, correctSource, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
+  return { ...workflow, state, grid, fees, images, busy, imageReviewBusy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, sourceMapping, correctSource, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
 
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

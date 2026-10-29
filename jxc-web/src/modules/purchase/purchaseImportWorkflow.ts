@@ -79,9 +79,9 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
       state.tasks.push({ id: response.id, kind: 'EXPLAIN', status: 'QUEUED', result: { rowId: row.id } }); matchKeys.delete(signature)
     })
   }
-  async function previewDrafts() {
-    if (!api.previews || !state.batchId || operationBusy() || state.edit || headerDirty()) return false
-    return write('saving', () => api.previews!(state.batchId!, state.version), response => applyBatch(readBatch(response)))
+  async function previewDrafts(preserveHeader = false) {
+    if (!api.previews || !state.batchId || operationBusy() || state.edit || !preserveHeader && headerDirty()) return false
+    return write('saving', () => api.previews!(state.batchId!, state.version), response => applyBatch(readBatch(response), preserveHeader))
   }
   async function saveGroup(group: ImportDraftGroup, header: Record<string, unknown>, splitRowIds?: number[]) {
     if (!api.saveGroup || !state.batchId || operationBusy() || state.edit) return false

@@ -94,7 +94,8 @@ test('相同操作再次成功仍提示一次，保存失败不弹成功消息',
   let fail = false
   const { state, messages } = await workspace(undefined, { purchaseImportApi: { async saveHeader(_id, value) { if (fail) throw new Error('保存失败'); return { batchId, header: { ...value }, rows: [{ ...row }] } } } })
   await state.loadReferences(); Object.assign(state.state, { batchId, header: { ...header }, rows: [{ ...row }] })
-  await state.saveHeader(); await state.saveHeader(); fail = true; await state.saveHeader()
+  await state.saveHeader(); state.state.header.paymentTerms = '第二次保存'; await state.saveHeader()
+  fail = true; state.state.header.paymentTerms = '第三次保存失败'; await state.saveHeader()
   assert.deepEqual(messages.map(item => item.message), ['基础信息已保存', '基础信息已保存'])
   assert.equal(state.state.error, '保存失败')
 })

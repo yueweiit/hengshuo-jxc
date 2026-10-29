@@ -3,18 +3,13 @@ import { computed, ref, watch } from 'vue'
 import { formatImportDecimal } from './purchaseImportDisplay'
 import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
 import { summarizeImportIssues } from './purchaseImportIssues'
-import type { FeeReviewInput, ImportDraftGroup, ImportRow, PurchaseImportModel } from './purchaseImportModel'
+import type { ImportDraftGroup, ImportRow, PurchaseImportModel } from './purchaseImportModel'
 
 const props = defineProps<{ modelValue: boolean; page: PurchaseImportModel; books: { id: number; name: string }[]; suppliers: { id: number; name: string }[]; currencies: { code: string }[]; creationEnabled:boolean; creationLoading:boolean; creationError:string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save:[]; review:[row:ImportRow]; 'pending-review':[value:boolean] }>()
 const editingVersion = ref<number | null>(null)
 const editing = ref<number | null>(null), header = ref<Record<string, any>>({}), split = ref<number[]>([])
-const feeEdits = ref<Record<number, FeeReviewInput[]>>({})
-function feeReviewItems(group:ImportDraftGroup):FeeReviewInput[] { return (group.feeTodos ?? []).map(t => ({ sourceRowIds:[...t.sourceRowIds],scope:t.scope,amount:t.amount,currency:t.currency,reason:t.reason,confirm:t.reviewStatus === 'CONFIRMED' })) }
-watch(() => props.page.state.groups.map(g => `${g.id}:${g.feeTodosVersion}:${g.sourceBasisHash}`).join(','), () => {
-  feeEdits.value = Object.fromEntries(props.page.state.groups.map(g => [g.id, feeReviewItems(g)]))
-}, { immediate:true })
-const pendingReview = computed(() => editing.value !== null || props.page.state.groups.some(group => JSON.stringify(feeEdits.value[group.id]) !== JSON.stringify(feeReviewItems(group))))
+const pendingReview = computed(() => editing.value !== null)
 watch(pendingReview, value => emit('pending-review',value), { immediate:true,flush:'sync' })
 const locked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.headerDirty())
 watch(() => props.page.state.batchId, () => { editing.value = null; editingVersion.value = null })
@@ -62,18 +57,9 @@ function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', R
         <span v-else>{{ summary.message }}</span>
       </li></ul>
       <div v-if="group.preview" class="preview-scroll"><table><thead><tr><th>行</th><th>商品／规格</th><th>数量与单位</th><th>原始采购单价</th><th>正式采购单价</th><th>舍入差额</th><th>税率</th><th>金额</th></tr></thead><tbody><tr v-for="line in group.preview.lines" :key="line.lineNo"><td>{{ line.lineNo }}</td><td>{{ productLabel(line.productId) }} · {{ line.productSpec || '规格待核实' }}</td><td>{{ formatImportDecimal(line.qty) }} {{ line.unit }}</td><td :title="line.sourceUnitPrice">{{ formatImportDecimal(line.sourceUnitPrice) }}</td><td :title="line.unitPrice">{{ formatImportDecimal(line.unitPrice) }}</td><td :title="line.unitPriceDifference">{{ line.unitPriceDifference.startsWith('-') ? '-' : '' }}{{ formatImportDecimal(line.unitPriceDifference.replace(/^-/,'') ) }}</td><td :title="line.taxRate">{{ formatImportDecimal(line.taxRate) }}</td><td :title="line.amount">{{ formatImportDecimal(line.amount) }}</td></tr></tbody></table><p>货款 {{ formatImportDecimal(group.preview.totalAmount) }} {{ group.header.currency }}；税额 {{ formatImportDecimal(group.preview.taxAmount) }} {{ group.header.currency }}</p></div>
-      <section class="fee-review" aria-label="费用来源核对">
-        <h3>待后续登记的费用</h3><p class="hint">原表重复出现的运费不会自动相加。请核对整单或单行归属、原币和金额；此处只保存来源记录。</p>
-        <el-form v-for="(fee,index) in feeEdits[group.id]" :key="index" label-width="90px" :disabled="locked || !!group.orderId">
-          <p>费用来源 {{ fee.sourceRowIds.length }} 条明细 · {{ group.feeTodos?.[index]?.reviewStatus === 'CONFIRMED' ? '已核对' : group.feeTodos?.[index]?.reviewStatus === 'STALE' ? '来源已变化，需复核' : '待核对' }}</p>
-          <el-form-item label="归属"><el-select v-model="fee.scope" aria-label="费用归属"><el-option value="ORDER" label="整单一次"/><el-option value="LINE" label="单行"/></el-select></el-form-item>
-          <el-form-item label="来源明细"><el-select v-model="fee.sourceRowIds" multiple collapse-tags aria-label="费用来源明细"><el-option v-for="source in group.sourceEvidence" :key="source.rowId" :value="source.rowId" :label="`第${source.rowNo}行 · ${source.sourceSheet} 原${source.sourceRow}行`"/></el-select></el-form-item>
-          <el-form-item label="费用原币"><el-select v-model="fee.currency" aria-label="费用原币"><el-option v-for="item in currencies" :key="item.code" :value="item.code" :label="item.code"/></el-select></el-form-item>
-          <el-form-item label="费用金额"><span v-if="group.orderId" :title="fee.amount ?? undefined">{{ formatImportDecimal(fee.amount) }}</span><el-input v-else v-model="fee.amount" aria-label="费用金额" inputmode="decimal" placeholder="未知请留空"/></el-form-item>
-          <el-form-item label="核对原因"><el-input v-model="fee.reason" aria-label="费用核对原因" type="textarea"/></el-form-item>
-          <el-checkbox v-model="fee.confirm" aria-label="确认费用来源">我已核对上述费用归属、金额及原币</el-checkbox>
-        </el-form>
-        <el-button :disabled="locked || !!group.orderId" @click="page.saveFeeTodos(group,feeEdits[group.id]!)">保存费用核对</el-button>
+      <section class="fee-review" aria-label="本次导入费用摘要">
+        <h3>本次导入费用</h3><p class="hint">请在基础信息中的“本次导入费用”表格填写和保存；这里显示已保存的核对结果。</p>
+        <p v-for="(fee,index) in group.feeTodos" :key="index">第{{ index + 1 }}项 · {{ fee.scope === 'ORDER' ? '整单一次' : fee.scope === 'LINE' ? '单行' : '归属待核对' }} · {{ formatImportDecimal(fee.amount) }} {{ fee.currency || '币种待核对' }} · 来源 {{ fee.sourceRowIds.length }} 条明细 · {{ fee.reviewStatus === 'CONFIRMED' ? '已核对' : fee.reviewStatus === 'STALE' ? '来源已变化，需复核' : '待核对' }}</p>
       </section>
       <el-collapse><el-collapse-item title="原文件、原单元格与公式来源"><div v-for="source in group.sourceEvidence" :key="source.rowId" class="source-evidence"><strong>第{{ source.rowNo }}行 · {{ source.fileName }} · {{ source.sourceSheet }} 原{{ source.sourceRow }}行</strong><p>原值：{{ JSON.stringify(source.originalValues) }}</p><p>公式及数量格：{{ JSON.stringify(source.formulaProvenance) }}</p></div></el-collapse-item></el-collapse>
       <el-alert v-if="group.errorMessage" :title="group.errorMessage" type="error" :closable="false" />
@@ -81,7 +67,7 @@ function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', R
       <div class="draft-actions"><el-button v-if="group.orderId || group.createIntent" :disabled="locked" @click="page.refreshCreation(group)">查询原保存结果</el-button></div>
     </article>
   </div>
-  <template #footer><span class="hint">{{ pendingReview ? '请先保存表头修改及费用核对，再保存采购单' : '保存后生成采购单草稿及关联明细' }}</span><el-button type="primary" :disabled="locked || !creationEnabled || pendingReview" :loading="page.state.saving" @click="emit('save')">保存</el-button></template>
+  <template #footer><span class="hint">{{ pendingReview ? '请先保存表头修改，再保存采购单' : '保存后生成采购单草稿及关联明细' }}</span><el-button type="primary" :disabled="locked || !creationEnabled || pendingReview" :loading="page.state.saving" @click="emit('save')">保存</el-button></template>
 </el-drawer>
 </template>
 
