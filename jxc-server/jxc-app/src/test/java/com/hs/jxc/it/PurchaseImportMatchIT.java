@@ -69,15 +69,15 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     Map<String,Object> freshPhotoBatch(){photoBatch(true);var b=upload(UUID.randomUUID().toString());doReturn(photoDocument()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));return imports.get(actor,id(b));}
     @Test void batchSourceOnlyNamingUsesTheOriginalSourceKeyAfterSharedImagePacking(){
         var b=photoBatch(false);UUID task=start(b);
-        doAnswer(call->{Map<String,Object> request=call.getArgument(0);var input=map(((List<?>)request.get("rows")).getFirst());var source=map(((List<?>)input.get("sourceImages")).getFirst());
+        doAnswer(call->{Map<String,Object> request=call.getArgument(2);var input=map(((List<?>)request.get("rows")).getFirst());var source=map(((List<?>)input.get("sourceImages")).getFirst());
             assertThat(source.get("sourceKey")).asString().startsWith("SOURCE:");assertThat(source.get("imageKey")).asString().startsWith("IMAGE:");
             var item=new LinkedHashMap<String,Object>();for(String key:List.of("runId","rowId","inputRevision","evidenceHash"))item.put(key,input.get(key));
             item.put("explanation",Map.of("status","READY","message","命名完成","candidateIds",List.of(),"candidateChecks",List.of(),"productNameSuggestion",Map.of("status","READY","category","裤子","baseName","黑色条纹裤子","reason","已看本行来源图片","sourceKeys",List.of(source.get("sourceKey")))));
             return Map.of("format","MatchReviewBatchResultV1","items",List.of(item));
-        }).when(parser).reviewBatch(anyMap());
+        }).when(parser).reviewBatch(any(),anyString(),anyMap());
         matches.executeBatch(101,List.of(task),tasks);
         assertThat(map(map(matched(b).get("explanation")).get("productNameSuggestion"))).containsEntry("name","S码黑色条纹裤子");
-        verify(parser,times(1)).reviewBatch(anyMap());verify(parser,never()).recognize(any(),anyString(),anyMap());
+        verify(parser,times(1)).reviewBatch(any(),anyString(),anyMap());verify(parser,never()).recognize(any(),anyString(),anyMap());
     }
     @Test void freshUnconfirmedPhotoCanRecommendBeforeOwnershipAndConfirmingReusesButRejectingDiscardsCache(){
         owner.update("UPDATE md_product SET spec='S',version=version+1 WHERE id=501");
@@ -283,29 +283,66 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(ints={20,21,60})
     void queuedRowsUseTwentyPerModelRequestAndAtMostThreeConcurrentBatches(int count){
         var b=queuedBatch(count);var sizes=new java.util.concurrent.CopyOnWriteArrayList<Integer>();var active=new java.util.concurrent.atomic.AtomicInteger();var peak=new java.util.concurrent.atomic.AtomicInteger();var entered=new java.util.concurrent.CountDownLatch((count+19)/20);
-        doAnswer(call->{var request=map(call.getArgument(0));var input=batchRows(request.get("rows"));sizes.add(input.size());assertThat((List<?>)request.get("images")).hasSize(1);assertThat(codec.write(request)).doesNotContain("credential","authorization_basis");int n=active.incrementAndGet();peak.accumulateAndGet(n,Math::max);entered.countDown();
+        doAnswer(call->{var request=map(call.getArgument(2));var input=batchRows(request.get("rows"));sizes.add(input.size());assertThat((List<?>)request.get("images")).hasSize(1);assertThat(codec.write(request)).doesNotContain("credential","authorization_basis");int n=active.incrementAndGet();peak.accumulateAndGet(n,Math::max);entered.countDown();
             try{assertThat(entered.await(30,java.util.concurrent.TimeUnit.SECONDS)).isTrue();var replies=new ArrayList<>(input.stream().map(this::batchReply).toList());Collections.reverse(replies);return Map.of("format","MatchReviewBatchResultV1","items",replies);}finally{active.decrementAndGet();}
-        }).when(parser).reviewBatch(anyMap());
+        }).when(parser).reviewBatch(any(),anyString(),anyMap());
         assertThat(tasks.recover(101,100)).isEqualTo(count);assertThat(sizes).containsExactlyInAnyOrderElementsOf(count==20?List.of(20):count==21?List.of(20,1):List.of(20,20,20));assertThat(peak.get()).isEqualTo((count+19)/20);
         for(var row:rows(imports.get(actor,id(b)))){var result=map(row.get("matchResult"));assertThat(map(result.get("explanation"))).containsEntry("status","READY");assertThat(map(((List<?>)map(result.get("explanation")).get("candidateChecks")).getFirst())).containsEntry("specMatch","S".equals(row.get("productSpec"))?"MATCH":"CONFLICT");}
         verify(parser,never()).recognize(any(),anyString(),anyMap());assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
     }
     @Test void batchMissingDuplicateAndChangedRowsCannotInvalidateTheOtherSavedRows(){
         var b=queuedBatch(4);
-        doAnswer(call->{var input=batchRows(map(call.getArgument(0)).get("rows"));owner.update("UPDATE pur_order_import SET version=version+1 WHERE id=?",input.get(2).get("rowId"));return Map.of("format","MatchReviewBatchResultV1","items",List.of(batchReply(input.get(1)),batchReply(input.get(1)),batchReply(input.get(2)),batchReply(input.get(3))));}).when(parser).reviewBatch(anyMap());
+        doAnswer(call->{var input=batchRows(map(call.getArgument(2)).get("rows"));owner.update("UPDATE pur_order_import SET version=version+1 WHERE id=?",input.get(2).get("rowId"));return Map.of("format","MatchReviewBatchResultV1","items",List.of(batchReply(input.get(1)),batchReply(input.get(1)),batchReply(input.get(2)),batchReply(input.get(3))));}).when(parser).reviewBatch(any(),anyString(),anyMap());
         tasks.recover(101,100);
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='FAILED'",Integer.class,id(b))).isEqualTo(2);
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='STALE'",Integer.class,id(b))).isEqualTo(1);
         assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='SUCCEEDED'",Integer.class,id(b))).isEqualTo(1);
-        clearInvocations(parser);assertThat(tasks.recover(101,100)).isZero();verify(parser,never()).reviewBatch(anyMap());
+        clearInvocations(parser);assertThat(tasks.recover(101,100)).isZero();verify(parser,never()).reviewBatch(any(),anyString(),anyMap());
     }
     @Test void oversizedRequestsRenewTheWaitingRowBeforeSendingItsNextBatch(){
         var b=queuedBatch(6,true);var waiting=new java.util.concurrent.atomic.AtomicReference<UUID>();var calls=new java.util.concurrent.atomic.AtomicInteger();
-        doAnswer(call->{var request=map(call.getArgument(0));var input=batchRows(request.get("rows"));assertThat(codec.write(request).getBytes(java.nio.charset.StandardCharsets.UTF_8).length).isLessThanOrEqualTo(40*1024*1024);
+        doAnswer(call->{var request=map(call.getArgument(2));var input=batchRows(request.get("rows"));assertThat(codec.write(request).getBytes(java.nio.charset.StandardCharsets.UTF_8).length).isLessThanOrEqualTo(40*1024*1024);
             if(calls.incrementAndGet()==1){var sent=input.stream().map(row->UUID.fromString(row.get("runId").toString())).toList();var remaining=owner.queryForList("SELECT id FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='RUNNING'",UUID.class,id(b)).stream().filter(id->!sent.contains(id)).toList();assertThat(remaining).hasSize(1);waiting.set(remaining.getFirst());owner.update("UPDATE pur_order_import_task SET lease_until=clock_timestamp()+interval '1 minute',expires_at=clock_timestamp()+interval '1 minute' WHERE id=?",waiting.get());}
             else assertThat(owner.queryForObject("SELECT lease_until>clock_timestamp()+interval '14 minutes' FROM pur_order_import_task WHERE id=?",Boolean.class,waiting.get())).as("前一批等待结束后必须重新延长后续行有效期").isTrue();
             return Map.of("format","MatchReviewBatchResultV1","items",input.stream().map(this::batchReply).toList());
-        }).when(parser).reviewBatch(anyMap());
+        }).when(parser).reviewBatch(any(),anyString(),anyMap());
         tasks.recover(101,100);assertThat(calls.get()).isEqualTo(2);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='SUCCEEDED'",Integer.class,id(b))).isEqualTo(6);
+    }
+    @Autowired com.hs.jxc.sys.integrations.ExternalServiceConfig externalServices;
+    @Test void workflowImageSearchUsesOnlyTheOriginalTaskPlanAndRejectsOtherRequests(){
+        var b=photoBatch(true);UUID task=start(b);var completed=new java.util.concurrent.atomic.AtomicInteger();
+        doReturn(Map.of("hits",List.of())).when(parser).search(any(),anyString(),anyMap());
+        doAnswer(call->{String credential=call.getArgument(1);var catalog=matches.catalogSearch(task,credential,Map.of("operation","TEXT"));
+            var request=map(((List<?>)map(catalog.get("imagePlan")).get("requests")).getFirst());
+            var reply=imageSearchHttp(task,credential,request);assertThat(reply.statusCode()).isEqualTo(200);
+            assertThat(codec.readMap(reply.body())).containsEntry("status","ok");assertThat(map(codec.readMap(reply.body()).get("search"))).containsEntry("hits",List.of());
+            var tampered=new LinkedHashMap<>(request);tampered.put("queryAssetId",999999);
+            assertThat(imageSearchHttp(task,credential,tampered).statusCode()).isEqualTo(403);
+            tampered=new LinkedHashMap<>(request);tampered.put("url","http://arbitrary.invalid");
+            assertThat(imageSearchHttp(task,credential,tampered).statusCode()).isEqualTo(403);
+            assertThat(imageSearchHttp(task,"101:"+"0".repeat(72),request).statusCode()).isEqualTo(403);
+            var evidence=matches.catalogSearch(task,credential,Map.of("operation","RESOLVE","imageResults",List.of(Map.of("queryAssetId",request.get("queryAssetId"),"status","NOT_FOUND","hits",List.of()))));
+            matches.result(task,credential,callback(task,evidence,List.of()));completed.incrementAndGet();return Map.of("taskId",task.toString());
+        }).when(parser).recognize(any(),anyString(),anyMap());
+        tasks.execute(101,task);assertThat(completed.get()).isEqualTo(1);verify(parser,times(1)).search(eq(task),anyString(),anyMap());
+    }
+    java.net.http.HttpResponse<String> imageSearchHttp(UUID task,String credential,Map<String,Object> request)throws Exception{
+        return java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:"+port+"/internal/purchase-import/tasks/"+task+"/image-search")).timeout(java.time.Duration.ofSeconds(10)).header("Content-Type","application/json").header("X-Purchase-Task",credential).POST(java.net.http.HttpRequest.BodyPublishers.ofString(codec.write(request))).build(),java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
+    @Test void changingConnectionVersionDuringPreparationSeparatesModelRequests(){
+        var b=queuedBatch(20);var prepared=new java.util.concurrent.atomic.AtomicInteger();var sizes=new ArrayList<Integer>();
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);
+        doAnswer(call->{
+            if(prepared.incrementAndGet()==5)owner.update("INSERT INTO sys_external_service_revision(version,config,created_by) VALUES(1,?::jsonb,201)",codec.write(externalServices.snapshot(0)));
+            return Map.of("hits",List.of(Map.of("featureId",feature,"score",1.0)));
+        }).when(parser).search(any(),anyString(),anyMap());
+        doAnswer(call->{
+            var input=batchRows(map(call.getArgument(2)).get("rows"));sizes.add(input.size());
+            var versions=input.stream().map(row->owner.queryForObject("SELECT service_config_version FROM pur_order_import_task WHERE id=?",Integer.class,UUID.fromString(row.get("runId").toString()))).distinct().toList();
+            assertThat(versions).as("同一模型请求不能混用任务绑定的连接版本").hasSize(1);
+            return Map.of("format","MatchReviewBatchResultV1","items",input.stream().map(this::batchReply).toList());
+        }).when(parser).reviewBatch(any(),anyString(),anyMap());
+        tasks.recover(101,100);assertThat(sizes).containsExactly(5,15);
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order_import_task WHERE batch_id=? AND kind='MATCH' AND status='SUCCEEDED'",Integer.class,id(b))).isEqualTo(20);
     }
 }

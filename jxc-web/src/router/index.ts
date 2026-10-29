@@ -24,7 +24,7 @@ router.beforeEach(async (to) => {
     }
   }
 
-  if (to.meta.perm && !user.hasPerm(to.meta.perm)) {
+  if ((to.meta.platformOnly && user.user?.isPlatformAdmin !== true) || (to.meta.perm && !user.hasPerm(to.meta.perm))) {
     return { path: '/403', query: { from: to.fullPath } }
   }
   return true

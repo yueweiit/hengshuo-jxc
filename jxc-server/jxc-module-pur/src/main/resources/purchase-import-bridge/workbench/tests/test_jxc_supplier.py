@@ -58,12 +58,14 @@ def test_model_document_has_no_task_credential_or_arbitrary_path(tmp_path):
     assert 'C:/private' not in str(request)
 
 
-def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tmp_path, monkeypatch):
+@pytest.mark.parametrize('managed', [False, True])
+def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tmp_path, monkeypatch, managed):
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from threading import Thread
     from fastapi.testclient import TestClient
     from workbench.jxc_bridge import create_app
     import workbench.documents
+    import workbench.jxc_supplier as supplier_module
     import convert
     path, compact, mapping = supplier(tmp_path)
     calls=[]
@@ -74,8 +76,13 @@ def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tm
             calls.append('asset');data=path.read_bytes();self.send_response(200);self.end_headers();self.wfile.write(data)
         def do_POST(self):
             assert calls[-1]=='docling'
-            assert self.path=='/webhook/jxc-purchase-fields-v1'
-            assert self.headers['Authorization']=='Bearer fields-key'
+            if managed:
+                assert self.path=='/internal/purchase-import/tasks/11111111-2222-4333-8444-555555555555/fields'
+                assert self.headers['X-Purchase-Task']=='101:'+'b'*72
+                assert self.headers['Authorization'] is None
+            else:
+                assert self.path=='/webhook/jxc-purchase-fields-v1'
+                assert self.headers['Authorization']=='Bearer fields-key'
             body=__import__('json').loads(self.rfile.read(int(self.headers['Content-Length'])))
             assert 'credential' not in body
             assert any(c['cell']=='A1' and c['value']=='PO-1' for c in body['sourceCells'])
@@ -86,11 +93,25 @@ def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tm
     monkeypatch.setenv('JXC_SUPPLIER_N8N_URL',root+'/webhook/jxc-purchase-fields-v1');monkeypatch.setenv('JXC_SUPPLIER_N8N_KEY','fields-key')
     monkeypatch.setattr(convert,'convert',lambda *args:calls.append('docling'))
     monkeypatch.setattr(workbench.documents,'prepare_document',lambda *args:compact)
+    timeouts=[]
+    original_opener=supplier_module.build_opener
+    def observed_opener(*handlers):
+        opener=original_opener(*handlers)
+        class Observed:
+            def open(self, *args, **kwargs):
+                timeouts.append(kwargs['timeout'])
+                return opener.open(*args, **kwargs)
+        return Observed()
+    monkeypatch.setattr(supplier_module,'build_opener',observed_opener)
     try:
         client=TestClient(create_app(root,'worker-key'))
-        response=client.post('/internal/jxc/supplier-parse',headers={'Authorization':'Bearer worker-key'},json=dict(taskId='11111111-2222-4333-8444-555555555555',sourceId=1,sha256=compact['source']['sha256'],credential='101:'+'b'*72,sheet=None))
+        body=dict(taskId='11111111-2222-4333-8444-555555555555',sourceId=1,sha256=compact['source']['sha256'],credential='101:'+'b'*72,sheet=None)
+        if managed:
+            body['managedServices']=True
+        response=client.post('/internal/jxc/supplier-parse',headers={'Authorization':'Bearer worker-key'},json=body)
         assert response.status_code==200, response.text
         assert calls==['asset','docling','n8n']
+        assert timeouts==[600 if managed else 300]
         assert len(response.json()['document']['rows'])==2
     finally:
         server.shutdown();server.server_close();thread.join()

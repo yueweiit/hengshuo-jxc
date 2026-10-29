@@ -223,7 +223,7 @@ public class PurchaseImportMatchServiceImpl implements PurchaseImportTaskHandler
         output.put("productNameSuggestion",PurchaseImportNameSuggestion.validate(imports.map(input.get("productNameSuggestion")),imports.map(evidence.get("sourceInput")).get("productSpec"),keys));
     }
     @Override public void executeBatch(long country,List<UUID> ids,PurchaseImportTaskServiceImpl runtime){
-        var pending=new LinkedHashMap<String,PurchaseImportTaskServiceImpl.Lease>();var current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);
+        var pending=new LinkedHashMap<String,PurchaseImportTaskServiceImpl.Lease>();var current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);Integer currentVersion=null;
         // 每行准备后立刻规范图片键；大图不进入另一条业务保存流程。
         for(UUID id:ids){var lease=runtime.claim(country,id);if(lease==null)continue;try{
             var cached=imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return reusePhotos(lease.actor(),task);});
@@ -237,14 +237,15 @@ public class PurchaseImportMatchServiceImpl implements PurchaseImportTaskHandler
                 completeEvidence(lease,evidence,Map.of("status","NOT_REQUESTED","message","没有可读图片配对，尚未进行图文核对","candidateIds",List.of(),"candidateChecks",checks));continue;
             }
             var row=batchRow(evidence,review);
-            if(!current.add(row)){reviewPrepared(current.request(),pending,runtime);pending.clear();current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return null;});current.add(row);}
+            int version=runtime.connectionVersion(lease);
+            if(currentVersion!=null&&currentVersion!=version||!current.add(row)){reviewPrepared(current.request(),pending,runtime);pending.clear();current=new PurchaseImportReviewBatch.Packer(imports.json,PurchaseImportReviewBatch.MAX_BYTES);imports.tx.execute(s->{var task=runtime.active(lease);validate(lease.actor(),task);return null;});current.add(row);}currentVersion=version;
             pending.put(lease.id().toString(),lease);
         }catch(RuntimeException failure){runtime.fail(lease,failure);}}
         if(!current.empty())reviewPrepared(current.request(),pending,runtime);
     }
     private void reviewPrepared(Map<String,Object> request,Map<String,PurchaseImportTaskServiceImpl.Lease> pending,PurchaseImportTaskServiceImpl runtime){
         try{
-            var response=client.reviewBatch(request);
+            var first=pending.values().iterator().next();var response=client.reviewBatch(first.id(),first.token(),request);
             for(var item:PurchaseImportReviewBatch.responses(request,response)){
                 var lease=pending.get(item.get("runId"));
                 try{var explanation=imports.map(item.get("explanation"));if("READY".equals(explanation.get("status"))&&!(explanation.get("candidateChecks") instanceof List<?>))throw Inputs.bad("批量核对必须逐一检查所有候选");var body=new LinkedHashMap<>(item);body.put("format","MatchResultV1");result(lease.id(),lease.token(),body);}

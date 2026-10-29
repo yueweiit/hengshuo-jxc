@@ -353,7 +353,7 @@ def create_app(asset_base=None, worker_key=None, encoder=None):
         if rejected is not None:
             return rejected
         try:
-            if set(body)-{'taskId', 'sourceId', 'sha256', 'credential', 'sheet', 'mappingOverrides', 'reportProgress'} or not {'taskId','sourceId','sha256','credential','sheet'} <= set(body) or type(body.get('reportProgress', False)) is not bool:
+            if set(body)-{'taskId', 'sourceId', 'sha256', 'credential', 'sheet', 'mappingOverrides', 'reportProgress', 'managedServices'} or not {'taskId','sourceId','sha256','credential','sheet'} <= set(body) or type(body.get('reportProgress', False)) is not bool or type(body.get('managedServices', False)) is not bool:
                 raise SourceError('REQUEST_INVALID', '只接受任务范围资产清单，不能指定文件或网络路径')
             task, credential = scope(body, 'sourceId')
             source_id, digest = body['sourceId'], body['sha256']
@@ -367,6 +367,10 @@ def create_app(asset_base=None, worker_key=None, encoder=None):
                 fetch(task, source_id, credential, digest, path, MAX_FILE)
                 args = (path, Path(directory) / 'parsed', sheet, os.environ.get('JXC_DOCLING_URL', 'http://127.0.0.1:5001'))
                 options = {'progress': reporter} if reporter is not None else {}
+                if body.get('managedServices'):
+                    if source_parser is parse_document:
+                        raise SourceError('REQUEST_INVALID', '托管服务配置只支持采购字段识别入口')
+                    options['task_context'] = (server_base(), task, credential)
                 if 'mappingOverrides' in body:
                     if source_parser is parse_document or not isinstance(body['mappingOverrides'],dict):
                         raise SourceError('REQUEST_INVALID','当前解析入口不接受字段修正')
@@ -383,6 +387,15 @@ def create_app(asset_base=None, worker_key=None, encoder=None):
             return JSONResponse(status_code=502, content=dict(status='error', code='PARSE_FAILED', message='来源读取、Docling转换或原图提取失败'))
 
 
+
+    @app.post('/internal/jxc/connection-test')
+    def connection_test(body: dict = Body(...), authorization: str | None = Header(default=None)):
+        rejected = guard(authorization)
+        if rejected is not None:
+            return rejected
+        if body != {'format': 'JxcConnectionProbeV1'}:
+            return JSONResponse(status_code=422, content=dict(status='error', code='REQUEST_INVALID', message='只接受连接检查协议'))
+        return dict(status='ok', format='JxcConnectionProbeV1', purpose='docling')
 
     @app.post('/internal/jxc/parse')
     def parse(body: dict = Body(...), authorization: str | None = Header(default=None)):

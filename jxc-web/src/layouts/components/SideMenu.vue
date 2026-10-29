@@ -17,7 +17,7 @@ const visibleGroups = computed(() =>
     .map((g) => ({
       ...g,
       children: g.children.filter(
-        (r) => !r.meta?.hidden && user.hasPerm(r.meta?.perm) && (country.current || r.path === '/workbench'),
+        (r) => !r.meta?.hidden && (!r.meta?.platformOnly || user.user?.isPlatformAdmin === true) && user.hasPerm(r.meta?.perm) && (country.current || r.path === '/workbench'),
       ),
     }))
     .filter((g) => g.children.length > 0),

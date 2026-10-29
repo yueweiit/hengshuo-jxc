@@ -23,20 +23,28 @@ def recognition_request(compact, sheet):
     return result
 
 
-def recognize_fields(compact, sheet):
-    endpoint, key = os.environ.get('JXC_SUPPLIER_N8N_URL', ''), os.environ.get('JXC_SUPPLIER_N8N_KEY', '')
+def recognize_fields(compact, sheet, task_context=None):
+    # 旧启动配置仍由原入口消费；托管模式只携带短期任务凭证回到受控Java根地址。
+    if task_context is None:
+        endpoint, key = os.environ.get('JXC_SUPPLIER_N8N_URL', ''), os.environ.get('JXC_SUPPLIER_N8N_KEY', '')
+        if not endpoint or not key:
+            raise SourceError('SUPPLIER_N8N_UNAVAILABLE', '供应商Excel字段识别工作流未配置，原文件已保留')
+        headers = {'Authorization': 'Bearer '+key, 'Content-Type': 'application/json'}
+    else:
+        root, task, credential = task_context
+        endpoint = root + f'/internal/purchase-import/tasks/{task}/fields'
+        headers = {'X-Purchase-Task': credential, 'Content-Type': 'application/json'}
     url = urlsplit(endpoint)
-    if not endpoint or not key:
-        raise SourceError('SUPPLIER_N8N_UNAVAILABLE', '供应商Excel字段识别工作流未配置，原文件已保留')
-    if url.scheme not in ('http','https') or not url.hostname or url.username or url.password or url.query or url.fragment or not url.path.endswith('/jxc-purchase-fields-v1'):
+    if url.scheme not in ('http','https') or not url.hostname or url.username or url.password or url.query or url.fragment or task_context is None and not url.path.endswith('/jxc-purchase-fields-v1'):
         raise SourceError('SUPPLIER_N8N_CONFIG_INVALID', '请配置独立的采购字段识别工作流地址')
     class NoRedirect(HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             return None
     try:
         request = Request(endpoint, json.dumps(recognition_request(compact, sheet), ensure_ascii=False).encode('utf-8'),
-                          {'Authorization':'Bearer '+key, 'Content-Type':'application/json'}, method='POST')
-        with build_opener(NoRedirect).open(request, timeout=300) as response:
+                          headers, method='POST')
+        # 托管请求由Java执行已保存的1～600秒连接超时，桥接不能先在300秒截断。
+        with build_opener(NoRedirect).open(request, timeout=600 if task_context is not None else 300) as response:
             data = response.read(4*1024*1024+1)
         if len(data)>4*1024*1024:
             raise SourceError('SUPPLIER_MAPPING_LIMIT', '字段识别结果超过允许大小')
@@ -205,7 +213,7 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
         return output
 
 
-def parse_supplier_document(source, output, sheet=None, docling_url='http://127.0.0.1:5001', mapping_overrides=None, progress=None):
+def parse_supplier_document(source, output, sheet=None, docling_url='http://127.0.0.1:5001', mapping_overrides=None, progress=None, task_context=None):
     from convert import convert
     from workbench.documents import prepare_document
     validate_archive(source); output.mkdir(parents=True,exist_ok=True)
@@ -226,4 +234,4 @@ def parse_supplier_document(source, output, sheet=None, docling_url='http://127.
         compact['sourceCells']=cells
     if len(json.dumps(recognition_request(compact,sheet),ensure_ascii=False).encode('utf-8'))>4*1024*1024:
         raise SourceError('SUPPLIER_INPUT_LIMIT','识别内容超过4MiB，请按采购工作表拆分后导入')
-    return build_supplier_document(source,compact,recognize_fields(compact,sheet) if mapping_overrides is None else mapping_overrides.get("mapping"),sheet,overrides=mapping_overrides,progress=progress)
+    return build_supplier_document(source,compact,recognize_fields(compact,sheet,task_context) if mapping_overrides is None else mapping_overrides.get("mapping"),sheet,overrides=mapping_overrides,progress=progress)
