@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { http } from '@/api/http'
@@ -12,14 +12,16 @@ import PurchaseImportPreviewDrawer from './PurchaseImportPreviewDrawer.vue'
 import PurchaseImportTable from './PurchaseImportTable.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
 import PurchaseImportProgress from './PurchaseImportProgress.vue'
-import { createPurchaseImportModel, importColumns, type ImportRow } from './purchaseImportModel'
+import { createPurchaseImportModel, consumeImportClearNavigation, rememberImportClearNavigation, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
 
 defineProps<{ downloading: boolean; downloadError: string }>()
 const emit = defineEmits<{ download: [] }>()
 const country = useCountryStore(), user = useUserStore(), route = useRoute(), router = useRouter()
-const page = createPurchaseImportModel(purchaseImportApi, todayIn(country.timezone))
+const clearContext = () => JSON.stringify([country.currentId, country.epoch, user.token])
+const clearedOnEntry = consumeImportClearNavigation(clearContext())
+const page = createPurchaseImportModel(purchaseImportApi, todayIn(country.timezone), undefined, clearedOnEntry)
 const state = page.state
 const books = ref<{ id: number; name: string; baseCurrency: string; status: string }[]>([])
 const suppliers = ref<{ id: number; name: string; settleCurrency?: string; paymentTerms?: string }[]>([])
@@ -35,7 +37,7 @@ const creationEnabled = ref(false), creationLoading = ref(false), creationError 
 const pendingReview = ref(false)
 function review(row?: ImportRow) { reviewRow.value = row?.id ?? null; reviewVisible.value = true }
 async function preview() { if(await page.previewDrafts()) previewVisible.value = true }
-let active = true, refsSequence = 0, creationSequence = 0, defaultsAllowed = true
+let active = true, refsSequence = 0, creationSequence = 0, defaultsAllowed = !clearedOnEntry
 async function loadCreationCapability() {
   const request = ++creationSequence, batch = state.batchId
   creationEnabled.value = false; creationError.value = ''; creationLoading.value = false
@@ -142,8 +144,10 @@ async function syncClearedUi(confirmed = false) {
   pendingReview.value = false; ++creationSequence; creationEnabled.value = false; creationLoading.value = false; creationError.value = ''
   if (fileInput.value) fileInput.value.value = ''
   if (state.clearedBatchId && route.query.batchId !== undefined) {
-    try { await router.replace({ query: { ...route.query, batchId: undefined } }) }
+    const releaseClear = rememberImportClearNavigation(clearContext())
+    try { await router.replace({ query: { ...route.query, batchId: undefined } }); await nextTick() }
     catch (error) { if (active) page.failure(new Error(`数据已清空，但批次地址移除失败：${error instanceof Error ? error.message : '请重试'}`)) }
+    finally { releaseClear() }
   }
 }
 async function clearAll() {

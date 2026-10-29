@@ -138,8 +138,12 @@ function readBatch(value: unknown): ImportBatch {
 }
 
 /** 页面只有一个编辑草稿；网络、解析、持久化错误始终保留为明确错误状态。 */
-export function createPurchaseImportModel(api: PurchaseImportApi, today: string, newKey = () => crypto.randomUUID()) {
-  const emptyHeader = (): ImportHeader => ({ bookId: null, supplierId: null, currency: '', orderDate: today, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null })
+let clearedNavigationContext: string | null = null
+/** 只跨越本次地址更新造成的组件重建，不写入浏览器存储或公共路由。 */
+export function rememberImportClearNavigation(context: string) { clearedNavigationContext = context; return () => { if (clearedNavigationContext === context) clearedNavigationContext = null } }
+export function consumeImportClearNavigation(context: string) { const cleared = clearedNavigationContext === context; clearedNavigationContext = null; return cleared }
+export function createPurchaseImportModel(api: PurchaseImportApi, today: string, newKey = () => crypto.randomUUID(), clearedOnEntry = false) {
+  const emptyHeader = (): ImportHeader => ({ bookId: null, supplierId: null, currency: '', orderDate: clearedOnEntry ? null : today, expectedDate: null, paymentTerms: '', prepayRatio: null, termDays: null })
   const state = reactive({
     header: emptyHeader(), batchId: null as string | null, rows: [] as ImportRow[],
     edit: null as { id: number; field: ImportField | null; values: ImportValues; photoFile: File | null } | null,

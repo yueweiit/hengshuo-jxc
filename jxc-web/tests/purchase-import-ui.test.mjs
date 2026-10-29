@@ -18,7 +18,7 @@ function workspace(confirm = async () => {}, dependencies = {}) {
   const user = reactive({ token: 'test' })
   const route = reactive({ query: { from: 'test' } })
   const state = loadVueScript(file, {
-    ref, computed, watch, onMounted() {}, onBeforeUnmount() {}, defineProps: () => ({ downloading: false, downloadError: '' }), defineEmits: () => () => {},
+    ref, computed, watch, nextTick, onMounted() {}, onBeforeUnmount() {}, defineProps: () => ({ downloading: false, downloadError: '' }), defineEmits: () => () => {},
     useCountryStore: () => country, useUserStore: () => user,
     useRoute: () => route, useRouter: () => ({ async replace(target) { navigations.push(target) } }),
     todayIn: () => '2026-10-28', ...model, purchaseOrderSaveStatus,
@@ -112,6 +112,17 @@ test('已保存批次确认清空后移除地址参数并关闭预览和旧保�
   assert.equal(state.state.batchId, null); assert.equal(state.state.rows.length, 0); assert.equal(state.pendingReview.value, false); assert.equal(state.previewVisible.value, false); assert.equal(state.dialogVisible.value, false)
   assert.deepEqual(navigations.at(-1), { query: { from: 'test', batchId: undefined } })
   state.route.query.batchId = undefined; await nextTick(); assert.equal(state.state.header.orderDate, null); assert.equal(state.state.header.bookId, null)
+})
+
+test('清空移除批次地址导致工作区重新挂载时仍保持所有输入空白', async () => {
+  let mounted
+  const { state } = workspace(undefined, { useRouter: () => ({ async replace() { mounted = workspace().state; await mounted.loadReferences() } }), purchaseImportApi: {
+    async clearBatch(id, version, key) { return { cleared: true, batchId: id, version, requestKey: key, cleanupPending: false, pendingFiles: 0, counts: { rows: 1, sources: 1, images: 1, tasks: 1, groups: 0, progress: 1 } } },
+  } })
+  Object.assign(state.state, { batchId, version: 2, header: { ...header }, rows: [{ ...row }] }); state.route.query.batchId = batchId
+  await state.clearAll()
+  assert.ok(mounted); assert.equal(mounted.state.header.orderDate, null); assert.equal(mounted.state.header.bookId, null); assert.equal(mounted.state.header.supplierId, null); assert.equal(mounted.state.header.currency, '')
+  const fresh = workspace().state; await fresh.loadReferences(); assert.equal(fresh.state.header.orderDate, '2026-10-28'); assert.equal(fresh.state.header.bookId, 1)
 })
 
 test('基础选项读取失败不阻止导入文件和来源编辑，基础信息保存仍需有效选项', async () => {
