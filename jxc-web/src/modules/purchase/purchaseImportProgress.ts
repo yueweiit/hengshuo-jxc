@@ -24,7 +24,7 @@ export function importProgressView(state: { tasks: ImportTask[]; activeTaskId?: 
   const complete = task.status === 'SUCCEEDED', failed = ['FAILED', 'NEEDS_REAUTH', 'STALE', 'CANCELLED'].includes(task.status)
   const rows = p ? `${p.sourceTotalRows != null ? `文件 ${p.sourceTotalRows} 行；` : ''}当前步骤已处理 ${p.processedRows} / ${p.totalRows === null ? '待统计' : p.totalRows} 行${p.sourceSheet && p.sourceRow ? `；最近处理 ${p.sourceSheet}!${p.sourceRow}` : ''}` : '正在统计采购行数'
   const phase = p?.phase
-  const step = task.status === 'QUEUED' ? 1 : phase === 'READING' ? 1 : phase === 'CONVERTING' || phase === 'PARSING' ? 2 : phase === 'EXTRACTING_IMAGES' || phase === 'VALIDATING' || phase === 'PREPARING_IMAGES' ? 3 : 4
+  const step = task.status === 'QUEUED' || !phase || phase === 'READING' ? 1 : phase === 'CONVERTING' || phase === 'PARSING' ? 2 : phase === 'EXTRACTING_IMAGES' || phase === 'VALIDATING' || phase === 'PREPARING_IMAGES' ? 3 : 4
   const result = task.result
   const imageStep = phase === 'EXTRACTING_IMAGES' || phase === 'PREPARING_IMAGES'
   const percentage = complete ? 100 : imageStep ? p?.totalImages ? Math.floor(p.processedImages / p.totalImages * 100) : null : p?.totalRows ? Math.floor(p.processedRows / p.totalRows * 100) : null

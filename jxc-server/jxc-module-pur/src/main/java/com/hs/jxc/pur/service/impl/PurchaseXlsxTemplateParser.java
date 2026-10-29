@@ -6,6 +6,7 @@ import java.io.*;
 import java.math.*;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.zip.*;
 import javax.xml.XMLConstants;
@@ -20,8 +21,13 @@ public final class PurchaseXlsxTemplateParser {
     private static final String ART="http://schemas.openxmlformats.org/drawingml/2006/main";
     private static final List<String> HEADERS=List.of("采购单号","商品照片","商品规格","采购数量","单件售价","售价合计","供应商单价（采购单价）","运费","到货单位成本","美元单位成本","美元成本合计");
     private record Sheet(String name,String part,Document xml,LinkedHashMap<Integer,Map<String,Element>> rows,Integer header) {}
+    private record DataRow(int number,Map<String,Element> cells,Map<String,Object> original) {}
+    private static final class ProgressFailure extends RuntimeException {ProgressFailure(RuntimeException cause){super(cause);}}
+    private static void report(Consumer<Map<String,Object>> progress,String phase,int rows,int total,int images,Integer totalImages,String sheet,Integer row){
+        try{progress.accept(PurchaseImportProgressService.event(phase,rows,total,images,totalImages,sheet,row));}catch(RuntimeException failure){throw new ProgressFailure(failure);}
+    }
     private static ApiException bad(String message){return new ApiException(422,"SOURCE_XLSX_INVALID",message);}
-    public Optional<Map<String,Object>> parse(byte[] bytes,String name,String selection){
+    public Optional<Map<String,Object>> parse(byte[] bytes,String name,String selection,Consumer<Map<String,Object>> progress){
         if(bytes.length==0||bytes.length>100L*1024*1024)throw bad("采购文件须非空且不超过100MiB");
         try {
             var archive=archive(bytes);var strings=new ArrayList<String>();
@@ -50,10 +56,16 @@ public final class PurchaseXlsxTemplateParser {
             }
             var shared=new HashMap<String,Element>();
             for(var cells:selected.rows.values())for(var cell:cells.values()){var f=first(cell,MAIN,"f");if(f!=null&&"shared".equals(f.getAttribute("t"))&&!f.getTextContent().isBlank())shared.put(f.getAttribute("si"),cell);}
+            var dataRows=new ArrayList<DataRow>();
             for(var entry:selected.rows.entrySet()){
                 int number=entry.getKey();if(number<=selected.header)continue;var cells=entry.getValue();var original=new LinkedHashMap<String,Object>();cells.forEach((col,cell)->original.put(col,value(cell,strings)));
                 if(original.values().stream().allMatch(v->v==null||v.toString().isBlank()))continue;
                 if(Set.of("合计","总计","total","TOTAL","subtotal").contains(Objects.toString(original.get("A"),"")))continue;
+                dataRows.add(new DataRow(number,cells,original));
+            }
+            report(progress,"PARSING",0,dataRows.size(),0,null,selected.name,null);
+            for(var data:dataRows){
+                int number=data.number;var cells=data.cells;var original=data.original;
                 var normalized=new LinkedHashMap<String,Object>();var numeric=new LinkedHashMap<String,Object>();var formulas=new LinkedHashMap<String,Object>();var cached=new LinkedHashMap<String,Object>();
                 for(var item:cells.entrySet()){
                     var cell=item.getValue();String raw=value(cell,strings);if((!cell.hasAttribute("t")||"n".equals(cell.getAttribute("t")))&&raw!=null)numeric.put(item.getKey(),raw);
@@ -78,21 +90,25 @@ public final class PurchaseXlsxTemplateParser {
                 if(normalized.get("sourceOrderNo")==null||normalized.get("purchaseQty")==null)throw bad("原第"+number+"行缺少采购单号或数量");
                 var row=new LinkedHashMap<String,Object>();row.put("sourceSheet",selected.name);row.put("sourceRow",number);row.put("sourceItemKey","D"+number);row.put("sourceCells",Map.of("purchaseQty","D"+number));row.put("originalValues",original);row.put("rawNumericTexts",numeric);row.put("formulas",formulas);row.put("cachedValues",cached);row.put("normalizedValues",normalized);rows.add(row);
                 if(rows.size()>10000)throw bad("采购明细超过10000行");
+                if(rows.size()==1||rows.size()%25==0||rows.size()==dataRows.size())report(progress,"PARSING",rows.size(),dataRows.size(),0,null,selected.name,number);
             }
             if(rows.isEmpty())throw bad("采购工作表没有明细");
             var known=new HashSet<String>();
+            report(progress,"EXTRACTING_IMAGES",rows.size(),rows.size(),0,null,selected.name,null);
             for(var drawing:elements(selected.xml,MAIN,"drawing")){
                 String part=relations(archive,selected.part).get(drawing.getAttributeNS(REL,"id"));var imageLinks=relations(archive,part);
                 for(var anchor:children(xml(archive,part).getDocumentElement()))for(var blip:elements(anchor,ART,"blip")){
                     String media=imageLinks.get(blip.getAttributeNS(REL,"embed"));byte[] content=archive.get(media);if(content==null||content.length==0||content.length>10*1024*1024)throw bad("原图缺失或超过10MiB");String sha=AttachmentObjectStore.sha256(content);
-                    if(known.add(sha)){
+                    boolean added=known.add(sha);if(added){
                         try(var input=javax.imageio.ImageIO.createImageInputStream(new ByteArrayInputStream(content))){var readers=javax.imageio.ImageIO.getImageReaders(input);if(!readers.hasNext())throw bad("原图格式无法读取");var reader=readers.next();try{reader.setInput(input);String format=reader.getFormatName().toLowerCase(Locale.ROOT);String mime=switch(format){case "jpg","jpeg"->"image/jpeg";case "png"->"image/png";case "gif"->"image/gif";case "webp"->"image/webp";default->throw bad("原图格式不支持");};var image=new LinkedHashMap<String,Object>();image.put("imageId",sha);image.put("sha256",sha);image.put("mimeType",mime);image.put("bytes",content.length);image.put("width",reader.getWidth(0));image.put("height",reader.getHeight(0));image.put("mediaPart",media);image.put("contentBase64",Base64.getEncoder().encodeToString(content));images.add(image);}finally{reader.dispose();}}
                     }
+                    if(added&&(known.size()==1||known.size()%25==0))report(progress,"EXTRACTING_IMAGES",rows.size(),rows.size(),known.size(),null,selected.name,null);
                     var from=first(anchor,DRAW,"from");Integer sourceRow=from==null?null:Integer.parseInt(text(from,DRAW,"row"))+1;var association=new LinkedHashMap<String,Object>();association.put("imageId",sha);association.put("sourceSheet",selected.name);association.put("sourceRow",sourceRow);association.put("anchor",Map.of("type",anchor.getLocalName(),"xml",serialize(anchor)));association.put("status","UNCONFIRMED");associations.add(association);
                 }
             }
+            report(progress,"EXTRACTING_IMAGES",rows.size(),rows.size(),known.size(),known.size(),selected.name,null);
             sourceInfo.put("fileRows",rows.size());out.put("rows",rows);out.put("sheets",sheetInfo);out.put("images",images);out.put("associations",associations);out.put("warnings",warnings);out.put("errors",List.of());return Optional.of(out);
-        }catch(ApiException e){throw e;}catch(Exception e){throw bad("工作簿损坏或包含无法校验的内容，请核对原文件");}
+        }catch(ProgressFailure e){throw (RuntimeException)e.getCause();}catch(ApiException e){throw e;}catch(Exception e){throw bad("工作簿损坏或包含无法校验的内容，请核对原文件");}
     }
     private static Map<String,byte[]> archive(byte[] bytes)throws IOException{
         // ZipInputStream只验证本地条目，另核对中央目录结束记录，避免截断文件被误报完整。
