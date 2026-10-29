@@ -2,7 +2,11 @@
 
 这是C:/project/docling-demo对应文件的版本化交付副本，不是第二个运行入口。实际调用仍是Java任务→受限Python bridge→原Docling与n8n；不从此资源目录启动Python。
 
-部署时先备份原工作台，再按相对路径同步这些文件，保留原convert.py、documents.py、vision/gallery模块、模型、环境和凭据；使用既有Python环境运行workbench/tests/test_jxc_supplier.py及test_jxc_bridge.py。新字段工作流需绑定已有DeepSeek凭据及专用Header凭据后启用。源码不包含真实凭据。
+部署时先备份原工作台，再按相对路径同步这些文件，保留原convert.py、documents.py、jxc_gallery.py、vision_routes.py、模型、环境和凭据；vision.py由此交付副本更新，共用一个运行入口。使用既有Python环境运行workbench/tests/test_jxc_supplier.py、test_jxc_gallery.py及原test_jxc_bridge.py、test_vision.py、test_vision_api.py。新字段工作流需绑定已有DeepSeek凭据及专用Header凭据后启用。源码不包含真实凭据。
+
+新建图片索引统一采用IndexIDMap2包装的HNSW，使用归一化向量与内积计算余弦相似度；保留稳定featureId，参数初值为M=32、efConstruction=200、efSearch=256。JXC与演示图库继续共用write_vector_index，不另建识别流程。HNSW为近似搜索，可能漏候选，结果仍需人工确认；上述参数与算法测试不代表真实照片识别准确率。
+
+读取兼容已发布的IDMap2+Flat正式索引，以及仅演示入口允许的旧裸Flat索引。新建或重建才使用HNSW，不自动覆盖旧图库；旧读取保留至正式图库重建、旧演示迁移且核实无调用后移除，具体日期及其他调用方不确定。同步源码后需按运行维护流程重启Python进程；已有正式图库还需通过原有重建入口发布新索引，代码交付本身不代表这些运行步骤已执行。
 
 字段环境：JXC_SUPPLIER_N8N_URL（必须以/jxc-purchase-fields-v1结尾）与JXC_SUPPLIER_N8N_KEY。Java原任务retry接受mappingOverrides，仅允许原格映射、规格列标签和明确确认。旧/internal/jxc/parse保留给尚未升级客户端；当前本机客户端切换后，其他运行客户端是否仍调用不确定；全部客户端迁移且核实无调用后可删除，无承诺日期。
 

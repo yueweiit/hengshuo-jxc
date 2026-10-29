@@ -3,5 +3,7 @@
   "workbench/jxc_supplier.py": "f62cc5ed608f9bf5b3581c8e36ac216268de4499aa57e95a2e86a21abd07a865",
   "workbench/tests/test_jxc_supplier.py": "2ff786be9c8d4cf4fab3fed515e8ccbdbaf1d3c6631d844081fb8da8bf578b5f",
   "n8n/jxc-purchase-fields.json": "be2da6681972f26ef367c45aa870cc354bf670bf39370291696a603efaee0e00",
-  "n8n/jxc-purchase-fields.test.mjs": "fdc65cd3a4fdb96f5621910da2c3ccbad7ad67e0a6de34158867576065941892"
+  "n8n/jxc-purchase-fields.test.mjs": "fdc65cd3a4fdb96f5621910da2c3ccbad7ad67e0a6de34158867576065941892",
+  "workbench/vision.py": "7e1761c85e51bdf303d301df0e7b3498422aa1e3e18053341503cb4e992f8bc0",
+  "workbench/tests/test_jxc_gallery.py": "efe522edae30663f6cee15c7d64e6dc58d32aebc53bafc18bf1a2438dbf78700"
 }
