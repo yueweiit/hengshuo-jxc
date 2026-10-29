@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { computed, compile, createSSRApp, defineComponent, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
+import { ElProgress } from 'element-plus'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 import { loadTsModule } from './contracts/load-ts-module.mjs'
 const path = new URL('../src/modules/purchase/purchaseImportModel.ts', import.meta.url)
@@ -85,15 +86,28 @@ test('解析已完成时后续商品任务沿用批次查询，不重复读取�
   await page.loadBatch(batchId);await page.refreshTasks()
   assert.deepEqual(calls,['batch','batch'])
 })
-test('真实进度模板呈现当前步骤、行数与未保存提示', async () => {
-  const { page }=setup();Object.assign(page.state,{batchId,status:'FAILED',activeTaskId:taskId,tasks:[{...task('FAILED',progress('SAVING',1,2)),errorMessage:'第3行保存失败'}]})
+async function renderProgress(page) {
   const source=new URL('../src/modules/purchase/PurchaseImportProgress.vue',import.meta.url)
   const {importProgressView}=loadTsModule(new URL('../src/modules/purchase/purchaseImportProgress.ts',import.meta.url))
   const state=loadVueScript(source,{computed,importProgressView,defineProps:()=>({page})},['display','steps'])
   const template=readFileSync(source,'utf8').match(/<template>([\s\S]*)<\/template>/)[1]
   const app=createSSRApp({setup:()=>({...state,page}),render:compile(template)})
-  app.component('ElProgress',defineComponent({props:['percentage'],setup:(props)=>()=>h('div',{'role':'progressbar','aria-valuenow':props.percentage})}))
+  app.component('ElProgress',ElProgress)
   app.component('ElButton',defineComponent({setup:(_,ctx)=>()=>h('button',ctx.slots.default?.())}))
-  const html=await renderToString(app)
+  return renderToString(app)
+}
+test('真实进度模板呈现当前步骤、行数与未保存提示', async () => {
+  const { page }=setup();Object.assign(page.state,{batchId,status:'FAILED',activeTaskId:taskId,tasks:[{...task('FAILED',progress('SAVING',1,2)),errorMessage:'第3行保存失败'}]})
+  const html=await renderProgress(page)
   assert.match(html,/当前步骤进度/);assert.match(html,/1 \/ 2/);assert.match(html,/aria-valuenow="50"/);assert.match(html,/本次未保存明细/);assert.match(html,/第3行保存失败/);assert.match(html,/保存采购明细/);assert.match(html,/采购!2/)
+})
+test('总量未知时真实等待条可见且无虚构百分比，缺步骤不能误标保存', async () => {
+  const {page}=setup();Object.assign(page.state,{batchId,status:'PARSING',activeTaskId:taskId,tasks:[task()]})
+  const html=await renderProgress(page)
+  assert.match(html,/inner--indeterminate/)
+  assert.doesNotMatch(html,/width:0%/)
+  assert.doesNotMatch(html,/aria-valuenow|el-progress__text/)
+  assert.match(html,/进度待统计/)
+  assert.match(html,/<li class="active">读取文件/)
+  assert.doesNotMatch(html,/<li class="active">保存明细/)
 })

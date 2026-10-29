@@ -47,7 +47,7 @@ public class PurchaseImportTaskServiceImpl implements PurchaseImportTaskService 
             if(!"PARSE".equals(lease.kind)){handler(lease.kind).execute(lease,this);return;}
             var source=imports.content(lease.actor,lease.batch,lease.source,false);
             if(!AttachmentObjectStore.sha256(source.bytes()).equals(lease.sha))throw Inputs.bad("原文件哈希已变化");
-            var local=new PurchaseXlsxTemplateParser().parse(source.bytes(),source.fileName(),lease.sheet);
+            var local=new PurchaseXlsxTemplateParser().parse(source.bytes(),source.fileName(),lease.sheet,event->progress.publish(lease.actor,lease.id,lease.owner,event));
             var result=local.orElseGet(()->lease.input.containsKey("mappingOverrides")?parser.parse(taskId,lease.token,lease.source,lease.sha,lease.sheet,imports.map(lease.input.get("mappingOverrides"))):parser.parse(taskId,lease.token,lease.source,lease.sha,lease.sheet));validate(result,lease);
             int totalRows=list(result.get("rows")).size(),totalImages=list(result.get("images")).size();
             publish(lease,"PREPARING_IMAGES",totalRows,totalRows,0,totalImages,null,null);
