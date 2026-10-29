@@ -208,18 +208,43 @@ test('预览中表头和费用的未保存修改上报给主保存，保存或�
   bindings.edit(group);await nextTick();assert.equal(emitted.at(-1)[1],true)
   bindings.editing.value=null;await nextTick();assert.equal(emitted.at(-1)[1],false)
 })
-test('表格与完整预览输出两位数字，编辑和提交仍保留原精度', async () => {
-  const page = setup(); await page.loadBatch(batchId)
+async function renderImportTable(page) {
   const file = new URL('../src/modules/purchase/PurchaseImportTable.vue', import.meta.url)
-  const { importTableColumns } = feature('purchaseImportModel'), { formatImportDecimal } = feature('purchaseImportDisplay')
-  const state = loadVueScript(file, { nextTick, ref, importTableColumns, formatImportDecimal, defineProps: () => ({ page, disabled: false }), defineEmits: () => () => {} }, ['columns', 'editor', 'setEditor', 'begin', 'editing', 'saveCell', 'displayNumber'])
+  const { importTableColumns } = feature('purchaseImportModel'), display = feature('purchaseImportDisplay')
+  const state = loadVueScript(file, { nextTick, ref, importTableColumns, ...display, defineProps: () => ({ page, disabled: false }), defineEmits: () => () => {} }, ['columns', 'editor', 'setEditor', 'begin', 'editing', 'saveCell', 'displayNumber'])
   const template = readFileSync(file, 'utf8').match(/<template>([\s\S]*)<\/template>/)[1].replaceAll('(instance: Element | ComponentPublicInstance | null)', '(instance)')
-  const app = createSSRApp({ setup: () => ({ ...state, formatImportDecimal, page, disabled: false }), render: compile(template) })
+  const app = createSSRApp({ setup: () => ({ ...state, ...display, page, disabled: false }), render: compile(template) })
   const slot = defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => h('div', ctx.attrs, ctx.slots.default?.()) })
   app.component('ElTableColumn', defineComponent({ setup: (_, ctx) => () => h('div', ctx.slots.default?.({ row: page.state.rows[0] })) }))
   for (const name of ['ElTable', 'ElInput', 'ElTooltip', 'ElButton', 'ElIcon', 'Check', 'Close', 'EditPen', 'Delete']) app.component(name, slot)
   app.component('PurchaseImportPhoto', { render: () => null })
-  const html = await renderToString(app)
+  return renderToString(app)
+}
+
+test('来源名称为空时显示已核对商品名和来源，编辑仍为空且不产生待上传内容', async () => {
+  const page = setup(); await page.loadBatch(batchId)
+  Object.assign(page.state.rows[0], { suppliedProductName: null, matchedProductId: 501, decision: 'EXISTING', readiness: 'READY', productSnapshot: { id: 501, name: '库存商品甲' } })
+  const before = JSON.stringify(page.state.rows[0]), html = await renderImportTable(page)
+  assert.match(html, /库存商品甲/); assert.match(html, /已核对商品/)
+  assert.equal(JSON.stringify(page.state.rows[0]), before); assert.equal(page.grid.hasChanges(), false)
+  assert.equal(page.startEdit(page.state.rows[0], 'suppliedProductName'), true)
+  assert.equal(page.state.edit.values.suppliedProductName, null)
+})
+
+test('来源名称优先，未确认、错绑与不完整快照不能冒充已核对商品名', async () => {
+  const page = setup(); await page.loadBatch(batchId)
+  const base = { suppliedProductName: null, matchedProductId: 501, decision: 'EXISTING', readiness: 'READY', productSnapshot: { id: 501, name: '库存商品甲' } }
+  for (const fields of [{ decision: 'UNRESOLVED' }, { matchedProductId: null }, { productSnapshot: { id: 999, name: '库存商品甲' } }, { productSnapshot: { id: 501 } }, { suppliedProductName: '原表名称' }]) {
+    Object.assign(page.state.rows[0], base, fields)
+    const html = await renderImportTable(page)
+    assert.doesNotMatch(html, /库存商品甲|已核对商品/)
+    if (fields.suppliedProductName) assert.match(html, /原表名称/)
+  }
+})
+
+test('表格与完整预览输出两位数字，编辑和提交仍保留原精度', async () => {
+  const page = setup(); await page.loadBatch(batchId)
+  const html = await renderImportTable(page)
   assert.match(html, />53\.06</); assert.match(html, />10\.00</)
   assert.doesNotMatch(html, /53\.0606250000/)
   assert.equal(page.state.rows[0].purchaseUnitPrice, '53.0606250000')

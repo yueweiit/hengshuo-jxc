@@ -37,7 +37,7 @@ const model=createPurchaseImportModel({
 const local=createPurchaseImportDraftSession(model)
 await local.open('purchase-import-grid-fixture')
 if(model.state.batchId)server=model.exportLocalDraft().batch
-window.gridFixture={model,calls,photoCalls,local,fail:false,loadExisting:async()=>{model.invalidate();server.rows=[structuredClone(row)];await model.loadBatch(server.batchId);await local.flush()}}
+window.gridFixture={model,calls,photoCalls,local,fail:false,loadExisting:async(fields={})=>{model.invalidate();server.rows=[structuredClone({...row,...fields})];await model.loadBatch(server.batchId);await local.flush()}}
 const app=createApp({render:()=>h('div',{},[model.state.error?h('p',{role:'alert'},model.state.error):null,local.view.error?h('p',{role:'alert'},local.view.error):null,h(Editor,{page:model,disabled:model.busy(),persist:local.flush})])}).use(ElementPlus)
 for(const [name,icon]of Object.entries(Icons))app.component(name,icon)
 app.mount('#app')

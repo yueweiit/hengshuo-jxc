@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch, onBeforeUnmount } from 'vue'
 import RevoGrid from '@revolist/vue3-datagrid'
 import { TextEditor, type BeforeSaveDataDetails, type BeforeRangeSaveDataDetails, type ColumnDataSchemaModel, type ColumnRegular, type EditorCtr } from '@revolist/revogrid'
 import { importTableColumns, type PurchaseImportModel } from './purchaseImportModel'
+import { confirmedProductName } from './purchaseImportDisplay'
 
 const props = defineProps<{ page: PurchaseImportModel; disabled: boolean }>()
 const grid = ref<{ $el: HTMLRevoGridElement }>()
@@ -39,11 +40,13 @@ const columns = importTableColumns.map((col): ColumnRegular => ({
     type: 'button', 'aria-label': `第${model.id}行粘贴或选择照片`, onClick: () => choosePhoto(Number(model.id)),
     disabled: props.disabled || props.page.grid.view.pending,
     style: { border: '0', background: 'transparent', width: '100%', height: '100%', cursor: 'pointer', color: 'var(--el-color-primary)' },
-  }, [model.photo ? h('img', { src: model.photo, alt: '商品照片', style: { maxWidth: '100%', height: '30px', objectFit: 'contain' } }) : h('span', {}, '粘贴/选择照片')]) : undefined,
+  }, [model.photo ? h('img', { src: model.photo, alt: '商品照片', style: { maxWidth: '100%', height: '30px', objectFit: 'contain' } }) : h('span', {}, '粘贴/选择照片')]) : col.key === 'suppliedProductName' ? (h, { model }) => model._confirmedProductName
+    ? h('span', { title: '来自已核对商品，原表名称未填写' }, [h('span', {}, String(model._confirmedProductName)), h('small', { style: { marginLeft: '6px', color: 'var(--el-text-color-secondary)', fontSize: '11px' } }, '已核对商品')])
+    : h('span', {}, String(model.suppliedProductName ?? '')) : undefined,
 }))
 // RevoGrid只接收投影副本；真实原图、来源及业务状态仍由采购模型持有。
 const source = computed(() => props.page.grid.rows().map(row => Object.fromEntries([
-  ['id', row.id], ...importTableColumns.map(col => [col.key, col.key === 'photo' ? photoUrls[row.id]?.url ?? row.images?.map(image => props.page.images.urls.value[image.id]).find(Boolean) ?? (row.photo && /^(https?:\/\/|\/(?!\/)|data:image\/(?:png|jpeg|webp);base64,)/i.test(row.photo) ? row.photo : '') : row[col.key] ?? '']),
+  ['id', row.id], ['_confirmedProductName', confirmedProductName(row)], ...importTableColumns.map(col => [col.key, col.key === 'photo' ? photoUrls[row.id]?.url ?? row.images?.map(image => props.page.images.urls.value[image.id]).find(Boolean) ?? (row.photo && /^(https?:\/\/|\/(?!\/)|data:image\/(?:png|jpeg|webp);base64,)/i.test(row.photo) ? row.photo : '') : row[col.key] ?? '']),
 ])))
 function edit(event: CustomEvent<BeforeSaveDataDetails>) {
   const { model, prop, val } = event.detail
