@@ -1,4 +1,4 @@
-import type { ImportTask } from './purchaseImportModel'
+import type { ImportRow, ImportTask } from './purchaseImportModel'
 export const importPhases = ['READING', 'CONVERTING', 'PARSING', 'EXTRACTING_IMAGES', 'VALIDATING', 'PREPARING_IMAGES', 'SAVING', 'LINKING'] as const
 export interface ImportProgress { phase: typeof importPhases[number]; processedRows: number; totalRows: number | null; sourceTotalRows?: number | null; processedImages: number; totalImages: number | null; sourceSheet?: string | null; sourceRow?: number | null; attemptCount: number; updatedAt: string }
 export interface ImportUpload { fileName: string; loaded: number; total: number | null; status: 'UPLOADING' | 'ACCEPTING' | 'UNKNOWN' | 'ERROR' }
@@ -14,10 +14,41 @@ export function readImportTask(value: unknown): ImportTask {
   if (object(value.result) && (value.result.rows !== undefined && !count(value.result.rows) || value.result.images !== undefined && !count(value.result.images))) throw new Error('后端返回的导入完成数量无效')
   return value as unknown as ImportTask
 }
-export function importProgressView(state: { tasks: ImportTask[]; activeTaskId?: string | null; upload?: ImportUpload | null; progressError?: string; progressReloadNeeded?: boolean; error?: string }) {
+type ReviewState = { tasks: ImportTask[]; rows: ImportRow[]; imageReviewEnabled?: boolean; imageReviewError?: string; groups: { id: number; createStatus: string }[] }
+export function imageReviewRows(state: ReviewState) {
+  return state.rows.filter(row => (row.readiness !== 'READY' || !!row.matchTaskId) && !row.targetOrderLineId && !state.groups.some(group => group.id === row.groupId && ['CREATING', 'UNKNOWN'].includes(group.createStatus)))
+}
+/** 汇总后台当前行任务；人工确认数与AI任务处理数分别计算。 */
+export function imageReviewProgress(state: ReviewState) {
+  const rows = imageReviewRows(state), tasks = new Map(state.tasks.map(task => [task.id, task]))
+  let succeeded = 0, failed = 0, attention = 0, pending = 0
+  for (const row of rows) {
+    const task = row.matchTaskId ? tasks.get(row.matchTaskId) : undefined
+    if (!task || ['QUEUED', 'RUNNING'].includes(task.status)) { pending++; continue }
+    const result = row.matchResult
+    if (task.status !== 'SUCCEEDED' || result?.status === 'FAILED') failed++
+    else if (!result || result.runId !== task.id || (result.inputRevision !== row.version && row.readiness !== 'READY') || result.status !== 'OK' || result.image.status === 'NO_INPUT') attention++
+    else succeeded++
+  }
+  return { total: rows.length, completed: succeeded + failed + attention, succeeded, failed, attention, pending, running: rows.some(row => row.matchTaskId && ['QUEUED', 'RUNNING'].includes(tasks.get(row.matchTaskId)?.status ?? '')) }
+}
+export function importProgressView(state: ReviewState & { activeTaskId?: string | null; upload?: ImportUpload | null; progressError?: string; progressReloadNeeded?: boolean; error?: string }) {
   const task = state.tasks.find(item => item.id === state.activeTaskId) ?? state.tasks.filter(item => !item.kind || item.kind === 'PARSE').at(-1)
   const upload = state.upload
   if (upload) return { title: upload.status === 'UPLOADING' ? '正在上传文件' : upload.status === 'ACCEPTING' ? '等待服务器接收确认' : upload.status === 'UNKNOWN' ? '文件接收结果尚未确认' : '文件未成功接收', fileName: upload.fileName, message: ['UNKNOWN', 'ERROR'].includes(upload.status) ? state.error || '请核对原因后使用原请求重试' : '文件上传完成后还需解析和保存', percentage: upload.total ? Math.round(upload.loaded / upload.total * 100) : null, complete: false, failed: ['UNKNOWN', 'ERROR'].includes(upload.status), rows: '', images: '', step: 0 }
+  const review = imageReviewProgress(state)
+  if (state.imageReviewEnabled && review.total && !state.progressReloadNeeded && (!task || task.status === 'SUCCEEDED')) {
+    const complete = review.completed === review.total && !review.failed && !review.attention
+    const stopped = !review.running && (!!state.imageReviewError || !!review.failed || !!review.attention)
+    return {
+      title: complete ? '导入与AI图文核对已完成，待人工确认' : stopped ? '明细已暂存，AI图文核对仍有待处理项' : review.running ? '正在进行AI图文核对' : '明细已暂存，等待AI图文核对',
+      fileName: task?.fileName || '采购明细',
+      message: state.imageReviewError ? `明细已暂存。AI图文核对未能启动：${state.imageReviewError}。请进入核对窗口处理。` : `明细已暂存；AI结果仅供参考，请点击“待确定是否为新商品”逐行确认。${review.attention ? '缺图、部分结果或过期结果仍需人工处理。' : ''}${review.failed ? '核对失败行请进入辅助识别查看原因并重试。' : ''}`,
+      percentage: Math.floor(review.completed / review.total * 100), complete, failed: stopped,
+      rows: `AI已处理 ${review.completed} / ${review.total} 行；成功 ${review.succeeded} · 失败 ${review.failed} · 待人工处理 ${review.attention} · 处理中 ${review.pending}`,
+      images: '', step: complete ? 6 : 5,
+    }
+  }
   if (!task) return null
   const p = task.progress
   const labels: Record<string, string> = { READING: '正在读取文件、统计采购行数', CONVERTING: '正在识别文件内容', PARSING: '正在解析采购明细', EXTRACTING_IMAGES: '正在提取原图', VALIDATING: '正在校验采购明细', PREPARING_IMAGES: '正在保存原图文件', SAVING: '正在保存采购明细', LINKING: '正在关联照片、等待保存提交' }

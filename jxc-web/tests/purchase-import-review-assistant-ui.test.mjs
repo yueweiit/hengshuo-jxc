@@ -11,11 +11,11 @@ async function setup(fail=false){
  let data={batchId:batch,version:1,header:{bookId:null,supplierId:null,currency:null,orderDate:null,expectedDate:null,paymentTerms:'',prepayRatio:null,termDays:null},sources:[{id:7,fileName:'供应商.xlsx',fileSha256:'a'.repeat(64),status:'READY'}],rows:[1,2].map(id=>({...values,id,rowNo:id,version:1,sourceId:7,sourceItemKey:`B${id+2}`}))}
  const page=model.createPurchaseImportModel({async load(){return structuredClone(data)},async confirmReview(id,body,key){calls.push({id,body,key});if(fail){fail=false;throw new Error('保存超时，请按原确认重试')};data={...data,version:3,rows:data.rows.map(r=>({...r,...body.changes.find(c=>c.rowId===r.id).values,version:2}))};return structuredClone(data)}},'2026-10-29',()=>batch)
  await page.loadBatch(batch)
- const ui=loadVueScript(new URL('../src/modules/purchase/PurchaseImportReviewAssistant.vue',import.meta.url),{ref,computed,watch,defineProps:()=>({page}),defineEmits:()=>()=>{},...review},['open','pendingQuestions','answer','proposal','prepare','confirm','feedback'])
+ const ui=loadVueScript(new URL('../src/modules/purchase/PurchaseImportReviewAssistant.vue',import.meta.url),{ref,computed,watch,defineProps:()=>({page}),defineEmits:()=>()=>{},...review},['pendingQuestions','answer','proposal','prepare','confirm','feedback'])
  return {ui,page,calls}
 }
 test('实际核对组件先展示建议，点击确认才批量更新原暂存行',async()=>{
- const {ui,page,calls}=await setup();assert.equal(ui.open.value,false);assert.equal(ui.pendingQuestions.value,6);ui.open.value=true;ui.answer.value='单号是NY-051';ui.prepare()
+ const {ui,page,calls}=await setup();assert.equal(ui.pendingQuestions.value,6);ui.answer.value='单号是NY-051';ui.prepare()
  assert.equal(ui.proposal.value.changes.length,2);assert.equal(calls.length,0);assert.equal(page.state.rows[0].sourceOrderNo,null)
  await ui.confirm();await nextTick();assert.equal(calls.length,1);assert.equal(page.state.rows.length,2);assert.equal(page.state.rows[0].sourceOrderNo,'NY-051');assert.equal(ui.pendingQuestions.value,5);await ui.confirm();assert.equal(calls.length,1)
 })
@@ -25,5 +25,5 @@ test('确认失败保留输入和预览，原请求重试沿用幂等键',async(
  await ui.confirm();assert.equal(calls.length,2);assert.equal(calls[0].key,calls[1].key);assert.deepEqual(calls[0].body,calls[1].body)
 })
 test('切换批次后原对话建议不能写入新文件',async()=>{
- const {ui,page,calls}=await setup();ui.open.value=true;ui.answer.value='NY-051';ui.prepare();page.invalidate();await nextTick();await ui.confirm();assert.equal(calls.length,0);assert.equal(ui.open.value,false);assert.equal(ui.answer.value,'');assert.equal(ui.proposal.value,null)
+ const {ui,page,calls}=await setup();ui.answer.value='NY-051';ui.prepare();page.invalidate();await nextTick();await ui.confirm();assert.equal(calls.length,0);assert.equal(ui.answer.value,'');assert.equal(ui.proposal.value,null)
 })

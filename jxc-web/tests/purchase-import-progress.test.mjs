@@ -86,6 +86,28 @@ test('解析已完成时后续商品任务沿用批次查询，不重复读取�
   await page.loadBatch(batchId);await page.refreshTasks()
   assert.deepEqual(calls,['batch','batch'])
 })
+
+test('解析读回成功后自动逐行登记核对，继续查询只读回已有任务', async () => {
+  const run='33333333-2222-4333-8444-555555555555', calls=[]
+  const model=loadTsModule(path), values=Object.fromEntries(model.importColumns.map(column=>[column.key,null]))
+  let saved={batchId,header,version:1,status:'PARSING',rows:[],tasks:[task()]}
+  const page=model.createPurchaseImportModel({async load(){calls.push('load');return structuredClone(saved)},async readTask(){saved={...saved,status:'REVIEW',rows:[{...values,id:1,rowNo:1,version:1,sourceId:8,readiness:'UNRESOLVED'}],tasks:[task('SUCCEEDED')]};return saved.tasks[0]},async startMatches(id,version,ids){calls.push('match');assert.deepEqual([id,version,ids],[batchId,1,[1]]);saved={...saved,rows:saved.rows.map(row=>({...row,matchTaskId:run})),tasks:[...saved.tasks,{id:run,kind:'MATCH',status:'QUEUED',result:{rowId:1}}]};return {...structuredClone(saved),taskIds:[run]}}},'2026-10-29')
+  await page.loadBatch(batchId);await page.refreshTasks();await page.refreshTasks()
+  assert.deepEqual(calls,['load','load','match','load']);assert.equal(page.state.rows[0].matchTaskId,run)
+  assert.match(view(page.state).title,/AI图文核对/);assert.equal(view(page.state).complete,false)
+})
+
+test('核对进度区分成功失败缺图与排队，失败不声称明细未保存', () => {
+  const {page}=setup({startMatches:async()=>{throw new Error('不应创建任务')}})
+  const ids=['33333333-2222-4333-8444-555555555555','44444444-2222-4333-8444-555555555555','55555555-2222-4333-8444-555555555555','66666666-2222-4333-8444-555555555555']
+  Object.assign(page.state,{batchId,status:'REVIEW',activeTaskId:taskId,tasks:[task('SUCCEEDED'),...ids.map((id,index)=>({id,kind:'MATCH',status:index===1?'FAILED':index===3?'RUNNING':'SUCCEEDED',errorMessage:index===1?'图库连接失败':null,result:{rowId:index+1}}))],rows:ids.map((id,index)=>({id:index+1,rowNo:index+1,version:1,readiness:'UNRESOLVED',matchTaskId:id,matchResult:index===0||index===2?{runId:id,inputRevision:1,status:'OK',image:{status:index===2?'NO_INPUT':'FOUND'}}:null}))})
+  const result=view(page.state)
+  assert.equal(result.complete,false);assert.equal(result.percentage,75)
+  assert.match(result.rows,/成功 1.*失败 1.*待人工处理 1.*处理中 1/)
+  page.state.tasks.at(-1).status='FAILED'
+  const failed=view(page.state);assert.equal(failed.complete,false);assert.equal(failed.failed,true)
+  assert.match(failed.message,/已暂存/);assert.doesNotMatch(failed.message,/未保存明细/)
+})
 async function renderProgress(page) {
   const source=new URL('../src/modules/purchase/PurchaseImportProgress.vue',import.meta.url)
   const {importProgressView}=loadTsModule(new URL('../src/modules/purchase/purchaseImportProgress.ts',import.meta.url))

@@ -12,7 +12,6 @@ import PurchaseImportPreviewDrawer from './PurchaseImportPreviewDrawer.vue'
 import PurchaseImportEditor from './PurchaseImportEditor.vue'
 import PurchaseImportSources from './PurchaseImportSources.vue'
 import PurchaseImportProgress from './PurchaseImportProgress.vue'
-import PurchaseImportReviewAssistant from './PurchaseImportReviewAssistant.vue'
 import { createPurchaseImportModel, consumeImportClearNavigation, rememberImportClearNavigation, importColumns, type ImportRow } from './purchaseImportModel'
 import { purchaseImportApi } from './purchaseImportApi'
 import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
@@ -42,17 +41,11 @@ const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 const reviewVisible = ref(false), previewVisible = ref(false), reviewRow = ref<number | null>(null)
 const reviewTab = ref<'todos' | 'match'>('todos')
-const imageReviewProgress = computed(() => page.imageReviewProgress())
-const imageReviewAvailable = computed(() => state.rows.some(row => row.readiness !== 'READY' && !page.rowLocked(row)))
+const pendingProductCount = computed(() => state.rows.filter(row => row.readiness !== 'READY' && !page.rowLocked(row)).length)
 const creationEnabled = ref(false), creationLoading = ref(false), creationError = ref('')
 const pendingReview = ref(false)
-function review(row?: ImportRow) { reviewTab.value = 'todos'; reviewRow.value = row?.id ?? null; reviewVisible.value = true }
-async function startImageReview() {
-  if (await page.startImageReview()) {
-    reviewTab.value = 'match'; reviewRow.value = state.rows.find(row => row.readiness !== 'READY' && !page.rowLocked(row))?.id ?? null; reviewVisible.value = true
-  }
-}
-async function preview() { if(await page.previewDrafts()) previewVisible.value = true }
+function review(row?: ImportRow, tab: 'todos' | 'match' = 'todos') { reviewTab.value = tab; reviewRow.value = row?.id ?? state.rows.find(item => item.readiness !== 'READY' && !page.rowLocked(item))?.id ?? state.rows[0]?.id ?? null; reviewVisible.value = true }
+async function preview() { if(await page.previewDrafts()) { reviewVisible.value = false; previewVisible.value = true } }
 let active = true, refsSequence = 0, creationSequence = 0, localSequence = 0, defaultsAllowed = !clearedOnEntry
 async function loadCreationCapability() {
   const request = ++creationSequence, batch = state.batchId
@@ -193,7 +186,10 @@ async function openLocalDraft() {
   defaultsAllowed = !restored && !clearedOnEntry
   if (!restored) { state.header.orderDate = clearedOnEntry ? null : todayIn(country.timezone); await loadRouteBatch() }
   else if (state.batchId && !page.grid.hasChanges() && !state.clearPending) await page.loadBatch(state.batchId)
-  if (active && request === localSequence) await loadReferences()
+  if (active && request === localSequence) {
+    await loadReferences()
+    if (active && request === localSequence && state.status === 'REVIEW' && !state.imageReviewError) await page.startImageReview()
+  }
 }
 onMounted(() => { void openLocalDraft() })
 watch(() => route.query.batchId, () => {
@@ -245,7 +241,7 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
       <PurchaseImportSources :page="page" />
       <PurchaseImportProgress v-if="!dialogVisible" :page="page" />
       <p class="table-hint">点击单元格或铅笔编辑草稿；完成编辑只切换视图，点击上传后提交校验。</p>
-      <div v-if="state.rows.length" class="workflow-actions"><el-button :loading="imageReviewProgress.running" :disabled="importDisabled || page.headerDirty() || imageReviewProgress.running || !imageReviewAvailable" @click="startImageReview">AI图文核对</el-button><span v-if="imageReviewProgress.total" role="status" aria-live="polite" class="field-hint">{{ imageReviewProgress.running ? '核对处理中' : '任务已结束，请查看核对结果' }} {{ imageReviewProgress.completed }} / {{ imageReviewProgress.total }} 行</span><el-button :disabled="importDisabled" @click="review()">核对商品</el-button><PurchaseImportReviewAssistant :page="page" @products="review()" @preview="preview" /><el-button :disabled="importDisabled || page.headerDirty()" @click="preview">预览采购草稿</el-button><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>
+      <div v-if="state.rows.length" class="workflow-actions"><el-badge :value="pendingProductCount" :max="9999" class="pending-product-trigger"><el-button type="danger" :disabled="importDisabled" :aria-label="`待确定是否为新商品，${pendingProductCount}行待确认`" @click="review(undefined, 'match')">待确定是否为新商品</el-button></el-badge><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>
       <p v-if="state.rows.length" class="table-hint">保存后生成对应采购单草稿及明细，并保留商品、原文件和费用来源关联。资料待核对时会提示具体原因。</p>
       <el-alert v-if="creationError" type="error" :closable="false" class="import-alert"><template #title>采购单保存暂不可用：{{ creationError }}</template><el-button link @click="loadCreationCapability">重新读取保存能力</el-button></el-alert>
       <p v-else-if="state.batchId && !creationEnabled && !creationLoading" class="table-hint">当前环境尚未启用保存采购单，可先完成资料核对。</p>
@@ -253,7 +249,7 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
       <section v-if="state.groups.length" class="saved-orders" aria-label="采购单保存结果"><h3>采购单保存结果</h3><div v-for="group in state.groups" :key="group.id"><strong>{{ group.sourceOrderNo }}</strong><router-link v-if="group.orderId" :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || `采购单 ${group.orderId}` }}</router-link><span>{{ purchaseOrderSaveStatus(group) }}</span><el-button v-if="group.orderId || group.createIntent" link :disabled="page.busy()" @click="page.refreshCreation(group)">查询原保存结果</el-button><span v-if="group.errorMessage">{{ group.errorMessage }}</span></div></section>
     </section>
 
-    <PurchaseImportReviewDialog v-if="state.batchId" v-model="reviewVisible" :page="page" :row-id="reviewRow" :initial-tab="reviewTab" />
+    <PurchaseImportReviewDialog v-if="state.batchId" v-model="reviewVisible" :page="page" :row-id="reviewRow" :initial-tab="reviewTab" @preview="preview" />
     <PurchaseImportPreviewDrawer v-if="state.batchId" v-model="previewVisible" :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" :creation-enabled="creationEnabled" :creation-loading="creationLoading" :creation-error="creationError" @save="saveOrders" @pending-review="pendingReview = $event" />
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
@@ -279,6 +275,7 @@ h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 24px; }
 .field-hint, .table-hint { color: var(--el-text-color-secondary); font-size: 12px; line-height: 20px; }
 .import-command { display: flex; justify-content: space-between; align-items: center; gap: 20px; p { margin: 5px 0 0; color: var(--el-text-color-secondary); font-size: 13px; } }
 .workflow-actions { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0; }
+.pending-product-trigger { margin: 7px 8px 0 0; }
 .save-orders-button { margin-left:auto; }
 .saved-orders { margin-top:14px;border-top:1px solid var(--el-border-color-light);padding-top:12px;font-size:13px; }
 .saved-orders h3 { margin:0 0 8px;font-size:14px; }

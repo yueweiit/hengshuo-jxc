@@ -4,7 +4,7 @@ import type { PurchaseImportModel } from './purchaseImportModel'
 import { importProgressView } from './purchaseImportProgress'
 const props = defineProps<{ page: PurchaseImportModel }>()
 const display = computed(() => importProgressView(props.page.state))
-const steps = ['上传文件', '读取文件', '解析明细', '校验与照片', '保存明细', '暂存完成']
+const steps = computed(() => ['上传文件', '读取文件', '解析明细', '校验与照片', '保存明细', ...(props.page.state.imageReviewEnabled ? ['AI图文核对', '待人工确认'] : ['暂存完成'])])
 </script>
 <template>
   <section v-if="display" class="import-progress" role="status" aria-live="polite" :aria-label="`导入进度：${display.title}`">

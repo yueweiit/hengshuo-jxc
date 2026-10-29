@@ -1,13 +1,14 @@
 import { shallowRef, type ShallowRef } from 'vue'
 import type { ImportRow, ImportValues, MatchInputs, ImportDraftGroup, FeeReviewInput, PurchaseImportApi } from '@/modules/purchase/purchaseImportModel'
 import { importColumns, isBatchId, importRecord as record, importPositiveId as positiveId } from '@/modules/purchase/purchaseImportModel'
+import { imageReviewProgress as reviewProgress, imageReviewRows } from '@/modules/purchase/purchaseImportProgress'
 interface Dependencies {
-  state: { batchId: string | null; rows: ImportRow[]; groups: ImportDraftGroup[]; tasks: import('./purchaseImportModel').ImportTask[]; version: number; success: string; edit: unknown }; api: PurchaseImportApi; busy: () => boolean; headerDirty: () => boolean; rowLocked: (row: ImportRow) => boolean
+  state: { batchId: string | null; rows: ImportRow[]; groups: ImportDraftGroup[]; tasks: import('./purchaseImportModel').ImportTask[]; version: number; success: string; error: string; imageReviewError: string; edit: unknown }; api: PurchaseImportApi; busy: () => boolean; headerDirty: () => boolean; rowLocked: (row: ImportRow) => boolean
   failure: (error: unknown) => void; newKey: () => string; loadBatch: (id: string) => Promise<boolean>
   saveHeader: () => Promise<boolean>
   write: (flag: 'saving', request: () => Promise<unknown>, apply: (response: unknown) => void) => Promise<boolean>
   readRow: (value: unknown) => ImportRow; readGroup: (value: unknown) => ImportDraftGroup
-  readBatch: (value: unknown) => Parameters<Dependencies['applyBatch']>[0]; applyBatch: (batch: import('./purchaseImportModel').ImportBatch) => void
+  readBatch: (value: unknown) => Parameters<Dependencies['applyBatch']>[0]; applyBatch: (batch: import('./purchaseImportModel').ImportBatch, preserveDraft?: boolean) => void
 }
 export function purchaseOrderSaveStatus(group: ImportDraftGroup) {
   if (group.orderId) return ({ VERIFIED:'已保存，读回核对一致', DIFFERENT:'已保存，采购单与确认内容有差异，请核对', READ_FAILED:'已保存，读回核对失败，请重试读取' } as Record<string,string>)[group.verifyStatus] ?? '已保存，读回待核实'
@@ -32,17 +33,18 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     return write('saving', () => api.createProduct!(state.batchId!, { ...row }, request, key), response => applyReview(row, response))
   }
   const matchKeys = new Map<string, string>()
-  function imageReviewProgress() {
-    const ids = new Set(state.rows.map(row => row.matchTaskId).filter(Boolean))
-    const tasks = state.tasks.filter(task => task.kind === 'MATCH' && ids.has(task.id))
-    const active = tasks.filter(task => ['QUEUED', 'RUNNING'].includes(task.status)).length
-    return { total: tasks.length, completed: tasks.length - active, running: active > 0 }
-  }
+  const imageReviewProgress = () => reviewProgress(state)
   async function startImageReview() {
-    if (imageReviewProgress().running) return false
-    const ids = state.rows.filter(row => row.readiness !== 'READY' && !rowLocked(row)).map(row => row.id)
-    if (!ids.length) { failure(new Error('没有尚待确认的商品行')); return false }
-    return startMatches(ids)
+    if (!api.startMatches || busy() || state.edit) return false
+    const ids = imageReviewRows(state).filter(row => row.readiness !== 'READY'
+      && (!row.matchTaskId || row.matchResult && row.matchResult.inputRevision !== row.version)
+      && !state.tasks.some(task => task.id === row.matchTaskId && ['QUEUED', 'RUNNING'].includes(task.status))).map(row => row.id)
+    if (!ids.length) return false
+    const batch = state.batchId
+    state.imageReviewError = ''
+    const saved = await startMatches(ids, true)
+    if (state.batchId === batch && !saved) state.imageReviewError = state.error || '核对任务尚未登记，请核对后重试'
+    return saved
   }
   async function saveMatchInputs(row: ImportRow, input: MatchInputs) {
     if (!state.batchId || busy() || state.edit || headerDirty() || rowLocked(row)) return false
@@ -51,14 +53,14 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     const values = Object.fromEntries(importColumns.map(column => [column.key, row[column.key]])) as ImportValues
     return write('saving', () => api.saveRow(state.batchId!, row, values, normalized), response => applyReview(row, response))
   }
-  async function startMatches(rowIds: number[]) {
-    if (!api.startMatches || !state.batchId || busy() || state.edit || headerDirty() || !rowIds.length || new Set(rowIds).size !== rowIds.length || rowIds.some(id => !state.rows.some(row => row.id === id && !rowLocked(row)))) return false
+  async function startMatches(rowIds: number[], useSavedInputs = false) {
+    if (!api.startMatches || !state.batchId || busy() || state.edit || (!useSavedInputs && headerDirty()) || !rowIds.length || new Set(rowIds).size !== rowIds.length || rowIds.some(id => !state.rows.some(row => row.id === id && !rowLocked(row)))) return false
     if (state.tasks.some(task => ['MATCH', 'EXPLAIN'].includes(task.kind || '') && ['QUEUED', 'RUNNING'].includes(task.status) && rowIds.some(id => state.rows.find(row => row.id === id)?.matchTaskId === task.id || task.result?.rowId === id))) return false
     const signature = JSON.stringify([state.batchId, state.version, rowIds])
     if (!matchKeys.has(signature)) matchKeys.set(signature, newKey())
     return write('saving', () => api.startMatches!(state.batchId!, state.version, rowIds, matchKeys.get(signature)!), response => {
       if (!record(response) || !Array.isArray(response.taskIds) || response.taskIds.length !== rowIds.length || response.taskIds.some(id => !isBatchId(id))) throw new Error('后端未确认候选任务')
-      applyBatch(readBatch(response)); matchKeys.delete(signature); state.success = '候选任务已登记，请等待结果并人工核对'
+      applyBatch(readBatch(response), useSavedInputs); matchKeys.delete(signature); state.imageReviewError = ''; state.success = 'AI图文核对已登记，请查看导入进度'
     })
   }
   async function explainMatch(row: ImportRow) {

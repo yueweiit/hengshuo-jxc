@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>采购自动核对隔离验证</title><div id="app"></div>
+<script type="module">
+import { createApp, h } from 'vue'
+import { createPinia } from 'pinia'
+import { createRouter, createWebHistory } from 'vue-router'
+import ElementPlus from 'element-plus'
+import * as icons from '@element-plus/icons-vue'
+import 'element-plus/dist/index.css'
+import Workspace from '@/modules/purchase/PurchaseImportWorkspace.vue'
+import { useCountryStore } from '@/stores/country'
+import { useUserStore } from '@/stores/user'
+const app=createApp({render:()=>h(Workspace,{downloading:false,downloadError:''})})
+app.use(createPinia());app.use(ElementPlus)
+for(const [name,component] of Object.entries(icons))app.component(name,component)
+const country=useCountryStore();country.available=[{id:101,name:'隔离测试国家',currency:'USD',timezone:'Asia/Shanghai'}];country.currentId=101
+const user=useUserStore();user.user={id:7};user.token='isolated-fixture';user.permissions=['*']
+const router=createRouter({history:createWebHistory(),routes:[{path:'/:pathMatch(.*)*',component:{render:()=>h('div')}}]})
+app.use(router);await router.isReady();app.mount('#app')
+</script></html>

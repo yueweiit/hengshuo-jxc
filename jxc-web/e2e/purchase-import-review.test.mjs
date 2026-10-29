@@ -7,7 +7,7 @@ import { chromium, expect } from '@playwright/test'
 
 test('真实核对组件桌面/窄屏可操作，预览后才确认写入',async()=>{
  const root=fileURLToPath(new URL('../..',import.meta.url))
- const server=await createServer({configFile:false,root:fileURLToPath(new URL('./fixtures',import.meta.url)),cacheDir:`${root}/runtime/review-verification/vite-cache`,plugins:[vue()],resolve:{alias:{'@':fileURLToPath(new URL('../src',import.meta.url))}},server:{host:'127.0.0.1',port:0,fs:{allow:[root,'C:/project/jxc/jxc-web/node_modules']}}})
+ const server=await createServer({configFile:false,root:fileURLToPath(new URL('./fixtures',import.meta.url)),cacheDir:`${root}/runtime/review-verification/vite-cache`,optimizeDeps:{entries:['purchase-import-review.html']},plugins:[vue()],resolve:{alias:{'@':fileURLToPath(new URL('../src',import.meta.url))}},server:{host:'127.0.0.1',port:0,fs:{allow:[root,'C:/project/jxc/jxc-web/node_modules']}}})
  await server.listen();let browser
  try{
   browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[]
