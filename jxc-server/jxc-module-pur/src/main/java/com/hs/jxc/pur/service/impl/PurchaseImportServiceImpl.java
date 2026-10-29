@@ -77,16 +77,22 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
         Object source=out.get("sourceOrderNo");if(source!=null&&source.toString().length()>100)throw Inputs.bad("采购单号不能超过100字");return out;
     }
     public Map<String,Object> upload(RequestContext ctx,String name,byte[] bytes,Map<String,Object> input,UUID existing,String key){
+        return upload(ctx,name,bytes,input,existing,key,Map.of());
+    }
+    private Map<String,Object> upload(RequestContext ctx,String name,byte[] bytes,Map<String,Object> input,UUID existing,String key,Map<String,Object> options){
         if(!workerEnabled)throw new ApiException(503,"PARSER_DISABLED","采购解析后台尚未启用，文件未导入；请联系管理员完成受限桥接配置");
         if(name==null||!name.toLowerCase(Locale.ROOT).endsWith(".xlsx"))throw Inputs.bad("请上传.xlsx采购模板");
         var h=tx.execute(s->{Access a=access(ctx,true);if(existing!=null){var current=map(batch(a,existing,false).get("header"));if(!input.isEmpty()&&!sameHeader(current,stagingHeader(input)))throw Inputs.conflict();return current;}return stagingHeader(input);});
         var prepared=assets.prepare(ctx,AttachmentAssetService.Policy.PURCHASE_SOURCE,name,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",bytes);
         return tx.execute(s->{Access a=access(ctx,true);var checked=stagingHeader(h);requireHeaderAccess(a,checked);var intent=new LinkedHashMap<String,Object>();if(!input.isEmpty())intent.put("header",checked);intent.put("fileSha256",prepared.sha256());intent.put("fileName",name);intent.put("batchId",existing==null?null:existing.toString());
+            if(!options.isEmpty())intent.put("parseOptions",options);
             return commands.execute(ctx,"POST",BASE,key,intent,input.isEmpty()?null:bookId(h),()->{
+                if(options.containsKey("correctedFrom")){var origin=map(options.get("correctedFrom"));var original=batch(a,UUID.fromString(origin.get("batchId").toString()),true);if(number(original,"version")!=Inputs.id(origin.get("batchVersion")))throw Inputs.conflict();}
                 UUID id=existing==null?UUID.randomUUID():existing;
                 if(existing==null)mapper.insertBatch(a.requireCountry(),id,json.write(checked),a.userId());
                 var b=batch(a,id,true);if(existing!=null&&!sameHeader(map(b.get("header")),checked))throw Inputs.conflict();
                 long asset=assets.register(ctx,prepared);long source=PurchaseRows.one(mapper.insertSource(a.requireCountry(),id,asset,name,prepared.sha256()));
+                if(!options.isEmpty()&&mapper.setSourceParseOptions(json.write(options),a.requireCountry(),source)!=1)throw Inputs.conflict();
                 UUID task=UUID.randomUUID();mapper.insertParseTask(task,a.requireCountry(),id,source,number(b,"version"),prepared.sha256(),a.userId(),json.write(Map.of("userId",a.userId(),"tokenHash",ctx.tokenHash())));
                 mapper.markBatchParsing(a.requireCountry(),id);
                 audit.append(ctx,"PUR_IMPORT_UPLOAD","PURCHASE_IMPORT",number(b,"id"),null,Map.of("sourceId",source,"sha256",prepared.sha256()));var result=snapshot(a,id);result.put("taskId",task.toString());return result;
@@ -94,6 +100,32 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
         });
     }
     public Map<String,Object> get(RequestContext ctx,UUID id){return tx.execute(s->snapshot(access(ctx,false),id));}
+    private Map<String,Object> correctionSource(Access a,UUID id,long sourceId){
+        batch(a,id,false);var source=mapper.selectSources(a.requireCountry(),id).stream().filter(r->number(r,"id")==sourceId).findFirst().orElseThrow(ApiException::notFound);
+        if(!"READY".equals(source.get("status"))||!"docling-n8n-supplier-v1".equals(source.get("parser_version"))||!"XLSX".equals(source.get("origin")))throw Inputs.bad("仅已成功解析的供应商原文件可创建纠正批次");return source;
+    }
+    public Map<String,Object> sourceMapping(RequestContext ctx,UUID id,long sourceId){return tx.execute(s->{
+        Access a=access(ctx,false);var source=correctionSource(a,id,sourceId);var lines=new ArrayList<Map<String,Object>>();var raw=new LinkedHashMap<String,Map<String,Object>>();var sheets=new LinkedHashSet<String>();
+        for(var row:mapper.selectRows(a.requireCountry(),id))if(Objects.equals(row.get("source_id"),source.get("id"))){
+            String sheet=Objects.toString(row.get("source_sheet"),"");if(sheet.isBlank())throw Inputs.bad("原工作表依据缺失，不能生成纠正建议");sheets.add(sheet);
+            var refs=map(map(row.get("formula_provenance")).get("sourceCells"));if(refs.get("purchaseQty")==null)throw Inputs.bad("原数量单元格依据缺失，不能生成纠正建议");var cells=new LinkedHashMap<String,Object>();for(String field:FIELDS)if(!field.equals("photo"))cells.put(field,refs.get(field));
+            lines.add(Map.of("sourceRow",row.get("source_row"),"cells",cells));var originals=map(row.get("original_values"));for(var entry:originals.entrySet())if(entry.getKey().matches("[A-Z]{1,3}")&&entry.getValue()!=null){String ref=entry.getKey()+row.get("source_row");raw.put(sheet+":"+ref,Map.of("sheet",sheet,"cell",ref,"value",entry.getValue().toString()));}
+        }
+        if(lines.isEmpty()||sheets.size()!=1)throw Inputs.bad("请先核实单一工作表及其原始明细来源");
+        var ignored=new ArrayList<Map<String,Object>>();for(var warning:list(json.read(source.get("warnings").toString(),List.class)))if("SUPPLIER_ROW_EXCLUDED".equals(warning.get("code"))&&warning.get("sourceRow")!=null)ignored.add(Map.of("sourceRow",warning.get("sourceRow"),"reason",warning.get("message")));
+        var mapping=Map.of("format","SupplierMappingV1","fileSha256",source.get("file_sha256"),"sheet",sheets.iterator().next(),"needsReview",false,"reasons",List.of("根据此前保存的原格依据生成建议，请核对；确认后保留原批次并创建纠正批次"),"ignoredRows",ignored,"lines",lines);
+        return Map.of("mapping",mapping,"sourceCells",new ArrayList<>(raw.values()),"batchVersion",batch(a,id,false).get("version"));
+    });}
+    public Map<String,Object> correctSource(RequestContext ctx,UUID id,long sourceId,Map<String,Object> input,String key){
+        if(!input.keySet().equals(Set.of("batchVersion","mappingOverrides")))throw Inputs.bad("只接受当前批次版本和确认后的原格映射");long version=Inputs.id(input.get("batchVersion"));var overrides=map(input.get("mappingOverrides"));
+        if(!overrides.keySet().equals(Set.of("mapping","specLabels","confirm"))||!Boolean.TRUE.equals(overrides.get("confirm"))||!(overrides.get("specLabels") instanceof Map<?,?>)||json.write(overrides).length()>4*1024*1024)throw Inputs.bad("请明确确认原格映射和规格标签");
+        var mapping=map(overrides.get("mapping"));var source=tx.execute(s->{Access a=access(ctx,true);return correctionSource(a,id,sourceId);});
+        if(!Objects.equals(source.get("file_sha256"),mapping.get("fileSha256"))||!"SupplierMappingV1".equals(mapping.get("format")))throw Inputs.bad("纠正映射与原文件来源不一致");String sheet=Inputs.required(mapping,"sheet");
+        if(list(json.read(source.get("sheets").toString(),List.class)).stream().noneMatch(item->sheet.equals(item.get("name"))&&"PURCHASE".equals(item.get("role"))))throw Inputs.bad("纠正工作表不属于当前采购来源");
+        var file=content(ctx,id,sourceId,false);if(!AttachmentObjectStore.sha256(file.bytes()).equals(source.get("file_sha256")))throw Inputs.bad("原文件哈希已变化");
+        var header=tx.execute(s->map(batch(access(ctx,true),id,false).get("header")));
+        return upload(ctx,file.fileName(),file.bytes(),header,null,key,Map.of("sheet",sheet,"mappingOverrides",overrides,"correctedFrom",Map.of("batchId",id.toString(),"sourceId",sourceId,"batchVersion",version)));
+    }
     Map<String,Object> snapshot(Access a,UUID id){
         var b=batch(a,id,false);var out=new LinkedHashMap<String,Object>();out.put("batchId",id.toString());out.put("version",b.get("version"));out.put("status",b.get("status"));out.put("sourceStatus",b.get("source_status"));out.put("header",map(b.get("header")));
         out.put("rows",mapper.selectRows(a.requireCountry(),id).stream().map(this::rowDto).toList());out.put("groups",mapper.selectGroups(a.requireCountry(),id).stream().map(this::groupDto).toList());
@@ -102,7 +134,7 @@ public class PurchaseImportServiceImpl implements PurchaseImportService {
     }
     Map<String,Object> groupDto(Map<String,Object> row){var out=new LinkedHashMap<String,Object>();out.putAll(PurchaseImportTraceServiceImpl.view(this,row));out.put("id",row.get("id"));out.put("version",row.get("version"));out.put("sourceOrderNo",row.get("source_order_no"));out.put("header",map(row.get("effective_header")));out.put("createStatus",row.get("create_status"));out.put("verifyStatus",row.get("verify_status"));out.put("previewToken",row.get("preview_token")==null?null:row.get("preview_token").toString());out.put("orderId",row.get("target_order_id"));out.put("errorCode",row.get("error_code"));out.put("errorMessage",row.get("error_message"));out.put("preview",row.get("preview_snapshot")==null?null:map(row.get("preview_snapshot")).get("preview"));out.put("errors",row.get("preview_snapshot")==null?List.of():map(row.get("preview_snapshot")).get("errors"));if(row.get("outer_key")!=null&&row.get("create_request")!=null)out.put("createIntent",Map.of("key",row.get("outer_key").toString(),"request",map(row.get("create_request"))));if(row.get("result_snapshot")!=null){var result=map(row.get("result_snapshot"));out.put("docNo",result.get("docNo"));out.put("orderStatus",result.get("status"));}return out;}
     Map<String,Object> taskDto(Map<String,Object> row){var out=new LinkedHashMap<String,Object>();for(String k:List.of("id","kind","phase","status","attempt_count","error_code","error_message","source_id","file_name"))out.put(camel(k),row.get(k)==null?null:row.get(k) instanceof UUID?row.get(k).toString():row.get(k));out.put("progress",row.get("progress_snapshot")==null?null:map(row.get("progress_snapshot")));if(row.get("result")!=null){var result=map(row.get("result"));out.put("result",Set.of("MATCH","EXPLAIN").contains(row.get("kind"))?result.get("public"):result);}return out;}
-    private Map<String,Object> sourceDto(Map<String,Object> r){var out=new LinkedHashMap<String,Object>();for(String k:List.of("id","file_name","file_sha256","parser_version","status","origin","error_code","error_message"))out.put(camel(k),r.get(k));for(String k:List.of("sheets","warnings","associations"))out.put(k,json.read(r.get(k).toString(),List.class));return out;}
+    private Map<String,Object> sourceDto(Map<String,Object> r){var out=new LinkedHashMap<String,Object>();for(String k:List.of("id","file_name","file_sha256","parser_version","status","origin","error_code","error_message"))out.put(camel(k),r.get(k));for(String k:List.of("sheets","warnings","associations"))out.put(k,json.read(r.get(k).toString(),List.class));if(r.get("corrected_from")!=null)out.put("correctedFrom",map(r.get("corrected_from")));return out;}
     List<Map<String,Object>> sourceReviews(Access a,UUID id){return mapper.selectSources(a.requireCountry(),id).stream().map(this::sourceDto).toList();}
     static Map<String,Object> valueDto(Map<String,Object> row){var out=new LinkedHashMap<String,Object>();for(int i=0;i<FIELDS.size();i++){Object v=row.get(COLUMNS.get(i));out.put(FIELDS.get(i),v instanceof BigDecimal d?d.toPlainString():v);}return out;}
     Map<String,Object> rowDto(Map<String,Object> row){var out=new LinkedHashMap<String,Object>();out.put("id",row.get("id"));out.put("version",row.get("version"));out.put("rowNo",row.get("row_no"));out.putAll(valueDto(row));for(String k:List.of("source_id","source_sheet","source_row","source_item_key","group_id","target_order_line_id"))out.put(camel(k),row.get(k));for(String field:List.of("matched_product_id","purchase_unit","supplied_product_code","supplied_product_name","supplier_product_code","decision","readiness","confirmed_by","confirmed_at")){Object value=row.get(field);out.put(camel(field),value instanceof java.sql.Timestamp timestamp?timestamp.toInstant().toString():value);}out.put("matchTaskId",row.get("match_task_id")==null?null:row.get("match_task_id").toString());out.put("matchResult",row.get("match_result")==null?null:map(row.get("match_result")));for(String field:List.of("product_snapshot","product_operation"))out.put(camel(field),row.get(field)==null?null:map(row.get(field)));out.put("setupReasons",json.read(row.get("setup_reasons").toString(),List.class));out.put("images",mapper.selectRowImages(row.get("country_id"),row.get("id")).stream().map(this::imageDto).toList());return out;}

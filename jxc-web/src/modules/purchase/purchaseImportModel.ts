@@ -44,8 +44,9 @@ export interface MatchRun { format: 'MatchRunV1'; runId: string; inputRevision: 
 export type ImportRow = ImportValues & Partial<MatchInputs> & { matchTaskId?: string | null; matchResult?: MatchRun | null; id: number; version: number; rowNo: number; groupId?: number | null; targetOrderLineId?: number | null; sourceId?: number; sourceSheet?: string; sourceRow?: number; sourceItemKey?: string; images?: ImportImage[]; batchVersion?: number; matchedProductId?: number | null; purchaseUnit?: string | null; decision?: string; readiness?: string; setupReasons?: string[]; productSnapshot?: Record<string, unknown> | null; productOperation?: { key: string; request: Record<string, unknown>; status: string } | null }
 export interface SupplierMapping { format: string; fileSha256: string; sheet: string; needsReview: boolean; reasons: string[]; ignoredRows: { sourceRow:number; reason:string }[]; lines: { sourceRow:number; cells: Record<string,string | string[] | null> }[] }
 export interface MappingOverrides { mapping:SupplierMapping; specLabels:Record<string,string>; confirm:boolean }
+export interface SourceMappingPreview { mapping:SupplierMapping; sourceCells:{sheet:string;cell:string;value:string}[]; batchVersion:number }
 export interface ImportTask { id: string; sourceId?: number | null; fileName?: string | null; kind?: string; phase?: string; progress?: ImportProgress | null; attemptCount?: number; status: string; errorCode?: string | null; errorMessage?: string | null; result?: { sheets?: string[]; rowId?: number; mapping?: SupplierMapping; sourceCells?: { sheet: string; cell: string; value: string }[]; rows?: number; images?: number; reviewRows?: number; unstagedCandidates?: number } }
-export interface ImportSource { sheets?: SourceReviewSheet[]; id: number; fileName: string; fileSha256: string; status: string; origin?: 'MANUAL_UPLOAD' | 'XLSX'; warnings?: { sourceRow?: number; message: string }[] }
+export interface ImportSource { sheets?: SourceReviewSheet[]; id: number; fileName: string; fileSha256: string; parserVersion?:string; correctedFrom?:{batchId:string;sourceId:number;batchVersion:number}; status: string; origin?: 'MANUAL_UPLOAD' | 'XLSX'; warnings?: { sourceRow?: number; message: string }[] }
 export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE' | null; amount: string | null; currency: string | null; reason: string; confirm: boolean }
 export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
 export interface FeeTodo extends Omit<FeeReviewInput, 'confirm'> { format: 'FeeTodoV1'; todoId: string; sourceRows: ImportSourceRef[]; status: 'PENDING'; reviewStatus: 'UNRESOLVED' | 'CONFIRMED' | 'STALE'; registeredReference: null; targetOrderId: number | null; targetDocNo: string | null; targetReferenceStatus: string }
@@ -54,6 +55,8 @@ export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: numb
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
+  sourceMapping?(batchId:string,sourceId:number):Promise<unknown>
+  correctSource?(batchId:string,sourceId:number,batchVersion:number,input:MappingOverrides,key:string):Promise<unknown>
   saveGrid?(input: GridSaveInput, key: string): Promise<unknown>
   confirmReview?(batchId: string, input: Omit<ReviewProposal, 'batchId'>, key: string): Promise<unknown>
   upload(file: File, batchId: string | null, key: string, progress?: (loaded: number, total: number | null) => void): Promise<unknown>
@@ -410,6 +413,27 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     return saved
   }
   const retryKeys = new Map<string, string>()
+  async function sourceMapping(source: ImportSource): Promise<SourceMappingPreview | null> {
+    if (!api.sourceMapping || !state.batchId || busy() || state.edit || grid.hasChanges()) return null
+    const batch = state.batchId, context = epoch
+    try {
+      const value = await api.sourceMapping(batch,source.id)
+      if (context !== epoch || state.batchId !== batch) return null
+      if (!record(value) || !record(value.mapping) || value.mapping.format !== 'SupplierMappingV1' || value.mapping.fileSha256 !== source.fileSha256 || !Array.isArray(value.mapping.lines) || !value.mapping.lines.length || !Array.isArray(value.sourceCells) || value.batchVersion !== state.version) throw new Error('原格建议不完整或已过期，请重新读取')
+      return value as unknown as SourceMappingPreview
+    } catch(error) { if (context === epoch && state.batchId === batch) failure(error); return null }
+  }
+  async function correctSource(sourceId:number,batchVersion:number,input:MappingOverrides) {
+    if (!api.correctSource || !state.batchId || busy() || state.edit || grid.hasChanges()) return false
+    if (batchVersion !== state.version) { failure(new Error('原批次已变化，请重新核对原列')); return false }
+    const batch = state.batchId, signature = JSON.stringify([batch,sourceId,batchVersion,input])
+    if (!retryKeys.has(signature)) retryKeys.set(signature,newKey())
+    return write('saving',()=>api.correctSource!(batch,sourceId,batchVersion,input,retryKeys.get(signature)!),response=>{
+      const saved=readBatch(response)
+      if (saved.batchId === batch || saved.status !== 'PARSING' || !record(response) || !isBatchId(response.taskId)) throw new Error('后端未确认新的纠正批次')
+      applyBatch(saved,true);state.activeTaskId=response.taskId;retryKeys.delete(signature);state.success='已创建纠正批次，原批次保留；正在从原文件重新读取'
+    })
+  }
   async function retryTask(task: ImportTask, sheet: string | null = null, mappingOverrides?: MappingOverrides) {
     if (!api.retryTask || busy() || state.edit) return false
     ++progressSequence; state.progressReading = false
@@ -541,7 +565,7 @@ export function createPurchaseImportModel(api: PurchaseImportApi, today: string,
     state.groups = []; photoKeys.clear(); reviewKeys.clear()
     clearIntent = null; state.clearing = false; state.clearPending = false; state.clearedBatchId = null
   }
-  return { ...workflow, state, grid, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
+  return { ...workflow, state, grid, images, busy, headerDirty, rowLocked, clearFeedback, failure, loadBatch, importFile, startEdit, selectPhoto, cancelEdit, saveEdit, saveHeader, removeRow, refreshTasks, retryTask, sourceMapping, correctSource, associate, publishPhotos, invalidate, canClear, clearAll, clearBlockReason, confirmReview, exportLocalDraft, restoreLocalDraft }
 
 }
 export type PurchaseImportModel = ReturnType<typeof createPurchaseImportModel>

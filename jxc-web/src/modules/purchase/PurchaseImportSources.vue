@@ -3,10 +3,20 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { http } from '@/api/http'
 import PurchaseImportMappingReviewDialog from './PurchaseImportMappingReviewDialog.vue'
-import type { PurchaseImportModel, ImportTask, ImportRow } from './purchaseImportModel'
+import type { PurchaseImportModel, ImportTask, ImportRow, ImportSource } from './purchaseImportModel'
 
 const props = defineProps<{ page: PurchaseImportModel }>()
+const emit=defineEmits<{corrected:[batchId:string]}>()
 const mappingTask = ref<ImportTask | null>(null), mappingVisible = ref(false)
+const correctionSourceId=ref<number>(),mappingVersion=ref<number>(),mappingLoading=ref(false)
+async function correct(source:ImportSource){
+  mappingLoading.value=true
+  try{const preview=await props.page.sourceMapping(source);if(!preview)return
+    const task=props.page.state.tasks.find(t=>t.kind==='PARSE'&&t.sourceId===source.id)
+    if(!task){props.page.failure(new Error('找不到当前来源的解析任务，请重新读取'));return}
+    mappingTask.value={...task,result:preview};correctionSourceId.value=source.id;mappingVersion.value=preview.batchVersion;mappingVisible.value=true
+  }finally{mappingLoading.value=false}
+}
 const sheets = ref<Record<string, string>>({})
 const { urls: imageUrls, errors: imageErrors } = props.page.images
 const downloading = ref<number | null>(null)
@@ -44,12 +54,14 @@ onBeforeUnmount(clean)
     <div v-for="task in page.state.tasks.filter(item => (!item.kind || item.kind === 'PARSE') && ['FAILED', 'NEEDS_REAUTH', 'STALE'].includes(item.status))" :key="task.id" class="source-task" role="status">
         <span class="source-error">{{ task.errorMessage || '任务未完成，请重新读取原因' }}</span>
         <el-select v-if="task.errorCode === 'SHEET_SELECTION_REQUIRED'" v-model="sheets[task.id]" placeholder="请选择采购工作表" aria-label="采购工作表"><el-option v-for="sheet in task.result?.sheets" :key="sheet" :value="sheet" :label="sheet" /></el-select>
-        <el-button v-if="task.result?.mapping" :disabled="page.busy() || !!page.state.edit" @click="mappingTask=task;mappingVisible=true">核对原列与规格</el-button>
+        <el-button v-if="task.result?.mapping" :disabled="page.busy() || !!page.state.edit" @click="correctionSourceId=undefined;mappingTask=task;mappingVisible=true">核对原列与规格</el-button>
         <el-button :disabled="page.busy() || !!page.state.edit || (task.errorCode === 'SHEET_SELECTION_REQUIRED' && !sheets[task.id])" @click="retry(task)">重试解析</el-button>
     </div>
     <div v-for="source in page.state.sources" :id="`import-source-${source.id}`" :key="source.id" class="source-file">
       <div><strong>{{ source.fileName }}</strong><small>{{ source.origin === 'MANUAL_UPLOAD' ? '手工上传照片' : '原文件' }} SHA256：{{ source.fileSha256 }}</small></div>
       <el-button link type="primary" :loading="downloading === source.id" @click="download(source.id, source.fileName)">下载原文件</el-button>
+      <a v-if="source.correctedFrom" :href="`?batchId=${source.correctedFrom.batchId}`">查看保留的原批次</a>
+      <el-button v-if="source.status==='READY' && source.parserVersion==='docling-n8n-supplier-v1' && source.origin!=='MANUAL_UPLOAD'" link type="primary" :disabled="mappingLoading || page.busy() || !!page.state.edit || page.grid.hasChanges()" @click="correct(source)">纠正原列并保留当前批次</el-button>
       <el-collapse v-if="source.warnings?.length"><el-collapse-item :title="`导入时的来源核对记录（${source.warnings.length}项）`"><p v-for="(warning, index) in source.warnings" :key="index" class="source-warning">{{ warning.sourceRow ? `原第${warning.sourceRow}行：` : '' }}{{ warning.message }}</p></el-collapse-item></el-collapse>
     </div>
     <el-collapse v-if="page.state.rows.some(row => row.images?.length)">
@@ -70,7 +82,7 @@ onBeforeUnmount(clean)
         </div>
       </el-collapse-item>
     </el-collapse>
-    <PurchaseImportMappingReviewDialog v-if="mappingTask" v-model="mappingVisible" :page="page" :task="mappingTask"/>
+    <PurchaseImportMappingReviewDialog v-if="mappingTask" v-model="mappingVisible" :page="page" :task="mappingTask" :correction-source-id="correctionSourceId" :batch-version="mappingVersion" @corrected="emit('corrected',$event)"/>
   </div>
 </template>
 

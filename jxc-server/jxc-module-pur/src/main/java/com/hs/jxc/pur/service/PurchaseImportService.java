@@ -9,6 +9,8 @@ public interface PurchaseImportService {
     Map<String,Object> capabilities(RequestContext ctx);
     Map<String,Object> upload(RequestContext ctx,String name,byte[] bytes,Map<String,Object> input,UUID existing,String key);
     Map<String,Object> get(RequestContext ctx,UUID id);
+    Map<String,Object> sourceMapping(RequestContext ctx,UUID batch,long source);
+    Map<String,Object> correctSource(RequestContext ctx,UUID batch,long source,Map<String,Object> input,String key);
     Map<String,Object> saveRow(RequestContext ctx,UUID id,long rowId,Map<String,Object> input);
     Map<String,Object> saveGrid(RequestContext ctx,Map<String,Object> input,String key);
     Map<String,Object> confirmReview(RequestContext ctx,UUID id,Map<String,Object> input,String key);

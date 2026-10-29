@@ -5,6 +5,8 @@ import type { PurchaseImportApi } from './purchaseImportModel'
 const base = '/pur/order-imports'
 const batchPath = (id: string) => `${base}/${encodeURIComponent(id)}`
 export const purchaseImportApi: PurchaseImportApi = {
+  sourceMapping:(id,sourceId)=>http.get(`${batchPath(id)}/sources/${sourceId}/mapping`,undefined,{silent:true}),
+  correctSource:(id,sourceId,batchVersion,mappingOverrides,key)=>http.post(`${batchPath(id)}/sources/${sourceId}/corrections`,{batchVersion,mappingOverrides},{headers:{'Idempotency-Key':key},silent:true}),
   saveGrid: (input, key) => http.post('/pur/order-imports/grid', input, { headers: { 'Idempotency-Key': key }, silent: true }),
   confirmReview: (id, input, key) => http.post(`${batchPath(id)}/review`, input, { headers: { 'Idempotency-Key': key }, silent: true }),
   upload(file, batchId, key, progress) {

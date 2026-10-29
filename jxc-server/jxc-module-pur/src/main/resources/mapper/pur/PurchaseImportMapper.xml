@@ -63,6 +63,9 @@
     VALUES(#{countryId},#{batchId},#{attachmentId},#{fileName},#{fileSha256},'READY','manual-upload/v1','{"origin":"MANUAL_UPLOAD"}') RETURNING id
   </select>
 
+  <update id="setSourceParseOptions">
+    UPDATE pur_order_import_source SET parse_options=#{options}::jsonb WHERE country_id=#{countryId} AND id=#{id} AND status='PENDING'
+  </update>
   <insert id="insertParseTask">
     INSERT INTO pur_order_import_task(id,country_id,batch_id,source_id,input_revision,input_hash,requested_by,authorization_basis) VALUES(#{id},#{countryId},#{batchId},#{sourceId},#{inputRevision},#{inputHash},#{requestedBy},#{authorizationBasis}::jsonb)
   </insert>
@@ -80,7 +83,7 @@
   </select>
 
   <select id="selectSources" resultType="java.util.LinkedHashMap" useCache="false">
-    SELECT id,file_name,file_sha256,parser_version,status,sheets,warnings,associations,error_code,error_message,coalesce(parse_options-&gt;&gt;'origin','XLSX') AS origin FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id
+    SELECT id,file_name,file_sha256,parser_version,status,sheets,warnings,associations,error_code,error_message,coalesce(parse_options-&gt;&gt;'origin','XLSX') AS origin,parse_options-&gt;'correctedFrom' AS corrected_from FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id
   </select>
 
   <select id="selectTasks" resultType="java.util.LinkedHashMap" useCache="false">

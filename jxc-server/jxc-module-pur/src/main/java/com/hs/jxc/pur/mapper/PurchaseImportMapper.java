@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Param;
 
 /** 采购PurchaseImportMapper：SQL主体位于同名资源XML，参数全部绑定。 */
 public interface PurchaseImportMapper {
+    int setSourceParseOptions(@Param("options") String options,@Param("countryId") long country,@Param("id") long source);
     List<Map<String,Object>> selectClearTasks(@Param("countryId") long country,@Param("batchId") UUID batch);
     List<Long> selectClearAssets(@Param("countryId") long country,@Param("batchId") UUID batch);
     int clearRows(@Param("countryId") long country,@Param("batchId") UUID batch);

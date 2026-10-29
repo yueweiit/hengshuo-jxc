@@ -26,6 +26,8 @@ public class PurchaseImportController {
         return ResponseEntity.accepted().body(ok(imports.upload(ctx(),file.getOriginalFilename(),file.getBytes(),header==null?Map.of():json.readMap(header),batchId,key)));
     }
     @GetMapping("/{batchId}") public ApiEnvelope get(@PathVariable UUID batchId){return ok(imports.get(ctx(),batchId));}
+    @GetMapping("/{batchId}/sources/{sourceId}/mapping") public ApiEnvelope sourceMapping(@PathVariable UUID batchId,@PathVariable long sourceId){return ok(imports.sourceMapping(ctx(),batchId,Inputs.id(sourceId)));}
+    @PostMapping("/{batchId}/sources/{sourceId}/corrections") public ApiEnvelope correctSource(@PathVariable UUID batchId,@PathVariable long sourceId,@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key")String key){return ok(imports.correctSource(ctx(),batchId,Inputs.id(sourceId),body,key));}
     @DeleteMapping("/{batchId}") public ApiEnvelope clear(@PathVariable UUID batchId,@RequestHeader("If-Match")long version,@RequestHeader("Idempotency-Key")String key){return ok(clearing.clear(ctx(),batchId,Inputs.id(version),key));}
     @GetMapping("/{batchId}/clear-status") public ApiEnvelope clearStatus(@PathVariable UUID batchId){return ok(clearing.status(ctx(),batchId));}
     @PostMapping("/{batchId}/review") public ApiEnvelope review(@PathVariable UUID batchId,@RequestBody Map<String,Object> body,@RequestHeader("Idempotency-Key")String key){return ok(imports.confirmReview(ctx(),batchId,body,key));}

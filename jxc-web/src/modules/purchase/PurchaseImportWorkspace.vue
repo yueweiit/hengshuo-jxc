@@ -126,6 +126,7 @@ async function submitImport() {
   }
 }
 async function saveHeader() { if (!disabled.value && selectedRefsValid()) await page.saveHeader() }
+async function correctedBatch(batchId:string){try{await router.replace({query:{...route.query,batchId}})}catch(error){page.failure(new Error(`纠正批次已创建，但地址更新失败：${error instanceof Error?error.message:'请重新读取'}`))}}
 async function saveOrders() {
   if (disabled.value || state.edit || creationLoading.value) return false
   if (pendingReview.value) { page.failure(new Error('预览中还有未保存的表头或费用修改，请先完成核对')); previewVisible.value = true; return false }
@@ -238,7 +239,7 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
       <p v-else class="table-hint" role="status">{{ !localDraft.view.ready ? '正在恢复此浏览器的草稿' : localDraft.view.saving ? '正在保存草稿' : localDraft.view.saved ? '草稿已保存在此浏览器' : '编辑内容会自动保存到此浏览器' }}</p>
       <el-alert v-if="page.headerDirty()" type="warning" title="基础信息尚未保存；文件和来源明细已独立暂存，请补齐后保存基础信息。" :closable="false" show-icon class="import-alert" />
       <el-alert v-if="state.error && !dialogVisible" :title="state.error" type="error" :closable="false" show-icon class="import-alert" />
-      <PurchaseImportSources :page="page" />
+      <PurchaseImportSources :page="page" @corrected="correctedBatch" />
       <PurchaseImportProgress v-if="!dialogVisible" :page="page" />
       <p class="table-hint">点击单元格或铅笔编辑草稿；完成编辑只切换视图，点击上传后提交校验。</p>
       <div v-if="state.rows.length" class="workflow-actions"><el-badge :value="pendingProductCount" :max="9999" class="pending-product-trigger"><el-button type="danger" :disabled="importDisabled" :aria-label="`待确定是否为新商品，${pendingProductCount}行待确认`" @click="review(undefined, 'match')">待确定是否为新商品</el-button></el-badge><span class="field-hint">就绪 {{ state.rows.filter(row => row.readiness === 'READY').length }} / {{ state.rows.length }}</span><el-button type="primary" class="save-orders-button" :disabled="disabled || !!state.edit || creationLoading || !creationEnabled" :loading="state.saving && !state.edit" @click="saveOrders">保存</el-button></div>

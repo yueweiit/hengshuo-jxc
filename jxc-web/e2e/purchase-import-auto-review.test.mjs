@@ -18,13 +18,18 @@ for(const width of [1280,390])test(`自动逐行核对与单一人工入口，${
     const batchId='11111111-2222-4333-8444-555555555555',parseId='22222222-2222-4333-8444-555555555555',runIds=['33333333-2222-4333-8444-555555555555','44444444-2222-4333-8444-555555555555']
     const header={bookId:1,supplierId:2,currency:'USD',orderDate:'2026-10-29',expectedDate:null,paymentTerms:'',prepayRatio:null,termDays:null}
     const rows=[1,2].map(id=>({id,version:1,rowNo:id,sourceId:8,sourceOrderNo:'隔离采购单',sourceSheet:'Sheet1',sourceRow:id+1,photo:null,productSpec:'S',purchaseQty:'1',purchaseUnitPrice:'2',saleUnitPrice:null,saleTotal:null,freight:null,landedUnitCost:null,usdUnitCost:null,usdTotal:null,readiness:'UNRESOLVED',images:[{id:10+id,status:'UNCONFIRMED',sha256:'a'.repeat(64)}]}))
-    let data={batchId,version:1,status:'PARSING',header,rows:[],sources:[{id:8,fileName:'隔离采购.xlsx',fileSha256:'b'.repeat(64),status:'READY'}],tasks:[{id:parseId,kind:'PARSE',sourceId:8,fileName:'隔离采购.xlsx',status:'RUNNING'}],groups:[]},matchRequests=0,decisions=0
+    const correctedId='55555555-2222-4333-8444-555555555555',correctedTask='66666666-2222-4333-8444-555555555555'
+    let data={batchId,version:1,status:'PARSING',header,rows:[],sources:[{id:8,fileName:'隔离采购.xlsx',fileSha256:'b'.repeat(64),parserVersion:'docling-n8n-supplier-v1',status:'READY'}],tasks:[{id:parseId,kind:'PARSE',sourceId:8,fileName:'隔离采购.xlsx',status:'RUNNING'}],groups:[]},matchRequests=0,decisions=0,correctionRequest,originalAtCorrection
     await page.route('**/api/v1/**',async route=>{
       const request=route.request(),path=new URL(request.url()).pathname.slice('/api/v1'.length),method=request.method(),ok=value=>route.fulfill({json:{code:'OK',data:value}})
       if(method==='GET'&&path==='/org/books')return ok([{id:1,name:'隔离账套',baseCurrency:'USD',status:'ACTIVE'}])
       if(method==='GET'&&path==='/md/partners')return ok([{id:2,name:'隔离供应商',status:'ENABLED',settleCurrency:'USD'}])
       if(method==='GET'&&path==='/md/currencies')return ok([{code:'USD',name:'美元',status:'ENABLED'}])
       if(method==='GET'&&path==='/pur/order-imports/capabilities')return ok({draftCreationEnabled:false,recognitionEnabled:true})
+      if(method==='GET'&&path===`/pur/order-imports/${batchId}/sources/8/mapping`)return ok({batchVersion:data.version,sourceCells:[],mapping:{format:'SupplierMappingV1',fileSha256:'b'.repeat(64),sheet:'Sheet1',needsReview:false,reasons:[],ignoredRows:[],lines:[2,3].map(sourceRow=>({sourceRow,cells:{purchaseQty:'E'+sourceRow,purchaseUnitPrice:'H'+sourceRow}}))}})
+      if(method==='POST'&&path===`/pur/order-imports/${batchId}/sources/8/corrections`){correctionRequest=request.postDataJSON();originalAtCorrection=structuredClone(data);data={batchId:correctedId,version:1,status:'PARSING',header,rows:[],sources:[],tasks:[{id:correctedTask,kind:'PARSE',status:'QUEUED'}],groups:[]};return ok({...data,taskId:correctedTask})}
+      if(method==='GET'&&path===`/pur/order-imports/${correctedId}`)return ok(data)
+      if(method==='GET'&&path===`/pur/order-imports/tasks/${correctedTask}`)return ok(data.tasks[0])
       if(method==='POST'&&path==='/pur/order-imports')return ok({...data,taskId:parseId})
       if(method==='GET'&&path===`/pur/order-imports/tasks/${parseId}`){data={...data,status:'REVIEW',rows,tasks:[{...data.tasks[0],status:'SUCCEEDED',result:{rows:2,images:2}}]};return ok(data.tasks[0])}
       if(method==='GET'&&path===`/pur/order-imports/${batchId}`)return ok(data)
@@ -70,5 +75,13 @@ for(const width of [1280,390])test(`自动逐行核对与单一人工入口，${
     await page.locator('.workflow-actions').scrollIntoViewIfNeeded();await page.screenshot({path:`${evidence}/entry-${width}.png`,animations:'disabled'})
     const buttonBox=await page.getByRole('button',{name:'待确定是否为新商品，1行待确认',exact:true}).boundingBox(),badgeBox=await page.locator('.pending-product-trigger .el-badge__content').boundingBox()
     assert.ok(badgeBox.x>buttonBox.x&&badgeBox.y<buttonBox.y+8);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[])
+    await page.getByRole('button',{name:'纠正原列并保留当前批次',exact:true}).click()
+    const mappingDialog=page.getByRole('dialog',{name:'核对供应商原列与规格',exact:true});await expect(mappingDialog).toContainText('当前批次保留')
+    await mappingDialog.getByRole('textbox',{name:'拆分数量列',exact:true}).fill('B,C,D');await mappingDialog.getByRole('button',{name:'按数量列拆分建议',exact:true}).click()
+    await expect(mappingDialog.getByRole('textbox',{name:'B列规格',exact:true})).toBeVisible()
+    await page.screenshot({path:`${evidence}/correction-${width}.png`,animations:'disabled'});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))
+    await mappingDialog.getByText('我已核对原列对应、规格和排除行，按上述来源重新解析',{exact:true}).click();await mappingDialog.getByRole('button',{name:'确认字段并创建纠正批次',exact:true}).click()
+    await expect.poll(()=>new URL(page.url()).searchParams.get('batchId')).toBe(correctedId)
+    assert.equal(correctionRequest.mappingOverrides.mapping.lines.length,6);assert.deepEqual(correctionRequest.mappingOverrides.specLabels,{});assert.equal(originalAtCorrection.rows.length,2);assert.equal(data.rows.length,0);assert.equal(data.batchId,correctedId);assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[])
   }finally{await browser?.close();await server.close()}
 })
