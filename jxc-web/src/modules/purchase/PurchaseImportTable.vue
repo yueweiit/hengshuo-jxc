@@ -58,7 +58,7 @@ function saveCell() { if (props.page.state.edit?.field != null) return props.pag
         </button>
       </template>
     </el-table-column>
-    <el-table-column label="商品核对" width="130" fixed="right"><template #default="{ row }"><el-button link :type="row.readiness === 'READY' ? 'success' : 'primary'" :disabled="disabled || !!page.state.edit || page.grid.hasChanges()" :aria-label="`核对第${row.rowNo}行商品`" @click="emit('review',row)">{{ row.readiness === 'READY' ? '就绪' : row.readiness === 'NEEDS_SETUP' ? '待补资料' : '未核对' }}</el-button></template></el-table-column>
+    <el-table-column label="商品核对" width="130" fixed="right"><template #default="{ row }"><el-button link :type="row.readiness === 'READY' ? 'success' : 'primary'" :disabled="disabled || !!page.state.edit || page.grid.hasChanges()" :aria-label="`核对第${row.rowNo}行商品`" @click="emit('review',row)">{{ row.readiness === 'READY' ? '已确认' : row.readiness === 'NEEDS_SETUP' ? '待补资料' : '未核对' }}</el-button></template></el-table-column>
     <el-table-column label="操作" width="112" fixed="right" align="center">
       <template #default="{ row }">
         <div class="import-row-actions">

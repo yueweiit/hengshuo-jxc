@@ -40,11 +40,12 @@ const importDisabled = computed(() => page.busy() || !!state.edit || page.grid.h
 const disabled = computed(() => page.busy() || refsLoading.value || !!refsError.value || page.grid.hasChanges())
 const headerLocked = computed(() => state.rows.some(row => !!row.targetOrderLineId) || state.groups.some(group => ['UNKNOWN', 'CREATING'].includes(group.createStatus)))
 const reviewVisible = ref(false), previewVisible = ref(false), reviewRow = ref<number | null>(null)
-const reviewTab = ref<'todos' | 'match'>('todos')
+const reviewTab = ref<'todos' | 'match' | 'product'>('todos')
 const pendingProductCount = computed(() => state.rows.filter(row => row.readiness !== 'READY' && !page.rowLocked(row)).length)
 const creationEnabled = ref(false), creationLoading = ref(false), creationError = ref('')
 const pendingReview = ref(false)
-function review(row?: ImportRow, tab: 'todos' | 'match' = 'todos') { reviewTab.value = tab; reviewRow.value = row?.id ?? state.rows.find(item => item.readiness !== 'READY' && !page.rowLocked(item))?.id ?? state.rows[0]?.id ?? null; reviewVisible.value = true }
+function review(row?: ImportRow, tab: 'todos' | 'match' | 'product' = 'todos') { reviewTab.value = tab; reviewRow.value = row?.id ?? state.rows.find(item => item.readiness !== 'READY' && !page.rowLocked(item))?.id ?? state.rows[0]?.id ?? null; reviewVisible.value = true }
+function reviewPreviewRow(row: ImportRow) { previewVisible.value = false; review(row, 'product') }
 async function preview() { if(await page.previewDrafts()) { reviewVisible.value = false; previewVisible.value = true } }
 let active = true, refsSequence = 0, creationSequence = 0, localSequence = 0, defaultsAllowed = !clearedOnEntry
 async function loadCreationCapability() {
@@ -223,6 +224,8 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
           <el-form-item label="付款条件"><el-input v-model="state.header.paymentTerms" maxlength="200" placeholder="填写付款条件" aria-label="付款条件" /></el-form-item>
           <el-form-item label="预付比例"><div class="ratio-field"><el-input v-model="state.header.prepayRatio" inputmode="decimal" placeholder="0 至 1" aria-label="预付比例" /><span class="field-hint">0～1，例如 0.3 表示 30%</span></div></el-form-item>
           <el-form-item label="账期天数"><el-input-number v-model="state.header.termDays" :min="0" :max="2147483647" :precision="0" controls-position="right" placeholder="天数" aria-label="账期天数" /></el-form-item>
+          <el-form-item label="税率"><div class="ratio-field"><el-input v-model="state.header.taxRate" inputmode="decimal" placeholder="未知请留空" aria-label="税率" clearable /><span class="field-hint">0～1，例如 0.13 表示 13%；作为各行默认税率</span></div></el-form-item>
+          <el-form-item label="单价口径"><el-select v-model="state.header.priceTaxBasis" placeholder="请核对供应商单价" aria-label="单价口径" clearable :value-on-clear="null"><el-option value="EXCLUSIVE" label="已核对：未含税单价" /></el-select></el-form-item>
         </div>
       </el-form>
     </section>
@@ -251,7 +254,7 @@ onBeforeUnmount(() => { localDraft.stop(); active = false; ++refsSequence; ++cre
     </section>
 
     <PurchaseImportReviewDialog v-if="state.batchId" v-model="reviewVisible" :page="page" :row-id="reviewRow" :initial-tab="reviewTab" @preview="preview" />
-    <PurchaseImportPreviewDrawer v-if="state.batchId" v-model="previewVisible" :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" :creation-enabled="creationEnabled" :creation-loading="creationLoading" :creation-error="creationError" @save="saveOrders" @pending-review="pendingReview = $event" />
+    <PurchaseImportPreviewDrawer v-if="state.batchId" v-model="previewVisible" :page="page" :books="books" :suppliers="suppliers" :currencies="currencies" :creation-enabled="creationEnabled" :creation-loading="creationLoading" :creation-error="creationError" @save="saveOrders" @review="reviewPreviewRow" @pending-review="pendingReview = $event" />
     <el-dialog v-model="dialogVisible" title="导入采购文件" width="620px" :close-on-click-modal="!state.importing" :close-on-press-escape="!state.importing" :show-close="!state.importing" append-to-body class="purchase-import-dialog">
       <el-button :loading="downloading" :disabled="state.importing" @click="emit('download')"><el-icon><Download /></el-icon>下载模板</el-button>
       <ol class="import-notices"><li>请上传不超过100 MiB的 .xlsx 文件。</li><li>系统模板直接读取；供应商原表识别后如有歧义，请核对原列与规格。</li><li>导入后先暂存明细；基础信息在保存时核验，原图归属需人工确认。</li></ol>

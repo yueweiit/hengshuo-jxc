@@ -20,6 +20,16 @@ function scoredRun(textScore = 0.8) {
   return {format:'MatchRunV1',runId:batchId,inputRevision:1,status:'OK',text:{status:'NO_INPUT',reason:'缓存'},image:{status:'FOUND',reason:'照片候选'},candidates:[candidate],explanation:{status:'NOT_REQUESTED',message:'缓存重算'},ranking:{format:'CandidateRankingV1',policyVersion:'photo-first-text-40-40-20-v1',completePhotoGroup:true,status:'RECOMMENDED',reason:'通过门槛',photoThreshold:0.8,textThreshold:0.8,weights:{productCode:40,spec:40,name:20},highestPhotoIds:[501],recommendedIds:[501],scores:[{productId:501,photoScore:1,textScore,fields,reason:'通过门槛'}]}}
 }
 
+test('保存缺项只汇总同类税率错误，保留整单提示和服务端逐行错误且不调用建单', async () => {
+  let created=0
+  const errors=[{field:'priceTaxBasis',message:'请确认未含税单价'},...Array.from({length:60},(_,n)=>({rowId:n+1,field:'taxRate',message:'本行税率待核实，请明确填写'}))]
+  const invalid={...group,createStatus:'DRAFT',previewToken:null,preview:null,errors}
+  const page=await setup({previews:async()=>({batchId,header,rows:[row],groups:[invalid]}),createDraft:async()=>{created++},creation:async()=>{}},{groups:[]})
+  assert.equal(await page.saveOrders(),false)
+  assert.equal(page.state.error,'NY-051：请确认未含税单价；本行税率待核实，请明确填写（60行）')
+  assert.equal(page.state.groups[0].errors.length,61);assert.equal(created,0)
+})
+
 test('读取恢复批次保留后台加权分及字段依据，不在前端重新算分', async()=>{
   const page=await setup({}, {rows:[{...row,matchTaskId:batchId,matchResult:scoredRun()}]})
   assert.equal(page.state.error,'');assert.equal(page.state.rows[0].matchResult.ranking.scores[0].textScore,0.8)

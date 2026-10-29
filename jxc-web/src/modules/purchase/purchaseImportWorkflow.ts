@@ -2,6 +2,7 @@ import { shallowRef, type ShallowRef } from 'vue'
 import type { ImportRow, ImportValues, MatchInputs, ImportDraftGroup, FeeReviewInput, PurchaseImportApi } from '@/modules/purchase/purchaseImportModel'
 import { importColumns, isBatchId, importRecord as record, importPositiveId as positiveId } from '@/modules/purchase/purchaseImportModel'
 import { imageReviewProgress as reviewProgress, imageReviewRows } from '@/modules/purchase/purchaseImportProgress'
+import { formatImportIssues } from '@/modules/purchase/purchaseImportIssues'
 interface Dependencies {
   state: { batchId: string | null; rows: ImportRow[]; groups: ImportDraftGroup[]; tasks: import('./purchaseImportModel').ImportTask[]; version: number; success: string; error: string; imageReviewError: string; edit: unknown }; api: PurchaseImportApi; busy: () => boolean; headerDirty: () => boolean; rowLocked: (row: ImportRow) => boolean
   failure: (error: unknown) => void; newKey: () => string; loadBatch: (id: string) => Promise<boolean>
@@ -138,7 +139,7 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
         }
         if (group.createStatus === 'CREATING') return stop(`${group.sourceOrderNo}：${purchaseOrderSaveStatus(group)}`)
         if (['UNKNOWN','FAILED'].includes(group.createStatus) && !originalIntent(group)) return stop(`${group.sourceOrderNo}：原保存请求信息缺失，请查询原结果并核对`)
-        if (group.errors.length || !group.previewToken || !group.preview) return stop(`${group.sourceOrderNo}：${group.errors.map(issue => issue.message).join('；') || '请核对完整预览后再保存'}`)
+        if (group.errors.length || !group.previewToken || !group.preview) return stop(`${group.sourceOrderNo}：${formatImportIssues(group.errors) || '请核对完整预览后再保存'}`)
         if (group.feeTodos?.some(todo => todo.reviewStatus !== 'CONFIRMED')) return stop(`${group.sourceOrderNo}：请先核对费用来源、金额与币种`)
       }
       for (const id of state.groups.map(group => group.id)) {

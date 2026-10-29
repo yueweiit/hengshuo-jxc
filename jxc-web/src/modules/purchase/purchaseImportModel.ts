@@ -14,6 +14,8 @@ export interface ImportHeader {
   paymentTerms: string
   prepayRatio: string | null
   termDays: number | null
+  taxRate?: string | null
+  priceTaxBasis?: 'EXCLUSIVE' | null
 }
 export const importColumns = [
   { key: 'sourceOrderNo', label: '采购单号', width: 150 },
@@ -51,7 +53,7 @@ export interface FeeReviewInput { sourceRowIds: number[]; scope: 'ORDER' | 'LINE
 export interface ImportSourceRef { rowId: number; rowNo: number; sourceId: number | null; sourceSheet: string | null; sourceRow: number | null; fileName: string | null; fileSha256: string | null; sourceStatus: string }
 export interface FeeTodo extends Omit<FeeReviewInput, 'confirm'> { format: 'FeeTodoV1'; todoId: string; sourceRows: ImportSourceRef[]; status: 'PENDING'; reviewStatus: 'UNRESOLVED' | 'CONFIRMED' | 'STALE'; registeredReference: null; targetOrderId: number | null; targetDocNo: string | null; targetReferenceStatus: string }
 export interface ImportSourceEvidence extends ImportSourceRef { currentValues: ImportValues; originalValues: Record<string, unknown> | null; formulaProvenance: Record<string, unknown> | null; targetOrderLineId: number | null }
-export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: number; sourceBasisHash?: string; sourceEvidence?: ImportSourceEvidence[]; id: number; version: number; sourceOrderNo: string; header: ImportHeader & { taxRate?: string | null; priceTaxBasis?: string | null }; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number; sourceSheet?: string; sourceRow?: number; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
+export interface ImportDraftGroup { feeTodos?: FeeTodo[]; feeTodosVersion?: number; sourceBasisHash?: string; sourceEvidence?: ImportSourceEvidence[]; id: number; version: number; sourceOrderNo: string; header: ImportHeader; createStatus: string; verifyStatus: string; previewToken: string | null; orderId: number | null; docNo?: string; errorCode?: string | null; errorMessage?: string | null; errors: { rowId?: number | null; sourceSheet?: string | null; sourceRow?: number | null; field?: string; message: string }[]; preview: { header: ImportHeader; totalAmount: string; taxAmount: string; totalQty?: string; lines: { lineNo: number; productId: number; productSpec: string | null; unit: string; qty: string; unitPrice: string; sourceUnitPrice: string; unitPriceDifference: string; amount: string; taxRate: string }[] } | null; createIntent?: { key: string; request: Record<string, unknown> } | null }
 export interface ImportBatch { batchId: string; header: ImportHeader; rows: ImportRow[]; version?: number; status?: string; sources?: ImportSource[]; tasks?: ImportTask[]; groups?: ImportDraftGroup[] }
 export interface ImportIssue { rowNo?: number; field?: string; message: string }
 export interface PurchaseImportApi {
@@ -97,6 +99,8 @@ export function validateImportHeader(header: ImportHeader, complete = true): str
   if (typeof header.paymentTerms !== 'string' || header.paymentTerms.length > 200) return '付款条件最多200个字符'
   if (header.prepayRatio !== null && header.prepayRatio !== '' && (!/^\d(\.\d{1,6})?$/.test(header.prepayRatio) || Number(header.prepayRatio) > 1)) return '预付比例应为0至1，最多6位小数'
   if (header.termDays !== null && (!Number.isInteger(header.termDays) || header.termDays < 0 || header.termDays > 2147483647)) return '账期天数应为非负整数'
+  if (header.taxRate != null && header.taxRate !== '' && (typeof header.taxRate !== 'string' || !/^\d(\.\d{1,6})?$/.test(header.taxRate) || Number(header.taxRate) > 1)) return '税率应为0至1，最多6位小数'
+  if (header.priceTaxBasis != null && header.priceTaxBasis !== 'EXCLUSIVE') return '请核对单价口径，当前仅支持未含税单价'
   return ''
 }
 
