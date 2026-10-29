@@ -12,6 +12,27 @@ async function setup(extra={},source={}){
   const page=createPurchaseImportModel({async load(){return structuredClone(data)},...extra},'2026-10-29',()=>batchId)
   await page.loadBatch(batchId);return page
 }
+
+test('AI图文核对只登记未确认行且后台运行时重复点击不另建任务',async()=>{
+  let calls=0
+  const task='22222222-2222-4333-8444-555555555555'
+  const page=await setup({async startMatches(_id,_version,ids){calls++;assert.deepEqual(ids,[1]);return {batchId,version:1,status:'REVIEW',header,rows:[{...row,matchTaskId:task},{...row,id:2,rowNo:2,readiness:'READY'}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:1}}],taskIds:[task]}}},{rows:[row,{...row,id:2,rowNo:2,readiness:'READY'}]})
+  assert.equal(await page.startImageReview(),true);assert.equal(await page.startImageReview(),false);assert.equal(calls,1)
+  assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,running:true})
+  page.state.tasks[0].status='SUCCEEDED';assert.deepEqual(page.imageReviewProgress(),{total:1,completed:1,running:false})
+})
+
+test('重新打开已有运行任务的批次能恢复按钮进度，不重启自动化',async()=>{
+  const task='22222222-2222-4333-8444-555555555555'
+  const page=await setup({}, {rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'RUNNING',result:{rowId:1}}]})
+  assert.deepEqual(page.imageReviewProgress(),{total:1,completed:0,running:true});assert.equal(await page.startImageReview(),false)
+})
+
+test('图片尚未确认同款时拒绝声称规格已经一致的响应',async()=>{
+  const candidate={productId:501,product:{id:501,productCode:'SKU',name:'衣服',spec:'S',units:[]},visualScore:null,textEvidence:[],visualEvidence:[],conflicts:[]}
+  const page=await setup({}, {rows:[{...row,matchResult:{format:'MatchRunV1',runId:batchId,inputRevision:1,status:'OK',text:{status:'FOUND',reason:'目录'},image:{status:'NO_INPUT',reason:'无图'},candidates:[candidate],explanation:{status:'READY',message:'说明',candidateChecks:[{productId:501,imageMatch:'NO_INPUT',imageReason:'无图',specMatch:'MATCH',specReason:'猜测'}]}}}]})
+  assert.match(page.state.error,/图文核对/);assert.equal(page.state.rows.length,0)
+})
 test('人工选择零库存已有商品仍复用真实商品，不创建新品',async()=>{
   const page=await setup({async decide(_id,r,input){return {...r,version:2,matchedProductId:input.productId,purchaseUnit:input.unit,readiness:'READY',decision:'EXISTING'}}})
   assert.equal(await page.decideProduct(page.state.rows[0],{decision:'EXISTING',productId:501,unit:'PCS'}),true)

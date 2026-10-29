@@ -32,7 +32,7 @@ function workspace(confirm = async () => {}, dependencies = {}) {
       async saveHeader(_batch, value) { savedHeaders.push(value); return { batchId, header: { ...value }, rows: [{ ...row }] } },
     },
     ...dependencies,
-  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming'])
+  }, ['page', 'state', 'books', 'suppliers', 'currencies', 'refsError', 'refsLoading', 'dialogVisible', 'selected', 'fileInput', 'disabled', 'importDisabled', 'headerLocked', 'route', 'loadReferences', 'loadRouteBatch', 'supplierChanged', 'selectFile', 'submitImport', 'saveHeader', 'remove', 'errorLabel', 'emit', 'scheduleTasks','creationEnabled','creationLoading','creationError','loadCreationCapability','saveOrders','purchaseOrderSaveStatus','pendingReview','previewVisible', 'clearAll', 'clearConfirming','reviewVisible','reviewRow','reviewTab','review','startImageReview','imageReviewProgress','imageReviewAvailable'])
   return { state, navigations, requests, removed, savedHeaders, country, user, messages }
 }
 
@@ -384,4 +384,13 @@ test('本地编辑使任务读取暂缓时仍会接续轮询，网络错误明�
   state.page.refreshTasks = async () => { state.page.failure(new Error('网络读取失败')); return false }
   await timers.shift()()
   assert.equal(timers.length, 1); assert.match(state.page.state.error, /网络读取失败/)
+})
+
+
+test('AI图文核对按钮显示真实任务进度，登记后进入原商品图片对照标签',async()=>{
+  const task='22222222-2222-4333-8444-555555555555'
+  const {state}=workspace(undefined,{purchaseImportApi:{async load(){return {batchId,version:1,header,rows:[{...row}]}},async startMatches(){return {batchId,version:1,header,rows:[{...row,matchTaskId:task}],tasks:[{id:task,kind:'MATCH',status:'QUEUED',result:{rowId:10}}],taskIds:[task]}}}})
+  await state.page.loadBatch(batchId);await state.startImageReview()
+  assert.equal(state.reviewVisible.value,true);assert.equal(state.reviewTab.value,'match');assert.equal(state.reviewRow.value,10)
+  const html=await render(state);assert.match(html,/AI图文核对/);assert.match(html,/核对处理中 0 \/ 1 行/);assert.doesNotMatch(html,/>识别商品<\/button>/)
 })

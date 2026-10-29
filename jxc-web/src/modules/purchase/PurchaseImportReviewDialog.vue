@@ -8,7 +8,7 @@ import type { PurchaseImportModel, ImportRow, MatchCandidate, VisualMatchEvidenc
 import { createPurchaseImportCatalogImages } from './purchaseImportCatalogImages'
 import PurchaseImportProductPhoto from './PurchaseImportProductPhoto.vue'
 
-const props = defineProps<{ page: PurchaseImportModel; modelValue: boolean; rowId?: number | null }>()
+const props = defineProps<{ page: PurchaseImportModel; modelValue: boolean; rowId?: number | null; initialTab?: 'todos' | 'match' }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 interface Product { id: number; productCode: string; name: string; spec: string; baseUnit: string; status: string; units: { unit: string }[] }
 type ReviewTab = 'todos' | 'product' | 'images' | 'match'
@@ -67,7 +67,7 @@ const sourceImages = computed(() => row.value?.images?.filter(image => image.sta
 let epoch = 0, active = true
 watch(() => props.rowId, id => { if (id) selectedRow.value = id })
 watch(() => props.modelValue, opened => {
-  if (opened) { activeTab.value = 'todos'; focusedImage.value = null; if (props.rowId && props.page.state.rows.some(item => item.id === props.rowId)) selectedRow.value = props.rowId }
+  if (opened) { activeTab.value = props.initialTab ?? 'todos'; focusedImage.value = null; if (props.rowId && props.page.state.rows.some(item => item.id === props.rowId)) selectedRow.value = props.rowId }
 }, { immediate: true })
 watch(() => [props.modelValue,activeTab.value,row.value?.id,row.value?.version], () => {
   if (props.modelValue && activeTab.value !== 'todos') for (const image of (activeTab.value === 'images' ? row.value?.images ?? [] : sourceImages.value)) void props.page.images.load(image.id)
@@ -107,6 +107,9 @@ function manualSelection() {
   else { candidateRun.value = null; candidateProduct.value = null }
 }
 async function saveInputs() { if (row.value && await props.page.saveMatchInputs(row.value, { ...matchInputs.value })) syncRow(row.value) }
+const imageCheckLabel = (status: string) => ({ SAME: '照片同款', DIFFERENT: '照片不同款', UNCERTAIN: '照片尚不能确定', NO_INPUT: '缺少可用配对图' }[status] || status)
+const specCheckLabel = (status: string) => ({ MATCH: '规格一致', CONFLICT: '规格冲突', MISSING: '规格缺失', NOT_CHECKED: '尚未核对规格' }[status] || status)
+const candidateCheck = (productId: number) => row.value?.matchResult?.explanation.candidateChecks?.find(check => check.productId === productId)
 const routeLabel = (status: string) => ({ FOUND: '已找到候选', NOT_FOUND: '未查到', NO_INPUT: '无输入', UNAVAILABLE: '暂不可用', FAILED: '执行失败' }[status] || status)
 async function search() {
   if (catalogLoading.value) return
@@ -232,7 +235,7 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
       <div class="match-panel">
         <div class="match-title"><strong>图文候选辅助核对</strong><span>候选不会自动确认商品，也不会自动判定新品。</span></div>
         <div class="match-inputs"><el-input v-model="matchInputs.suppliedProductCode" placeholder="系统商品编码（未知留空）" aria-label="补充系统商品编码" :disabled="locked" maxlength="200" /><el-input v-model="matchInputs.suppliedProductName" placeholder="商品名称（未知留空）" aria-label="补充商品名称" :disabled="locked" maxlength="200" /><el-input v-model="matchInputs.supplierProductCode" placeholder="供应商编码（未知留空）" aria-label="补充供应商编码" :disabled="locked" maxlength="200" /></div>
-        <div class="match-actions"><el-button :disabled="locked || !inputsDirty" @click="saveInputs">保存补充文字</el-button><el-button :disabled="locked || !matchEnabled || inputsDirty" @click="page.startMatches([row.id])">识别本行候选</el-button><span v-if="!matchEnabled && !capabilityError">当前环境尚未启用候选识别</span><span v-if="inputsDirty">请先保存补充文字</span></div>
+        <div class="match-actions"><el-button :disabled="locked || !inputsDirty" @click="saveInputs">保存补充文字</el-button><el-button :disabled="locked || !matchEnabled || inputsDirty" @click="page.startMatches([row.id])">重新核对本行</el-button><span v-if="!matchEnabled && !capabilityError">当前环境尚未启用候选识别</span><span v-if="inputsDirty">请先保存补充文字</span></div>
         <p v-if="capabilityError" class="review-warning">{{ capabilityError }}</p>
         <div v-for="task in page.state.tasks.filter(item => ['MATCH', 'EXPLAIN'].includes(item.kind || '') && (item.id === row?.matchTaskId || item.result?.rowId === row?.id))" :key="task.id" class="match-task"><span>{{ task.kind === 'EXPLAIN' ? '解释' : '识别' }}任务：{{ task.status }}{{ task.errorMessage ? ` · ${task.errorMessage}` : '' }}</span><el-button v-if="task.kind === 'EXPLAIN' && ['FAILED', 'NEEDS_REAUTH'].includes(task.status)" :disabled="locked" @click="page.retryTask(task)">继续原解释任务</el-button></div>
         <template v-if="row.matchResult">
@@ -252,10 +255,15 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
             <div v-if="!candidate.visualEvidence.length" class="text-candidate-photo"><PurchaseImportProductPhoto :catalog="catalogImages" :product-id="candidate.productId" :label="`${candidate.product.name}资料照片`" /><span class="review-hint">文字匹配 · 商品资料照片</span></div>
             <p v-if="candidate.visualScore !== null">外观相似度 {{ candidate.visualScore.toFixed(4) }}（排序分数，非正确概率）</p><p v-for="(evidence, index) in candidate.textEvidence" :key="index">{{ evidence.reason }}</p>
             <p v-for="conflict in candidate.conflicts" :key="conflict" class="review-warning">{{ conflict }}</p>
+            <div v-if="candidateCheck(candidate.productId)" class="candidate-check" :class="{ 'review-warning': candidateCheck(candidate.productId)?.specMatch === 'CONFLICT' || candidateCheck(candidate.productId)?.imageMatch === 'DIFFERENT' }">
+              <strong>{{ imageCheckLabel(candidateCheck(candidate.productId)!.imageMatch) }} · {{ specCheckLabel(candidateCheck(candidate.productId)!.specMatch) }}</strong>
+              <p>{{ candidateCheck(candidate.productId)!.imageReason }}</p><p>{{ candidateCheck(candidate.productId)!.specReason }}</p>
+            </div>
+            <p v-else class="review-hint">尚无图片与规格复核结论，请勿仅按外观分数确认。</p>
             <el-button :disabled="locked || !currentMatch" @click="chooseCandidate(candidate)">选择此候选后核对单位</el-button>
           </article>
-          <p>解释状态：{{ row.matchResult.explanation.status }} · {{ row.matchResult.explanation.message }}</p><p v-for="note in row.matchResult.explanation.candidateNotes" :key="note.productId">商品 {{ note.productId }}：{{ note.message }}</p>
-          <el-button :disabled="locked || !matchEnabled || !currentMatch || inputsDirty" @click="page.explainMatch(row)">只重试候选解释</el-button>
+          <p>图文核对状态：{{ row.matchResult.explanation.status }} · {{ row.matchResult.explanation.message }}</p><p v-for="note in row.matchResult.explanation.candidateNotes" :key="note.productId">商品 {{ note.productId }}：{{ note.message }}</p>
+          <el-button :disabled="locked || !matchEnabled || !currentMatch || inputsDirty" @click="page.explainMatch(row)">只重试图文复核</el-button>
         </template>
       </div>
           </template>
@@ -288,6 +296,8 @@ onBeforeUnmount(() => { active = false; ++epoch; catalogImages.reset() })
 .match-title span, .match-actions span { color: var(--el-text-color-secondary); }
 .match-inputs { margin: 12px 0; .el-input { width: 260px; } }
 .match-task { margin-top: 10px; }
+.candidate-check { display: block; padding: 10px 12px; border-left: 3px solid var(--el-border-color); background: var(--el-fill-color-light); }
+.candidate-check p { margin: 4px 0 0; }
 .candidate-card { background: var(--el-bg-color); padding: 12px; margin: 10px 0; border-left: 3px solid var(--el-color-primary-light-5); p { margin: 6px 0; } }
 .new-review { max-width: 600px; margin-top: 18px; }
 .review-product-option { display:flex; align-items:center; gap:12px; height:auto; min-height:82px; line-height:1.5; padding:10px 16px; max-width:min(540px, calc(100vw - 40px)); }

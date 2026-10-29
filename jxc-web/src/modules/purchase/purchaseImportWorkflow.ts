@@ -32,6 +32,18 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
     return write('saving', () => api.createProduct!(state.batchId!, { ...row }, request, key), response => applyReview(row, response))
   }
   const matchKeys = new Map<string, string>()
+  function imageReviewProgress() {
+    const ids = new Set(state.rows.map(row => row.matchTaskId).filter(Boolean))
+    const tasks = state.tasks.filter(task => task.kind === 'MATCH' && ids.has(task.id))
+    const active = tasks.filter(task => ['QUEUED', 'RUNNING'].includes(task.status)).length
+    return { total: tasks.length, completed: tasks.length - active, running: active > 0 }
+  }
+  async function startImageReview() {
+    if (imageReviewProgress().running) return false
+    const ids = state.rows.filter(row => row.readiness !== 'READY' && !rowLocked(row)).map(row => row.id)
+    if (!ids.length) { failure(new Error('没有尚待确认的商品行')); return false }
+    return startMatches(ids)
+  }
   async function saveMatchInputs(row: ImportRow, input: MatchInputs) {
     if (!state.batchId || busy() || state.edit || headerDirty() || rowLocked(row)) return false
     const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [key, value?.trim() || null])) as unknown as MatchInputs
@@ -41,6 +53,7 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
   }
   async function startMatches(rowIds: number[]) {
     if (!api.startMatches || !state.batchId || busy() || state.edit || headerDirty() || !rowIds.length || new Set(rowIds).size !== rowIds.length || rowIds.some(id => !state.rows.some(row => row.id === id && !rowLocked(row)))) return false
+    if (state.tasks.some(task => ['MATCH', 'EXPLAIN'].includes(task.kind || '') && ['QUEUED', 'RUNNING'].includes(task.status) && rowIds.some(id => state.rows.find(row => row.id === id)?.matchTaskId === task.id || task.result?.rowId === id))) return false
     const signature = JSON.stringify([state.batchId, state.version, rowIds])
     if (!matchKeys.has(signature)) matchKeys.set(signature, newKey())
     return write('saving', () => api.startMatches!(state.batchId!, state.version, rowIds, matchKeys.get(signature)!), response => {
@@ -156,5 +169,5 @@ export function createPurchaseImportWorkflow(deps: Dependencies) {
   }
 
   function reset() { saveRun.value = null; creationIntents.clear(); matchKeys.clear() }
-  return { decideProduct,createProduct,saveMatchInputs,startMatches,explainMatch,previewDrafts,saveGroup,createDraft,refreshCreation,saveFeeTodos,saveOrders,saveOrdersPending: () => saveRun.value !== null,reset }
+  return { decideProduct,createProduct,saveMatchInputs,startMatches,startImageReview,imageReviewProgress,explainMatch,previewDrafts,saveGroup,createDraft,refreshCreation,saveFeeTodos,saveOrders,saveOrdersPending: () => saveRun.value !== null,reset }
 }
