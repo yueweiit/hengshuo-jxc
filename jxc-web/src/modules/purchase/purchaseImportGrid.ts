@@ -44,6 +44,10 @@ export function createPurchaseImportGrid(deps: GridDeps) {
   const dataRows = () => rows().filter(row => row.id > 0 || hasContent(row))
   function compact() { if (view.draft) view.draft = view.draft.filter(row => row.id > 0 || hasContent(row)) }
   const hasChanges = () => {
+    if (live.cell) {
+      const row = rows().find(row => row.id === live.cell!.id)
+      if (row && live.cell.text !== (value(row, live.cell.field) ?? '')) return true
+    }
     const saved = new Map(deps.state.rows.map(row => [row.id, row]))
     return Object.keys(photos).length > 0 || rows().some(row => {
       const old = saved.get(row.id)

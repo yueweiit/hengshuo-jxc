@@ -25,6 +25,46 @@ class PurchaseImportMatchIT extends PurchaseImportFixture {
     @SuppressWarnings("unchecked") Map<String,Object> matched(Map<String,Object>b){return (Map<String,Object>)rows(imports.get(actor,id(b))).getFirst().get("matchResult");}
     Map<String,Object> photoBatch(boolean published){owner.update("UPDATE sys_role SET permissions=permissions||'[\"md:product:edit\"]'::jsonb WHERE id=801");var b=upload(UUID.randomUUID().toString());doReturn(photoDocument()).when(parser).parse(any(),anyString(),anyLong(),anyString(),isNull());tasks.execute(101,task(b));long image=owner.queryForObject("SELECT id FROM pur_order_import_image",Long.class);imports.associate(actor,id(b),rowId(b),image,Map.of("version",1,"association","CONFIRMED"));if(published){review.decide(actor,id(b),rowId(b),Map.of("version",2,"decision","EXISTING","productId",501,"unit","PCS"));var result=photos.publish(actor,id(b),rowId(b),Map.of("version",3,"confirmOwnership",true,"imageIds",List.of(image)),UUID.randomUUID().toString());doReturn(vector()).when(parser).embed(any(),anyString(),anyLong(),anyString());doAnswer(call->indexResult(call.getArgument(2))).when(parser).index(any(),anyString(),anyMap());tasks.execute(101,UUID.fromString(((List<?>)result.get("taskIds")).getFirst().toString()));}return imports.get(actor,id(b));}
     @SuppressWarnings("unchecked") Map<String,Object> map(Object value){return (Map<String,Object>)value;}
+    @Test void reviewImagesAreLimitedToFixedHitsAndSamePhotoDoesNotProveTheSize(){
+        var b=photoBatch(true);owner.update("UPDATE md_product SET spec='M',version=version+1 WHERE id=501");
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);UUID task=start(b);
+        doAnswer(call->{try{String credential=call.getArgument(1);var catalog=matches.catalogSearch(task,credential,Map.of("operation","TEXT"));
+            assertThatThrownBy(()->matches.catalogSearch(task,credential,Map.of("operation","REVIEW","imageId",999))).isInstanceOf(ApiException.class);
+            var request=map(((List<?>)map(catalog.get("imagePlan")).get("requests")).getFirst());
+            var evidence=matches.catalogSearch(task,credential,Map.of("operation","RESOLVE","imageResults",List.of(Map.of("queryAssetId",request.get("queryAssetId"),"status","FOUND","hits",List.of(Map.of("featureId",feature,"score",0.99))))));
+            var pictures=matches.catalogSearch(task,credential,Map.of("operation","REVIEW"));
+            assertThat(pictures).containsEntry("format","ImageReviewInputV1").containsEntry("evidenceHash",evidence.get("evidenceHash"));
+            assertThat((List<?>)pictures.get("images")).hasSize(2);assertThat((List<?>)pictures.get("pairs")).hasSize(1);
+            assertThat(map(((List<?>)pictures.get("images")).getFirst()).get("dataUrl")).asString().startsWith("data:image/");
+            var body=new LinkedHashMap<>(callback(task,evidence,List.of()));var explanation=new LinkedHashMap<>(map(body.get("explanation")));
+            explanation.put("candidateChecks",List.of(Map.of("productId",501,"imageMatch","SAME","imageReason","照片同款","specMatch","CONFLICT","specReason","来源S，候选M")));body.put("explanation",explanation);
+            owner.update("UPDATE md_product_image SET status='DELETED'");
+            assertThatThrownBy(()->matches.result(task,credential,body)).isInstanceOf(ApiException.class).extracting("status").isEqualTo(409);
+            owner.update("UPDATE md_product_image SET status='ACTIVE'");
+            matches.result(task,credential,body);return Map.of("taskId",task.toString());}catch(Exception error){throw new AssertionError("读取复核图片并保存结果失败",error);}
+        }).when(parser).recognize(any(),anyString(),anyMap());tasks.execute(101,task);
+        assertThat(tasks.get(actor,task)).as(tasks.get(actor,task).toString()).containsEntry("status","SUCCEEDED");
+        assertThat(map(matched(b).get("explanation")).get("candidateChecks")).asString().contains("CONFLICT");
+        assertThat(owner.queryForObject("SELECT result::text FROM pur_order_import_task WHERE id=?",String.class,task)).doesNotContain("data:image/");
+        assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();
+    }
+    @Test void structuredReviewCannotClaimSameWithoutReadingTheFixedImagePair(){
+        var b=source("SKU");UUID task=start(b);doAnswer(call->{String credential=call.getArgument(1);matches.catalogSearch(task,credential,Map.of("operation","TEXT"));
+            var evidence=matches.catalogSearch(task,credential,Map.of("operation","RESOLVE","imageResults",List.of()));var body=new LinkedHashMap<>(callback(task,evidence,List.of()));var explanation=new LinkedHashMap<>(map(body.get("explanation")));
+            explanation.put("candidateChecks",List.of(Map.of("productId",501,"imageMatch","SAME","imageReason","猜测同款","specMatch","MATCH","specReason","猜测一致")));body.put("explanation",explanation);
+            assertThatThrownBy(()->matches.result(task,credential,body)).isInstanceOf(ApiException.class);
+            var input=matches.catalogSearch(task,credential,Map.of("operation","REVIEW"));assertThat((List<?>)input.get("pairs")).isEmpty();
+            explanation.put("candidateChecks",List.of(Map.of("productId",501,"imageMatch","NO_INPUT","imageReason","没有可用配对图","specMatch","NOT_CHECKED","specReason","尚未确认同款")));matches.result(task,credential,body);return Map.of("taskId",task.toString());
+        }).when(parser).recognize(any(),anyString(),anyMap());tasks.execute(101,task);assertThat(tasks.get(actor,task)).as(tasks.get(actor,task).toString()).containsEntry("status","SUCCEEDED");
+        assertThat(map(matched(b).get("explanation")).get("candidateChecks")).asString().contains("NO_INPUT","NOT_CHECKED");
+    }
+    @Test void textOnlyCandidatesCannotDisplaceTheFaissPhotoCandidatesBeforeImageReview(){
+        var b=photoBatch(true);var row=rows(b).getFirst();
+        for(int n=1;n<=5;n++)owner.update("INSERT INTO md_product(id,product_code,name,base_unit,spec) VALUES(?,?,'LOOKALIKE','PCS','S')",6000+n,"LOOK-"+n);
+        imports.saveRow(actor,id(b),rowId(b),Map.of("version",row.get("version"),"values",values(),"matchInputs",Map.of("suppliedProductName","LOOKALIKE","suppliedProductCode","","supplierProductCode","")));
+        long feature=owner.queryForObject("SELECT id FROM image_feature",Long.class);doReturn(Map.of("hits",List.of(Map.of("featureId",feature,"score",0.99)))).when(parser).search(any(),anyString(),anyMap());
+        tasks.execute(101,start(b));assertThat(((List<?>)matched(b).get("candidates")).stream().map(c->map(c).get("productId"))).contains(501);
+    }
     @Test void textHitWithoutPhotoSurvivesWorkflowFailureAndCannotCreateBusinessData(){var b=source("SKU");UUID task=start(b);tasks.execute(101,task);var result=matched(b);assertThat(result.get("text")).asString().contains("FOUND");assertThat(result.get("image")).asString().contains("NO_INPUT");assertThat(result.get("explanation")).asString().contains("UNAVAILABLE");assertThat(result.get("candidates")).asString().contains("501");assertThat(rows(imports.get(actor,id(b))).getFirst()).containsEntry("readiness","UNRESOLVED").containsEntry("suppliedProductCode","SKU");assertThat(owner.queryForObject("SELECT count(*) FROM md_product",Integer.class)).isEqualTo(1);assertThat(owner.queryForObject("SELECT count(*) FROM pur_order",Integer.class)).isZero();}
     @Test void noInputAndRealNoMatchRemainDifferentAndNeverMeanNewProduct(){var missing=source(null);tasks.execute(101,start(missing));assertThat(matched(missing).get("text")).asString().contains("NO_INPUT");var absent=source("NOT-IN-REAL-CATALOG");tasks.execute(101,start(absent));assertThat(matched(absent).get("text")).asString().contains("NOT_FOUND");assertThat(owner.queryForObject("SELECT count(*) FROM md_product",Integer.class)).isEqualTo(1);}
     @Test void matchingNeverOverwritesAnAlreadyConfirmedProduct(){var b=source("SKU");var row=rows(b).getFirst();review.decide(actor,id(b),rowId(b),Map.of("version",row.get("version"),"decision","EXISTING","productId",501,"unit","PCS"));UUID task=start(b);tasks.execute(101,task);assertThat(rows(imports.get(actor,id(b))).getFirst()).containsEntry("readiness","READY").containsEntry("matchedProductId",501L).containsEntry("purchaseUnit","PCS");}

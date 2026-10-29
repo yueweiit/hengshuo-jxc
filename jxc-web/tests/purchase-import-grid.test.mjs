@@ -52,6 +52,16 @@ test('格式错误先保留原始草稿，上传时报告校验错误而不丢�
   assert.equal(page.grid.rows()[0].purchaseQty, 'abc')
 })
 
+test('尚未关闭的单元格属于未上传修改，退出编辑可恢复原快照', async () => {
+  const page = setup(); await page.loadBatch(batchId); page.grid.setMode('excel')
+  page.grid.trackEdit(17, 'suppliedProductName', '输入中未上传')
+  assert.equal(page.grid.hasChanges(), true)
+  const restored = setup(); restored.restoreLocalDraft(page.exportLocalDraft())
+  assert.equal(restored.grid.rows()[0].suppliedProductName, '输入中未上传')
+  page.grid.clearTrackedEdit()
+  assert.equal(page.grid.hasChanges(), false)
+})
+
 test('普通表格收妥编辑只更新本地草稿，显式上传才提交', async () => {
   let calls = 0
   const page = setup(async () => { calls++; return { ...batch(), rows: [{ ...row(), version: 4, suppliedProductName: '草稿名称' }] } })

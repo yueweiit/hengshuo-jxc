@@ -11,3 +11,13 @@
 字段环境：JXC_SUPPLIER_N8N_URL（必须以/jxc-purchase-fields-v1结尾）与JXC_SUPPLIER_N8N_KEY。Java原任务retry接受mappingOverrides，仅允许原格映射、规格列标签和明确确认。旧/internal/jxc/parse保留给尚未升级客户端；当前本机客户端切换后，其他运行客户端是否仍调用不确定；全部客户端迁移且核实无调用后可删除，无承诺日期。
 
 manifest.json记录UTF-8文本将CRLF统一为LF后的SHA-256，避免Windows检出行尾导致相同源码误报变更。校验时按上述规范化读取；不移除空白、不改代码正文。运行包内旧清单按当时实际字节留存，其运行源码没有变化。
+
+## 商品AI图文核对
+
+n8n/jxc-purchase-recognition.json是同一受限商品识别工作流的版本化交付，替代其旧版“只解释编号与分数”的实现；不是额外运行一套流程。导入后保持未激活，绑定原有DeepSeek/专用Header凭据及Validate task中的受控Java、Python根地址，再沿原发布流程启用。Java配置仍使用jxc.purchase-import.n8n-url，路径保持/jxc-purchase-recognition-v1。源码交付不等于已激活线上工作流。
+
+Resolve real products后增加REVIEW工具调用：后台从固定FAISS命中选取每个候选的最佳命中配对，回查国家、图库代次和照片归属后读取真实图片；读文件在数据库事务之外，保存前再次校验证据。原图和候选图使用不同键，单图不超过10MiB、总原始图片不超过24MiB，超限或读取失败在候选原因中保留；不会创建公开图片URL。任务只存图片键及SHA，不存base64，模型请求不含任务凭证，n8n沿用不保存执行内容的设置。
+
+deepseek-flash接收实际image_url内容，先判照片同款，再核对来源productSpec与候选spec内真实的尺码、颜色、型号等属性。candidateChecks逐候选返回图片与规格状态；缺图/不确定/规格缺失不能伪装成一致，模型失败保留原候选。原确认商品与单位入口保留，候选及模型结果不自动创建商品或采购单。
+
+旧版本外部文件C:/project/docling-demo/n8n/jxc-purchase-recognition.json暂保留：当前在线工作流或其他运维脚本是否仍引用该文件不确定；保留到新版本完成授权发布且旧任务结束，核实无入口引用并归档旧发布包后再删除或同步。旧MatchRunV1文字解释仍可读；历史持久化结果是兼容对象，尚在运行的其他旧回调调用方不确定。全部工作流升级、旧任务结束且历史读取策略明确后才可收紧旧合同，不承诺删除日期。
