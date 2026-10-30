@@ -58,6 +58,43 @@ def recognize_fields(compact, sheet, task_context=None):
         raise SourceError('SUPPLIER_N8N_FAILED', '字段识别连接、超时或响应解析失败，原文件已保留') from None
 
 
+def source_review_context(compact, sheet_name, values, mapping, images):
+    """保留可向人展示的原文依据；坐标是内部身份，不是要求用户输入的业务语言。"""
+    tables=[t for t in compact['tables'] if t['source_sheet']==sheet_name]
+    headers={k:' '.join(str(v).split()) for t in tables for k,v in t.get('headers',{}).items() if v is not None}
+    detail=sorted({r['source_row'] for r in compact['rows'] if r['source_sheet']==sheet_name and r['row_kind']=='detail'})
+    fields={key:set() for key in headers}
+    for line in mapping['lines']:
+        for field, refs in line.get('cells',{}).items():
+            for ref in refs if isinstance(refs,list) else [refs]:
+                if isinstance(ref,str) and re.fullmatch('[A-Z]{1,3}[1-9][0-9]*',ref):
+                    column=re.sub('[0-9]','',ref)
+                    if column in fields: fields[column].add(field)
+    columns=[]
+    for column,header in headers.items():
+        examples=[]
+        for row in detail:
+            value=values.get(column+str(row))
+            if value is not None and str(value).strip() and str(value) not in examples: examples.append(str(value))
+            if len(examples)==3: break
+        columns.append(dict(key=column,header=header,examples=examples,fields=sorted(fields[column])))
+    subjects=[]
+    for ref,value in values.items():
+        if value is None or not detail or int(re.search('[0-9]+',ref).group())>=detail[0]: continue
+        text=str(value).strip()
+        if text not in headers.values() and re.fullmatch(r'[\w./-]{3,100}',text) and re.search(r'\d',text):
+            subjects.append(dict(id='title:'+ref,kind='IDENTIFIER',label=text,examples=[text]))
+    for col in columns:
+        label=col['header']; common=dict(id='column:'+col['key'],label=label,examples=col['examples'])
+        if re.search(r'foto|photo|照片|图片',label,re.I) and images:
+            subjects.append(dict(common,kind='PHOTO'))
+        elif re.search(r'\busd\b|美元',label,re.I):
+            subjects.append(dict(common,kind='USD_AMOUNT'))
+        elif 'freight' in col['fields'] or re.search(r'flete|freight|运费',label,re.I):
+            subjects.append(dict(common,kind='FREIGHT'))
+    return dict(format='SourceReviewContextV1',columns=columns,subjects=subjects[:30],imageCount=len(images))
+
+
 def build_supplier_document(source, compact, mapping, selected_sheet=None, overrides=None, progress=None):
     validate_archive(source)
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
@@ -72,8 +109,9 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
                     value = cell_value(cell, strings)
                     if value is not None:
                         review_cells.append(dict(sheet=item.attrib['name'],cell=cell.attrib['r'],value=value))
+    diagnostics=[]
     def reject(message):
-        raise SourceError('SOURCE_MAPPING_REVIEW_REQUIRED', message, mapping=mapping, sourceCells=review_cells)
+        raise SourceError('SOURCE_MAPPING_REVIEW_REQUIRED', message, mapping=mapping, sourceCells=review_cells, warnings=diagnostics)
     labels = {}
     if overrides is not None:
         if (not isinstance(overrides,dict) or set(overrides) != {'mapping','specLabels','confirm'}
@@ -94,7 +132,7 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
         reject('字段识别格式不正确')
     if mapping['needsReview']:
         reasons = '；'.join(str(item)[:300] for item in mapping['reasons'][:10])
-        reject('采购字段仍需核实：'+reasons)
+        # 业务歧义不阻止读取可靠来源；写入统一warnings后由原页面逐项核对。
     sheet_name = mapping['sheet']
     if not isinstance(sheet_name,str) or selected_sheet is not None and sheet_name != selected_sheet:
         reject('识别工作表与选择不一致')
@@ -116,7 +154,9 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
         raw={c.attrib['r']:c for row in chosen['document'].findall('m:sheetData/m:row',NS) for c in row}
         values={ref:cell_value(cell,strings) for ref,cell in raw.items()}
         output=dict(format='SourceDocumentV1',source=dict(fileSha256=digest,fileName=source.name,bytes=source.stat().st_size,parserVersion='docling-n8n-supplier-v1'),
-                    sheets=[],rows=[],images=[],associations=[],warnings=[],errors=[])
+                    sheets=[],rows=[],images=[],associations=[],warnings=diagnostics,errors=[])
+        if mapping['needsReview']:
+            output['warnings'].append(dict(code='SOURCE_REVIEW_REQUIRED', message='采购字段待核对：'+reasons))
         source_rows = {int(re.search('[0-9]+', ref).group()) for ref in raw}
         covered=set(); qty_cells=set(); ignored_source_rows=set()
         for item in ignored:
@@ -137,6 +177,9 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
             if not isinstance(line,dict) or set(line)!=set(('sourceRow','cells')) or type(line['sourceRow']) is not int or line['sourceRow'] not in detail or line['sourceRow'] in ignored_rows or not isinstance(line['cells'],dict) or set(line['cells'])-set(FIELDS):
                 reject('采购行来源或字段不正确')
             row_no=line['sourceRow']; covered.add(row_no); mapped=line['cells']; normalized={}; selected={}; formulas={}; numeric={}; cached={}
+            skip_line=False
+            def issue(code, field, message):
+                output['warnings'].append(dict(code=code,sourceSheet=sheet_name,sourceRow=row_no,sourceItemKey=mapped.get('purchaseQty'),field=field,message=message))
             for index,field in enumerate(FIELDS):
                 refs=mapped.get(field)
                 if refs is None:
@@ -144,11 +187,15 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
                     continue
                 refs=refs if isinstance(refs,list) and field=='productSpec' else [refs]
                 if not refs or len(refs)>8 or any(not isinstance(ref,str) or not re.fullmatch('[A-Z]{1,3}[1-9][0-9]{0,6}',ref) or ref not in raw for ref in refs):
-                    reject('字段引用不存在的原单元格，不能使用模型生成的数值')
+                    normalized[field]=None
+                    issue('FIELD_SOURCE_INVALID',field,'原单元格无法定位，本字段未导入；请核对来源')
+                    if field=='purchaseQty': skip_line=True; break
+                    continue
                 if field=='purchaseQty':
                     ref=refs[0]
                     if int(re.search('[0-9]+',ref).group())!=row_no or ref in qty_cells:
-                        reject('数量单元格与原行不一致或被重复计入')
+                        issue('ROW_NOT_STAGED',field,'数量来源与原行不一致或重复，本候选未导入')
+                        skip_line=True; break
                     qty_cells.add(ref)
                 texts=[values[ref] for ref in refs]
                 text=' / '.join(str(t).strip() for t in texts if t is not None and str(t).strip()) if index<3 else texts[0]
@@ -174,7 +221,13 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
                             quantum=Decimal('0.0001' if index==3 else '0.0000000001')
                             if index==3 and (value<=0 or value!=value.quantize(quantum)): raise InvalidOperation()
                             normalized[field]=format(value.quantize(quantum,rounding=ROUND_HALF_UP),'f')
-                    except (InvalidOperation,ValueError): reject('原单元格数值或数量精度需要核实')
+                    except (InvalidOperation,ValueError):
+                        normalized[field]=None
+                        issue('FIELD_VALUE_INVALID',field,'原数值或精度无效，已保留原格原文，业务字段待核对')
+            if skip_line:
+                if not output['warnings'] or output['warnings'][-1]['code']!='ROW_NOT_STAGED':
+                    issue('ROW_NOT_STAGED','purchaseQty','数量来源无法定位，本候选未导入')
+                continue
             # 原行中未参与采购映射的旧公式同样保留，不据其重算当前采购价。
             for ref, cell in raw.items():
                 if int(re.search('[0-9]+',ref).group()) != row_no:
@@ -193,22 +246,31 @@ def build_supplier_document(source, compact, mapping, selected_sheet=None, overr
             if quantity_column in labels:
                 normalized['productSpec'] = labels[quantity_column]
                 selected['manualSpecLabel'] = labels[quantity_column]
-            if not normalized['productSpec']:
-                reject('商品规格仍缺失，请核对数量列的规格名称')
-            if not normalized['sourceOrderNo'] or len(normalized['sourceOrderNo'])>100 or normalized['purchaseQty'] is None:
-                reject('采购单号或有效采购数量缺失，不能自动补写')
+            if normalized['productSpec'] and normalized['productSpec'].strip().lower() in {'talla','size','规格','尺码','商品规格'}:
+                normalized['productSpec']=None
+            if normalized['sourceOrderNo'] and len(normalized['sourceOrderNo'])>100:
+                normalized['sourceOrderNo']=None
+            for field in ('sourceOrderNo','productSpec','purchaseQty'):
+                if normalized[field] is None: issue('FIELD_REVIEW_REQUIRED',field,'本字段待核对，未补造默认值')
+            item_key=mapped.get('purchaseQty') or 'ROW:'+str(row_no)
+            if any(r['sourceItemKey']==item_key for r in output['rows']):
+                issue('ROW_NOT_STAGED','purchaseQty','同一来源候选重复，本候选未导入'); continue
             original={re.sub('[0-9]','',ref):value for ref,value in values.items() if int(re.search('[0-9]+',ref).group())==row_no}
-            output['rows'].append(dict(sourceSheet=sheet_name,sourceRow=row_no,sourceItemKey=mapped['purchaseQty'],sourceCells=selected,
+            output['rows'].append(dict(sourceSheet=sheet_name,sourceRow=row_no,sourceItemKey=item_key,sourceCells=selected,
                                        originalValues=original,rawNumericTexts=numeric,formulas=formulas,cachedValues=cached,normalizedValues=normalized))
             if last_line[row_no] == line_number:
                 completed_rows.add(row_no)
                 if len(completed_rows) == 1 or len(completed_rows) % 25 == 0:
                     progress_event(progress, 'PARSING', len(completed_rows), file_rows, sheet=sheet_name, row=row_no)
-        if covered!=detail: reject('识别结果遗漏原采购行，未保存不完整采购单')
+        for omitted in sorted(detail-covered):
+            output['warnings'].append(dict(code='ROW_NOT_STAGED',sourceSheet=sheet_name,sourceRow=omitted,message='本原始行未获可靠字段映射，候选未导入，请核对原文件'))
+        if not output['rows']: reject('没有可核实来源的明细可暂存，请核对原列；候选问题已保留')
         progress_event(progress, 'PARSING', file_rows, file_rows, sheet=sheet_name)
         for sheet in sheets:
             output['sheets'].append(dict(name=sheet['name'],role='PURCHASE' if sheet is chosen else 'PARAMETERS'))
         append_sheet_images(archive,chosen,output,{},progress,row_count=file_rows)
+        context=source_review_context(compact,sheet_name,values,mapping,output['images'])
+        next(item for item in output['sheets'] if item['role']=='PURCHASE')['reviewContext']=context
         progress_event(progress, 'EXTRACTING_IMAGES', file_rows, file_rows, len(output['images']), len(output['images']), sheet_name)
         return output
 

@@ -38,7 +38,7 @@ def test_supplier_columns_split_into_specs_without_changing_source_row_or_prices
 
 
 @pytest.mark.parametrize('change', ['literal', 'missing_cell', 'duplicate_qty', 'wrong_hash', 'omitted_row', 'needs_review'])
-def test_unverifiable_mapping_never_becomes_success(tmp_path, change):
+def test_invalid_mapping_preserves_valid_rows_and_reports_each_problem(tmp_path, change):
     path, compact, mapping = supplier(tmp_path)
     if change == 'literal': mapping['lines'][0]['cells']['purchaseQty'] = '999'
     elif change == 'missing_cell': mapping['lines'][0]['cells']['purchaseUnitPrice'] = 'Z99'
@@ -46,7 +46,16 @@ def test_unverifiable_mapping_never_becomes_success(tmp_path, change):
     elif change == 'wrong_hash': mapping['fileSha256'] = '0'*64
     elif change == 'omitted_row': compact['rows'].append(dict(source_sheet='订单',source_row=3,row_kind='detail',cells={'A':'遗漏'}))
     else: mapping['needsReview'] = True; mapping['reasons'] = ['单价口径不明确']
-    with pytest.raises(SourceError): build_supplier_document(path, compact, mapping)
+    if change == 'wrong_hash':
+        with pytest.raises(SourceError): build_supplier_document(path, compact, mapping)
+    else:
+        result = build_supplier_document(path, compact, mapping)
+        assert result['rows']
+        assert result['warnings']
+        if change in ('literal', 'duplicate_qty'): assert len(result['rows']) == 1
+        if change == 'missing_cell': assert result['rows'][0]['normalizedValues']['purchaseUnitPrice'] is None
+        if change == 'omitted_row':
+            assert any(w['code'] == 'ROW_NOT_STAGED' and w['sourceRow'] == 3 for w in result['warnings'])
 
 
 def test_model_document_has_no_task_credential_or_arbitrary_path(tmp_path):
@@ -59,7 +68,8 @@ def test_model_document_has_no_task_credential_or_arbitrary_path(tmp_path):
 
 
 @pytest.mark.parametrize('managed', [False, True])
-def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tmp_path, monkeypatch, managed):
+@pytest.mark.parametrize('needs_review', [False, True])
+def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tmp_path, monkeypatch, managed, needs_review):
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from threading import Thread
     from fastapi.testclient import TestClient
@@ -68,6 +78,11 @@ def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tm
     import workbench.jxc_supplier as supplier_module
     import convert
     path, compact, mapping = supplier(tmp_path)
+    if needs_review:
+        mapping['needsReview'] = True
+        mapping['reasons'] = ['规格和采购单号待核对']
+        for line in mapping['lines']:
+            line['cells'].pop('sourceOrderNo'); line['cells'].pop('productSpec')
     calls=[]
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_): pass
@@ -112,19 +127,28 @@ def test_real_bridge_route_fetches_scoped_source_and_calls_docling_before_n8n(tm
         assert response.status_code==200, response.text
         assert calls==['asset','docling','n8n']
         assert timeouts==[600 if managed else 300]
-        assert len(response.json()['document']['rows'])==2
+        document = response.json()['document']
+        assert len(document['rows']) == 2
+        if needs_review:
+            assert all(row['normalizedValues']['sourceOrderNo'] is None and row['normalizedValues']['productSpec'] is None for row in document['rows'])
+            assert any(w['code'] == 'SOURCE_REVIEW_REQUIRED' for w in document['warnings'])
     finally:
         server.shutdown();server.server_close();thread.join()
 
 
-def test_ambiguous_mapping_keeps_source_cells_and_candidate_for_page_review(tmp_path):
+def test_review_flag_and_missing_business_fields_keep_reliable_rows(tmp_path):
     path, compact, mapping = supplier(tmp_path)
     mapping['needsReview'] = True
-    mapping['reasons'] = ['规格名称缺失']
-    with pytest.raises(SourceError) as error:
-        build_supplier_document(path, compact, mapping)
-    assert error.value.details['mapping'] == mapping
-    assert error.value.details['sourceCells'][0] == dict(sheet='订单', cell='A1', value='PO-1')
+    mapping['reasons'] = ['单位和规格待核对']
+    for line in mapping['lines']:
+        line['cells'].pop('sourceOrderNo'); line['cells'].pop('productSpec')
+    result = build_supplier_document(path, compact, mapping)
+    assert len(result['rows']) == 2
+    assert result['rows'][0]['normalizedValues']['sourceOrderNo'] is None
+    assert result['rows'][0]['normalizedValues']['productSpec'] is None
+    assert result['rows'][0]['normalizedValues']['purchaseQty'] == '10.0000'
+    assert result['rows'][0]['sourceCells']['purchaseQty'] == 'C2'
+    assert any(w['code'] == 'SOURCE_REVIEW_REQUIRED' for w in result['warnings'])
 
 
 def test_confirmed_spec_labels_split_original_quantity_cells_without_replacing_prices(tmp_path):
@@ -172,3 +196,32 @@ def test_original_summary_can_be_explicitly_excluded_without_becoming_purchase_d
     mapping['ignoredRows'][0]['sourceRow'] = 999
     with pytest.raises(SourceError):
         build_supplier_document(path, compact, mapping)
+
+
+def test_missing_quantity_stays_unknown_without_losing_other_specs(tmp_path):
+    path, compact, mapping = supplier(tmp_path)
+    mapping['lines'][0]['cells'].pop('purchaseQty')
+    result = build_supplier_document(path, compact, mapping)
+    assert len(result['rows']) == 2
+    assert result['rows'][0]['normalizedValues']['purchaseQty'] is None
+    assert result['rows'][0]['sourceItemKey'] == 'ROW:2'
+    assert result['rows'][1]['normalizedValues']['purchaseQty'] == '4.0000'
+
+
+def test_no_reliable_rows_is_an_explicit_error_with_preserved_diagnostics(tmp_path):
+    path, compact, mapping = supplier(tmp_path)
+    for line in mapping['lines']: line['cells']['purchaseQty'] = '999'
+    with pytest.raises(SourceError) as error:
+        build_supplier_document(path, compact, mapping)
+    assert error.value.details['warnings']
+    assert error.value.details['mapping'] == mapping
+
+
+def test_source_review_context_keeps_real_title_headers_and_value_examples(tmp_path):
+    path, compact, mapping = supplier(tmp_path)
+    result = build_supplier_document(path, compact, mapping)
+    context = result['sheets'][0]['reviewContext']
+    assert context['format'] == 'SourceReviewContextV1'
+    assert any(s['kind'] == 'IDENTIFIER' and s['label'] == 'PO-1' for s in context['subjects'])
+    assert next(c for c in context['columns'] if c['key'] == 'C')['header'] == '小规格'
+    assert next(c for c in context['columns'] if c['key'] == 'C')['examples'] == ['10']
