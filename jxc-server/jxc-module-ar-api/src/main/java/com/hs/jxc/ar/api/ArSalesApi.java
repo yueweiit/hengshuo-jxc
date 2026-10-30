@@ -13,6 +13,10 @@ public interface ArSalesApi {
     void reserveOrder(Access access,long bookId,long customerId,String currency,long orderId,BigDecimal amount);
     void releaseOrder(Access access,long bookId,long customerId,String currency,long orderId,BigDecimal amount);
     boolean cashCovered(Access access,long bookId,long customerId,long orderId,BigDecimal required);
+    record CashCollection(BigDecimal confirmedAmount,BigDecimal pendingAmount,boolean canManageReceipts) {
+        public boolean covers(BigDecimal required) { return confirmedAmount.compareTo(required)>=0; }
+    }
+    CashCollection cashCollection(Access access,long bookId,long customerId,long orderId);
     long createFromOutbound(RequestContext context,Access access,long bookId,long customerId,long orderId,long outboundId,String currency,BigDecimal amount,LocalDate date,String paymentType);
     java.util.Map<String,Object> storeDaily(Access access,Long storeId,LocalDate date);
     BigDecimal allocated(Access access,long bookId,long orderId);

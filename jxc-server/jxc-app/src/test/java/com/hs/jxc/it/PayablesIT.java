@@ -25,7 +25,6 @@ abstract class PayablesFixtures extends BasePgIT {
  Map<String,Object> proof(String type,long id,String category){var result=attachments.upload(c(),type,id,category,"proof.txt","text/plain","bank-confirmed-fact".getBytes(java.nio.charset.StandardCharsets.UTF_8));long attachment=id(result);return Map.of("attachmentId",attachment,"linkVersion",result.get("versionNo"),"sha256",owner.queryForObject("select sha256 from sys_attachment where id=?",String.class,attachment));}
  void rule(String type){workflow.createRule(c(),Map.of("docType",type,"name",type+" approval","conditions",List.of(),"nodes",List.of(Map.of("nodeName","Finance","approverType","USER","approverRef",201,"mode","ANY"))));}
  void approve(String type,long doc){long task=owner.queryForObject("select t.id from wf_task t join wf_instance i on i.country_id=t.country_id and i.id=t.instance_id where i.doc_type=? and i.doc_id=? and t.status='PENDING' order by t.id desc limit 1",Long.class,type,doc);workflow.approve(c(),task,"verified");}
- int compete(Callable<?> a,Callable<?> b)throws Exception{var pool=Executors.newFixedThreadPool(2);var latch=new CountDownLatch(1);try{var fs=List.of(pool.submit(()->{latch.await();return a.call();}),pool.submit(()->{latch.await();return b.call();}));latch.countDown();int success=0;for(var f:fs)try{f.get(20,TimeUnit.SECONDS);success++;}catch(ExecutionException e){if(!(e.getCause() instanceof ApiException))throw e;}return success;}finally{pool.shutdownNow();}}
 }
 
 class PayablesIT extends PayablesFixtures {

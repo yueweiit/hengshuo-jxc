@@ -7,7 +7,7 @@ const file = new URL('../src/modules/approval/ApprovalTaskList.vue', import.meta
 function renderMoney(sample) {
   const source = readFileSync(file, 'utf8')
   const cells = source.match(/<el-table-column label="金额"[\s\S]*?<\/el-table-column>/)[0]
-    + source.match(/<el-descriptions-item label="金额"[\s\S]*?<\/el-descriptions-item>/)[0]
+    + source.match(/<ApprovalAmount\b[^>]*:value="detail\.amount"[^>]*\/>/)[0]
   const calls = []
   const renderer = createRenderer({
     createElement: tag => ({ tag, children: [] }), createText: text => ({ text }), createComment: text => ({ comment: text }),
@@ -15,8 +15,9 @@ function renderMoney(sample) {
     insert: (node, parent) => { parent.children.push(node) }, remove() {}, patchProp() {}, parentNode: () => null, nextSibling: () => null,
   })
   const app = renderer.createApp({ setup: () => ({ detail: sample }), render: compile(`<div>${cells}</div>`) })
+  const amountTemplate = readFileSync(new URL('../src/modules/approval/ApprovalAmount.vue', import.meta.url), 'utf8').match(/<template>([\s\S]*?)<\/template>/)[1]
+  app.component('ApprovalAmount', defineComponent({ props: ['value', 'currency'], render: compile(amountTemplate) }))
   app.component('ElTableColumn', defineComponent({ setup: (_, context) => () => h('div', context.slots.default?.({ row: sample })) }))
-  app.component('ElDescriptionsItem', defineComponent({ setup: (_, context) => () => h('div', context.slots.default?.()) }))
   app.component('MoneyText', defineComponent({ props: ['value', 'currency'], setup(props) { calls.push({ value: props.value, currency: props.currency }); return () => h('span', String(props.value)) } }))
   const root = { children: [] }; app.mount(root)
   function text(node) { return (node.text ?? '') + (node.children ?? []).map(text).join('') }

@@ -13,7 +13,7 @@ function receiptPage(get) {
     ElMessage: { warning: message => warnings.push(message), success() {} },
     allRecords: async () => [{ id: 592, docNo: 'PO-1', supplierId: 801, status: 'CONFIRMED' }],
     http: { get: async path => { calls.push(path); const value = await get(path); return path.endsWith('/progress') || !value.order ? value : { ...value.order, lines: value.order.lines.map(({ productCode, productName, undeliveredQty, ...line }) => line) } }, postIdem: async (path, body) => { posts.push({ path, body: JSON.parse(JSON.stringify(body)) }); return { id: 1001 } } },
-  }, ['edit', 'orders', 'openCreate', 'openEdit', 'onOrderChange', 'orderLabel', 'save'])
+  }, ['edit', 'orders', 'openCreate', 'openEdit', 'onOrderChange', 'orderLabel', 'save', 'productFilter', 'filteredLines', 'applyProductFilter', 'clearFilters'])
   return { ...page, calls, posts, warnings, country, user }
 }
 
@@ -38,6 +38,17 @@ test('domestic receipt references use the existing owner progress order and pres
   assert.equal(page.posts[0].body.lines[0].pendingInspectQty, 10)
   assert.equal(page.posts[0].body.lines[0].damagedQty, 5)
   assert.deepEqual(page.calls, ['/pur/orders/592/progress'])
+})
+
+test('新建收货默认提交全部未交数量，包含零和小数数量', async () => {
+  const source = progress(592)
+  source.order.lines = [10, 0, 2.5].map((remaining, index) => ({ ...source.order.lines[0], id: 5920 + index, lineNo: index + 1, undeliveredQty: remaining }))
+  const page = receiptPage(async () => source)
+  await page.openCreate()
+  page.edit.orderId = 592
+  await page.onOrderChange()
+  await page.save(false)
+  assert.deepEqual(page.posts[0].body.lines.map(row => [row.qualifiedQty, row.pendingInspectQty, row.damagedQty]), [[10, 0, 0], [0, 0, 0], [2.5, 0, 0]])
 })
 
 test('a late old order projection cannot replace the currently selected order or its native remaining quantity', async () => {
@@ -76,10 +87,75 @@ for (const changed of ['country', 'session']) test(`a ${changed} change discards
 })
 
 test('editing a draft keeps its original good, pending and damaged inputs after native reference enrichment', async () => {
-  const page = receiptPage(async () => progress(592, 100))
+  const source = progress(592, 100)
+  source.order.lines.push({ ...source.order.lines[0], id: 5921, lineNo: 2 })
+  const page = receiptPage(async () => source)
   await page.openEdit({ id: 701, version: 4, orderId: 592, receiptDate: '2026-10-15', location: 'Existing location', remark: 'Existing remark', lines: [{ orderLineId: 5920, qualifiedQty: 70, pendingInspectQty: 10, damagedQty: 5 }] })
-  assert.deepEqual(page.edit.lines.map(row => [row.productCode, row.undeliveredQty, row.qualifiedQty, row.pendingInspectQty, row.damagedQty]), [['SKU-A', 100, 70, 10, 5]])
+  assert.deepEqual(page.edit.lines.map(row => [row.productCode, row.undeliveredQty, row.qualifiedQty, row.pendingInspectQty, row.damagedQty]), [['SKU-A', 100, 70, 10, 5], ['SKU-A', 100, 0, 0, 0]])
   assert.equal(page.edit.id, 701)
   assert.equal(page.edit.version, 4)
   assert.equal(page.edit.receiptDate, '2026-10-15')
+})
+
+const searchable = () => ({ order: { ...progress(592).order, lines: [
+  { id: 5920, lineNo: 1, productCode: 'NY051-TEST-01-S', productName: '蓝色杯垫', undeliveredQty: 10 },
+  { id: 5921, lineNo: 2, productCode: 'NY051-TEST-01-M', productName: '蓝色杯垫', undeliveredQty: 4 },
+  { id: 5922, lineNo: 3, productCode: 'AB-02', productName: '餐垫', undeliveredQty: 8 },
+] } })
+
+test('商品编码和名称支持去空白、不区分大小写的包含搜索，空条件恢复全部', async () => {
+  const page = receiptPage(async () => searchable())
+  page.edit.orderId = 592
+  await page.onOrderChange()
+  for (const [input, expected] of [[' ny051-test-01 ', [5920, 5921]], ['杯垫', [5920, 5921]], ['餐', [5922]], ['missing', []], ['   ', [5920, 5921, 5922]]]) {
+    page.productFilter.input = input
+    page.productFilter.visible = true
+    page.applyProductFilter()
+    assert.deepEqual(page.filteredLines.value.map(row => row.orderLineId), expected)
+    assert.equal(page.productFilter.visible, false)
+  }
+})
+
+test('清除筛选的默认值与关闭、提交参数分别控制菜单和当前结果', async () => {
+  const page = receiptPage(async () => searchable())
+  page.edit.orderId = 592
+  await page.onOrderChange()
+  for (const [args, visible, count] of [[[], false, 3], [[false], true, 3], [[false, false], true, 1], [[true, false], false, 1]]) {
+    page.productFilter.input = '餐'
+    page.applyProductFilter()
+    page.productFilter.visible = true
+    page.clearFilters(...args)
+    assert.equal(page.productFilter.input, '')
+    assert.equal(page.productFilter.visible, visible)
+    assert.equal(page.filteredLines.value.length, count)
+  }
+})
+
+test('筛选行保留原明细引用，隐藏行仍参与校验与整单保存', async () => {
+  const page = receiptPage(async () => searchable())
+  page.edit.orderId = 592
+  await page.onOrderChange()
+  page.productFilter.input = '01-S'
+  page.applyProductFilter()
+  assert.equal(page.filteredLines.value[0], page.edit.lines[0])
+  page.filteredLines.value[0].qualifiedQty = 7
+  page.edit.lines[1].pendingInspectQty = 1
+  await page.save(false)
+  assert.equal(page.posts.length, 0, '隐藏行超出未交数量时也不能保存')
+  assert.equal(page.warnings.length, 1)
+  page.edit.lines[1].qualifiedQty = 3
+  await page.save(false)
+  assert.deepEqual(page.posts[0].body.lines.map(row => [row.orderLineId, row.qualifiedQty, row.pendingInspectQty]), [[5920, 7, 0], [5921, 3, 1], [5922, 8, 0]])
+  page.clearFilters()
+  assert.equal(page.filteredLines.value[0].qualifiedQty, 7)
+})
+
+test('切换采购单或重新打开新建与编辑时清除已应用及未应用的搜索条件', async () => {
+  const page = receiptPage(async () => searchable())
+  for (const reopen of [() => page.onOrderChange(), () => page.openCreate(), () => page.openEdit({ id: 701, version: 1, orderId: 592, lines: [] })]) {
+    Object.assign(page.productFilter, { visible: true, input: '尚未搜索', keyword: 'missing' })
+    page.edit.orderId = 592
+    await reopen()
+    assert.deepEqual({ ...page.productFilter }, { visible: false, input: '', keyword: '' })
+  }
 })

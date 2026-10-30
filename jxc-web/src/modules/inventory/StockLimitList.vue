@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http, createCommandIntent } from '@/api/http'
@@ -6,7 +7,7 @@ import { allRecords } from '@/api/pagination'
 import { useUserStore } from '@/stores/user'
 import FieldInput from '@/components/crud/FieldInput.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
-import { ALERT_TAG, ALERT_TYPES, ALL_WAREHOUSE_SOURCE, USER_SOURCE, optionText } from '@/modules/shared/bizOptions'
+import { ALERT_TAG, ALERT_TYPES, ALL_WAREHOUSE_SOURCE, INVENTORY_LIMIT_OWNER_SOURCE, optionText } from '@/modules/shared/bizOptions'
 
 const intent = createCommandIntent()
 
@@ -36,7 +37,7 @@ async function load() {
 }
 
 async function save() {
-  if (dirty.value.some(invalid)) return ElMessage.error('有商品的下限高于上限，请修改后再保存')
+  if (dirty.value.some(invalid)) return reportError(new Error('有商品的下限高于上限，请修改后再保存'))
   saving.value = true
   try {
     await http.putIdem('/inv/limits', {
@@ -85,7 +86,7 @@ onMounted(load)
             <template #default="{ row }"><el-switch v-model="row.alertEnabled" :disabled="!canEdit" size="small" /></template>
           </el-table-column>
           <el-table-column label="负责人" width="160">
-            <template #default="{ row }"><FieldInput v-model="row.ownerId" :field="{ prop: 'ownerId', label: '负责人', type: 'select', options: USER_SOURCE }" :disabled="!canEdit" clearable /></template>
+            <template #default="{ row }"><FieldInput v-model="row.ownerId" :field="{ prop: 'ownerId', label: '负责人', type: 'select', options: INVENTORY_LIMIT_OWNER_SOURCE }" :disabled="!canEdit" clearable /></template>
           </el-table-column>
           <el-table-column label="当前预警" min-width="120">
             <template #default="{ row }"><el-tag v-for="a in row.alerts" :key="a" :type="ALERT_TAG[a]" size="small">{{ optionText(ALERT_TYPES, a) }}</el-tag></template>

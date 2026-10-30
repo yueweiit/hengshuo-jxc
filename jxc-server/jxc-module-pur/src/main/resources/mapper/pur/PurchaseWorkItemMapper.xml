@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseWorkItemMapper">
+
+  <select id="selectPendingReceipts" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT o.* FROM pur_order o WHERE o.country_id=#{countryId} AND o.status IN ('CONFIRMED','PARTIAL_DELIVERED') AND EXISTS(SELECT 1 FROM pur_order_line l WHERE l.country_id=o.country_id AND l.order_id=o.id AND l.base_qty&gt;l.cancelled_qty+l.qualified_qty+l.pending_inspect_qty+l.opening_shipped_qty) ORDER BY o.id
+  </select>
+</mapper>

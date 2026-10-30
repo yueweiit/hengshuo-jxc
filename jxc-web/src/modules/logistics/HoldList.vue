@@ -7,7 +7,7 @@ import { useUserStore } from '@/stores/user'
 import CrudPage from '@/components/crud/CrudPage.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
 import type { ColumnDef, CrudPageExpose, FieldDef } from '@/components/crud/types'
-import { HOLD_STATUS, USER_SOURCE } from '@/modules/shared/bizOptions'
+import { HOLD_STATUS, HOLD_OWNER_SOURCE } from '@/modules/shared/bizOptions'
 import { formatDate } from '@/utils/format'
 import { queryDefaults } from '@/utils/action'
 
@@ -35,7 +35,7 @@ const columns: ColumnDef[] = [
 const searchFields: FieldDef[] = [
   { prop: 'keyword', label: '单号 / 批次 / 地点' },
   { prop: 'status', label: '状态', type: 'select', options: HOLD_STATUS },
-  { prop: 'ownerId', label: '责任人', type: 'select', options: USER_SOURCE },
+  { prop: 'ownerId', label: '责任人', type: 'select', options: HOLD_OWNER_SOURCE },
 ]
 
 const rel = reactive({ visible: false, saving: false, hold: {} as Row, qty: {} as Record<number, number>, remark: '' })

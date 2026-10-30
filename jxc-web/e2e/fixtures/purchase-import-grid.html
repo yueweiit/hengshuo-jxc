@@ -1,0 +1,44 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>采购表格隔离验证</title><body style="margin:16px"><div id="app"></div>
+<script type="module">
+import { createApp, h } from 'vue'
+import ElementPlus from 'element-plus'
+import * as Icons from '@element-plus/icons-vue'
+import 'element-plus/dist/index.css'
+import Editor from '../../src/modules/purchase/PurchaseImportEditor.vue'
+import { createPurchaseImportModel } from '../../src/modules/purchase/purchaseImportModel.ts'
+import { createPurchaseImportDraftSession } from '../../src/modules/purchase/purchaseImportDraft.ts'
+const header={bookId:null,supplierId:null,currency:null,orderDate:null,expectedDate:null,paymentTerms:'',prepayRatio:null,termDays:null}
+const row={id:17,version:3,rowNo:1,sourceId:9,sourceSheet:'原表',sourceRow:8,sourceOrderNo:'PO-01',suppliedProductName:'来源商品',photo:null,productSpec:'S',purchaseQty:'10.0000',saleUnitPrice:null,saleTotal:null,purchaseUnitPrice:'53.0606250000',freight:null,landedUnitCost:null,usdUnitCost:null,usdTotal:null,images:[]}
+const calls=[],photoCalls=[]
+let server={batchId:'11111111-2222-4333-8444-555555555555',version:5,status:'REVIEW',header,rows:[]}
+const model=createPurchaseImportModel({
+ load:async()=>structuredClone(server),
+ saveGrid:async(input,key)=>{
+  calls.push({input,key})
+  if(window.gridFixture.fail)throw new Error('测试保存失败，保留草稿')
+  const gridSaved={}
+  for(const change of input.rows){
+   const id=change.id??100+calls.length+server.rows.length
+   gridSaved[change.clientId]=id
+   const old=server.rows.find(r=>r.id===id)
+   const saved={...old,...change.values,...change.matchInputs,id,version:(old?.version??0)+1,rowNo:old?.rowNo??server.rows.length+1,images:old?.images??[]}
+   if(old)server.rows.splice(server.rows.indexOf(old),1,saved);else server.rows.push(saved)
+  }
+  server.version++
+  return structuredClone({...server,gridSaved})
+ },
+ uploadPhoto:async(_batch,current,file,values,key)=>{
+  photoCalls.push({id:current.id,name:file.name,key})
+  const saved=server.rows.find(row=>row.id===current.id)
+  Object.assign(saved,values,{version:saved.version+1,images:[{id:90,sha256:'a'.repeat(64),status:'CONFIRMED',origin:'MANUAL_UPLOAD'}]})
+  server.version++;return structuredClone(server)
+ }
+},'2026-10-29')
+const local=createPurchaseImportDraftSession(model)
+await local.open('purchase-import-grid-fixture')
+if(model.state.batchId)server=model.exportLocalDraft().batch
+window.gridFixture={model,calls,photoCalls,local,fail:false,loadExisting:async(fields={})=>{model.invalidate();server.rows=[structuredClone({...row,...fields})];await model.loadBatch(server.batchId);await local.flush()}}
+const app=createApp({render:()=>h('div',{},[model.state.error?h('p',{role:'alert'},model.state.error):null,local.view.error?h('p',{role:'alert'},local.view.error):null,h(Editor,{page:model,disabled:model.busy(),persist:local.flush})])}).use(ElementPlus)
+for(const [name,icon]of Object.entries(Icons))app.component(name,icon)
+app.mount('#app')
+</script></body></html>

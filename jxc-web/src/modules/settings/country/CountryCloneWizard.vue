@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -195,8 +196,8 @@ async function activate() {
   } catch (e) {
     if (e instanceof BizError && e.code === 'SYS_CONFIG_MISSING') {
       preview.value!.missing = (e.data as { missing: MissingItem[] }).missing
-      ElMessage.error('还有阻断缺项，不能启用')
-    } else if (e instanceof BizError) ElMessage.error(e.message)
+      reportError(e, { title: '国家未能启用', nextStep: '请在启用检查中处理阻断缺项后重试。' })
+    } else reportError(e)
   } finally {
     busy.value = false
   }

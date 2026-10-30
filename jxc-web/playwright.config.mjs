@@ -1,0 +1,2 @@
+import { defineConfig } from '@playwright/test';
+export default defineConfig({testDir:'./e2e',testMatch:['sales-flow.spec.mjs','access-inspection.spec.mjs','attachments-inspection.spec.mjs','recovery.spec.mjs'],workers:1,retries:0,timeout:1200000,reporter:'list',outputDir:'../runtime/e2e-runner',use:{headless:true,viewport:{width:1500,height:1000},locale:'zh-CN',timezoneId:'America/Mexico_City',actionTimeout:15000}});

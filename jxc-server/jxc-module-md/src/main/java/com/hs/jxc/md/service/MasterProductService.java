@@ -22,8 +22,13 @@ public class MasterProductService implements MasterProductApi {
  }
  @Override public Product reference(long country,long product){var p=product(country,product,false);String base=String.valueOf(p.get("base_unit"));return new Product(product,String.valueOf(p.get("product_code")),String.valueOf(p.get("name")),base,base,BigDecimal.ONE,(BigDecimal)p.get("gross_weight"),(BigDecimal)p.get("volume"));}
  public Product requireEnabled(long country,long product,String unit){
-  var p=product(country,product,true);String base=String.valueOf(p.get("base_unit"));if(unit==null||unit.isBlank())throw Inputs.bad("请选择商品单位");
-  BigDecimal factor;if(unit.equals(base))factor=BigDecimal.ONE;else{var conversions=jdbc.queryForList("SELECT factor_to_base FROM md_product_unit WHERE product_id=? AND unit=?",product,unit);if(conversions.isEmpty())throw new ApiException(400,"MD_BAD_UNIT","商品未配置该单位换算");factor=(BigDecimal)conversions.getFirst().get("factor_to_base");}
+  return resolveEnabled(country,product,unit,false);
+ }
+ public Product requireEnabledLocked(long country,long product,String unit){return resolveEnabled(country,product,unit,true);}
+ private Product resolveEnabled(long country,long product,String unit,boolean lock){
+  var p=product(country,product,true,lock);String base=String.valueOf(p.get("base_unit"));if(unit==null||unit.isBlank())throw Inputs.bad("请选择商品单位");
+  if(lock&&jdbc.queryForList("SELECT product_id FROM md_country_sku WHERE country_id=? AND product_id=? AND status='ENABLED' FOR SHARE",country,product).isEmpty())throw new ApiException(409,"MD_SKU_DISABLED","商品未在本国启用");
+  BigDecimal factor;if(unit.equals(base))factor=BigDecimal.ONE;else{var conversions=jdbc.queryForList("SELECT factor_to_base FROM md_product_unit WHERE product_id=? AND unit=?"+(lock?" FOR SHARE":""),product,unit);if(conversions.isEmpty())throw new ApiException(400,"MD_BAD_UNIT","商品未配置该单位换算");factor=(BigDecimal)conversions.getFirst().get("factor_to_base");}
   return new Product(product,String.valueOf(p.get("product_code")),String.valueOf(p.get("name")),base,unit,factor,(BigDecimal)p.get("gross_weight"),(BigDecimal)p.get("volume"));
  }
  public BigDecimal previewToBase(Product p,BigDecimal qty){Inputs.decimal(qty,4,new BigDecimal("999999999999"));if(qty.signum()<=0)throw Inputs.bad("数量必须大于0");var base=qty.multiply(p.factorToBase());Inputs.decimal(base,4,new BigDecimal("999999999999"));return base;}

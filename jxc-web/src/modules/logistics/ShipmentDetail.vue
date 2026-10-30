@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { feedbackMessage } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -7,17 +8,19 @@ import { useUserStore } from '@/stores/user'
 import { useCountryStore } from '@/stores/country'
 import StatusTag from '@/components/StatusTag.vue'
 import MoneyText from '@/components/MoneyText.vue'
+import QtyText from '@/components/QtyText.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
 import DocAttachment from '@/components/DocAttachment.vue'
-import AuditTimeline from '@/components/AuditTimeline.vue'
+import AuditDrawer from '@/components/AuditDrawer.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
 import FieldInput from '@/components/crud/FieldInput.vue'
 import { confirmAction } from '@/utils/action'
 import { formatDate, countryDateTimeInput, countryDateTimeToIso } from '@/utils/format'
 import { nowMs } from '@/utils/datetime'
-import { BUCKETS, HOLD_REASON_SOURCE, MANUAL_NODES, MX_WAREHOUSE_SOURCE, TRANSPORT_MODES, USER_SOURCE, optionText } from '@/modules/shared/bizOptions'
+import { BUCKETS, HOLD_REASON_SOURCE, MANUAL_NODES, MX_WAREHOUSE_SOURCE, TRANSPORT_MODES, HOLD_OWNER_SOURCE, optionText } from '@/modules/shared/bizOptions'
 import ShipmentForm from './ShipmentForm.vue'
 import FeeForm from './FeeForm.vue'
+import './shipment-detail.scss'
 
 const supplyCommandIntent = createCommandIntent()
 
@@ -37,28 +40,114 @@ const nowCountryTime = () => countryDateTimeInput(new Date(nowMs()).toISOString(
 const sh = ref<Row>({})
 const related = ref<Row>({})
 const loading = ref(false)
+const loadError = ref('')
 const tab = ref('deliveries')
+const lineQuery = ref('')
+const quantityExpanded = ref(true)
+const linePage = ref(1)
+const linePageSize = ref(10)
+const expandedNodeIds = ref<number[]>([])
 const form = ref<InstanceType<typeof ShipmentForm>>()
 const feeForm = ref<InstanceType<typeof FeeForm>>()
 
 const id = computed(() => Number(route.params.id))
 const lines = computed<Row[]>(() => sh.value.lines ?? [])
+const auditVisible = ref(false)
+const auditContext = computed(() => ({
+  title: '运输批次',
+  identifier: String(sh.value.docNo ?? `#${id.value}`),
+  status: sh.value.status,
+}))
+function openAudit() {
+  auditVisible.value = true
+}
+const filteredLines = computed(() => {
+  const query = lineQuery.value.trim().toLowerCase()
+  return query ? lines.value.filter(line => [line.productCode, line.productName, line.poNo, line.sourceNo]
+    .some(value => typeof value === 'string' && value.toLowerCase().includes(query))) : lines.value
+})
+const pagedLines = computed(() => filteredLines.value.slice((linePage.value - 1) * linePageSize.value, linePage.value * linePageSize.value))
 const rank = computed(() => RANK[sh.value.status] ?? 0)
 const identityOk = computed(() => lines.value.every((l) => l.identityOk))
 const pendingTotal = computed(() => sh.value.totals?.pendingDeliveryQty ?? 0)
 function summary({ columns }: { columns: { property: string }[] }) {
-  return columns.map((c, i) => (i === 0 ? '合计' : c.property === 'boxes' && lines.value.some(line => line.boxes == null) ? '未维护' : c.property ? String(lines.value.reduce((s, l) => s + (Number(l[c.property]) || 0), 0)) : ''))
+  return columns.map((c, i) => (i === 0 ? '合计' : c.property === 'boxes' && filteredLines.value.some(line => line.boxes == null) ? '未维护' : c.property ? String(filteredLines.value.reduce((s, l) => s + (Number(l[c.property]) || 0), 0)) : ''))
 }
-const nodes = computed<Row[]>(() => [...(sh.value.nodes ?? [])].reverse())
+const NODE_QUANTITY_SOURCES: Record<string, { recordsKey: string; timeField: string; label: string; statuses?: string[] }> = {
+  DISPATCHED: { recordsKey: 'deliveries', timeField: 'dispatchedAt', label: '派送单', statuses: ['DISPATCHED', 'RECEIVED'] },
+  HOLD: { recordsKey: 'holds', timeField: 'createdAt', label: '暂缓单' },
+  TRANSSHIPPED: { recordsKey: 'transships', timeField: 'transshipAt', label: '换柜单', statuses: ['CONFIRMED'] },
+  RECEIVED: { recordsKey: 'receipts', timeField: 'confirmedAt', label: '实收单', statuses: ['CONFIRMED'] },
+}
+const NODE_QUANTITY_FIELDS: Record<string, { label: string; key: string }[]> = {
+  DISPATCHED: [{ label: '派送', key: 'dispatchQty' }],
+  HOLD: [{ label: '暂缓', key: 'holdQty' }],
+  TRANSSHIPPED: [{ label: '转移', key: 'movedQty' }, { label: '差异', key: 'diffQty' }],
+  RECEIVED: [
+    { label: '派送', key: 'dispatchQty' }, { label: '合格', key: 'goodQty' }, { label: '破损', key: 'damagedQty' },
+    { label: '待检', key: 'pendingInspectQty' }, { label: '短缺', key: 'shortQty' },
+  ],
+}
+function sameInstant(left: unknown, right: unknown) {
+  if (typeof left !== 'string' || typeof right !== 'string') return false
+  const leftTime = Date.parse(left)
+  return Number.isFinite(leftTime) && leftTime === Date.parse(right)
+}
+function nodeQuantityInfo(event: Row) {
+  const source = NODE_QUANTITY_SOURCES[event.nodeType]
+  if (!source) {
+    const label = event.nodeType === 'RESUMED' ? '恢复数量仅有累计记录，无法对应到本次节点' : '节点本身未记录数量'
+    return { state: 'unrecorded', label, records: [] as Row[] }
+  }
 
+  const records = ((related.value[source.recordsKey] ?? []) as Row[]).filter((record) =>
+    (!source.statuses || source.statuses.includes(record.status)) && Array.isArray(record.lines) && record.lines.length > 0)
+  const sameTypeNodes = ((sh.value.nodes ?? []) as Row[]).filter((item) => item.nodeType === event.nodeType)
+  const matchingRecords = records.filter((record) => sameInstant(event.actualAt, record[source.timeField]))
+  const matchingNodes = sameTypeNodes.filter((item) => sameInstant(item.actualAt, event.actualAt))
+
+  if (matchingRecords.length === 1 && matchingNodes.length === 1) {
+    return { state: 'linked', label: source.label, records: matchingRecords }
+  }
+  if (records.length === 1 && sameTypeNodes.length === 1) {
+    return { state: 'linked', label: source.label, records }
+  }
+  if (!records.length) return { state: 'unrecorded', label: `未找到关联${source.label}数量明细`, records: [] as Row[] }
+  return { state: 'ambiguous', label: '未能唯一关联数量明细', records: [] as Row[] }
+}
+function nodeQuantityValues(nodeType: string, line: Row) {
+  return (NODE_QUANTITY_FIELDS[nodeType] ?? [])
+    .filter((field) => line[field.key] !== undefined && line[field.key] !== null)
+    .map((field) => ({ label: field.label, value: line[field.key] }))
+}
+const nodes = computed<Row[]>(() => [...(sh.value.nodes ?? [])].reverse().map((event) => ({
+  ...event,
+  quantityInfo: nodeQuantityInfo(event),
+})))
+const allNodesExpanded = computed(() => nodes.value.length > 0 && nodes.value.every(node => expandedNodeIds.value.includes(node.id)))
+function toggleAllNodes() {
+  expandedNodeIds.value = allNodesExpanded.value ? [] : nodes.value.map(node => node.id)
+}
+function setNodeExpanded(nodeId: number, event: Event) {
+  const open = (event.target as HTMLDetailsElement).open
+  if (open && !expandedNodeIds.value.includes(nodeId)) expandedNodeIds.value.push(nodeId)
+  else if (!open && expandedNodeIds.value.includes(nodeId)) expandedNodeIds.value = expandedNodeIds.value.filter(id => id !== nodeId)
+}
+
+let loadRequest = 0
 async function load() {
+  const request = ++loadRequest
   loading.value = true
+  loadError.value = ''
   try {
     const [s, r] = await Promise.all([http.get<Row>(`/lgs/shipments/${id.value}`), http.get<Row>(`/lgs/shipments/${id.value}/related`)])
+    if (request !== loadRequest) return
     sh.value = s
     related.value = r
+  } catch (error) {
+    if (request === loadRequest) loadError.value = feedbackMessage(error, "运输批次读取失败，请重试")
   } finally {
-    loading.value = false
+    if (request === loadRequest) loading.value = false
   }
 }
 
@@ -147,116 +236,145 @@ function submitDelivery() {
 
 const canNode = computed(() => user.hasPerm('lgs:node:record') && rank.value >= RANK.IN_TRANSIT && sh.value.status !== 'COMPLETED')
 const canTransship = computed(() => user.hasPerm('lgs:transship:create') && sh.value.transportMode === 'SEA' && rank.value >= RANK.IN_TRANSIT && sh.value.status !== 'COMPLETED')
+const canHold = computed(() => pendingTotal.value > 0 && user.hasPerm('lgs:hold:create'))
+const canVoid = computed(() => ['DRAFT', 'PENDING_DISPATCH'].includes(sh.value.status) && user.hasPerm('lgs:shipment:edit'))
 
-watch(id, load)
+watch([lineQuery, linePageSize], () => { linePage.value = 1 })
+watch(() => filteredLines.value.length, total => {
+  linePage.value = Math.min(linePage.value, Math.max(1, Math.ceil(total / linePageSize.value)))
+})
+watch(id, () => {
+  lineQuery.value = ''
+  linePage.value = 1
+  tab.value = 'deliveries'
+  auditVisible.value = false
+  expandedNodeIds.value = []
+  sh.value = {}
+  related.value = {}
+  load()
+})
 onMounted(load)
 </script>
 
 <template>
-  <div v-loading="loading" class="page">
-    <div class="page-card">
-      <div class="page-title">
-        <h2>
-          <el-button link @click="router.push('/logistics/shipments')"><el-icon><ArrowLeft /></el-icon></el-button>
-          运输批次 <span class="mono">{{ sh.docNo }}</span>
+  <div v-loading="loading" class="page shipment-detail">
+    <div v-if="loadError" class="request-state" role="status"><p class="muted">尚未加载成功</p><el-button size="small" @click="load">重新加载</el-button></div>
+    <template v-else>
+    <section class="shipment-section shipment-overview" aria-label="运输批次基础资料">
+      <div class="shipment-heading">
+        <div class="shipment-title">
+          <el-tooltip content="返回运输批次" placement="bottom"><el-button link aria-label="返回运输批次" @click="router.push('/logistics/shipments')"><el-icon><ArrowLeft /></el-icon></el-button></el-tooltip>
+          <h2>运输批次 <span class="mono">{{ sh.docNo }}</span></h2>
           <StatusTag :status="sh.status" />
           <el-tag v-if="sh.delayed" type="danger" effect="dark" size="small">{{ sh.delayStage }}延误 {{ sh.delayHours }} 小时</el-tag>
-        </h2>
-        <div class="toolbar">
-          <el-button v-if="['DRAFT', 'PENDING_DISPATCH'].includes(sh.status) && user.hasPerm('lgs:shipment:edit')" @click="form?.open(sh)">编辑</el-button>
-          <el-button v-if="sh.status === 'DRAFT'" type="primary" @click="submit">提交</el-button>
-          <el-button v-if="sh.status === 'PENDING_DISPATCH' && user.hasPerm('lgs:shipment:dispatch')" type="primary" @click="openDispatch">实际发运</el-button>
-          <el-button v-if="canNode" @click="openNode">记录节点</el-button>
-          <el-button v-if="canTransship" @click="openTransship">换柜</el-button>
-          <el-button v-if="pendingTotal > 0 && user.hasPerm('lgs:hold:create')" @click="openHold">暂缓派送</el-button>
-          <el-button v-if="pendingTotal > 0 && rank >= RANK.RELEASED && user.hasPerm('lgs:delivery:create')" type="primary" @click="openDelivery">派送到仓</el-button>
-          <el-button v-if="rank >= 1 && user.hasPerm('lgs:fee:create')" @click="feeForm?.open({ refType: 'SHIPMENT', refId: id })">登记费用</el-button>
-          <el-button v-if="['DRAFT', 'PENDING_DISPATCH'].includes(sh.status) && user.hasPerm('lgs:shipment:edit')" type="danger" plain @click="voidShipment">作废</el-button>
+        </div>
+        <div class="shipment-actions">
+          <el-button v-if="['DRAFT', 'PENDING_DISPATCH'].includes(sh.status) && user.hasPerm('lgs:shipment:edit')" size="small" @click="form?.open(sh)">编辑</el-button>
+          <el-button v-if="sh.status === 'DRAFT'" size="small" type="primary" @click="submit">提交</el-button>
+          <el-button v-if="sh.status === 'PENDING_DISPATCH' && user.hasPerm('lgs:shipment:dispatch')" size="small" type="primary" @click="openDispatch">实际发运</el-button>
+          <el-button v-if="canNode" size="small" @click="openNode">记录节点</el-button>
+          <el-button v-if="rank >= 1 && user.hasPerm('lgs:fee:create')" size="small" @click="feeForm?.open({ refType: 'SHIPMENT', refId: id })">登记费用</el-button>
+          <el-button v-if="pendingTotal > 0 && rank >= RANK.RELEASED && user.hasPerm('lgs:delivery:create')" size="small" type="primary" @click="openDelivery">派送到仓</el-button>
+          <el-dropdown v-if="canTransship || canHold || canVoid" trigger="click">
+            <el-button size="small" aria-label="更多操作" title="更多操作"><el-icon><MoreFilled /></el-icon></el-button>
+            <template #dropdown><el-dropdown-menu>
+              <el-dropdown-item v-if="canTransship" @click="openTransship">换柜</el-dropdown-item>
+              <el-dropdown-item v-if="canHold" @click="openHold">暂缓派送</el-dropdown-item>
+              <el-dropdown-item v-if="canVoid" @click="voidShipment"><span class="shipment-danger">作废</span></el-dropdown-item>
+            </el-dropdown-menu></template>
+          </el-dropdown>
         </div>
       </div>
-      <el-descriptions :column="3" border size="small">
-        <el-descriptions-item label="物流商">{{ sh.carrierName }}</el-descriptions-item>
-        <el-descriptions-item label="运输方式">{{ optionText(TRANSPORT_MODES, sh.transportMode) }}</el-descriptions-item>
-        <el-descriptions-item label="目的仓">{{ sh.destWarehouseName }}</el-descriptions-item>
+      <dl class="shipment-facts">
+        <div class="shipment-fact"><dt>物流商</dt><dd>{{ sh.carrierName }}</dd></div>
+        <div class="shipment-fact"><dt>运输方式</dt><dd>{{ optionText(TRANSPORT_MODES, sh.transportMode) }}</dd></div>
+        <div class="shipment-fact"><dt>目的仓</dt><dd>{{ sh.destWarehouseName }}</dd></div>
+        <div class="shipment-fact"><dt>起运地</dt><dd>{{ sh.originLocation || '-' }}</dd></div>
         <template v-if="sh.transportMode === 'SEA'">
-          <el-descriptions-item label="船名 / 航次">{{ sh.vessel }} / {{ sh.voyage }}</el-descriptions-item>
-          <el-descriptions-item label="提单号"><span class="mono">{{ sh.blNo }}</span></el-descriptions-item>
-          <el-descriptions-item label="当前柜号 / 封号"><span class="mono">{{ sh.currentContainerNo }}</span> / {{ sh.currentSealNo || '-' }}</el-descriptions-item>
+          <div class="shipment-fact"><dt>船名航次</dt><dd>{{ sh.vessel }} / {{ sh.voyage }}</dd></div>
+          <div class="shipment-fact"><dt>提单号</dt><dd class="mono">{{ sh.blNo }}</dd></div>
+          <div class="shipment-fact"><dt>当前柜号</dt><dd class="mono">{{ sh.currentContainerNo }}</dd></div>
+          <div class="shipment-fact"><dt>封号</dt><dd class="mono">{{ sh.currentSealNo || '-' }}</dd></div>
         </template>
         <template v-else>
-          <el-descriptions-item label="航班号">{{ sh.flightNo }}</el-descriptions-item>
-          <el-descriptions-item label="运单号" :span="2"><span class="mono">{{ sh.awbNo }}</span></el-descriptions-item>
+          <div class="shipment-fact"><dt>航班号</dt><dd>{{ sh.flightNo }}</dd></div>
+          <div class="shipment-fact shipment-fact--wide"><dt>运单号</dt><dd class="mono">{{ sh.awbNo }}</dd></div>
         </template>
-        <el-descriptions-item label="起运地">{{ sh.originLocation || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="计划发运 / 实际"><DateTimeText :value="sh.plannedEtd" /> / <DateTimeText v-if="sh.actualEtd || (sh.openingRef && sh.openingSourceDate)" :value="sh.actualEtd" :known-date="sh.openingRef ? sh.openingSourceDate : null" /><span v-else class="muted">未发运</span></el-descriptions-item>
-        <el-descriptions-item label="计划到港 / 实际"><DateTimeText :value="sh.plannedEta" /> / <DateTimeText v-if="sh.actualEta" :value="sh.actualEta" /><span v-else class="muted">未到港</span></el-descriptions-item>
-        <el-descriptions-item label="箱数 / 毛重 / 体积">{{ sh.totalBoxes ?? '未维护' }} 箱 · {{ sh.grossWeight ?? '未维护' }} kg · {{ sh.volume ?? '未维护' }} m³</el-descriptions-item>
-        <el-descriptions-item label="采购单">{{ sh.poNos }}</el-descriptions-item>
-        <el-descriptions-item label="创建人">{{ sh.createdByName }} · <DateTimeText :value="sh.createdAt" /></el-descriptions-item>
-        <el-descriptions-item v-if="sh.remark" label="备注" :span="3">{{ sh.remark }}</el-descriptions-item>
-      </el-descriptions>
-    </div>
+        <div class="shipment-fact shipment-fact--date" data-field="departure"><dt>发运时间</dt><dd class="shipment-date-pair"><span><small>计划</small><DateTimeText :value="sh.plannedEtd" /></span><span><small>实际</small><DateTimeText v-if="sh.actualEtd || (sh.openingRef && sh.openingSourceDate)" :value="sh.actualEtd" :known-date="sh.openingRef ? sh.openingSourceDate : null" /><span v-else class="muted">未发运</span></span></dd></div>
+        <div class="shipment-fact shipment-fact--date"><dt>到港时间</dt><dd class="shipment-date-pair"><span><small>计划</small><DateTimeText :value="sh.plannedEta" /></span><span><small>实际</small><DateTimeText v-if="sh.actualEta" :value="sh.actualEta" /><span v-else class="muted">未到港</span></span></dd></div>
+        <div class="shipment-fact"><dt>装载信息</dt><dd>{{ sh.totalBoxes ?? '未维护' }} 箱 · {{ sh.grossWeight ?? '未维护' }} kg<span class="shipment-subline">{{ sh.volume ?? '未维护' }} m³</span></dd></div>
+        <div class="shipment-fact shipment-fact--wide"><dt>采购单</dt><dd class="mono">{{ sh.poNos }}</dd></div>
+        <div class="shipment-fact"><dt>创建信息</dt><dd>{{ sh.createdByName }}<span class="shipment-subline"><DateTimeText :value="sh.createdAt" /></span></dd></div>
+      </dl>
+      <p v-if="sh.remark" class="shipment-remark"><span>备注</span>{{ sh.remark }}</p>
+    </section>
 
-    <div class="page-card">
-      <div class="page-title">
-        <h3>数量分桶</h3>
-        <el-tag v-if="rank >= RANK.IN_TRANSIT" :type="identityOk ? 'success' : 'danger'" effect="plain">{{ identityOk ? '数量恒等校验通过' : '数量不平，请检查' }}</el-tag>
-      </div>
-      <div class="table-scroll">
-        <el-table :data="lines" border size="small" row-key="id" show-summary :summary-method="summary">
-          <el-table-column label="商品" min-width="170"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.poNo} · ${row.sourceNo}`" /></template></el-table-column>
-          <el-table-column prop="boxes" label="箱数" width="75" align="right"><template #default="{ row }">{{ row.boxes ?? '未维护' }}</template></el-table-column>
-          <el-table-column prop="baseQty" label="计划" width="64" align="right" />
-          <el-table-column prop="shippedQty" label="已发运" width="70" align="right" />
-          <el-table-column v-for="b in BUCKETS" :key="b.prop" :prop="b.prop" :label="b.label" width="88" align="right">
-            <template #default="{ row }"><span :class="{ zero: !row[b.prop], warn: b.prop === 'discrepancyQty' && row[b.prop] > 0 }">{{ row[b.prop] }}</span></template>
-          </el-table-column>
-          <el-table-column label="恒等" width="60" align="center">
-            <template #default="{ row }"><el-icon v-if="row.identityOk" color="var(--el-color-success)"><CircleCheck /></el-icon><el-icon v-else color="var(--el-color-danger)"><Warning /></el-icon></template>
-          </el-table-column>
-        </el-table>
-      </div>
-      <p class="muted">已发运 = 国际在途 + 当地待派送 + 暂缓 + 派送在途 + 已实收合格 + 已实收冻结 + 差异。到港把国际在途转为当地待派送；放行（或换柜）后才能派送；实收后进入目的仓库存。</p>
-    </div>
-
-    <el-row :gutter="12">
-      <el-col :xs="24" :lg="14">
-        <div class="page-card">
-          <h3>节点时间线</h3>
-          <el-empty v-if="!nodes.length" description="尚未发运，没有节点" :image-size="60" />
-          <el-timeline v-else>
-            <el-timeline-item v-for="n in nodes" :key="n.id" :type="n.nodeType === 'EXCEPTION' ? 'danger' : n.corrected ? 'info' : 'primary'" :hollow="n.corrected" placement="top" :timestamp="`${n.nodeLabel} · ${n.location || ''}`">
-              <div :class="{ struck: n.corrected }">
-                <DateTimeText :value="n.actualAt" />
-                <span v-if="n.plannedAt" class="muted">（计划 <DateTimeText :value="n.plannedAt" />）</span>
-                <span v-if="n.refNo" class="mono"> · {{ n.refNo }}</span>
-                <span class="muted"> · {{ n.operatorName }}</span>
-                <el-tag v-if="n.correctsEventId" size="small" type="warning" class="ml">更正</el-tag>
-                <el-tag v-if="n.corrected" size="small" type="info" class="ml">已被更正</el-tag>
-                <el-button v-if="canNode && !n.corrected && ['DEPARTED', 'ARRIVED_PORT', 'CUSTOMS_DECLARED', 'CUSTOMS_RELEASED', 'EXCEPTION'].includes(n.nodeType)" link type="primary" size="small" class="ml" @click="openCorrect(n)">更正</el-button>
-              </div>
-              <div v-if="n.remark" class="muted">{{ n.remark }}</div>
-            </el-timeline-item>
-          </el-timeline>
-          <p class="muted">节点事件只追加不修改；时间录错时用“更正”生成新事件，原事件标记为已被更正并保留。</p>
+    <section class="shipment-section shipment-quantities" aria-labelledby="shipment-quantity-title">
+      <div class="shipment-section-heading shipment-quantity-heading">
+        <div class="shipment-quantity-controls">
+          <el-input v-model="lineQuery" clearable size="small" placeholder="商品编码 / 名称 / 来源" aria-label="筛选商品" class="shipment-line-search"><template #prefix><el-icon><Search /></el-icon></template></el-input>
         </div>
-      </el-col>
-      <el-col :xs="24" :lg="10">
-        <div v-if="sh.transportMode === 'SEA'" class="page-card">
-          <h3>柜号历史</h3>
-          <el-table :data="sh.containers ?? []" border size="small">
-            <el-table-column label="柜号" min-width="130"><template #default="{ row }"><span class="mono">{{ row.containerNo }}</span><el-tag v-if="!row.activeTo" size="small" type="success" class="ml">当前</el-tag></template></el-table-column>
-            <el-table-column prop="sealNo" label="封号" width="90" />
-            <el-table-column label="启用 → 停用" min-width="180">
-              <template #default="{ row }"><DateTimeText :value="sh.openingRef && row.id === sh.containers?.[0]?.id && row.bizDate === sh.cutoffDate ? null : row.activeFrom" :known-date="sh.openingRef && row.id === sh.containers?.[0]?.id && row.bizDate === sh.cutoffDate ? sh.openingSourceDate : null" /><template v-if="row.activeTo"> → <DateTimeText :value="row.activeTo" /></template></template>
+        <div class="shipment-heading-text"><h3 id="shipment-quantity-title">数量分桶</h3><span class="muted">{{ filteredLines.length }} / {{ lines.length }} 条明细</span><el-tag v-if="rank >= RANK.IN_TRANSIT" :type="identityOk ? 'success' : 'danger'" effect="plain" size="small">{{ identityOk ? '数量恒等校验通过' : '数量不平，请检查' }}</el-tag></div>
+        <button type="button" class="shipment-quantity-toggle" :aria-expanded="quantityExpanded" aria-controls="shipment-quantity-body" :aria-label="quantityExpanded ? '收起数量分桶' : '展开数量分桶'" :title="quantityExpanded ? '收起数量分桶' : '展开数量分桶'" @click="quantityExpanded = !quantityExpanded"><el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon></button>
+      </div>
+      <div v-show="quantityExpanded" id="shipment-quantity-body" class="shipment-quantity-body">
+        <div class="table-scroll">
+          <el-table :data="pagedLines" class="shipment-quantity-table" max-height="400" border stripe size="small" row-key="id" show-summary :summary-method="summary" :empty-text="lineQuery.trim() ? '没有匹配的商品' : '暂无商品明细'">
+            <el-table-column label="商品 / 采购来源" min-width="250"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" :extra="`${row.poNo} · ${row.sourceNo}`" /></template></el-table-column>
+            <el-table-column prop="boxes" label="箱数" width="66" align="right" show-overflow-tooltip><template #default="{ row }">{{ row.boxes ?? '未维护' }}</template></el-table-column>
+            <el-table-column prop="baseQty" label="计划" width="68" align="right" show-overflow-tooltip />
+            <el-table-column prop="shippedQty" label="已发运" width="74" align="right" show-overflow-tooltip />
+            <el-table-column v-for="b in BUCKETS" :key="b.prop" :prop="b.prop" :label="b.label" width="80" align="right" show-overflow-tooltip>
+              <template #default="{ row }"><span :class="{ zero: !row[b.prop], warn: b.prop === 'discrepancyQty' && row[b.prop] > 0 }">{{ row[b.prop] }}</span></template>
+            </el-table-column>
+            <el-table-column label="恒等" width="52" align="center">
+              <template #default="{ row }"><el-icon v-if="row.identityOk" color="var(--el-color-success)" role="img" aria-label="数量恒等校验通过"><CircleCheck /></el-icon><el-icon v-else color="var(--el-color-danger)" role="img" aria-label="数量不平"><Warning /></el-icon></template>
             </el-table-column>
           </el-table>
-          <p class="muted">按旧柜号搜索批次仍能找到这个批次。</p>
         </div>
-      </el-col>
-    </el-row>
+        <div class="shipment-quantity-footer">
+          <details class="shipment-rules"><summary>数量核对规则</summary><p>已发运 = 国际在途 + 当地待派送 + 暂缓 + 派送在途 + 已实收合格 + 已实收冻结 + 差异。到港把国际在途转为当地待派送；放行（或换柜）后才能派送；实收后进入目的仓库存。合计按当前筛选结果的全部明细计算。</p></details>
+          <el-pagination v-model:current-page="linePage" v-model:page-size="linePageSize" size="small" :page-sizes="[10, 20, 50]" :pager-count="5" layout="total, sizes, prev, pager, next" :total="filteredLines.length" />
+        </div>
+      </div>
+    </section>
 
-    <div class="page-card">
+    <div class="shipment-lower">
+      <section class="shipment-section shipment-nodes" aria-labelledby="shipment-nodes-title">
+        <div class="shipment-section-heading"><div class="shipment-heading-text"><h3 id="shipment-nodes-title">节点时间线</h3><span class="muted">最新在前</span></div><el-button v-if="nodes.length" link type="primary" size="small" @click="toggleAllNodes">{{ allNodesExpanded ? '收起全部' : '展开全部' }}</el-button></div>
+        <el-empty v-if="!nodes.length" description="暂无节点记录" :image-size="48" />
+        <div v-else class="shipment-node-list">
+          <details v-for="n in nodes" :key="n.id" class="shipment-node" :class="{ 'is-corrected': n.corrected, 'is-exception': n.nodeType === 'EXCEPTION' }" :open="expandedNodeIds.includes(n.id)" @toggle="setNodeExpanded(n.id, $event)">
+            <summary><span class="shipment-node-name">{{ n.nodeLabel }}</span><DateTimeText :value="n.actualAt" /><el-tag v-if="n.correctsEventId" size="small" type="warning">更正</el-tag><el-tag v-if="n.corrected" size="small" type="info">已被更正</el-tag></summary>
+            <div class="shipment-node-content">
+                <div>{{ n.location || '-' }} · {{ n.operatorName || '-' }}</div>
+                <div v-if="n.plannedAt" class="muted">计划 <DateTimeText :value="n.plannedAt" /></div>
+                <div v-if="n.refNo" class="mono">{{ n.refNo }}</div>
+                <div v-if="n.remark">{{ n.remark }}</div>
+                <div v-if="n.quantityInfo.state === 'linked'" class="shipment-node-quantity">
+                  <div class="shipment-node-quantity-source">关联数量 · {{ n.quantityInfo.label }}</div>
+                  <div v-for="record in n.quantityInfo.records" :key="record.id" class="shipment-node-quantity-record">
+                    <div class="shipment-node-quantity-doc">{{ record.docNo || `单据 #${record.id}` }}</div>
+                    <div v-for="line in record.lines" :key="line.id" class="shipment-node-quantity-line">
+                      <ProductCell :code="line.productCode" :name="line.productName" />
+                      <div class="shipment-node-quantity-values"><span v-for="quantity in nodeQuantityValues(n.nodeType, line)" :key="quantity.label">{{ quantity.label }} <QtyText :value="quantity.value" /></span></div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="shipment-node-quantity-empty">{{ n.quantityInfo.label }}</div>
+                <el-button v-if="canNode && !n.corrected && ['DEPARTED', 'ARRIVED_PORT', 'CUSTOMS_DECLARED', 'CUSTOMS_RELEASED', 'EXCEPTION'].includes(n.nodeType)" link type="primary" size="small" class="ml" @click="openCorrect(n)">更正</el-button>
+            </div>
+          </details>
+        </div>
+        <div class="shipment-node-footer"><span>共 {{ nodes.length }} 条节点</span><el-button v-if="canNode" link type="primary" size="small" @click="openNode">记录节点</el-button></div>
+      </section>
+
+    <details open class="shipment-section shipment-records" aria-labelledby="shipment-records-title">
+      <summary class="shipment-section-heading shipment-collapse-summary">
+        <h3 id="shipment-records-title">关联记录</h3>
+        <el-icon class="shipment-collapse-icon" aria-hidden="true"><ArrowRight /></el-icon>
+      </summary>
+      <div class="shipment-record-body">
       <el-tabs v-model="tab">
         <el-tab-pane :label="`派送（${related.deliveries?.length ?? 0}）`" name="deliveries">
           <el-table :data="related.deliveries ?? []" border size="small">
@@ -331,16 +449,30 @@ onMounted(load)
           </el-table>
           <el-button link type="primary" class="mt" @click="router.push({ path: '/logistics/fees', query: { shipmentId: id } })">在费用页管理</el-button>
         </el-tab-pane>
+        <el-tab-pane v-if="sh.transportMode === 'SEA'" :label="`柜号历史（${sh.containers?.length ?? 0}）`" name="containers">
+          <el-table :data="sh.containers ?? []" border size="small">
+            <el-table-column label="柜号" min-width="130"><template #default="{ row }"><span class="mono">{{ row.containerNo }}</span><el-tag v-if="!row.activeTo" size="small" type="success" class="ml">当前</el-tag></template></el-table-column>
+            <el-table-column prop="sealNo" label="封号" width="110" />
+            <el-table-column label="启用 → 停用" min-width="260">
+              <template #default="{ row }"><DateTimeText :value="sh.openingRef && row.id === sh.containers?.[0]?.id && row.bizDate === sh.cutoffDate ? null : row.activeFrom" :known-date="sh.openingRef && row.id === sh.containers?.[0]?.id && row.bizDate === sh.cutoffDate ? sh.openingSourceDate : null" /><template v-if="row.activeTo"> → <DateTimeText :value="row.activeTo" /></template></template>
+            </el-table-column>
+          </el-table>
+          <p class="muted">按旧柜号搜索批次仍能找到这个批次。</p>
+        </el-tab-pane>
         <el-tab-pane label="附件" name="files" lazy>
           <DocAttachment biz-type="SHIPMENT" :biz-id="id" category="LOGISTICS_DOC" />
         </el-tab-pane>
         <el-tab-pane label="操作日志" name="audit" lazy>
-          <AuditTimeline resource-type="shipment" :resource-id="id" />
+          <el-button type="primary" plain size="small" @click="openAudit"><el-icon><Clock /></el-icon>查看操作日志</el-button>
         </el-tab-pane>
       </el-tabs>
+      </div>
+      <AuditDrawer v-if="auditVisible" v-model="auditVisible" resource-type="shipment" :resource-id="id" :context="auditContext" />
+    </details>
     </div>
+    </template>
 
-    <el-dialog v-model="dispatch.visible" title="实际发运" width="480px" append-to-body>
+    <el-dialog v-model="dispatch.visible" title="实际发运" width="480px" class="shipment-dialog" append-to-body>
       <el-form label-width="90px">
         <el-form-item :label="`离港时间（${country.timezone}）`"><el-date-picker v-model="dispatch.actualEtd" type="datetime" value-format="YYYY-MM-DD HH:mm:ss.SSS" style="width: 100%" /></el-form-item>
         <el-form-item label="地点"><el-input v-model="dispatch.location" /></el-form-item>
@@ -353,7 +485,7 @@ onMounted(load)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="node.visible" title="记录节点" width="520px" append-to-body>
+    <el-dialog v-model="node.visible" title="记录节点" width="520px" class="shipment-dialog" append-to-body>
       <el-form label-width="90px">
         <el-form-item label="节点">
           <el-radio-group v-model="node.nodeType">
@@ -371,7 +503,7 @@ onMounted(load)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="correct.visible" :title="`更正节点：${correct.event.nodeLabel}`" width="480px" append-to-body>
+    <el-dialog v-model="correct.visible" :title="`更正节点：${correct.event.nodeLabel}`" width="480px" class="shipment-dialog" append-to-body>
       <el-form label-width="90px">
         <el-form-item label="原时间"><DateTimeText :value="correct.event.actualAt" /></el-form-item>
         <el-form-item :label="`正确时间（${country.timezone}）`"><el-date-picker v-model="correct.actualAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss.SSS" style="width: 100%" /></el-form-item>
@@ -384,7 +516,7 @@ onMounted(load)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="ts.visible" title="换柜" width="720px" append-to-body>
+    <el-dialog v-model="ts.visible" title="换柜" width="720px" class="shipment-dialog" append-to-body>
       <el-form label-width="90px">
         <el-row :gutter="12">
           <el-col :span="12"><el-form-item label="原柜号"><span class="mono">{{ sh.currentContainerNo }}</span></el-form-item></el-col>
@@ -395,7 +527,7 @@ onMounted(load)
           <el-col :span="12"><el-form-item label="备注"><el-input v-model="ts.remark" /></el-form-item></el-col>
         </el-row>
       </el-form>
-      <el-table :data="lines" border size="small">
+      <el-table :data="lines" max-height="320" border size="small">
         <el-table-column label="商品" min-width="160"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template></el-table-column>
         <el-table-column label="原柜在柜" width="90" align="right"><template #default="{ row }">{{ inContainer(row) }}</template></el-table-column>
         <el-table-column label="转入新柜" width="130">
@@ -410,7 +542,7 @@ onMounted(load)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="hold.visible" title="暂缓派送" width="720px" append-to-body>
+    <el-dialog v-model="hold.visible" title="暂缓派送" width="720px" class="shipment-dialog" append-to-body>
       <el-form label-width="90px">
         <el-row :gutter="12">
           <el-col :span="12">
@@ -421,14 +553,14 @@ onMounted(load)
           <el-col :span="12"><el-form-item label="停放地点" required><el-input v-model="hold.parkLocation" placeholder="例如：曼萨尼约港外堆场 B 区" /></el-form-item></el-col>
           <el-col :span="12">
             <el-form-item label="责任人" required>
-              <FieldInput v-model="hold.ownerId" :field="{ prop: 'ownerId', label: '责任人', type: 'select', options: USER_SOURCE }" />
+              <FieldInput v-model="hold.ownerId" :field="{ prop: 'ownerId', label: '责任人', type: 'select', options: HOLD_OWNER_SOURCE }" />
             </el-form-item>
           </el-col>
           <el-col :span="12"><el-form-item label="复查日期" required><el-date-picker v-model="hold.reviewDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" /></el-form-item></el-col>
           <el-col :span="24"><el-form-item label="备注"><el-input v-model="hold.remark" /></el-form-item></el-col>
         </el-row>
       </el-form>
-      <el-table :data="lines" border size="small">
+      <el-table :data="lines" max-height="320" border size="small">
         <el-table-column label="商品" min-width="160"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template></el-table-column>
         <el-table-column prop="pendingDeliveryQty" label="当地待派送" width="100" align="right" />
         <el-table-column label="暂缓数量" width="130">
@@ -442,7 +574,7 @@ onMounted(load)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="dl.visible" title="派送到仓" width="720px" append-to-body>
+    <el-dialog v-model="dl.visible" title="派送到仓" width="720px" class="shipment-dialog" append-to-body>
       <el-form label-width="90px">
         <el-row :gutter="12">
           <el-col :span="12">
@@ -456,7 +588,7 @@ onMounted(load)
           <el-col :span="24"><el-form-item label="备注"><el-input v-model="dl.remark" /></el-form-item></el-col>
         </el-row>
       </el-form>
-      <el-table :data="lines" border size="small">
+      <el-table :data="lines" max-height="320" border size="small">
         <el-table-column label="商品" min-width="160"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template></el-table-column>
         <el-table-column prop="pendingDeliveryQty" label="当地待派送" width="100" align="right" />
         <el-table-column label="本次派送" width="130">
@@ -474,38 +606,3 @@ onMounted(load)
     <FeeForm ref="feeForm" @saved="load" />
   </div>
 </template>
-
-<style scoped>
-h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-}
-
-.mt {
-  margin-top: 10px;
-}
-
-.ml {
-  margin-left: 6px;
-}
-
-.warn {
-  color: var(--el-color-warning);
-  font-weight: 600;
-}
-
-.zero {
-  color: var(--el-text-color-placeholder);
-}
-
-.struck {
-  text-decoration: line-through;
-  color: var(--el-text-color-secondary);
-}
-</style>

@@ -1,0 +1,246 @@
+import { loadTsModule } from './contracts/load-ts-module.mjs'
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { loadVueScript } from './contracts/load-vue-script.mjs'
+const salesOrderActions = loadTsModule(new URL('../src/modules/sales/salesOrderActions.ts', import.meta.url))
+
+const file = new URL('../src/modules/sales/SalesOrderDetail.vue', import.meta.url)
+const source = readFileSync(file, 'utf8')
+const fixture = (id = 71) => ({ id, docNo: `SO-${id}`, totalQty: 20, openQty: 8, totalAmount: 200, currency: 'MXN', approvalStatus: 'APPROVED', fulfillmentStatus: 'PARTIAL_OUTBOUND', lines: [{ id: 11, productCode: 'SKU-11', productName: '商品', qty: 20, unit: 'PCS', baseQty: 20, cancelledQty: 4, outboundQty: 8, openQty: 8, allocs: [{ id: 31, warehouseId: 401, warehouseName: 'A仓', allocQty: 12, cancelledQty: 4, outboundQty: 4, openQty: 4 }, { id: 32, warehouseId: 402, warehouseName: 'B仓', allocQty: 8, cancelledQty: 0, outboundQty: 4, openQty: 4 }] }] })
+const passed = { checks: [{ item: '仓库权限', ok: true, message: '有该仓数据范围' }] }
+function deferred() {
+  let resolve, reject
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+}
+function detail(read) {
+  const route = reactive({ params: { id: '71' } }), country = { epoch: 1, timezone: 'America/Mexico_City' }
+  const calls = [], writes = [], warnings = [], stops = [], navigations = [], storage = new Map()
+  const names = ['order', 'loading', 'load', 'loadError', 'timeline', 'orderedTimeline', 'auditVisible', 'auditContext', 'timelineError', 'timelineLoading', 'loadTimeline', 'ob', 'checks', 'runCheck', 'checkError', 'checkLoading', 'checkedWarehouseId', 'canConfirmOut', 'confirmOut', 'fullOrder', 'warehouses', 'paymentAction']
+  const page = loadVueScript(file, {
+    ...salesOrderActions, computed, reactive, ref, watch: (...args) => { const stop = watch(...args); stops.push(stop); return stop }, onMounted() {},
+    useRoute: () => route, useRouter: () => ({ push: target => navigations.push(target) }), useCountryStore: () => country,
+    useUserStore: () => ({ user: { id: 1 }, hasPerm: () => true, fieldAccess: () => 'WRITE' }),
+    sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
+    createCommandIntent: () => ({}), getCountryId: () => 2, getToken: () => 'owner', todayIn: () => '2026-10-24',
+    commandPayloadFingerprint: value => JSON.stringify(value),
+    ElMessage: { warning: value => warnings.push(value), success() {} },
+    http: {
+      get: async (url, params) => { calls.push({ url, params }); return read ? read(url, params) : url.endsWith('/timeline') ? [] : url.endsWith('/outbound-check') ? passed : fixture(Number(url.split('/').at(-1))) },
+      post: async (url, params) => { calls.push({ url, params, method: 'POST' }); return read ? read(url, params) : passed },
+      postIdem: async (url, body) => { writes.push({ url, body }); return { id: 99 } },
+    },
+  }, names.filter(name => new RegExp(`(?:function|const|let)\\s+${name}\\b`).test(source)))
+  return { ...page, route, country, calls, writes, warnings, navigations, storage, dispose: () => stops.forEach(stop => stop()) }
+}
+
+test('订单读取失败清除旧订单并保留原因，重试后恢复详情', async t => {
+  let failed = true
+  const p = detail(url => url.endsWith('/timeline') ? [] : failed ? Promise.reject(new Error('没有查看此订单的权限')) : fixture())
+  t.after(p.dispose); p.order.value = fixture(70)
+  await p.load()
+  assert.equal(p.order.value, null)
+  assert.match(p.loadError?.value ?? '', /没有查看此订单的权限/)
+  assert.equal(p.loading.value, false)
+  failed = false; await p.load()
+  assert.equal(p.order.value.id, 71)
+  assert.equal(p.loadError.value, '')
+})
+
+test('时间线失败不丢失订单，独立重试不重新请求订单', async t => {
+  let failed = true
+  const p = detail(url => url.endsWith('/timeline') ? failed ? Promise.reject(new Error('时间线服务暂不可用')) : [{ at: '2026-10-24T08:00:00Z', type: '建单', text: 'SO-71' }] : fixture())
+  t.after(p.dispose); await p.load()
+  assert.equal(p.order.value.id, 71)
+  assert.match(p.timelineError?.value ?? '', /时间线服务暂不可用/)
+  assert.equal(p.loadError.value, '')
+  const count = p.calls.filter(call => call.url === '/sal/orders/71').length
+  failed = false; await p.loadTimeline()
+  assert.equal(p.timeline.value.length, 1)
+  assert.equal(p.timelineError.value, '')
+  assert.equal(p.calls.filter(call => call.url === '/sal/orders/71').length, count)
+})
+
+test('较慢的旧订单响应不能覆盖新订单或加载状态', async t => {
+  const old = deferred()
+  const p = detail(url => url.endsWith('/timeline') ? [] : url.endsWith('/71') ? old.promise : fixture(72))
+  t.after(p.dispose)
+  if (p.auditVisible) p.auditVisible.value = true
+  const pending = p.load(); p.route.params.id = '72'; await p.load()
+  old.resolve(fixture()); await pending
+  assert.equal(p.order.value.id, 72)
+  assert.equal(p.loading.value, false)
+  assert.equal(p.loadError?.value, '')
+  assert.equal(p.auditVisible?.value, false)
+  assert.equal(p.auditContext?.value.identifier, 'SO-72')
+})
+
+test('时间线按真实时间排序，同刻及未知时间稳定，原始数据不变', async t => {
+  const p = detail(); t.after(p.dispose)
+  const events = [{ at: 'broken', type: '出库', text: '时间异常' }, { at: '2026-10-26T10:00:30Z', type: '出库', text: 'B' }, { at: '2026-10-26T10:00:10Z', type: '建单', text: 'A' }, { at: '2026-10-26T10:00:30Z', type: '出库', text: 'C' }, { type: '出库', text: '未记录时间' }, { at: '2026-10-26T09:00:00', type: '出库', text: '时区未知' }, { at: '2026-10-26', type: '出库', text: '仅日期' }]
+  p.timeline.value = events
+  assert.deepEqual(p.orderedTimeline?.value.map(item => item.text), ['A', 'B', 'C', '时间异常', '未记录时间', '时区未知', '仅日期'])
+  assert.deepEqual(p.timeline.value, events)
+})
+
+test('日志抬头使用当前订单编号，不将三类状态折成一个状态', async t => {
+  const p = detail(); t.after(p.dispose); await p.load()
+  assert.deepEqual(p.auditContext?.value, { title: '销售订单', identifier: 'SO-71' })
+  assert.equal(p.auditVisible?.value, false)
+})
+
+test('时间线事件格式异常显示读取错误，不伪装成无记录', async t => {
+  const p = detail(url => url.endsWith('/timeline') ? [null] : fixture()); t.after(p.dispose)
+  await p.load()
+  assert.equal(p.order.value.id, 71)
+  assert.match(p.timelineError.value, /格式/)
+  assert.deepEqual(p.timeline.value, [])
+})
+
+test('旧订单请求失败不会污染新订单的错误提示', async t => {
+  const old = deferred()
+  const p = detail(url => url.endsWith('/timeline') ? [] : url.endsWith('/71') ? old.promise : fixture(72))
+  t.after(p.dispose)
+  const pending = p.load(); p.route.params.id = '72'; await p.load()
+  old.reject(new Error('旧订单连接断开')); await pending
+  assert.equal(p.order.value.id, 72)
+  assert.equal(p.loadError?.value, '')
+})
+
+test('旧时间线响应不能出现在新订单下', async t => {
+  const old = deferred()
+  const p = detail(url => url === '/sal/orders/71/timeline' ? old.promise : url.endsWith('/timeline') ? [{ type: '建单', text: 'SO-72' }] : fixture(Number(url.split('/').at(-1))))
+  t.after(p.dispose)
+  const pending = p.load(); await nextTick(); await Promise.resolve()
+  p.route.params.id = '72'; await p.load()
+  old.resolve([{ type: '建单', text: 'SO-71' }]); await pending
+  assert.deepEqual(p.timeline.value.map(item => item.text), ['SO-72'])
+})
+
+test('出库检查使用所选分仓，切仓后旧结果立即失效', async t => {
+  const p = detail(); t.after(p.dispose); p.order.value = fixture()
+  p.ob.warehouseId = 401; await p.runCheck()
+  assert.deepEqual(p.calls.at(-1), { url: '/sal/orders/71/outbound-check', params: { warehouseId: 401 } })
+  assert.equal(p.checkedWarehouseId?.value, 401)
+  assert.equal(p.canConfirmOut.value, true)
+  p.ob.warehouseId = 402; await nextTick()
+  assert.deepEqual(p.checks.value, [])
+  assert.equal(p.checkedWarehouseId.value, undefined)
+  assert.equal(p.canConfirmOut.value, false)
+})
+
+test('慢仓库检查不能覆盖新仓库结果', async t => {
+  const old = deferred()
+  const p = detail((_url, params) => params.warehouseId === 401 ? old.promise : { checks: [{ item: 'B仓', ok: false, message: '缺少销售单据' }] })
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401
+  const pending = p.runCheck(); p.ob.warehouseId = 402; await p.runCheck()
+  old.resolve(passed); await pending
+  assert.equal(p.checkedWarehouseId?.value, 402)
+  assert.equal(p.checks.value[0].item, 'B仓')
+  assert.equal(p.canConfirmOut.value, false)
+})
+
+test('检查失败保留原因；成功空记录与失败状态分开', async t => {
+  let failed = true
+  const p = detail(() => failed ? Promise.reject(new Error('检查接口超时')) : { checks: [] })
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401
+  await p.runCheck()
+  assert.match(p.checkError?.value ?? '', /检查接口超时/)
+  assert.equal(p.canConfirmOut.value, false)
+  failed = false; await p.runCheck()
+  assert.equal(p.checkError.value, '')
+  assert.equal(p.checkedWarehouseId.value, 401)
+  assert.deepEqual(p.checks.value, [])
+})
+
+test('检查返回格式异常不能作为通过检查的依据', async t => {
+  const p = detail(() => ({ checks: [{ item: '仓库权限', message: '缺少结果字段' }] }))
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401
+  await p.runCheck()
+  assert.match(p.checkError?.value ?? '', /格式/)
+  assert.equal(p.checkedWarehouseId.value, undefined)
+  assert.equal(p.canConfirmOut.value, false)
+})
+
+test('没有可见分仓时不发送检查请求', async t => {
+  const p = detail(); t.after(p.dispose)
+  p.order.value = { ...fixture(), lines: [] }; await p.runCheck()
+  assert.equal(p.calls.length, 0)
+  assert.equal(p.canConfirmOut?.value, false)
+})
+
+test('检查中和检查失败不能发出出库命令', async t => {
+  const check = deferred()
+  const p = detail(() => check.promise)
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401
+  const pending = p.runCheck()
+  await p.confirmOut()
+  assert.deepEqual(p.writes, [])
+  check.reject(new Error('检查服务失败')); await pending
+  await p.confirmOut()
+  assert.deepEqual(p.writes, [])
+})
+
+test('国家上下文变化后检查响应不生效', async t => {
+  const check = deferred()
+  const p = detail(() => check.promise)
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401
+  const pending = p.runCheck(); p.country.epoch++
+  check.resolve(passed); await pending
+  assert.equal(p.checkedWarehouseId?.value, undefined)
+  assert.equal(p.canConfirmOut?.value, false)
+})
+
+test('授权仓库明细不反推被服务端移除的整单汇总', async t => {
+  const restricted = fixture(); delete restricted.totalQty; delete restricted.totalAmount
+  const p = detail(url => url.endsWith('/timeline') ? [] : restricted)
+  t.after(p.dispose); await p.load()
+  assert.equal(p.fullOrder.value, false)
+  assert.equal(p.order.value.totalQty, undefined)
+  assert.equal(p.order.value.totalAmount, undefined)
+  assert.equal(p.order.value.lines.length, 1)
+})
+
+test('出库弹窗按当前数量预查，数量改变立即废弃上次检查', async t => {
+  const p = detail(); t.after(p.dispose); p.order.value = fixture()
+  p.ob.warehouseId = 401; p.ob.qty = { 31: 2 }; p.ob.visible = true
+  await p.runCheck()
+  assert.deepEqual(p.calls.at(-1), { url: '/sal/orders/71/outbound-check', params: { warehouseId: 401, lines: [{ allocId: 31, qty: 2 }] }, method: 'POST' })
+  assert.equal(p.canConfirmOut.value, true)
+  p.ob.qty[31] = 3
+  assert.equal(p.canConfirmOut.value, false)
+})
+
+test('旧数量的慢检查不能放行新数量，零数量不可确认', async t => {
+  const old = deferred()
+  const p = detail((_url, params) => params.lines?.[0]?.qty === 2 ? old.promise : passed)
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401; p.ob.qty = { 31: 2 }; p.ob.visible = true
+  const pending = p.runCheck(); p.ob.qty[31] = 3
+  old.resolve(passed); await pending
+  assert.equal(p.canConfirmOut.value, false)
+  p.ob.qty[31] = 0; await p.runCheck()
+  assert.equal(p.canConfirmOut.value, false)
+  await p.confirmOut(); assert.deepEqual(p.writes, [])
+})
+
+test('收款处理返回后恢复选择并重新检查，不复用离开前的通过结果', async t => {
+  const p = detail(); t.after(p.dispose); await p.load()
+  p.ob.warehouseId = 401; p.ob.qty = { 31: 2 }; p.ob.visible = true
+  await p.paymentAction('view')
+  assert.deepEqual(p.navigations.at(-1), { path: '/ar/receipts', query: { orderId: '71', source: 'sales-outbound', action: 'view' } })
+  p.route.query = { resumeOutbound: '1' }; await p.load()
+  assert.equal(p.ob.visible, true); assert.equal(p.ob.qty[31], 2)
+  assert.equal(p.calls.at(-2).method, 'POST')
+  assert.equal(p.canConfirmOut.value, true)
+  assert.equal(p.storage.size, 0)
+})
+
+test('现款检查缺少金额明细不能用零值代替或放行', async t => {
+  const p = detail(() => ({ checks: [{ item: '现款到账', ok: true, message: '通过' }] }))
+  t.after(p.dispose); p.order.value = fixture(); p.ob.warehouseId = 401
+  await p.runCheck()
+  assert.match(p.checkError.value, /收款.*明细|金额.*明细/)
+  assert.equal(p.canConfirmOut.value, false)
+})

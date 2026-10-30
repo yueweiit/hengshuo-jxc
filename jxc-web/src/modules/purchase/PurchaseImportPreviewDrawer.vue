@@ -1,0 +1,85 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { formatImportDecimal } from './purchaseImportDisplay'
+import { purchaseOrderSaveStatus } from './purchaseImportWorkflow'
+import { summarizeImportIssues } from './purchaseImportIssues'
+import type { ImportDraftGroup, ImportRow, PurchaseImportModel } from './purchaseImportModel'
+
+const props = defineProps<{ modelValue: boolean; page: PurchaseImportModel; books: { id: number; name: string }[]; suppliers: { id: number; name: string }[]; currencies: { code: string }[]; creationEnabled:boolean; creationLoading:boolean; creationError:string }>()
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; save:[]; review:[row:ImportRow]; 'pending-review':[value:boolean] }>()
+const editingVersion = ref<number | null>(null)
+const editing = ref<number | null>(null), header = ref<Record<string, any>>({}), split = ref<number[]>([])
+const pendingReview = computed(() => editing.value !== null)
+watch(pendingReview, value => emit('pending-review',value), { immediate:true,flush:'sync' })
+const locked = computed(() => props.page.busy() || !!props.page.state.edit || props.page.headerDirty())
+watch(() => props.page.state.batchId, () => { editing.value = null; editingVersion.value = null })
+function edit(group: ImportDraftGroup) { editing.value = group.id; editingVersion.value = group.version; header.value = { ...group.header }; split.value = [] }
+async function save(group: ImportDraftGroup) { if (editing.value !== group.id || editingVersion.value === null) return; if (await props.page.saveGroup({ ...group, version: editingVersion.value }, header.value, split.value)) { editing.value = null; editingVersion.value = null } }
+function productLabel(id:number) { const product=props.page.state.rows.find(row=>row.matchedProductId===id)?.productSnapshot; return `${product?.productCode ?? '编码待核对'} · ${product?.name ?? '名称待核对'}` }
+function groupRows(group: ImportDraftGroup) { return props.page.state.rows.filter(row => row.groupId === group.id) }
+function issueRowLabel(issue: ImportDraftGroup['errors'][number]) { const row = props.page.state.rows.find(row => row.id === issue.rowId); return row ? `查看第${row.rowNo}行` : '查看对应明细' }
+function reviewIssue(issue: ImportDraftGroup['errors'][number]) {
+  const row = props.page.state.rows.find(row => row.id === issue.rowId)
+  if (!row) { props.page.failure(new Error('对应采购明细已变化，请重新读取后核对')); return }
+  emit('review', row)
+}
+function status(group: ImportDraftGroup) { return ({ DRAFT: '待补充核对', READY: '可确认建单', CREATING: '创建处理中', CREATED: '已创建草稿', FAILED: '创建失败', UNKNOWN: '创建结果待核实' } as Record<string, string>)[group.createStatus] }
+</script>
+
+<template>
+  <el-drawer :model-value="modelValue" title="完整采购草稿预览" size="94%" append-to-body @update:model-value="emit('update:modelValue',$event)">
+  <div v-if="page.state.batchId" class="draft-preview">
+    <el-alert v-if="page.state.error" :title="page.state.error" type="error" :closable="false" />
+    <div class="draft-heading"><h3>完整采购预览</h3><el-button :disabled="locked || editing !== null" @click="page.previewDrafts">核对并生成预览</el-button></div>
+    <p class="hint">同一采购单号的全部明细确认后才能创建草稿。表头不同的明细可以明确拆单，原单号仍保留用于追溯。</p>
+    <el-alert v-if="creationError" :title="creationError" type="error" :closable="false" />
+    <p v-else-if="!creationEnabled && !creationLoading" class="hint">当前环境尚未启用保存采购单，可先完成资料核对和预览。</p>
+    <article v-for="group in page.state.groups" :key="group.id" class="draft-group">
+      <div class="draft-heading"><strong>{{ group.sourceOrderNo }} · {{ status(group) }}</strong><el-button v-if="!group.orderId && !['CREATING', 'UNKNOWN'].includes(group.createStatus)" :disabled="locked" @click="edit(group)">核对表头／拆单</el-button></div>
+      <el-form v-if="editing === group.id" :model="header" :disabled="locked" label-width="100px" class="group-form" @submit.prevent>
+        <el-form-item label="账套"><el-select v-model="header.bookId"><el-option v-for="item in books" :key="item.id" :value="item.id" :label="item.name" /></el-select></el-form-item>
+        <el-form-item label="供应商"><el-select v-model="header.supplierId" filterable><el-option v-for="item in suppliers" :key="item.id" :value="item.id" :label="item.name" /></el-select></el-form-item>
+        <el-form-item label="币种"><el-select v-model="header.currency"><el-option v-for="item in currencies" :key="item.code" :value="item.code" :label="item.code" /></el-select></el-form-item>
+        <el-form-item label="下单日期"><el-date-picker v-model="header.orderDate" value-format="YYYY-MM-DD" type="date" /></el-form-item>
+        <el-form-item label="预计交货"><el-date-picker v-model="header.expectedDate" value-format="YYYY-MM-DD" type="date" /></el-form-item>
+        <el-form-item label="付款条件"><el-input v-model="header.paymentTerms" /></el-form-item>
+        <el-form-item label="预付比例"><el-input v-model="header.prepayRatio" placeholder="待核实，0～1" /></el-form-item>
+        <el-form-item label="账期天数"><el-input-number v-model="header.termDays" :min="0" :precision="0" /></el-form-item>
+        <el-form-item label="税率"><el-input v-model="header.taxRate" placeholder="待核实，例如0.13" /></el-form-item>
+        <el-form-item label="单价口径"><el-select v-model="header.priceTaxBasis" placeholder="请核对供应商单价"><el-option value="EXCLUSIVE" label="已核对：未含税单价" /></el-select></el-form-item>
+        <el-form-item label="拆出明细"><el-select v-model="split" multiple placeholder="留空表示整组修改"><el-option v-for="row in groupRows(group)" :key="row.id" :value="row.id" :label="`第${row.rowNo}行 · ${row.productSpec || '规格待核实'}`" /></el-select></el-form-item>
+        <div><el-button type="primary" @click="save(group)">保存并重新核对</el-button><el-button @click="editing = null">取消</el-button></div>
+      </el-form>
+      <p class="hint">{{ books.find(item => item.id === group.header.bookId)?.name || '账套待核实' }} · {{ suppliers.find(item => item.id === group.header.supplierId)?.name || '供应商待核实' }} · {{ group.header.currency }} · {{ group.header.orderDate }}</p>
+      <p class="hint">预计交货 {{ group.header.expectedDate || '未填写' }}；预付比例 {{ formatImportDecimal(group.header.prepayRatio ?? null) }}；账期 {{ group.header.termDays ?? '待核实' }} 天；付款条件 {{ group.header.paymentTerms || '未填写' }}；税率 {{ formatImportDecimal(group.header.taxRate ?? null) }}；单价口径 {{ group.header.priceTaxBasis === 'EXCLUSIVE' ? '未含税' : '待核实' }}</p>
+      <ul v-if="group.errors.length" class="issues"><li v-for="(summary, n) in summarizeImportIssues(group.errors)" :key="n">
+        <details v-if="summary.issues.some(issue => issue.rowId != null || issue.sourceRow != null)"><summary>{{ summary.message }} · 展开查看对应明细</summary><ul><li v-for="(issue, index) in summary.issues" :key="index"><span v-if="issue.sourceRow != null">{{ issue.sourceSheet }} 原第{{ issue.sourceRow }}行：</span><el-button v-if="issue.rowId != null" link type="primary" :disabled="locked" @click="reviewIssue(issue)">{{ issueRowLabel(issue) }}</el-button><span v-else>{{ issue.message }}</span></li></ul></details>
+        <span v-else>{{ summary.message }}</span>
+      </li></ul>
+      <div v-if="group.preview" class="preview-scroll"><table><thead><tr><th>行</th><th>商品／规格</th><th>数量与单位</th><th>原始采购单价</th><th>正式采购单价</th><th>舍入差额</th><th>税率</th><th>金额</th></tr></thead><tbody><tr v-for="line in group.preview.lines" :key="line.lineNo"><td>{{ line.lineNo }}</td><td>{{ productLabel(line.productId) }} · {{ line.productSpec || '规格待核实' }}</td><td>{{ formatImportDecimal(line.qty) }} {{ line.unit }}</td><td :title="line.sourceUnitPrice">{{ formatImportDecimal(line.sourceUnitPrice) }}</td><td :title="line.unitPrice">{{ formatImportDecimal(line.unitPrice) }}</td><td :title="line.unitPriceDifference">{{ line.unitPriceDifference.startsWith('-') ? '-' : '' }}{{ formatImportDecimal(line.unitPriceDifference.replace(/^-/,'') ) }}</td><td :title="line.taxRate">{{ formatImportDecimal(line.taxRate) }}</td><td :title="line.amount">{{ formatImportDecimal(line.amount) }}</td></tr></tbody></table><p>货款 {{ formatImportDecimal(group.preview.totalAmount) }} {{ group.header.currency }}；税额 {{ formatImportDecimal(group.preview.taxAmount) }} {{ group.header.currency }}</p></div>
+      <section class="fee-review" aria-label="本次导入费用摘要">
+        <h3>本次导入费用</h3><p class="hint">请在基础信息中的“本次导入费用”表格填写和保存；这里显示已保存的核对结果。</p>
+        <p v-for="(fee,index) in group.feeTodos" :key="index">第{{ index + 1 }}项 · {{ fee.scope === 'ORDER' ? '整单一次' : fee.scope === 'LINE' ? '单行' : '归属待核对' }} · {{ formatImportDecimal(fee.amount) }} {{ fee.currency || '币种待核对' }} · 来源 {{ fee.sourceRowIds.length }} 条明细 · {{ fee.reviewStatus === 'CONFIRMED' ? '已核对' : fee.reviewStatus === 'STALE' ? '来源已变化，需复核' : '待核对' }}</p>
+      </section>
+      <el-collapse><el-collapse-item title="原文件、原单元格与公式来源"><div v-for="source in group.sourceEvidence" :key="source.rowId" class="source-evidence"><strong>第{{ source.rowNo }}行 · {{ source.fileName }} · {{ source.sourceSheet }} 原{{ source.sourceRow }}行</strong><p>原值：{{ JSON.stringify(source.originalValues) }}</p><p>公式及数量格：{{ JSON.stringify(source.formulaProvenance) }}</p></div></el-collapse-item></el-collapse>
+      <el-alert v-if="group.errorMessage" :title="group.errorMessage" type="error" :closable="false" />
+      <p v-if="group.orderId">采购草稿：<router-link :to="`/purchase/orders/${group.orderId}`">{{ group.docNo || group.orderId }}</router-link> · {{ purchaseOrderSaveStatus(group) }}</p>
+      <div class="draft-actions"><el-button v-if="group.orderId || group.createIntent" :disabled="locked" @click="page.refreshCreation(group)">查询原保存结果</el-button></div>
+    </article>
+  </div>
+  <template #footer><span class="hint">{{ pendingReview ? '请先保存表头修改，再保存采购单' : '保存后生成采购单草稿及关联明细' }}</span><el-button type="primary" :disabled="locked || !creationEnabled || pendingReview" :loading="page.state.saving" @click="emit('save')">保存</el-button></template>
+</el-drawer>
+</template>
+
+<style scoped lang="scss">
+.draft-preview { font-size:13px; }
+.fee-review { margin:20px 0;max-width:760px; }
+.source-evidence { padding:8px 0;overflow-wrap:anywhere; }
+.draft-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; h3 { margin: 0; font-size: 15px; } }
+.hint { color: var(--el-text-color-secondary); font-size: 13px; line-height: 22px; }
+.draft-group { border: 1px solid var(--el-border-color-light); padding: 16px; margin: 16px 0; border-radius: 4px; }
+.group-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 16px; margin-top: 16px; .el-select { width: 100%; } }
+.issues { color: var(--el-color-danger); font-size: 13px; line-height: 24px; padding-left: 20px; }
+.preview-scroll { overflow: auto; font-size: 13px; table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; } th, td { padding: 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--el-border-color-light); } th { background: var(--el-fill-color-light); } }
+.draft-actions { display: flex; gap: 12px; margin-top: 14px; }
+</style>

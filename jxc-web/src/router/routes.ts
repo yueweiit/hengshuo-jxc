@@ -8,6 +8,8 @@ declare module 'vue-router' {
     /** 进入页面所需权限码，任一满足即可 */
     perm?: string | string[]
     hidden?: boolean
+    /** 系统级配置只允许平台管理员访问 */
+    platformOnly?: boolean
     /** 占位页：所属开发批次与设计文档 */
     batch?: number
     doc?: string
@@ -53,6 +55,7 @@ export const menuGroups: MenuGroup[] = [
     module: 'pur',
     children: [
       page('/purchase/orders', () => import('@/modules/purchase/PurchaseOrderList.vue'), { title: 'menu.purchaseOrders', perm: 'pur:order:view' }),
+      page('/purchase/orders/import', () => import('@/modules/purchase/PurchaseOrderImport.vue'), { title: 'menu.purchaseOrderImport', perm: 'pur:order:create', hidden: true, activeMenu: '/purchase/orders' }),
       page('/purchase/orders/:id', () => import('@/modules/purchase/PurchaseOrderDetail.vue'), { title: 'menu.purchaseOrderDetail', perm: 'pur:order:view', hidden: true, activeMenu: '/purchase/orders' }),
       page('/purchase/domestic-receipts', () => import('@/modules/purchase/DomesticReceiptList.vue'), { title: 'menu.domesticReceipts', perm: ['pur:receipt:create', 'pur:receipt:confirm'], mobile: true }),
       page('/purchase/export-nodes', () => import('@/modules/purchase/ExportNodeList.vue'), { title: 'menu.exportNodes', perm: ['pur:export:create', 'pur:export:confirm'] }),
@@ -176,6 +179,7 @@ export const menuGroups: MenuGroup[] = [
     title: 'menu.group.settings',
     icon: 'Setting',
     children: [
+      { path: '/settings/external-services', component: () => import('@/modules/settings/integrations/ExternalServiceSettings.vue'), meta: { title: 'menu.externalServices', perm: 'sys:integration:config', platformOnly: true } },
       { path: '/settings/countries', component: () => import('@/modules/settings/country/CountryList.vue'), meta: { title: 'menu.countries', perm: 'sys:country:view' } },
       { path: '/settings/countries/clone', component: () => import('@/modules/settings/country/CountryCloneWizard.vue'), meta: { title: 'menu.countryClone', perm: 'sys:country:create', hidden: true } },
       { path: '/settings/countries/:id', component: () => import('@/modules/settings/country/CountryDetail.vue'), meta: { title: 'menu.countryDetail', perm: 'sys:country:view', hidden: true } },

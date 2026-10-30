@@ -179,10 +179,38 @@ const allocReverse = http.post(`${API}/cst/allocations/:id/reverse`, handle((ctx
   return row
 }))
 
+// Demo adapter for the same read-only candidate DTO. Real cost calculation remains on the server.
+const adjustmentBatches = http.get(`${API}/cst/adjustment-batches`, handle((ctx) => {
+  requirePerm(ctx, 'cst:adjustment:create'); requireFieldAccess(ctx, 'COST')
+  const countryId = requireCountry(ctx), db = getDb(), q = ctx.url.searchParams
+  const target = q.get('target') ?? 'INVENTORY', page = Number(q.get('page') ?? 1), size = Number(q.get('size') ?? 20)
+  if (!['INVENTORY', 'COGS'].includes(target) || !Number.isInteger(page) || page < 1 || page > 1000000 || !Number.isInteger(size) || size < 1 || size > 200) bad('调整对象或分页参数不合法')
+  for (const key of ['bookId', 'warehouseId']) if (q.has(key) && (!/^[1-9]\d*$/.test(q.get(key)!) || !Number.isSafeInteger(Number(q.get(key))))) bad('筛选编号不合法')
+  const all = db.inboundCosts.filter(c => c.countryId === countryId && canDataAccess(ctx, c))
+    .filter(c => db.invBatchBalances.filter(b => b.countryId === countryId && b.batchId === c.batchId && num(b.onHandQty) > 0).every(b => canDataAccess(ctx, { ...b, bookId: c.bookId })))
+    .map(c => {
+      const balances = db.invBatchBalances.filter(b => b.countryId === countryId && b.batchId === c.batchId)
+      const onHandQty = sum(balances, b => num(b.onHandQty)), batch = db.invBatches.find(b => b.countryId === countryId && b.id === c.batchId)
+      const unavailableReason = c.unitCost == null ? '批次成本尚未完整，请先补齐成本或汇率' : target === 'INVENTORY' && onHandQty === 0 ? '此批次已无库存，不能调整库存成本' : null
+      return withProduct({ ...c, batchNo: batch?.batchNo ?? c.batchNo ?? `#${c.batchId}`, bookName: nameOf(db.books, c.bookId), warehouseName: nameOf(db.warehouses, c.warehouseId),
+        currentWarehouses: balances.filter(b => num(b.onHandQty) > 0).map(b => nameOf(db.warehouses, b.warehouseId)).join('、'),
+        onHandQty, costStatus: c.status, selectable: unavailableReason == null, unavailableReason })
+    })
+  const keyword = (q.get('keyword') ?? '').trim().toLowerCase()
+  const filtered = all.filter(c => ['bookId', 'warehouseId'].every(key => !q.has(key) || String(c[key]) === q.get(key)))
+    .filter(c => !keyword || [c.batchNo, c.productCode, c.productName].some(value => String(value).toLowerCase().includes(keyword)))
+    .sort((a, b) => b.id - a.id)
+  const unique = (key: string, label: string) => [...new Map(all.map(c => [c[key], { id: c[key], name: c[label] }])).values()]
+  return { ...paginate(filtered, ctx.url), books: unique('bookId', 'bookName'), warehouses: unique('warehouseId', 'warehouseName') }
+}))
+
 const adjList = http.get(`${API}/cst/adjustments`, handle((ctx) => {
   requirePerm(ctx, ['cst:adjustment:create', 'cst:cost:view'])
   requireFieldAccess(ctx, 'COST')
-  return paginate(getDb().costAdjustments.filter((a) => a.countryId === requireCountry(ctx) && canDataAccess(ctx, a)), ctx.url)
+  const db = getDb(), q = ctx.url.searchParams
+  return paginate(db.costAdjustments.filter(a => a.countryId === requireCountry(ctx) && canDataAccess(ctx, a))
+    .filter(a => ['bookId', 'target', 'status'].every(key => !q.get(key) || String(a[key]) === q.get(key)))
+    .map(a => withProduct({ ...a, batchNo: db.invBatches.find(b => b.id === a.batchId)?.batchNo, baseCurrency: db.books.find(b => b.id === a.bookId)?.baseCurrency })), ctx.url)
 }))
 
 const adjCreate = http.post(`${API}/cst/adjustments`, handle((ctx, { body }) => {
@@ -291,4 +319,4 @@ const methodPut = http.put(`${API}/cst/method`, handle((ctx, { body }) => {
   return row
 }))
 
-export const cstOpsHandlers = [allocList, allocCreate, allocConfirm, allocReverse, adjList, adjCreate, adjConfirm, expList, expCreate, profit, methodGet, methodPut]
+export const cstOpsHandlers = [allocList, allocCreate, allocConfirm, allocReverse, adjustmentBatches, adjList, adjCreate, adjConfirm, expList, expCreate, profit, methodGet, methodPut]

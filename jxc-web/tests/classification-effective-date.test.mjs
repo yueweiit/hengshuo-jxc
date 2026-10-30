@@ -7,17 +7,17 @@ import { loadVueScript } from './contracts/load-vue-script.mjs'
 
 const file = new URL('../src/modules/inventory/ClassifyRuleList.vue', import.meta.url)
 const source = readFileSync(file, 'utf8')
-function page() {
+function page(request = async () => ({})) {
   const commands = []
   const p = loadVueScript(file, {
     reactive: Vue.reactive, ref: Vue.ref, onMounted() {},
     useUserStore: () => ({ hasPerm: () => true }), ElMessage: { success() {} },
     allRecords: async () => [],
     http: {
-      post: async (url, body) => { commands.push({ method: 'POST', url, body: JSON.parse(JSON.stringify(body)) }); return {} },
-      put: async (url, body) => { commands.push({ method: 'PUT', url, body: JSON.parse(JSON.stringify(body)) }); return {} },
+      post: async (url, body) => { commands.push({ method: 'POST', url, body: JSON.parse(JSON.stringify(body)) }); return request() },
+      put: async (url, body) => { commands.push({ method: 'PUT', url, body: JSON.parse(JSON.stringify(body)) }); return request() },
     },
-  }, ['form', 'edit', 'save'])
+  }, ['form', 'open', 'edit', 'save'])
   return { ...p, commands }
 }
 const existing = { id: 42, name: '原仓库规则', dimType: 'WAREHOUSE', periodType: 'ROLLING_DAYS', periodDays: 30, versionNo: 7, effectiveFrom: '2026-10-16', conditions: [{ priority: 1, label: 'SLOW_CANDIDATE', stockOp: 'GTE', stockValue: 50, orderOp: 'LTE', orderValue: 5 }] }
@@ -47,4 +47,31 @@ test('a new rule never inherits the previously edited future date and blank date
   assert.equal(p.commands[1].body.effectiveFrom, null)
   assert.equal(p.commands[1].body.versionNo, 7)
   assert.deepEqual(p.commands[1].body.conditions, existing.conditions)
+})
+
+test('saving a pending rule sends one version command and keeps the dialog open until confirmation', async () => {
+  let confirm
+  const p = page(() => new Promise(resolve => { confirm = resolve }))
+  p.edit(existing)
+  const first = p.save()
+  const repeated = p.save()
+  assert.equal(p.commands.length, 1, 'a repeated click must not create another rule version')
+  assert.equal(p.open.value, true)
+  confirm({})
+  await Promise.all([first, repeated])
+  assert.equal(p.open.value, false)
+})
+
+test('a failed save retains edited values and permits a subsequent retry', async () => {
+  let attempts = 0
+  const p = page(async () => { if (++attempts === 1) throw new Error('规则冲突') })
+  p.edit(existing)
+  p.form.conditions[0].stockValue = 75
+  await assert.rejects(p.save(), /规则冲突/)
+  assert.equal(p.open.value, true)
+  assert.equal(p.form.conditions[0].stockValue, 75)
+  await p.save()
+  assert.equal(p.commands.length, 2)
+  assert.equal(p.commands[1].body.conditions[0].stockValue, 75)
+  assert.equal(p.open.value, false)
 })

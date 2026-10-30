@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportPhotoMapper">
+
+  <select id="selectSourceImage" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT i.*,r.association_status FROM pur_order_import_row_image r JOIN pur_order_import_image i ON i.country_id=r.country_id AND i.id=r.image_id JOIN pur_order_import_source src ON src.country_id=i.country_id AND src.id=i.source_id WHERE r.country_id=#{countryId} AND r.row_id=#{rowId} AND i.id=#{id} AND src.batch_id=#{batchId}
+  </select>
+
+  <update id="savePublishedImage">
+    UPDATE pur_order_import_row_image SET publish_status='READY',product_image_id=#{productImageId},publish_product_id=#{publishProductId},publish_error=NULL WHERE country_id=#{countryId} AND row_id=#{rowId} AND image_id=#{imageId}
+  </update>
+
+  <insert id="insertTask">
+    INSERT INTO pur_order_import_task(id,country_id,batch_id,source_id,kind,input_revision,input_hash,requested_by,authorization_basis,input_data,phase,result) VALUES(#{id},#{countryId},#{batchId},#{sourceId},#{kind},#{inputRevision},#{inputHash},#{requestedBy},#{authorizationBasis}::jsonb,#{inputData}::jsonb,#{phase},#{result}::jsonb)
+  </insert>
+
+  <select id="selectFirstSource" resultType="java.lang.Long" useCache="false">
+    SELECT id FROM pur_order_import_source WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id LIMIT 1
+  </select>
+
+  <select id="countConfirmedPublishedImage" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM pur_order_import_row_image WHERE country_id=#{countryId} AND row_id=#{rowId} AND image_id=#{imageId} AND product_image_id=#{productImageId} AND association_status='CONFIRMED'
+  </select>
+
+  <update id="saveFeatureInput">
+    UPDATE pur_order_import_task SET phase='FEATURE',input_data=#{inputData}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="saveIndexInput">
+    UPDATE pur_order_import_task SET phase='INDEX',input_data=#{inputData}::jsonb,result=#{result}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+</mapper>

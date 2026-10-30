@@ -3625,6 +3625,77 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/sys/business-user-options",
+      "phase": "CLOSURE",
+      "status": "implemented-business-foundation",
+      "responses": {
+        "200": {
+          "description": "Authorized bounded response envelope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        },
+        "default": {
+          "description": "Controlled authority, input or state failure; no partial fact commits.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEnvelope"
+              }
+            }
+          }
+        }
+      },
+      "policy": {
+        "auth": "Current opaque bearer session; authorization gates held through the transaction.",
+        "permissions": "LOGISTICS_HOLD: lgs:hold:create OR lgs:hold:release OR lgs:shipment:view; INVENTORY_LIMIT: inv:limit:config. Rechecks current caller authority; no user-management grant.",
+        "scope": "Current country and nonempty current native data scope. Candidates are enabled users with at least one enabled role in that country; no other-country or unassigned accounts.",
+        "field": "Only id and displayName; no usernames, contacts, roles, scopes, credentials or bank fields.",
+        "idem": {
+          "required": false,
+          "binding": "Read only; does not create tasks, business facts or authority."
+        },
+        "facts": "Two explicit business purposes share one bounded member-label query. Original user-options management permissions and manageable-user filtering remain unchanged."
+      },
+      "evidence": [
+        {
+          "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/AuthorizationIT.java",
+          "test": "businessOwnerOptionsExposeOnlyActiveCountryLabelsWithoutUserAdministration"
+        },
+        {
+          "file": "jxc-server/jxc-app/src/test/java/com/hs/jxc/it/AuthorizationIT.java",
+          "test": "businessOwnerOptionsRecheckCurrentScopePermissionAndSession"
+        }
+      ],
+      "limitations": [
+        "Only LOGISTICS_HOLD and INVENTORY_LIMIT are supported. Domain owners migrate the three consumer locations; API tests do not replace their page acceptance.",
+        "This read endpoint never grants approval authority or expands warehouse, store or book access."
+      ],
+      "noBody": true,
+      "parameters": [
+        {
+          "name": "purpose",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "LOGISTICS_HOLD",
+              "INVENTORY_LIMIT"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}/grants",
       "phase": "CLOSURE",

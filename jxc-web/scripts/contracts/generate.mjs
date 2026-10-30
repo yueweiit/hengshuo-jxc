@@ -8,6 +8,7 @@ const repoRoot = resolve(webRoot, '..')
 const outputRoot = resolve(repoRoot, 'docs/backend/contracts')
 const originalTestFiles = ['amounts', 'cost-inventory', 'finance', 'permissions', 'scenario'].map(n => `tests/${n}.test.mjs`)
 const json = value => `${JSON.stringify(value, null, 2)}\n`
+const portablePath = value => value.replaceAll('\\', '/')
 const uniq = values => [...new Set(values)].sort()
 const unwrap = node => {
   while (node && (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isTypeAssertionExpression(node) || ts.isNonNullExpression(node))) node = node.expression
@@ -35,7 +36,7 @@ function source(file, text = readFileSync(file, 'utf8')) {
   return { ast, definitions, imports, mutations, file }
 }
 function location(node, ctx) {
-  return { file: relative(repoRoot, ctx.file), line: ctx.ast.getLineAndCharacterOfPosition(node.getStart(ctx.ast)).line + 1 }
+  return { file: portablePath(relative(repoRoot, ctx.file)), line: ctx.ast.getLineAndCharacterOfPosition(node.getStart(ctx.ast)).line + 1 }
 }
 function textOf(node, ctx) { return node?.getText(ctx.ast) ?? '' }
 function property(node, key) {
@@ -192,7 +193,7 @@ export function extractRoutes() {
     const name = unwrap(ts.isSpreadElement(argument) ? argument.expression : argument).text
     const imported = browser.imports.get(name)
     if (!imported) throw new Error(`Unknown worker export ${name}`)
-    return { name: imported.name, file: relative(repoRoot, resolve(dirname(browser.file), `${imported.from}.ts`)) }
+    return { name: imported.name, file: portablePath(relative(repoRoot, resolve(dirname(browser.file), `${imported.from}.ts`))) }
   })
   const registrationRecords = registrations.map(route => ({
     registrationIndex: route.registrationIndex, method: route.method, path: route.path, kind: route.kind,
@@ -246,7 +247,7 @@ function walkFiles(directory) {
   return readdirSync(directory, { withFileTypes: true })
     .filter(entry => !entry.isDirectory() || !/^(?:target(?: \d+)?|node_modules|dist|\.git)$/.test(entry.name))
     .sort((a, b) => a.name.localeCompare(b.name, 'en'))
-    .flatMap(entry => entry.isDirectory() ? walkFiles(resolve(directory, entry.name)) : [resolve(directory, entry.name)])
+    .flatMap(entry => entry.isDirectory() ? walkFiles(resolve(directory, entry.name)) : [portablePath(resolve(directory, entry.name))])
 }
 const pathSignature = path => path.replace(/:[\w]+|\{[^}]+\}/g, '*')
 function matchEvidence(method, path, catalog) {
@@ -331,7 +332,7 @@ export function extractControllerMappings() {
       const expanded = suffixes.length > 1 || paths.length > 1
       const symbol = content.slice(match.index + match[0].length).match(/public\s+[A-Za-z<>[\],? ]+\s+(\w+)\s*\(/)?.[1]
       if (!symbol) throw new Error(`Unsupported Controller declaration: ${file}:${template}`)
-      for (const path of paths) operations.push({ method: match[1].toUpperCase(), path, file: relative(repoRoot, file), line: content.slice(0, match.index).split('\n').length, symbol, ...(expanded ? { expandedFrom: base + argument } : {}) })
+      for (const path of paths) operations.push({ method: match[1].toUpperCase(), path, file: portablePath(relative(repoRoot, file)), line: content.slice(0, match.index).split('\n').length, symbol, ...(expanded ? { expandedFrom: base + argument } : {}) })
     }
   }
   return { schemaVersion: 1, limitation: 'Bounded Java annotation inventory, not a Java AST or handler/policy inference. Literal/array paths and finite enumerated regex products are inventoried; registered combinations still need service-level action review. M1/M2/M3/M4 schemas and policies are reviewed separately.', operations }
@@ -411,7 +412,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (check) {
       let current
       try { current = readFileSync(file, 'utf8') } catch { current = '' }
-      if (current !== serialized) { process.stderr.write(`Contract drift: ${relative(repoRoot, file)}\n`); drift = true }
+      if (current.replaceAll('\r\n', '\n') !== serialized) { process.stderr.write(`Contract drift: ${portablePath(relative(repoRoot, file))}\n`); drift = true }
     } else writeFileSync(file, serialized)
   }
   if (drift) process.exitCode = 1

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { http, createCommandIntent } from '@/api/http'
 import { useUserStore } from '@/stores/user'
@@ -9,6 +9,9 @@ import type { ColumnDef, CrudPageExpose, FieldDef } from '@/components/crud/type
 import { PO_STATUS, PRODUCT_SOURCE, SUPPLIER_SOURCE } from '@/modules/shared/bizOptions'
 import { confirmAction } from '@/utils/action'
 import PurchaseOrderForm from './PurchaseOrderForm.vue'
+import PurchaseOrderAudit from './PurchaseOrderAudit.vue'
+import { auditDocumentContext } from '@/components/auditPresentation'
+import './purchase-order.scss'
 
 const supplyCommandIntent = createCommandIntent()
 
@@ -33,6 +36,10 @@ const router = useRouter()
 const user = useUserStore()
 const page = ref<CrudPageExpose>()
 const form = ref<InstanceType<typeof PurchaseOrderForm>>()
+const auditVisible = ref(false)
+const auditOrder = ref<Order>()
+const auditContext = computed(() => auditOrder.value ? auditDocumentContext({ ...auditOrder.value }, '采购单') : { title: '采购单', identifier: '尚未选择记录' })
+function openAudit(row: Order) { auditOrder.value = row; auditVisible.value = true }
 
 const columns: ColumnDef[] = [
   { prop: 'docNo', label: '采购单号', width: 185, fixed: 'left' },
@@ -76,22 +83,25 @@ function onSaved(o: { id: number }) {
 <template>
   <CrudPage
     ref="page"
+    class="purchase-order-list"
     title="采购单"
     resource="/pur/orders"
     :columns="columns"
     :search-fields="searchFields"
     :can-create="false"
     :can-toggle="false"
-    audit-type="purchase-order"
     :actions-width="220"
   >
     <template #toolbar>
       <el-button v-if="user.hasPerm('pur:order:create')" type="primary" @click="form?.open()">
         <el-icon><Plus /></el-icon>新建采购单
       </el-button>
+      <el-button v-if="user.hasPerm('pur:order:create')" @click="router.push('/purchase/orders/import')">
+        <el-icon><Upload /></el-icon>导入文件
+      </el-button>
     </template>
     <template #header>
-      <p class="muted">采购单按供应商币种（通常 CNY）下单；国内收货不进入任何库存，运营库存只在目的地实收后增加。</p>
+      <p class="muted purchase-list-note">采购单按供应商币种（通常 CNY）下单；国内收货不进入任何库存，运营库存只在目的地实收后增加。</p>
     </template>
     <template #col-docNo="{ row }">
       <el-link type="primary" @click="router.push(`/purchase/orders/${row.id}`)">{{ row.docNo }}</el-link>
@@ -110,7 +120,47 @@ function onSaved(o: { id: number }) {
       </template>
       <el-button v-if="row.status === 'DRAFT' && user.hasPerm('pur:order:submit')" link type="success" @click="submit(row)">提交</el-button>
       <el-button v-if="row.status === 'DRAFT' && user.hasPerm('pur:order:cancel')" link type="danger" @click="voidOrder(row)">作废</el-button>
+      <el-button link @click="openAudit(row)">操作日志</el-button>
     </template>
   </CrudPage>
   <PurchaseOrderForm ref="form" @saved="onSaved" />
+  <PurchaseOrderAudit v-if="auditOrder && auditVisible" :key="auditOrder.id" v-model="auditVisible" :resource-id="auditOrder.id" :context="auditContext" />
 </template>
+
+<style scoped>
+.purchase-order-list {
+  min-width: 0;
+}
+
+.purchase-order-list :deep(.page-title) {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.purchase-order-list :deep(.page-title > .toolbar) {
+  margin-bottom: 0;
+}
+
+.purchase-list-note {
+  margin: 0 0 12px;
+  line-height: 20px;
+}
+
+.purchase-order-list :deep(.search-form) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+
+.purchase-order-list :deep(.search-form .el-form-item) {
+  margin-right: 0;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .purchase-order-list :deep(.search-form .el-form-item__content > div) {
+    width: 100% !important;
+  }
+}
+</style>

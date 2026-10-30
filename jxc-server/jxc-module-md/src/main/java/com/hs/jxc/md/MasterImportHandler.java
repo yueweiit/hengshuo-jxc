@@ -3,7 +3,7 @@ package com.hs.jxc.md;
 import com.hs.jxc.common.api.*;
 import com.hs.jxc.common.context.RequestContext;
 import com.hs.jxc.common.db.DbRows;
-import com.hs.jxc.md.controller.ProductFxController;
+import com.hs.jxc.md.api.MasterProductMaintenanceApi;
 import com.hs.jxc.sys.api.Access;
 import com.hs.jxc.sys.imports.ImportHandler;
 import com.hs.jxc.sys.service.CountryLifecycle;
@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 /** Import is an adapter to the same maintenance commands; it does not own a second master writer. */
 @Component
 public class MasterImportHandler implements ImportHandler {
- private final JdbcTemplate db;private final ProductFxController products;private final CustomerMasterService customers;private final SupplierService suppliers;private final CountryLifecycle lifecycle;
- public MasterImportHandler(JdbcTemplate db,ProductFxController products,CustomerMasterService customers,SupplierService suppliers,CountryLifecycle lifecycle){this.db=db;this.products=products;this.customers=customers;this.suppliers=suppliers;this.lifecycle=lifecycle;}
+ private final JdbcTemplate db;private final MasterProductMaintenanceApi products;private final CustomerMasterService customers;private final SupplierService suppliers;private final CountryLifecycle lifecycle;
+ public MasterImportHandler(JdbcTemplate db,MasterProductMaintenanceApi products,CustomerMasterService customers,SupplierService suppliers,CountryLifecycle lifecycle){this.db=db;this.products=products;this.customers=customers;this.suppliers=suppliers;this.lifecycle=lifecycle;}
  public List<String> types(){return List.of("PRODUCT","PRODUCT_UNIT","PRODUCT_BARCODE","CUSTOMER","CUSTOMER_ADDRESS","SUPPLIER","LOGISTICS_PROVIDER");}
  public List<String> columns(String type){return switch(type){case "PRODUCT"->List.of("productCode","name","baseUnit","categoryId","brand","spec","grossWeight","volume","units","barcodes");case "PRODUCT_UNIT"->List.of("productCode","unit","factorToBase","isPurchaseDefault","isSalesDefault");case "PRODUCT_BARCODE"->List.of("productCode","unit","barcode");case "CUSTOMER"->List.of("code","name","storeId","groupId","levelId","salesOwnerId","contact","phone","email","taxId","addresses","remark");case "CUSTOMER_ADDRESS"->List.of("customerCode","addresses");default->List.of("code","name","settleCurrency","locatedCountry","paymentTerms","contact","phone","address");};}
  @SuppressWarnings("unchecked") public Row validate(Access a,String type,LocalDate cutoff,int rowNo,Map<String,Object> raw){

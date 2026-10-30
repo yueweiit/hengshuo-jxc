@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { http, createCommandIntent } from '@/api/http'
+import { http, createCommandIntent, BizError } from '@/api/http'
 import type { PageResult } from '@/api/types'
 import { allRecords } from '@/api/pagination'
 import { useCountryStore } from '@/stores/country'
 import { useUserStore } from '@/stores/user'
 import FieldInput from '@/components/crud/FieldInput.vue'
 import { CURRENCY_SOURCE } from '@/modules/master/options'
-import { CARRIER_SOURCE, ESTIMATE_FLAGS, EXPENSE_ITEM_SOURCE, FEE_REF_TYPES } from '@/modules/shared/bizOptions'
+import { CARRIER_SOURCE, ESTIMATE_FLAGS, FEE_REF_TYPES } from '@/modules/shared/bizOptions'
+import { feeTreatmentLabel, supportsLogisticsFee } from './feeTreatment'
 import { todayIn } from '@/utils/format'
 
 const supplyCommandIntent = createCommandIntent()
@@ -24,6 +25,10 @@ const saving = ref(false)
 const lockRef = ref(false)
 const refs = ref<Row[]>([])
 const estimates = ref<Row[]>([])
+const expenseItems = ref<Row[]>([])
+const expenseItemOptions = computed(() => expenseItems.value
+  .filter(item => item.status === 'ENABLED' && supportsLogisticsFee(item.costTreatment))
+  .map(item => ({ value: item.id, label: `${item.name} · ${feeTreatmentLabel(item.costTreatment)}` })))
 const m = reactive<Row>({})
 
 const REF_URL: Record<string, string> = { SHIPMENT: '/lgs/shipments', TRANSSHIP: '/lgs/transships', HOLD: '/lgs/holds', DELIVERY: '/lgs/deliveries' }
@@ -58,10 +63,12 @@ async function open(init: Row = {}, existing?: Row) {
   lockRef.value = !!init.refId
   Object.assign(m, { refType: 'SHIPMENT', estimateFlag: 'ACTUAL', incurredLocation: 'MX', currency: country.currency, bizDate: todayIn(country.timezone), ...init, ...existing })
   await loadRefs()
+  expenseItems.value = await allRecords<Row>('/md/expense-items', { status: 'ENABLED' })
   visible.value = true
 }
 
 async function save(confirm: boolean) {
+  if (saving.value) return
   for (const [k, label] of [['refId', '关联单据'], ['carrierId', '物流商'], ['expenseItemId', '费用项目'], ['currency', '币种'], ['amount', '金额']]) {
     if (!m[k!]) return ElMessage.warning(`请填写${label}`)
   }
@@ -76,6 +83,10 @@ async function save(confirm: boolean) {
     ElMessage.success(confirm ? '已确认' : '已保存草稿')
     visible.value = false
     emit('saved')
+  } catch (error) {
+    // The shared HTTP client already displays business failures once. Keep the form for correction.
+    if (!(error instanceof BizError)) throw error
+    if (error.code === 'CONTEXT_CHANGED') ElMessage.warning(error.message)
   } finally {
     saving.value = false
   }
@@ -123,7 +134,7 @@ defineExpose({ open })
         </el-col>
         <el-col :xs="24" :span="12">
           <el-form-item label="费用项目" required>
-            <FieldInput v-model="m.expenseItemId" :field="{ prop: 'expenseItemId', label: '费用项目', type: 'select', options: EXPENSE_ITEM_SOURCE }" />
+            <FieldInput v-model="m.expenseItemId" :field="{ prop: 'expenseItemId', label: '费用项目', type: 'select', options: expenseItemOptions }" />
           </el-form-item>
         </el-col>
         <el-col :xs="12" :span="8">

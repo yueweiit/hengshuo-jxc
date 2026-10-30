@@ -10,7 +10,8 @@ import StatusTag from '@/components/StatusTag.vue'
 import MoneyText from '@/components/MoneyText.vue'
 import QtyText from '@/components/QtyText.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
-import AuditTimeline from '@/components/AuditTimeline.vue'
+import AuditDrawer from '@/components/AuditDrawer.vue'
+import { auditDocumentContext, type AuditDocumentContext, type AuditPresentation } from '@/components/auditPresentation'
 import FieldInput from './FieldInput.vue'
 import OptionText from './OptionText.vue'
 import type { ColumnDef, FieldDef } from './types'
@@ -27,6 +28,10 @@ const props = withDefaults(
     editPerm?: string | string[]
     /** 审计日志的 resourceType，不传则不显示操作日志 */
     auditType?: string
+    /** 通用日志的业务字段展示；专用日志继续使用 audit 插槽。 */
+    auditPresentation?: AuditPresentation
+    /** 审计抽屉宽度；业务展示通过 audit 插槽复用加载器。 */
+    auditWidth?: string
     canCreate?: boolean
     canEdit?: boolean
     canToggle?: boolean
@@ -52,6 +57,7 @@ const props = withDefaults(
     formWidth: '640px',
     labelWidth: '110px',
     defaultQuery: () => ({}),
+    auditWidth: '420px',
   },
 )
 
@@ -169,8 +175,10 @@ async function toggle(row: T) {
 // ---------- 操作日志 ----------
 const auditVisible = ref(false)
 const auditRowId = ref<number>(0)
+const auditContext = ref<AuditDocumentContext>({ title: props.title, identifier: '尚未选择记录' })
 function openAudit(row: T) {
   auditRowId.value = row.id
+  auditContext.value = auditDocumentContext(row as T & Record<string, unknown>, props.title)
   auditVisible.value = true
 }
 
@@ -308,9 +316,10 @@ defineExpose({ reload: load, openCreate, openEdit, selection, query, search })
       </template>
     </el-dialog>
 
-    <el-drawer v-if="auditType" v-model="auditVisible" :title="t('common.auditLog')" size="420px" destroy-on-close>
-      <AuditTimeline :resource-type="auditType" :resource-id="auditRowId" />
+    <el-drawer v-if="auditType && $slots.audit" v-model="auditVisible" :title="t('common.auditLog')" :size="auditWidth" destroy-on-close>
+      <slot name="audit" :resource-id="auditRowId" />
     </el-drawer>
+    <AuditDrawer v-else-if="auditType" v-model="auditVisible" :resource-type="auditType" :resource-id="auditRowId" :context="auditContext" :presentation="auditPresentation" />
   </div>
 </template>
 

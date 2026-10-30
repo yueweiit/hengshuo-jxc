@@ -43,7 +43,7 @@ public class AuthorizationService {
         Set<String> permissions=new HashSet<>();
         Map<String,String> fields=new HashMap<>();
         FieldPolicyService.GROUPS.forEach(g->fields.put(g,"HIDDEN"));
-        if(platform)permissions.addAll(List.of("sys:country:view","sys:country:create","sys:country:activate","sys:template:publish"));
+        if(platform)permissions.addAll(List.of("sys:country:view","sys:country:create","sys:country:activate","sys:template:publish","sys:integration:config"));
         Instant until=instant(identity.get("expires_at"));
         DataScope scope=DataScope.none();
         if(ctx.countryId()!=null) {
@@ -67,6 +67,7 @@ public class AuthorizationService {
             for(var r:jdbc.queryForList("SELECT id,entity_id FROM fin_book WHERE country_id=?",ctx.countryId()))if(entities.contains(id(r,"entity_id")))books.add(id(r,"id"));
             scope=new DataScope(all,entities,stores,warehouses,books);
         }
+        if(!platform)permissions.remove("sys:integration:config");
         Access result=new Access(ctx.userId(),ctx.countryId(),platform,permissions,fields,scope,until);
         final Instant expires=until;
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){@Override public void beforeCommit(boolean readOnly) {

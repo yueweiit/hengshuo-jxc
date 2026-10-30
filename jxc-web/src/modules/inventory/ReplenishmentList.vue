@@ -71,6 +71,7 @@ onMounted(load)
       <el-table-column prop="docNo" label="单号" width="160" />
       <el-table-column prop="warehouseName" label="仓库" width="140" />
       <el-table-column prop="productCode" label="商品" width="90" />
+      <el-table-column prop="reason" label="申请原因" min-width="200" show-overflow-tooltip />
       <el-table-column prop="reqQty" label="需求" width="70" />
       <el-table-column prop="fulfilledQty" label="已满足" width="80" />
       <el-table-column prop="suggestedSource" label="建议来源" width="110" />

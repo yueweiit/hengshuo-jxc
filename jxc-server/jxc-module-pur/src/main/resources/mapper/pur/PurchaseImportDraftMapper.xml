@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseImportDraftMapper">
+
+  <select id="selectGroup" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId} AND id=#{id}<if test="lock"> FOR UPDATE</if>
+  </select>
+
+  <select id="selectSourceRows" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import WHERE country_id=#{countryId} AND batch_id=#{batchId} AND group_id=#{groupId} ORDER BY row_no FOR UPDATE
+  </select>
+
+  <select id="selectRowsWithGroups" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT r.*,g.source_order_no group_source FROM pur_order_import r LEFT JOIN pur_order_import_group g ON g.country_id=r.country_id AND g.id=r.group_id WHERE r.country_id=#{countryId} AND r.batch_id=#{batchId} ORDER BY r.row_no FOR UPDATE OF r
+  </select>
+
+  <select id="selectGroupByKey" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId} AND group_key=#{groupKey} FOR UPDATE
+  </select>
+
+  <select id="insertGroup" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_order_import_group(country_id,batch_id,group_key,source_order_no,effective_header,create_key) VALUES(#{countryId},#{batchId},#{groupKey},#{sourceOrderNo},#{effectiveHeader}::jsonb,#{createKey}) RETURNING id
+  </select>
+
+  <update id="assignRowGroup">
+    UPDATE pur_order_import SET group_id=#{groupId} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectGroupsForUpdate" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM pur_order_import_group WHERE country_id=#{countryId} AND batch_id=#{batchId} ORDER BY id FOR UPDATE
+  </select>
+
+  <update id="savePreview">
+    UPDATE pur_order_import_group SET preview_snapshot=#{previewSnapshot}::jsonb,preview_hash=#{previewHash},preview_token=#{previewToken},create_status=#{createStatus},version=version+1,error_code=NULL,error_message=NULL,outer_key=NULL,request_hash=NULL,create_request=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="insertOverrideGroup" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_order_import_group(country_id,batch_id,group_key,source_order_no,effective_header,header_override,create_key) VALUES(#{countryId},#{batchId},#{groupKey},#{sourceOrderNo},#{effectiveHeader}::jsonb,true,#{createKey}) RETURNING id
+  </select>
+
+  <update id="invalidateGroupPreview">
+    UPDATE pur_order_import_group SET preview_token=NULL,preview_snapshot=NULL,create_status='DRAFT',version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="updateGroupHeader">
+    UPDATE pur_order_import_group SET effective_header=#{effectiveHeader}::jsonb,header_override=true,preview_token=NULL,preview_snapshot=NULL,create_status='DRAFT',version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="markCreating">
+    UPDATE pur_order_import_group SET create_status='CREATING',outer_key=#{outerKey},request_hash=#{requestHash},create_request=#{createRequest}::jsonb WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="assignOrderLine">
+    UPDATE pur_order_import SET target_order_line_id=#{targetOrderLineId} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="markCreated">
+    UPDATE pur_order_import_group SET create_status='CREATED',target_order_id=#{targetOrderId},result_snapshot=#{resultSnapshot}::jsonb,verify_status='NOT_CHECKED',error_code=NULL,error_message=NULL,updated_at=clock_timestamp() WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="saveVerification">
+    UPDATE pur_order_import_group SET verify_status=#{verifyStatus},error_code=#{errorCode},error_message=#{errorMessage} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="saveCreationFailure">
+    UPDATE pur_order_import_group SET create_status=#{createStatus},outer_key=#{outerKey},request_hash=#{requestHash},create_request=#{createRequest}::jsonb,error_code=#{errorCode},error_message=#{errorMessage} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+</mapper>

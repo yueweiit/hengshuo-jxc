@@ -23,9 +23,20 @@ spring:
       use-big-decimal-for-floats: true
   servlet:
     multipart:
-      max-file-size: 1MB
-      max-request-size: 2MB
+      max-file-size: 100MB
+      max-request-size: 102MB
+      file-size-threshold: 0
 jxc:
+  purchase-import:
+    recognition:
+      enabled: ${JXC_PURCHASE_IMPORT_RECOGNITION_ENABLED:false}
+    n8n-url: ${JXC_PURCHASE_IMPORT_N8N_URL:}
+    n8n-key: ${JXC_PURCHASE_IMPORT_N8N_KEY:}
+    draft-creation:
+      enabled: ${JXC_PURCHASE_IMPORT_DRAFT_CREATION_ENABLED:false}
+    worker-enabled: ${JXC_PURCHASE_IMPORT_WORKER_ENABLED:false}
+    worker-url: ${JXC_PURCHASE_IMPORT_WORKER_URL:}
+    worker-key: ${JXC_PURCHASE_IMPORT_WORKER_KEY:}
   storage:
     endpoint: ${JXC_STORAGE_ENDPOINT:}
     access-key: ${JXC_STORAGE_ACCESS_KEY:}

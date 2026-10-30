@@ -1,0 +1,32 @@
+/* 仅采购列表和显式标记的详情表格共用，不影响审批、附件或编辑表单。 */
+.purchase-order-list > .page-card > .table-scroll > .el-table,
+.purchase-order-table.el-table {
+  --el-fill-color-lighter: var(--el-fill-color-light);
+  --el-table-header-bg-color: var(--el-fill-color-light);
+  --el-table-header-text-color: var(--el-text-color-regular);
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+  font-size: 13px;
+
+  .el-table__cell {
+    height: 32px;
+    padding: 4px 0;
+  }
+
+  .cell {
+    padding: 0 8px;
+    line-height: 22px;
+  }
+
+  th.el-table__cell {
+    font-weight: 600;
+  }
+
+  .el-link,
+  .el-button.is-link {
+    font-size: inherit;
+  }
+
+  .el-button + .el-button {
+    margin-left: 6px;
+  }
+}

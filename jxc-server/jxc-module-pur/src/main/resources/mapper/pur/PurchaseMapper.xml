@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hs.jxc.pur.mapper.PurchaseMapper">
+  <sql id="documentTable"><choose><when test="kind == 'orders'">pur_order</when><when test="kind == 'domestic-receipts'">pur_domestic_receipt</when><when test="kind == 'export-nodes'">pur_export_node</when><otherwise><bind name="invalidIdentifier" value="@com.hs.jxc.pur.mapper.PurchaseSqlGuard@reject()" /></otherwise></choose></sql>
+  <sql id="documentLineTable"><choose><when test="kind == 'orders'">pur_order_line</when><when test="kind == 'domestic-receipts'">pur_domestic_receipt_line</when><when test="kind == 'export-nodes'">pur_export_node_line</when><otherwise><bind name="invalidIdentifier" value="@com.hs.jxc.pur.mapper.PurchaseSqlGuard@reject()" /></otherwise></choose></sql>
+  <sql id="documentForeignKey"><choose><when test="kind == 'orders'">order_id</when><when test="kind == 'domestic-receipts'">receipt_id</when><when test="kind == 'export-nodes'">export_node_id</when><otherwise><bind name="invalidIdentifier" value="@com.hs.jxc.pur.mapper.PurchaseSqlGuard@reject()" /></otherwise></choose></sql>
+
+  <update id="updateWorkflowStatus">
+    UPDATE pur_order SET status=#{status},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectDocument" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM <include refid="documentTable" /> WHERE country_id=#{countryId} AND id=#{id}<if test="lock"> FOR UPDATE</if>
+  </select>
+
+  <select id="selectDocumentLines" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM <include refid="documentLineTable" /> WHERE country_id=#{countryId} AND <include refid="documentForeignKey" />=#{documentId} ORDER BY id
+  </select>
+
+  <select id="selectReferenceRow" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM <choose><when test="table == 'fin_book'">fin_book</when><when test="table == 'md_supplier'">md_supplier</when><when test="table == 'pur_order_line'">pur_order_line</when><when test="table == 'pur_domestic_receipt_line'">pur_domestic_receipt_line</when><when test="table == 'pur_export_node_line'">pur_export_node_line</when><otherwise><bind name="invalidIdentifier" value="@com.hs.jxc.pur.mapper.PurchaseSqlGuard@reject()" /></otherwise></choose> WHERE country_id=#{countryId} AND id=#{id}<if test="lock"> FOR UPDATE</if>
+  </select>
+
+  <update id="incrementVersion">
+    UPDATE <include refid="documentTable" /> SET version=version+1 WHERE country_id=#{countryId} AND id=#{id} AND version=#{version}
+  </update>
+
+  <select id="selectDocuments" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT * FROM <include refid="documentTable" /> WHERE country_id=#{countryId} ORDER BY id DESC
+  </select>
+
+  <select id="selectReceiptIds" resultType="java.lang.Long" useCache="false">
+    SELECT id FROM pur_domestic_receipt WHERE country_id=#{countryId} AND book_id=#{bookId} AND order_id=#{orderId} ORDER BY id
+  </select>
+
+  <select id="selectExportIds" resultType="java.lang.Long" useCache="false">
+    SELECT DISTINCT e.id FROM pur_export_node e JOIN pur_export_node_line l ON l.country_id=e.country_id AND l.export_node_id=e.id JOIN pur_order_line p ON p.country_id=l.country_id AND p.id=l.order_line_id WHERE e.country_id=#{countryId} AND e.book_id=#{bookId} AND p.order_id=#{orderId} ORDER BY e.id
+  </select>
+
+  <select id="selectCancellations" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT c.*,p.product_id FROM pur_order_cancel c JOIN pur_order_line p ON p.country_id=c.country_id AND p.id=c.order_line_id WHERE c.country_id=#{countryId} AND c.book_id=#{bookId} AND p.order_id=#{orderId} ORDER BY c.id
+  </select>
+
+  <select id="selectInspectionConversions" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT c.*,l.product_id FROM pur_inspect_convert c JOIN pur_domestic_receipt_line l ON l.country_id=c.country_id AND l.id=c.receipt_line_id WHERE c.country_id=#{countryId} AND l.receipt_id=#{receiptId} ORDER BY c.id
+  </select>
+
+  <select id="countEntityBook" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM fin_book WHERE country_id=#{countryId} AND id=#{id} AND entity_id=#{entityId}
+  </select>
+
+  <select id="insertOrder" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_order(country_id,book_id,entity_id,biz_date,doc_no,supplier_id,source_country,currency,order_date,expected_date,payment_terms,prepay_ratio,term_days,remark,created_by,opening_ref,cutoff_date,import_row_id) VALUES(#{countryId},#{bookId},#{entityId},#{bizDate},#{docNo},#{supplierId},#{sourceCountry},#{currency},#{orderDate},#{expectedDate},#{paymentTerms},#{prepayRatio},#{termDays},#{remark},#{createdBy},#{openingRef},#{cutoffDate},#{importRowId}) RETURNING id
+  </select>
+
+  <insert id="insertOrderLine">
+    INSERT INTO pur_order_line(country_id,order_id,line_no,product_id,unit,base_unit,factor,qty,base_qty,unit_price,amount,tax_rate,delivery_date,created_by) VALUES(#{countryId},#{orderId},#{lineNo},#{productId},#{unit},#{baseUnit},#{factor},#{qty},#{baseQty},#{unitPrice},#{amount},#{taxRate},#{deliveryDate},#{createdBy})
+  </insert>
+
+  <update id="updateOrderTotals">
+    UPDATE pur_order SET total_qty=#{totalQty},total_amount=#{totalAmount},tax_amount=#{taxAmount} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="insertReceipt" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_domestic_receipt(country_id,book_id,entity_id,biz_date,doc_no,order_id,supplier_id,receipt_date,location,remark,created_by) VALUES(#{countryId},#{bookId},#{entityId},#{bizDate},#{docNo},#{orderId},#{supplierId},#{receiptDate},#{location},#{remark},#{createdBy}) RETURNING id
+  </select>
+
+  <insert id="insertReceiptLine">
+    INSERT INTO pur_domestic_receipt_line(country_id,receipt_id,order_line_id,product_id,qualified_qty,pending_inspect_qty,damaged_qty,created_by) VALUES(#{countryId},#{receiptId},#{orderLineId},#{productId},#{qualifiedQty},#{pendingInspectQty},#{damagedQty},#{createdBy})
+  </insert>
+
+  <select id="insertExport" resultType="java.lang.Long" useCache="false" affectData="true" flushCache="true">
+    INSERT INTO pur_export_node(country_id,book_id,entity_id,biz_date,doc_no,declaration_no,export_port,export_date,remark,created_by) VALUES(#{countryId},#{bookId},#{entityId},#{bizDate},#{docNo},#{declarationNo},#{exportPort},#{exportDate},#{remark},#{createdBy}) RETURNING id
+  </select>
+
+  <insert id="insertExportLine">
+    INSERT INTO pur_export_node_line(country_id,export_node_id,receipt_line_id,order_line_id,product_id,qty,created_by) VALUES(#{countryId},#{exportNodeId},#{receiptLineId},#{orderLineId},#{productId},#{qty},#{createdBy})
+  </insert>
+
+  <select id="countOrderReceipts" resultType="java.lang.Integer" useCache="false">
+    SELECT count(*) FROM pur_domestic_receipt WHERE country_id=#{countryId} AND order_id=#{orderId}
+  </select>
+
+  <delete id="deleteOrderLines">
+    DELETE FROM pur_order_line WHERE country_id=#{countryId} AND order_id=#{orderId}
+  </delete>
+
+  <update id="updateOrder">
+    UPDATE pur_order SET supplier_id=#{supplierId},currency=#{currency},source_country=#{sourceCountry},order_date=#{orderDate},biz_date=#{bizDate},expected_date=#{expectedDate},payment_terms=#{paymentTerms},prepay_ratio=#{prepayRatio},term_days=#{termDays},status='DRAFT',remark=#{remark} WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <delete id="deleteDocumentLines">
+    DELETE FROM <include refid="documentLineTable" /> WHERE country_id=#{countryId} AND <include refid="documentForeignKey" />=#{documentId}
+  </delete>
+
+  <update id="moveDocumentLines">
+    UPDATE <include refid="documentLineTable" /> SET <include refid="documentForeignKey" />=#{documentId} WHERE country_id=#{countryId} AND <include refid="documentForeignKey" />=#{temporaryId}
+  </update>
+
+  <update id="replaceReceiptHeader">
+    UPDATE pur_domestic_receipt o SET (order_id,supplier_id,receipt_date,biz_date,location,remark)=(SELECT order_id,supplier_id,receipt_date,biz_date,location,remark FROM pur_domestic_receipt WHERE country_id=#{countryId} AND id=#{id}) WHERE o.country_id=#{countryId2} AND o.id=#{id2}
+  </update>
+
+  <update id="replaceExportHeader">
+    UPDATE pur_export_node o SET (declaration_no,export_port,export_date,biz_date,remark)=(SELECT declaration_no,export_port,export_date,biz_date,remark FROM pur_export_node WHERE country_id=#{countryId} AND id=#{id}) WHERE o.country_id=#{countryId2} AND o.id=#{id2}
+  </update>
+
+  <delete id="deleteDocument">
+    DELETE FROM <include refid="documentTable" /> WHERE country_id=#{countryId} AND id=#{id}
+  </delete>
+
+  <update id="voidDocument">
+    UPDATE <include refid="documentTable" /> SET status='VOIDED',version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <insert id="insertCancellation">
+    INSERT INTO pur_order_cancel(country_id,book_id,biz_date,order_line_id,cancel_qty,reason,created_by) VALUES(#{countryId},#{bookId},#{bizDate},#{orderLineId},#{cancelQty},#{reason},#{createdBy})
+  </insert>
+
+  <update id="addCancelledQty">
+    UPDATE pur_order_line SET cancelled_qty=cancelled_qty+#{cancelledQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="closeOrder">
+    UPDATE pur_order SET status='CLOSED',version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="reverseReceiptQty">
+    UPDATE pur_order_line SET qualified_qty=qualified_qty-#{qualifiedQty},pending_inspect_qty=pending_inspect_qty-#{pendingInspectQty},damaged_qty=damaged_qty-#{damagedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="updateApproval">
+    UPDATE pur_order SET status=#{status},approval_instance_id=#{approvalInstanceId},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="addReceiptQty">
+    UPDATE pur_order_line SET qualified_qty=qualified_qty+#{qualifiedQty},pending_inspect_qty=pending_inspect_qty+#{pendingInspectQty},damaged_qty=damaged_qty+#{damagedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="addReceiptExportQty">
+    UPDATE pur_domestic_receipt_line SET exported_qty=exported_qty+#{exportedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="addOrderExportQty">
+    UPDATE pur_order_line SET exported_qty=exported_qty+#{exportedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="confirmDocument">
+    UPDATE <include refid="documentTable" /> SET status='CONFIRMED',version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="refreshOrderStatus">
+    UPDATE pur_order o SET status=CASE WHEN NOT EXISTS(SELECT 1 FROM pur_order_line l WHERE l.country_id=o.country_id AND l.order_id=o.id AND l.cancelled_qty+l.qualified_qty+l.pending_inspect_qty+l.opening_shipped_qty&lt;l.base_qty) THEN 'DELIVERED' WHEN EXISTS(SELECT 1 FROM pur_order_line l WHERE l.country_id=o.country_id AND l.order_id=o.id AND l.qualified_qty+l.pending_inspect_qty+l.damaged_qty+l.opening_shipped_qty&gt;0) THEN 'PARTIAL_DELIVERED' ELSE 'CONFIRMED' END,version=version+1 WHERE country_id=#{countryId} AND id=#{id} AND status NOT IN ('CLOSED','CANCELLED')
+  </update>
+
+  <insert id="insertInspectionConversion">
+    INSERT INTO pur_inspect_convert(country_id,book_id,biz_date,receipt_line_id,to_qualified_qty,to_damaged_qty,remark,created_by) VALUES(#{countryId},#{bookId},#{bizDate},#{receiptLineId},#{toQualifiedQty},#{toDamagedQty},#{remark},#{createdBy})
+  </insert>
+
+  <update id="addConvertedQty">
+    UPDATE pur_domestic_receipt_line SET converted_qualified_qty=converted_qualified_qty+#{convertedQualifiedQty},converted_damaged_qty=converted_damaged_qty+#{convertedDamagedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="convertOrderPendingQty">
+    UPDATE pur_order_line SET pending_inspect_qty=pending_inspect_qty-#{pendingInspectQty},qualified_qty=qualified_qty+#{qualifiedQty},damaged_qty=damaged_qty+#{damagedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectExportRequired" resultType="java.lang.Boolean" useCache="false">
+    SELECT COALESCE((config-&gt;&gt;'pur.export.required')::boolean,true) FROM sys_country WHERE id=#{id}
+  </select>
+
+  <update id="addOpeningShippedQty">
+    UPDATE pur_order_line SET shipped_qty=shipped_qty+#{shippedQty},opening_shipped_qty=opening_shipped_qty+#{openingShippedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="addSourceShippedQty">
+    UPDATE <choose><when test="sourceType == &#x27;EXPORT_NODE_LINE&#x27;">pur_export_node_line</when><otherwise>pur_domestic_receipt_line</otherwise></choose> SET shipped_qty=shipped_qty+#{shippedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="addOrderShippedQty">
+    UPDATE pur_order_line SET shipped_qty=shipped_qty+#{shippedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="addArrivedQty">
+    UPDATE pur_order_line SET arrived_mx_qty=arrived_mx_qty+#{arrivedMxQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectPayableOrderLineIds" resultType="java.lang.Long" useCache="false">
+    SELECT l.id FROM pur_order_line l JOIN pur_order o ON o.country_id=l.country_id AND o.id=l.order_id WHERE l.country_id=#{countryId} AND o.status IN ('CONFIRMED','PARTIAL_DELIVERED','DELIVERED','CLOSED') ORDER BY l.id
+  </select>
+
+  <select id="selectPayableReceiptIds" resultType="java.lang.Long" useCache="false">
+    SELECT r.id FROM pur_domestic_receipt r JOIN pur_order o ON o.country_id=r.country_id AND o.id=r.order_id WHERE r.country_id=#{countryId} AND r.status='CONFIRMED' AND o.status IN ('CONFIRMED','PARTIAL_DELIVERED','DELIVERED','CLOSED') ORDER BY r.id
+  </select>
+
+  <select id="selectReturnReceiptLines" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT l.id,l.order_line_id FROM pur_domestic_receipt_line l JOIN pur_domestic_receipt d ON d.country_id=l.country_id AND d.id=l.receipt_id WHERE l.country_id=#{countryId} AND d.order_id=#{orderId} AND d.status='CONFIRMED' ORDER BY l.id
+  </select>
+
+  <select id="selectDomesticReturnableQty" resultType="java.math.BigDecimal" useCache="false">
+    SELECT COALESCE(sum(l.qualified_qty+l.converted_qualified_qty-l.exported_qty-l.shipped_qty-l.returned_qty),0) FROM pur_domestic_receipt_line l JOIN pur_domestic_receipt r ON r.country_id=l.country_id AND r.id=l.receipt_id WHERE l.country_id=#{countryId} AND l.order_line_id=#{orderLineId} AND r.status='CONFIRMED'
+  </select>
+
+  <update id="addReceiptReturnedQty">
+    UPDATE pur_domestic_receipt_line SET returned_qty=returned_qty+#{returnedQty},version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <update id="addOrderReturnedQty">
+    UPDATE pur_order_line SET returned_qty=returned_qty+#{returnedQty},<choose><when test="domestic">domestic_returned_qty=domestic_returned_qty+#{stageReturnedQty}</when><otherwise>overseas_returned_qty=overseas_returned_qty+#{stageReturnedQty}</otherwise></choose>,version=version+1 WHERE country_id=#{countryId} AND id=#{id}
+  </update>
+
+  <select id="selectShippableSourceIds" resultType="java.lang.Long" useCache="false">
+    <choose><when test="export">SELECT l.id FROM pur_domestic_receipt_line l JOIN pur_domestic_receipt r ON r.country_id=l.country_id AND r.id=l.receipt_id WHERE l.country_id=#{countryId} AND r.status='CONFIRMED' ORDER BY l.id</when><otherwise>SELECT l.id FROM pur_export_node_line l JOIN pur_export_node e ON e.country_id=l.country_id AND e.id=l.export_node_id WHERE l.country_id=#{countryId} AND e.status='CONFIRMED' ORDER BY l.id</otherwise></choose>
+  </select>
+
+  <select id="selectOpeningLogisticsReference" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT p.doc_no po_no,p.opening_ref source_no FROM pur_order p JOIN pur_order_line l ON l.country_id=p.country_id AND l.order_id=p.id WHERE p.country_id=#{countryId} AND p.book_id=#{bookId} AND p.id=#{id} AND l.id=#{id2} AND p.opening_ref IS NOT NULL
+  </select>
+
+  <select id="selectLogisticsReference" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT p.doc_no po_no,h.doc_no source_no FROM pur_order p JOIN pur_order_line ol ON ol.country_id=p.country_id AND ol.order_id=p.id JOIN <choose><when test="sourceType == &#x27;EXPORT_NODE_LINE&#x27;">pur_export_node_line</when><otherwise>pur_domestic_receipt_line</otherwise></choose> l ON l.country_id=ol.country_id AND l.order_line_id=ol.id JOIN <choose><when test="sourceType == &#x27;EXPORT_NODE_LINE&#x27;">pur_export_node</when><otherwise>pur_domestic_receipt</otherwise></choose> h ON h.country_id=l.country_id AND h.id=l.<choose><when test="sourceType == &#x27;EXPORT_NODE_LINE&#x27;">export_node_id</when><otherwise>receipt_id</otherwise></choose> AND h.book_id=p.book_id WHERE p.country_id=#{countryId} AND p.book_id=#{bookId} AND p.id=#{id} AND l.id=#{id2}<if test="sourceType == 'DOMESTIC_RECEIPT_LINE'"> AND h.order_id=p.id</if>
+  </select>
+
+  <select id="selectOrderReference" resultType="java.util.LinkedHashMap" useCache="false">
+    SELECT book_id,supplier_id,doc_no FROM pur_order WHERE country_id=#{countryId} AND book_id=#{bookId} AND id=#{id}
+  </select>
+</mapper>

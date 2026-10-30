@@ -7,7 +7,8 @@ const full = (id = 71) => ({ id, version: 1, status: 'DRAFT', bizDate: '2026-10-
 function receipt(beforeConfirm, get) {
   const route = reactive({ params: { id: '71' } }), context = { country: 101, token: 'session-a' }, calls = []
   const page = loadVueScript(new URL('../src/modules/logistics/LgsReceiptForm.vue', import.meta.url), {
-    computed, ref, watch() {}, onMounted() {}, nextTick: fn => fn(), createCommandIntent: () => ({}),
+    computed, ref, watch() {}, onMounted() {}, onBeforeUnmount() {}, nextTick: async fn => fn?.(), createCommandIntent: () => ({}),
+    useCountryStore: () => ({ timezone: 'America/Mexico_City' }),
     useRoute: () => route, useRouter: () => ({}), useUserStore: () => ({ hasPerm: () => true }),
     getCountryId: () => context.country, getToken: () => context.token,
     BizError: class extends Error { constructor(code, message) { super(message); this.code = code } },

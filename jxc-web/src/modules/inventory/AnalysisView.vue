@@ -1,27 +1,53 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '@/api/http'
 import { allRecords } from '@/api/pagination'
 import StatusTag from '@/components/StatusTag.vue'
+import { useCountryStore } from '@/stores/country'
 
 const router = useRouter()
+const country = useCountryStore()
 const rows = ref<Record<string, any>[]>([])
 const orders = ref<Record<string, any>[]>([])
 const current = ref<Record<string, any> | null>(null)
 const open = ref(false)
+let disposed = false
+let orderRequest = 0
+const active = (epoch: number) => !disposed && epoch === country.epoch
 
 async function load() {
-  rows.value = await allRecords<Record<string, any>>('/inv/classify-results')
+  const epoch = country.epoch
+  try {
+    const result = await allRecords<Record<string, any>>('/inv/classify-results')
+    if (active(epoch)) rows.value = result
+  } catch (error) {
+    // 切国家或页面卸载已使本次读取失效；当前页面的真实错误仍交给原错误处理。
+    if (!active(epoch)) return
+    throw error
+  }
 }
 
 async function show(row: Record<string, any>) {
+  const request = ++orderRequest
+  const epoch = country.epoch
   current.value = row
-  orders.value = await http.get('/inv/classify-results/' + row.id + '/orders')
-  open.value = true
+  orders.value = []
+  open.value = false
+  try {
+    const result = await http.get<Record<string, any>[]>('/inv/classify-results/' + row.id + '/orders')
+    if (!active(epoch) || request !== orderRequest) return
+    orders.value = result
+    open.value = true
+  } catch (error) {
+    // 后续仓店选择已替代本次读取时丢弃旧结果，当前读取失败仍原样报出。
+    if (!active(epoch) || request !== orderRequest) return
+    throw error
+  }
 }
 
 onMounted(load)
+onBeforeUnmount(() => { disposed = true; orderRequest++ })
 </script>
 
 <template>

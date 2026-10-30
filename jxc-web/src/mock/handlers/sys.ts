@@ -502,10 +502,14 @@ const workbenchHandlers = [
     handle((ctx) => {
       runPeriodic(requireCountry(ctx))
       const type = ctx.url.searchParams.get('type')
+      const keyword = ctx.url.searchParams.get('keyword')?.trim().toLowerCase()
+      const order = ctx.url.searchParams.get('order') ?? 'desc'
+      if (order !== 'asc' && order !== 'desc') throw new MockError(400, 'SYS_BAD_REQUEST', '待办排序参数不合法')
       const list = visibleTodos(ctx)
         .filter((t) => !type || t.todoType === type)
+        .filter((t) => !keyword || t.title.toLowerCase().includes(keyword) || String(t.id).includes(keyword))
         .map((t): Row => ({ ...t, typeLabel: TODO_LABELS[t.todoType] ?? t.todoType }))
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .sort((a, b) => (order === 'asc' ? 1 : -1) * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()))
       return paginate(list, ctx.url)
     }),
   ),

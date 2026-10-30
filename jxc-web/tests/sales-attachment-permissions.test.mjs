@@ -1,8 +1,10 @@
+import { loadTsModule } from './contracts/load-ts-module.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { compile, computed, createRenderer, defineComponent, h, nextTick, onMounted, reactive, ref } from 'vue'
+import { compile, computed, createRenderer, defineComponent, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
+const salesOrderActions = loadTsModule(new URL('../src/modules/sales/salesOrderActions.ts', import.meta.url))
 
 const detailFile = new URL('../src/modules/sales/SalesOrderDetail.vue', import.meta.url)
 const attachmentFile = new URL('../src/components/DocAttachment.vue', import.meta.url)
@@ -17,16 +19,16 @@ const renderer = createRenderer({
 async function mount(groups, permissions) {
   const calls = [], mounted = []
   const page = loadVueScript(detailFile, {
-    computed, reactive, ref, watch() {}, onMounted() {}, createCommandIntent: () => ({}),
+    ...salesOrderActions, computed, reactive, ref, watch() {}, onMounted() {}, createCommandIntent: () => ({}),
     useRoute: () => ({ params: { id: '1164' } }), useRouter: () => ({}), useCountryStore: () => ({}),
     useUserStore: () => ({ fieldAccess: group => groups[group] ?? 'HIDDEN', hasPerm: codes => (Array.isArray(codes) ? codes : [codes]).some(code => permissions.includes(code)) }),
-  }, ['order', 'id', 'user'])
+  }, ['order', 'id', 'user', 'canUploadSalesAttachment'])
   page.order.value = { id: 1164 }
   const attachment = defineComponent({
     props: ['bizType', 'bizId', 'category', 'readonly'],
     setup(props) {
       mounted.push({ category: props.category, readonly: Boolean(props.readonly) })
-      loadVueScript(attachmentFile, { ref, onMounted, defineProps: () => props, defineEmits: () => () => {}, defineExpose() {}, http: { get: async (url, params) => { calls.push({ url, category: params.category }); return [] } } }, ['load'])
+      loadVueScript(attachmentFile, { ref, reactive, watch, onBeforeUnmount, onMounted, defineProps: () => props, defineEmits: () => () => {}, defineExpose() {}, http: { get: async (url, params) => { calls.push({ url, category: params.category }); return [] } } }, ['load'])
       return () => h('div')
     },
   })

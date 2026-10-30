@@ -63,6 +63,50 @@ class CountryConfigurationIT extends BasePgIT {
         ok("POST","/sys/countries/"+country+"/activate",null);assertThat(data(ok("GET","/sys/countries/"+country,null))).containsEntry("status","ACTIVE");
 
     }
+    @Test void logisticsDelayParamsSaveReadAuditAndCountryIsolation()throws Exception{
+        seed("INSERT INTO sys_country(id,code,name,default_currency,timezone,status) VALUES(102,'CN','China','CNY','Asia/Shanghai','ACTIVE')");
+        seed("INSERT INTO sys_authz_epoch(country_id) VALUES(102)");
+        var original=data(ok("GET","/sys/countries/101",null));
+        assertThat(original).containsEntry("logisticsDelayToleranceHours",null);
+        var saved=data(ok("PUT","/sys/countries/101/params",Map.of("version",original.get("version"),"logisticsDelayToleranceHours",48)));
+        assertThat(saved).containsEntry("logisticsDelayToleranceHours",48);
+        assertThat(data(ok("GET","/sys/countries/101",null))).containsEntry("logisticsDelayToleranceHours",48);
+        assertThat(data(ok("GET","/sys/countries/102",null))).containsEntry("logisticsDelayToleranceHours",null);
+        var config=json.readMap(owner.queryForObject("SELECT config::text FROM sys_country WHERE id=101",String.class));
+        assertThat(config).containsEntry("lgs.delay.toleranceHours",48).containsEntry("sourceOnlySecret","excluded-marker");
+        assertThat(owner.queryForObject("SELECT after_value->>'logisticsDelayToleranceHours' FROM sys_audit_log WHERE country_id=101 AND action='修改地区参数' ORDER BY id DESC LIMIT 1",String.class)).isEqualTo("48");
+    }
+    @Test void logisticsDelayParamsPreserveZeroUpperBoundaryAndOmittedField()throws Exception{
+        for(int hours:List.of(0,999999)){
+            var current=data(ok("GET","/sys/countries/101",null));
+            var saved=data(ok("PUT","/sys/countries/101/params",Map.of("version",current.get("version"),"logisticsDelayToleranceHours",hours)));
+            assertThat(saved).containsEntry("logisticsDelayToleranceHours",hours);
+        }
+        var current=data(ok("GET","/sys/countries/101",null));
+        assertThat(data(ok("PUT","/sys/countries/101/params",Map.of("version",current.get("version"),"name","Renamed country")))).containsEntry("logisticsDelayToleranceHours",999999);
+    }
+    @Test void logisticsDelayParamsRejectInvalidInputsWithoutMutation()throws Exception{
+        var original=data(ok("GET","/sys/countries/101",null));
+        for(Object value:Arrays.asList(-1,1.5,1000000,"48",true,null)){
+            var body=new HashMap<String,Object>();body.put("version",original.get("version"));body.put("logisticsDelayToleranceHours",value);
+            var response=send("PUT","/sys/countries/101/params",body);
+            assertThat(response.statusCode()).withFailMessage(response.body()).isEqualTo(400);
+        }
+        assertThat(data(ok("GET","/sys/countries/101",null))).containsEntry("version",original.get("version")).containsEntry("logisticsDelayToleranceHours",null);
+        assertThat(owner.queryForObject("SELECT count(*) FROM sys_audit_log WHERE action='修改地区参数'",Integer.class)).isZero();
+    }
+    @Test void logisticsDelayParamsKeepPermissionGate()throws Exception{
+        seed("INSERT INTO sys_session(token_hash,user_id,expires_at) VALUES(?,202,clock_timestamp()+interval '1 hour')",com.hs.jxc.sys.service.SessionService.digest("country-no-edit-fixture"));
+        var request=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/v1/sys/countries/101/params")).header("Authorization","Bearer country-no-edit-fixture").header("Content-Type","application/json").PUT(HttpRequest.BodyPublishers.ofString("{\"version\":1,\"logisticsDelayToleranceHours\":48}")).build();
+        assertThat(http.send(request,HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(403);
+        assertThat(owner.queryForObject("SELECT config->>'lgs.delay.toleranceHours' FROM sys_country WHERE id=101",String.class)).isNull();
+    }
+    @Test void logisticsDelayParamsKeepVersionConflictGate()throws Exception{
+        var original=data(ok("GET","/sys/countries/101",null));
+        ok("PUT","/sys/countries/101/params",Map.of("version",original.get("version"),"logisticsDelayToleranceHours",48));
+        assertThat(send("PUT","/sys/countries/101/params",Map.of("version",original.get("version"),"logisticsDelayToleranceHours",72)).statusCode()).isEqualTo(409);
+        assertThat(data(ok("GET","/sys/countries/101",null))).containsEntry("logisticsDelayToleranceHours",48);
+    }
     @Test void newSysTablesHaveForceRlsAndTheStatementWriteGate(){
         for(String table:List.of("sys_country_template","sys_country_template_item","sys_country_clone_job","sys_country_config_review","sys_template_upgrade","sys_doc_number_rule","sys_doc_number_counter","sys_doc_watcher","sys_delegation")){
             assertThat(owner.queryForObject("SELECT coalesce((SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid=to_regclass(?)),false)",Boolean.class,table)).as(table+" RLS").isTrue();

@@ -1,0 +1,46 @@
+import { http } from '@/api/http'
+import type { PurchaseImportApi } from './purchaseImportModel'
+
+/** 后端接入约定的唯一路径定义；不在这里解析Excel或模拟保存成功。 */
+const base = '/pur/order-imports'
+const batchPath = (id: string) => `${base}/${encodeURIComponent(id)}`
+export const purchaseImportApi: PurchaseImportApi = {
+  sourceMapping:(id,sourceId)=>http.get(`${batchPath(id)}/sources/${sourceId}/mapping`,undefined,{silent:true}),
+  correctSource:(id,sourceId,batchVersion,mappingOverrides,key)=>http.post(`${batchPath(id)}/sources/${sourceId}/corrections`,{batchVersion,mappingOverrides},{headers:{'Idempotency-Key':key},silent:true}),
+  saveGrid: (input, key) => http.post('/pur/order-imports/grid', input, { headers: { 'Idempotency-Key': key }, silent: true }),
+  confirmReview: (id, input, key) => http.post(`${batchPath(id)}/review`, input, { headers: { 'Idempotency-Key': key }, silent: true }),
+  upload(file, batchId, key, progress) {
+    const data = new FormData()
+    data.append('file', file)
+    if (batchId) data.append('batchId', batchId)
+    return http.post(base, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true, onUploadProgress: event => progress?.(event.loaded, event.total && event.total > 0 ? event.total : null) })
+  },
+  readTask: id => http.get(`${base}/tasks/${encodeURIComponent(id)}`, undefined, { silent: true }),
+  load: id => http.get(batchPath(id), undefined, { silent: true }),
+  clearBatch: (id, version, key) => http.delete(batchPath(id), { headers: { 'If-Match': String(version), 'Idempotency-Key': key }, timeout: 120000, silent: true }),
+  clearStatus: id => http.get(`${batchPath(id)}/clear-status`, undefined, { silent: true }),
+  saveHeader: (id, header, versions, batchVersion) => http.put(batchPath(id), { header, versions, batchVersion }, { silent: true }),
+  saveRow: (id, row, values, matchInputs) => http.put(`${batchPath(id)}/rows/${row.id}`, { version: row.version, values, ...(matchInputs ? { matchInputs } : {}) }, { silent: true }),
+  uploadPhoto(id, row, file, values, key, matchInputs) {
+    const data = new FormData()
+    data.append('file', file)
+    data.append('version', String(row.version))
+    data.append('values', JSON.stringify(values))
+    if (matchInputs) data.append('matchInputs', JSON.stringify(matchInputs))
+    return http.post(`${base}?batchId=${encodeURIComponent(id)}&imageRowId=${row.id}`, data, { headers: { 'Idempotency-Key': key }, timeout: 120000, silent: true })
+  },
+  readImage: (id, imageId, signal) => http.attachmentBlob(`/api/v1${batchPath(id)}/images/${imageId}/content`, { signal, silent: true }),
+  deleteRow: (id, row) => http.delete(`${batchPath(id)}/rows/${row.id}`, { headers: { 'If-Match': String(row.version) }, silent: true }),
+  retryTask: (id, key, sheet, mappingOverrides) => http.post(`${base}/tasks/${encodeURIComponent(id)}/retry`, { sheet, ...(mappingOverrides ? { mappingOverrides } : {}) }, { headers: { 'Idempotency-Key': key }, silent: true }),
+  associate: (id, row, imageId, association) => http.put(`${batchPath(id)}/rows/${row.id}/images/${imageId}/association`, { version: row.version, association }, { silent: true }),
+  decide: (id, row, input) => http.put(`${batchPath(id)}/rows/${row.id}/decision`, { ...input, version: row.version }, { silent: true }),
+  createProduct: (id, row, input, key) => http.post(`${batchPath(id)}/rows/${row.id}/products`, input, { headers: { 'Idempotency-Key': key }, silent: true }),
+  startMatches: (id, batchVersion, rowIds, key) => http.post(`${batchPath(id)}/matches`, { batchVersion, rowIds, topK: 5 }, { headers: { 'Idempotency-Key': key }, silent: true }),
+  explain: (id, row, key) => http.post(`${batchPath(id)}/rows/${row.id}/explanations`, { version: row.version }, { headers: { 'Idempotency-Key': key }, silent: true }),
+  previews: (id, batchVersion) => http.post(`${batchPath(id)}/previews`, { batchVersion }, { silent: true }),
+  saveGroup: (id, group, header, splitRowIds) => http.put(`${batchPath(id)}/groups/${group.id}`, { groupVersion: group.version, header, splitRowIds }, { silent: true }),
+  createDraft: (id, group, request, key) => http.post(`${batchPath(id)}/groups/${group.id}/drafts`, request, { headers: { 'Idempotency-Key': key }, silent: true }),
+  saveFeeTodos: (id, group, items) => http.put(`${batchPath(id)}/groups/${group.id}/fee-todos`, { version: group.feeTodosVersion, sourceBasisHash: group.sourceBasisHash, items }, { silent: true }),
+  creation: (id, group) => http.get(`${batchPath(id)}/groups/${group.id}/creation`, undefined, { silent: true }),
+  publishPhotos: (id, row, imageIds, key) => http.post(`${batchPath(id)}/rows/${row.id}/photos`, { version: row.version, confirmOwnership: true, imageIds }, { headers: { 'Idempotency-Key': key }, silent: true }),
+}

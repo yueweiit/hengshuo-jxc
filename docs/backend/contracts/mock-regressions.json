@@ -8,14 +8,29 @@
     "jxc-web/tests/scenario.test.mjs"
   ],
   "note": "Frozen original test call-sites are independent contracts; for-of names are parameter expansions. This records Mock coverage, not PostgreSQL or Java acceptance.",
-  "independentContractCount": 101,
-  "expandedTestCount": 111,
+  "independentContractCount": 102,
+  "expandedTestCount": 112,
   "contracts": [
     {
       "id": "amounts-1",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 16
+        "line": 10
+      },
+      "nameTemplate": "'演示出库数量检查和收款定位遵守实际页面的新接口契约'",
+      "contractType": "HTTP-observable",
+      "expansions": [
+        {
+          "name": "演示出库数量检查和收款定位遵守实际页面的新接口契约",
+          "parameters": null
+        }
+      ]
+    },
+    {
+      "id": "amounts-2",
+      "source": {
+        "file": "jxc-web/tests/amounts.test.mjs",
+        "line": 30
       },
       "nameTemplate": "'credit recheck converts the current order reservation without counting it twice'",
       "contractType": "direct-TS-function-or-scenario",
@@ -27,10 +42,10 @@
       ]
     },
     {
-      "id": "amounts-2",
+      "id": "amounts-3",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 23
+        "line": 37
       },
       "nameTemplate": "`credit ${exception} exception cannot auto-approve when no approval rule matches`",
       "contractType": "direct-TS-function-or-scenario",
@@ -50,10 +65,10 @@
       ]
     },
     {
-      "id": "amounts-3",
+      "id": "amounts-4",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 42
+        "line": 56
       },
       "nameTemplate": "'editing an approved partly shipped order preserves line IDs and fulfillment counters'",
       "contractType": "HTTP-observable",
@@ -65,10 +80,10 @@
       ]
     },
     {
-      "id": "amounts-4",
+      "id": "amounts-5",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 70
+        "line": 84
       },
       "nameTemplate": "'purchase return cannot exceed the unshipped domestic source quantity'",
       "contractType": "HTTP-observable",
@@ -80,10 +95,10 @@
       ]
     },
     {
-      "id": "amounts-5",
+      "id": "amounts-6",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 77
+        "line": 91
       },
       "nameTemplate": "'completed domestic returns do not reduce the separate MX return quantity'",
       "contractType": "HTTP-observable",
@@ -95,10 +110,10 @@
       ]
     },
     {
-      "id": "amounts-6",
+      "id": "amounts-7",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 87
+        "line": 101
       },
       "nameTemplate": "'one sales return request cannot repeat the same outbound line to exceed delivered quantity'",
       "contractType": "HTTP-observable",
@@ -110,10 +125,10 @@
       ]
     },
     {
-      "id": "amounts-7",
+      "id": "amounts-8",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 96
+        "line": 110
       },
       "nameTemplate": "'executing domestic return updates the original receipt source while preserving received history'",
       "contractType": "HTTP-observable",
@@ -125,10 +140,10 @@
       ]
     },
     {
-      "id": "amounts-8",
+      "id": "amounts-9",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 105
+        "line": 119
       },
       "nameTemplate": "'AP bill creation reloads purchase price and rejects a stale duplicate source'",
       "contractType": "direct-TS-function-or-scenario",
@@ -140,10 +155,10 @@
       ]
     },
     {
-      "id": "amounts-9",
+      "id": "amounts-10",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 113
+        "line": 127
       },
       "nameTemplate": "'cross currency AP settlement records real base currency exchange difference'",
       "contractType": "direct-TS-function-or-scenario",
@@ -155,10 +170,10 @@
       ]
     },
     {
-      "id": "amounts-10",
+      "id": "amounts-11",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 124
+        "line": 138
       },
       "nameTemplate": "'AP settlement rejects a payment belonging to another supplier'",
       "contractType": "direct-TS-function-or-scenario",
@@ -170,10 +185,10 @@
       ]
     },
     {
-      "id": "amounts-11",
+      "id": "amounts-12",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 131
+        "line": 145
       },
       "nameTemplate": "'reversing AR writeoff restores credit and automatic order allocation; statement still balances'",
       "contractType": "HTTP-observable",
@@ -185,10 +200,10 @@
       ]
     },
     {
-      "id": "amounts-12",
+      "id": "amounts-13",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 147
+        "line": 161
       },
       "nameTemplate": "'manual AR writeoff cannot spend cash already allocated to a different order'",
       "contractType": "HTTP-observable",
@@ -200,10 +215,10 @@
       ]
     },
     {
-      "id": "amounts-13",
+      "id": "amounts-14",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 155
+        "line": 169
       },
       "nameTemplate": "'refund payment requires actual date, reference and active proof'",
       "contractType": "HTTP-observable",
@@ -215,10 +230,10 @@
       ]
     },
     {
-      "id": "amounts-14",
+      "id": "amounts-15",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 164
+        "line": 178
       },
       "nameTemplate": "'a valid refund consumes refundable balance once and preserves recipient and payment evidence'",
       "contractType": "HTTP-observable",
@@ -230,10 +245,10 @@
       ]
     },
     {
-      "id": "amounts-15",
+      "id": "amounts-16",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 179
+        "line": 193
       },
       "nameTemplate": "'AP confirmation freezes historical rate and reversal keeps supplier statement consistent'",
       "contractType": "HTTP-observable",
@@ -245,10 +260,10 @@
       ]
     },
     {
-      "id": "amounts-16",
+      "id": "amounts-17",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 197
+        "line": 211
       },
       "nameTemplate": "'AP prepayment and credit-note settlements can be reversed without losing history'",
       "contractType": "HTTP-observable",
@@ -260,10 +275,10 @@
       ]
     },
     {
-      "id": "amounts-17",
+      "id": "amounts-18",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 210
+        "line": 224
       },
       "nameTemplate": "'warehouse-scoped sales detail returns only its own allocations and hides whole-order totals'",
       "contractType": "HTTP-observable",
@@ -275,10 +290,10 @@
       ]
     },
     {
-      "id": "amounts-18",
+      "id": "amounts-19",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 220
+        "line": 234
       },
       "nameTemplate": "'store receipt lists exclude another store even in the same country'",
       "contractType": "HTTP-observable",
@@ -290,10 +305,10 @@
       ]
     },
     {
-      "id": "amounts-19",
+      "id": "amounts-20",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 228
+        "line": 242
       },
       "nameTemplate": "`AP prepayment ${action} response keeps COST-hidden amounts private`",
       "contractType": "HTTP-observable",
@@ -319,10 +334,10 @@
       ]
     },
     {
-      "id": "amounts-20",
+      "id": "amounts-21",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 245
+        "line": 259
       },
       "nameTemplate": "'cached AP statements recheck every source against the current data scope'",
       "contractType": "HTTP-observable",
@@ -334,10 +349,10 @@
       ]
     },
     {
-      "id": "amounts-21",
+      "id": "amounts-22",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 262
+        "line": 276
       },
       "nameTemplate": "'cached AP statements hide report summary and nested amounts when COST is hidden'",
       "contractType": "HTTP-observable",
@@ -349,10 +364,10 @@
       ]
     },
     {
-      "id": "amounts-22",
+      "id": "amounts-23",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 273
+        "line": 287
       },
       "nameTemplate": "`purchase return ${action} response hides COST fields recursively`",
       "contractType": "HTTP-observable",
@@ -384,10 +399,10 @@
       ]
     },
     {
-      "id": "amounts-23",
+      "id": "amounts-24",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 289
+        "line": 303
       },
       "nameTemplate": "`claim ${action} response hides COST amounts`",
       "contractType": "HTTP-observable",
@@ -407,10 +422,10 @@
       ]
     },
     {
-      "id": "amounts-24",
+      "id": "amounts-25",
       "source": {
         "file": "jxc-web/tests/amounts.test.mjs",
-        "line": 302
+        "line": 316
       },
       "nameTemplate": "'submitted refund response obeys amount and bank field permissions'",
       "contractType": "HTTP-observable",

@@ -5,7 +5,7 @@
 import { http } from 'msw'
 import { getDb, nextId, nowIso, type Row } from '../db'
 import { API, findOr404 } from '../crud'
-import { audit, canDataAccess, handle, inScope, paginate, requireDataAccess, requirePerm, type Ctx } from '../utils'
+import { audit, canDataAccess, handle, hasPerm, inScope, paginate, requireDataAccess, requirePerm, type Ctx } from '../utils'
 import { onApproval, submitApproval, cancelPendingApproval, invalidateApproval } from '../services/approval'
 import { changeReserve, salesOutbound } from '../services/inventory'
 import {
@@ -237,8 +237,8 @@ onApproval('SALES_ORDER', {
   },
 })
 
-export function outboundCheck(ctx: Ctx, o: Row, warehouseId: number, lines: { allocId: number; qty: number }[]) {
-  const checks: { item: string; ok: boolean; code?: string; message: string }[] = []
+export function outboundCheck(ctx: Ctx, o: Row, warehouseId: number, lines: { allocId: number; qty: number }[], explain = false) {
+  const checks: { item: string; ok: boolean; code?: string; message: string; payment?: Row }[] = []
   const approved = o.approvalStatus === 'APPROVED' && o.approvedHash === orderHash(o)
   checks.push({ item: '审批有效', ok: approved, code: approved ? undefined : 'WF_APPROVAL_INVALIDATED', message: approved ? '审批通过且关键字段未改' : '审批未通过或已因修改失效' })
   const doc = getDb().attachments.some((a) => a.bizType === 'SAL_ORDER' && String(a.bizId) === String(o.id) && a.category === 'SALES_DOC' && a.status === 'ACTIVE')
@@ -251,8 +251,11 @@ export function outboundCheck(ctx: Ctx, o: Row, warehouseId: number, lines: { al
   if (o.paymentType === 'CASH') {
     const ready = cashReady(o.id, o.customerId)
     const covered = confirmedAllocated(o.id) + 0.001 >= shippedAmount + thisAmount
-    const ok = ready && covered
-    checks.push({ item: '现款到账', ok, code: ok ? undefined : 'SAL_PAYMENT_NOT_CONFIRMED', message: ok ? '已确认到账覆盖本次出库' : ready ? '已确认到账不足以覆盖本次出库' : '缺少收款凭证或有效现金收款' })
+    const amountsVisible = Object.hasOwn(readableSalesOrder(ctx, o), 'totalAmount')
+    const payment: Row = { currency: o.currency, amountsVisible, canManageReceipts: hasPerm(ctx, ['ar:receipt:create', 'ar:receipt:confirm']) }
+    if (amountsVisible) Object.assign(payment, { outboundAmount: thisAmount, shippedAmount, requiredAmount: round(shippedAmount + thisAmount), confirmedAmount: confirmedAllocated(o.id), shortageAmount: round(Math.max(shippedAmount + thisAmount - confirmedAllocated(o.id), 0)), pendingAmount: sum(getDb().arReceipts.filter(receipt => receipt.countryId === ctx.countryId && receipt.customerId === o.customerId && receipt.status === 'PENDING_CONFIRM' && canDocumentDataAccess(ctx, 'AR_RECEIPT', receipt)), receipt => sum((receipt.orders ?? []).filter((allocation: Row) => allocation.orderId === o.id), (allocation: Row) => num(allocation.plannedAmount))) })
+    checks.push({ item: '现款到账', ok: covered, code: covered ? undefined : 'SAL_PAYMENT_NOT_CONFIRMED', message: covered ? '已确认到账覆盖本次出库' : '本单已确认并分配的收款不足', ...(explain ? { payment } : {}) })
+    checks.push({ item: '收款凭证', ok: ready, code: ready ? undefined : 'SAL_PAYMENT_EVIDENCE_REQUIRED', message: ready ? '收款证据有效' : '缺少有效收款凭证或已确认现金收款记录' })
   } else {
     const credit = evaluateCredit(ctx.countryId!, o.customerId, 'CREDIT', thisAmount, 'OUTBOUND', o.id)
     const exceptionApproved = !credit.requiresApproval || (o.creditExceptionApproved && o.creditExceptionRuleId === activeCreditRule(ctx.countryId!, o.customerId)?.id)
@@ -456,7 +459,13 @@ export const salHandlers = [
     const o = findOrder(ctx, Number(params.id))
     const warehouseId = Number(ctx.url.searchParams.get('warehouseId'))
     const lines = o.lines.flatMap((l: Row) => l.allocs.filter((a: Row) => a.warehouseId === warehouseId && a.allocQty - a.cancelledQty - a.outboundQty > 0).map((a: Row) => ({ allocId: a.id, qty: a.allocQty - a.cancelledQty - a.outboundQty })))
-    return { checks: outboundCheck(ctx, o, warehouseId, lines), lines }
+    return readableBusinessFields(ctx, { checks: outboundCheck(ctx, o, warehouseId, lines, true), lines })
+  })),
+  http.post(`${API}/sal/orders/:id/outbound-check`, handle((ctx, { params, body }) => {
+    requirePerm(ctx, ['sal:outbound:create', 'sal:order:view'])
+    const o = findOrder(ctx, Number(params.id))
+    if (!Array.isArray(body.lines) || !body.lines.length) bad('请填写本次出库数量')
+    return readableBusinessFields(ctx, { checks: outboundCheck(ctx, o, Number(body.warehouseId), body.lines, true), lines: body.lines })
   })),
   http.get(`${API}/sal/orders/:id/timeline`, handle((ctx, { params }) => {
     requirePerm(ctx, ['sal:order:view', 'sal:outbound:create', 'sal:outbound:confirm'])

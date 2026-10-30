@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import * as vue from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 function deferred(){let resolve; const promise=new Promise(r=>{resolve=r});return {promise,resolve}}
-function page(http){return loadVueScript(new URL('../src/modules/finance/LedgerView.vue',import.meta.url),{ ref:vue.ref,computed:vue.computed,onMounted(){},http,createCommandIntent:()=>({reset(){}}),ElMessage:{success(){}},useUserStore:()=>({hasPerm:()=>true}),allRecords:async(path,q)=>(await http.get(path,q)).records,useCountryStore:()=>({}),useRouter:()=>({push(){}}),useRoute:()=>({query:{}})},['bookId','periodId','accountId','fundAccountId','auxKey','books','accounts','periods','detail','general','balance','journal','fundAccounts','changeBook','load','loadDetail'])}
+function page(http){return loadVueScript(new URL('../src/modules/finance/LedgerView.vue',import.meta.url),{ ref:vue.ref,computed:vue.computed,watch:vue.watch,onMounted(){},onBeforeUnmount(){},http,createCommandIntent:()=>({reset(){}}),ElMessage:{success(){}},useUserStore:()=>({hasPerm:()=>true}),allRecords:async(path,q)=>(await http.get(path,q)).records,useCountryStore:()=>({}),useRouter:()=>({push(){}}),useRoute:()=>({query:{}})},['bookId','periodId','accountId','fundAccountId','auxKey','books','accounts','periods','detail','general','balance','journal','fundAccounts','changeBook','load','loadDetail'])}
 test('ledger discards old book account responses and clears all old scoped filters',async()=>{
  const old=deferred();const p=page({get:async(path,q)=>q.bookId===1?old.promise:{records:[{id:20}]}})
  p.books.value=[{id:1,periods:[]},{id:2,periods:[]}];p.bookId.value=1;p.fundAccountId.value=11;p.auxKey.value='old';p.fundAccounts.value=[{id:11}]

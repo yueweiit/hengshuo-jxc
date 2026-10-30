@@ -47,6 +47,47 @@ class AuthorizationIT extends BasePgIT {
     private RequestContext ctx() { return new RequestContext(71101L,71001L,"auth-test",HASH); }
     private Access access() { return tx.execute(s -> { dbContext.apply(71001L); return authorization.authorize(ctx()); }); }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"LOGISTICS_HOLD,lgs:hold:create","INVENTORY_LIMIT,inv:limit:config"})
+    void businessOwnerOptionsExposeOnlyActiveCountryLabelsWithoutUserAdministration(String purpose,String permission) throws Exception {
+        owner.update("UPDATE sys_role SET permissions=?::jsonb WHERE id=71201","[\""+permission+"\"]");
+        owner.execute("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,warehouse_id,granted_by) VALUES(71001,71101,'WAREHOUSE',71501,71101)");
+        owner.execute("INSERT INTO sys_user(id,username,password_hash,display_name,status,created_country_id) VALUES(71102,'eligible-owner','unused','Eligible owner','ENABLED',71001),(71103,'disabled-owner','unused','Disabled owner','DISABLED',71001),(71104,'other-country-owner','unused','Other country owner','ENABLED',71002),(71105,'unassigned-owner','unused','Unassigned owner','ENABLED',71001)");
+        owner.execute("INSERT INTO sys_role(id,country_id,code,name,permissions) VALUES(71202,71002,'OTHER','Other country','[]')");
+        owner.execute("INSERT INTO sys_user_role(country_id,user_id,role_id) VALUES(71001,71102,71201),(71001,71103,71201),(71002,71104,71202)");
+        var response = optionsRequest("/business-user-options?purpose="+purpose);
+        assertEquals(200,response.statusCode(),response.body());
+        var rows = (List<?>)new com.fasterxml.jackson.databind.ObjectMapper().readValue(response.body(),Map.class).get("data");
+        assertEquals(2,rows.size());
+        for(Object item:rows) assertEquals(java.util.Set.of("id","displayName"),((Map<?,?>)item).keySet());
+        assertTrue(response.body().contains("Eligible owner"));
+        assertFalse(response.body().contains("Disabled owner"));
+        assertFalse(response.body().contains("Other country owner"));
+        assertFalse(response.body().contains("Unassigned owner"));
+        assertEquals(403,optionsRequest("/user-options").statusCode());
+        assertEquals("[\""+permission+"\"]",owner.queryForObject("SELECT permissions::text FROM sys_role WHERE id=71201",String.class));
+    }
+
+    @Test void businessOwnerOptionsRecheckCurrentScopePermissionAndSession() throws Exception {
+        owner.execute("UPDATE sys_role SET permissions='[\"lgs:hold:release\"]' WHERE id=71201");
+        owner.execute("INSERT INTO sys_user_data_scope(country_id,user_id,scope_type,warehouse_id,granted_by) VALUES(71001,71101,'WAREHOUSE',71501,71101)");
+        assertEquals(200,optionsRequest("/business-user-options?purpose=LOGISTICS_HOLD").statusCode());
+        assertEquals(400,optionsRequest("/business-user-options?purpose=UNKNOWN").statusCode());
+        owner.execute("DELETE FROM sys_user_data_scope WHERE user_id=71101");
+        assertEquals(404,optionsRequest("/business-user-options?purpose=LOGISTICS_HOLD").statusCode());
+        owner.execute("UPDATE sys_role SET permissions='[\"sal:order:view\"]' WHERE id=71201");
+        assertEquals(403,optionsRequest("/business-user-options?purpose=LOGISTICS_HOLD").statusCode());
+        owner.execute("UPDATE sys_session SET revoked_at=clock_timestamp() WHERE user_id=71101");
+        assertEquals(401,optionsRequest("/business-user-options?purpose=LOGISTICS_HOLD").statusCode());
+    }
+
+    private java.net.http.HttpResponse<String> optionsRequest(String path) throws Exception {
+        return java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(
+            java.net.URI.create("http://127.0.0.1:"+port+"/api/v1/sys"+path))
+            .header("Authorization","Bearer fixture-bearer").header("X-Country-Id","71001").GET().build(),
+            java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
+
     @Test void functionWildcardNeverGrantsDataScope() {
         Access a=access();
         a.require("fin:voucher:post");

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/api/error-feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -16,6 +17,7 @@ import { COUNTRY_LOCALES, DATE_FORMATS, MODULES, NUMBER_FORMATS, TIMEZONES, labe
 
 interface CountryDetail extends Country {
   version: number
+  logisticsDelayToleranceHours?: number | string | null
   blockCount: number
   warnCount: number
   sourceCountry: Country | null
@@ -90,6 +92,16 @@ async function loadDetail() {
     isTest: detail.value.isTest,
     enabledModules: [...detail.value.enabledModules],
   })
+  const configuredHours = detail.value.logisticsDelayToleranceHours
+  // 48 is a form default; it becomes effective only after the existing save command succeeds.
+  const hours = configuredHours === null || configuredHours === undefined ? 48
+    : typeof configuredHours === 'string' && /^[0-9]{1,6}$/.test(configuredHours) ? Number(configuredHours) : configuredHours
+  if (typeof hours === 'number' && Number.isInteger(hours) && hours >= 0 && hours <= 999999) {
+    form.logisticsDelayToleranceHours = hours
+  } else {
+    form.logisticsDelayToleranceHours = undefined
+    reportError(new Error('物流延误容忍时长配置无效，请重新填写并保存'))
+  }
 }
 
 // ---------- 地区参数 ----------
@@ -102,9 +114,15 @@ const form = reactive({
   numberFormat: '',
   isTest: false,
   enabledModules: [] as string[],
+  logisticsDelayToleranceHours: 48 as number | undefined,
 })
 const saving = ref(false)
 async function saveParams() {
+  const hours = form.logisticsDelayToleranceHours
+  if (typeof hours !== 'number' || !Number.isInteger(hours) || hours < 0 || hours > 999999) {
+    ElMessage.warning('物流延误容忍时长必须为0至999999的整数小时')
+    return
+  }
   saving.value = true
   try {
     await http.put(`/sys/countries/${id}/params`, { ...form, version: detail.value!.version })
@@ -131,8 +149,8 @@ async function activate() {
     if (e instanceof BizError && e.code === 'SYS_CONFIG_MISSING') {
       missing.value = (e.data as { missing: MissingItem[] }).missing
       tab.value = 'readiness'
-      ElMessage.error('还有阻断缺项，不能启用')
-    } else if (e instanceof BizError) ElMessage.error(e.message)
+      reportError(e, { title: '国家未能启用', nextStep: '请在启用检查中处理阻断缺项后重试。' })
+    } else reportError(e)
   }
 }
 
@@ -265,6 +283,12 @@ onMounted(loadDetail)
               <div class="muted">未启用的模块在该国家的菜单中隐藏</div>
             </el-form-item>
             <el-form-item label="测试国家"><el-switch v-model="form.isTest" /></el-form-item>
+            <el-form-item label="物流延误容忍时长" label-width="150px">
+              <el-input-number v-model="form.logisticsDelayToleranceHours" :min="0" :max="999999" :step="1" :precision="0" step-strictly aria-label="物流延误容忍时长（小时）" />
+              <span class="ml">小时</span>
+              <div class="muted">超过计划发运或到港时间，且未记录对应实际时间时，超过此时长才算延误；0表示不设宽限。</div>
+              <div v-if="detail.logisticsDelayToleranceHours === null || detail.logisticsDelayToleranceHours === undefined" class="muted">尚未配置，已预填48小时，保存后生效。</div>
+            </el-form-item>
             <el-form-item v-if="canEdit">
               <el-button type="primary" :loading="saving" @click="saveParams">保存</el-button>
             </el-form-item>

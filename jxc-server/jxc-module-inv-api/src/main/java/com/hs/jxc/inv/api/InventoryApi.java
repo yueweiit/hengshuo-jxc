@@ -11,6 +11,9 @@ public interface InventoryApi {
     }
     record Inbound(long bookId,long warehouseId,long productId,BigDecimal goodQty,BigDecimal damagedQty,BigDecimal pendingInspectQty,Source source,LocalDate bizDate,Long shipmentId,Long poLineId,PurchaseCost purchaseCost) {}
     record Batch(long id,long costId) {}
+    /** 调用方完成业务行授权后，读取原批次标识；不返回库存数量或成本。 */
+    record BatchReference(String batchNo,String sourceType,long sourceId,long sourceLineId) {}
+    BatchReference batchReference(RequestContext context,long bookId,long warehouseId,long batchId);
     record Part(long batchId,BigDecimal qty) { public Part { qty=qty.setScale(4); } }
     record Movement(List<Part> parts,Long cogsId) {}
     record Reservation(long bookId,long warehouseId,long productId,long orderId,long orderLineId,long allocId,BigDecimal qty,LocalDate bizDate,long approvalVersion) {

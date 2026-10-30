@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "source": "jxc-web/src/mock/browser.ts export order, http.* calls, top-level array mutations and crud.handlers(extra) expanded with the installed TypeScript AST",
   "phaseNote": "Phase labels are the controlled foundation plan classification, not proof of implementation; reviewed M1 status is maintained separately.",
-  "registrationCount": 461,
-  "operationCount": 438,
+  "registrationCount": 464,
+  "operationCount": 441,
   "exportOrder": [
     {
       "name": "authHandlers",
@@ -522,7 +522,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 543
+        "line": 547
       },
       "phase": "M1",
       "mockStatus": "registered",
@@ -1172,7 +1172,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 512
+        "line": 516
       },
       "phase": "M4",
       "mockStatus": "registered",
@@ -1190,7 +1190,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 523
+        "line": 527
       },
       "phase": "M4",
       "mockStatus": "registered",
@@ -1208,7 +1208,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 531
+        "line": 535
       },
       "phase": "M4",
       "mockStatus": "registered",
@@ -4138,7 +4138,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/lgs.ts",
-        "line": 961
+        "line": 997
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -4156,7 +4156,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/lgs.ts",
-        "line": 966
+        "line": 1002
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6362,29 +6362,29 @@
     {
       "registrationIndex": 333,
       "method": "GET",
-      "path": "/api/v1/cst/adjustments",
+      "path": "/api/v1/cst/adjustment-batches",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 182
+        "line": 183
       },
       "phase": "M3",
       "mockStatus": "registered",
       "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m3-surface.json"
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
       "policyOperationIndex": 310
     },
     {
       "registrationIndex": 334,
-      "method": "POST",
+      "method": "GET",
       "path": "/api/v1/cst/adjustments",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 188
+        "line": 207
       },
       "phase": "M3",
       "mockStatus": "registered",
@@ -6398,25 +6398,7 @@
     {
       "registrationIndex": 335,
       "method": "POST",
-      "path": "/api/v1/cst/adjustments/:id/confirm",
-      "kind": "http",
-      "source": {
-        "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 210
-      },
-      "phase": "M3",
-      "mockStatus": "registered",
-      "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m3-surface.json"
-      },
-      "effective": true,
-      "policyOperationIndex": 312
-    },
-    {
-      "registrationIndex": 336,
-      "method": "GET",
-      "path": "/api/v1/cst/expenses",
+      "path": "/api/v1/cst/adjustments",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
@@ -6429,16 +6411,34 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
+      "policyOperationIndex": 312
+    },
+    {
+      "registrationIndex": 336,
+      "method": "POST",
+      "path": "/api/v1/cst/adjustments/:id/confirm",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/cstOps.ts",
+        "line": 238
+      },
+      "phase": "M3",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m3-surface.json"
+      },
+      "effective": true,
       "policyOperationIndex": 313
     },
     {
       "registrationIndex": 337,
-      "method": "POST",
+      "method": "GET",
       "path": "/api/v1/cst/expenses",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 222
+        "line": 244
       },
       "phase": "M3",
       "mockStatus": "registered",
@@ -6451,30 +6451,12 @@
     },
     {
       "registrationIndex": 338,
-      "method": "GET",
-      "path": "/api/v1/cst/profit",
+      "method": "POST",
+      "path": "/api/v1/cst/expenses",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 253
-      },
-      "phase": "M3",
-      "mockStatus": "registered",
-      "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m4-surface.json"
-      },
-      "effective": true,
-      "policyOperationIndex": 315
-    },
-    {
-      "registrationIndex": 339,
-      "method": "GET",
-      "path": "/api/v1/cst/method",
-      "kind": "http",
-      "source": {
-        "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 273
+        "line": 250
       },
       "phase": "M3",
       "mockStatus": "registered",
@@ -6483,16 +6465,34 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
+      "policyOperationIndex": 315
+    },
+    {
+      "registrationIndex": 339,
+      "method": "GET",
+      "path": "/api/v1/cst/profit",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/cstOps.ts",
+        "line": 281
+      },
+      "phase": "M3",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m4-surface.json"
+      },
+      "effective": true,
       "policyOperationIndex": 316
     },
     {
       "registrationIndex": 340,
-      "method": "PUT",
+      "method": "GET",
       "path": "/api/v1/cst/method",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 279
+        "line": 301
       },
       "phase": "M3",
       "mockStatus": "registered",
@@ -6505,18 +6505,18 @@
     },
     {
       "registrationIndex": 341,
-      "method": "GET",
-      "path": "/api/v1/sal/prices/resolve",
+      "method": "PUT",
+      "path": "/api/v1/cst/method",
       "kind": "http",
       "source": {
-        "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 341
+        "file": "jxc-web/src/mock/handlers/cstOps.ts",
+        "line": 307
       },
-      "phase": "M2",
+      "phase": "M3",
       "mockStatus": "registered",
       "backend": {
-        "status": "registered-gated",
-        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
       "policyOperationIndex": 318
@@ -6524,11 +6524,11 @@
     {
       "registrationIndex": 342,
       "method": "GET",
-      "path": "/api/v1/sal/prices",
+      "path": "/api/v1/sal/prices/resolve",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 348
+        "line": 344
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6541,12 +6541,12 @@
     },
     {
       "registrationIndex": 343,
-      "method": "POST",
+      "method": "GET",
       "path": "/api/v1/sal/prices",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 357
+        "line": 351
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6559,12 +6559,12 @@
     },
     {
       "registrationIndex": 344,
-      "method": "PUT",
-      "path": "/api/v1/sal/prices/:id",
+      "method": "POST",
+      "path": "/api/v1/sal/prices",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 358
+        "line": 360
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6577,12 +6577,12 @@
     },
     {
       "registrationIndex": 345,
-      "method": "GET",
-      "path": "/api/v1/sal/orders",
+      "method": "PUT",
+      "path": "/api/v1/sal/prices/:id",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 364
+        "line": 361
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6596,11 +6596,11 @@
     {
       "registrationIndex": 346,
       "method": "GET",
-      "path": "/api/v1/sal/orders/:id",
+      "path": "/api/v1/sal/orders",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 377
+        "line": 367
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6613,30 +6613,12 @@
     },
     {
       "registrationIndex": 347,
-      "method": "POST",
-      "path": "/api/v1/sal/orders",
-      "kind": "http",
-      "source": {
-        "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 381
-      },
-      "phase": "M2",
-      "mockStatus": "registered",
-      "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m2-surface.json"
-      },
-      "effective": true,
-      "policyOperationIndex": 324
-    },
-    {
-      "registrationIndex": 348,
-      "method": "PUT",
+      "method": "GET",
       "path": "/api/v1/sal/orders/:id",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 382
+        "line": 380
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6645,22 +6627,40 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 325
+      "policyOperationIndex": 324
     },
     {
-      "registrationIndex": 349,
+      "registrationIndex": 348,
       "method": "POST",
-      "path": "/api/v1/sal/orders/:id/submit",
+      "path": "/api/v1/sal/orders",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 407
+        "line": 384
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
         "status": "implemented-business-foundation",
         "contractSource": "docs/backend/contracts/m2-surface.json"
+      },
+      "effective": true,
+      "policyOperationIndex": 325
+    },
+    {
+      "registrationIndex": 349,
+      "method": "PUT",
+      "path": "/api/v1/sal/orders/:id",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/sal.ts",
+        "line": 385
+      },
+      "phase": "M2",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
       "policyOperationIndex": 326
@@ -6668,17 +6668,17 @@
     {
       "registrationIndex": 350,
       "method": "POST",
-      "path": "/api/v1/sal/orders/:id/withdraw",
+      "path": "/api/v1/sal/orders/:id/submit",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 408
+        "line": 410
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "registered-gated",
-        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
       "policyOperationIndex": 327
@@ -6686,11 +6686,11 @@
     {
       "registrationIndex": 351,
       "method": "POST",
-      "path": "/api/v1/sal/orders/:id/cancel-lines",
+      "path": "/api/v1/sal/orders/:id/withdraw",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 416
+        "line": 411
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6703,12 +6703,12 @@
     },
     {
       "registrationIndex": 352,
-      "method": "GET",
-      "path": "/api/v1/sal/orders/:id/outbound-check",
+      "method": "POST",
+      "path": "/api/v1/sal/orders/:id/cancel-lines",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 454
+        "line": 419
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6722,11 +6722,11 @@
     {
       "registrationIndex": 353,
       "method": "GET",
-      "path": "/api/v1/sal/orders/:id/timeline",
+      "path": "/api/v1/sal/orders/:id/outbound-check",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 461
+        "line": 457
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6739,12 +6739,12 @@
     },
     {
       "registrationIndex": 354,
-      "method": "GET",
-      "path": "/api/v1/sal/outbounds",
+      "method": "POST",
+      "path": "/api/v1/sal/orders/:id/outbound-check",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 472
+        "line": 464
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6757,7 +6757,25 @@
     },
     {
       "registrationIndex": 355,
-      "method": "POST",
+      "method": "GET",
+      "path": "/api/v1/sal/orders/:id/timeline",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/sal.ts",
+        "line": 470
+      },
+      "phase": "M2",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+      },
+      "effective": true,
+      "policyOperationIndex": 332
+    },
+    {
+      "registrationIndex": 356,
+      "method": "GET",
       "path": "/api/v1/sal/outbounds",
       "kind": "http",
       "source": {
@@ -6767,26 +6785,8 @@
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m2-surface.json"
-      },
-      "effective": true,
-      "policyOperationIndex": 332
-    },
-    {
-      "registrationIndex": 356,
-      "method": "POST",
-      "path": "/api/v1/sal/outbounds/:id/confirm",
-      "kind": "http",
-      "source": {
-        "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 485
-      },
-      "phase": "M2",
-      "mockStatus": "registered",
-      "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m2-surface.json"
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
       "policyOperationIndex": 333
@@ -6794,35 +6794,35 @@
     {
       "registrationIndex": 357,
       "method": "POST",
-      "path": "/api/v1/sal/outbounds/:id/sign",
+      "path": "/api/v1/sal/outbounds",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 486
+        "line": 490
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "registered-gated",
-        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
       "policyOperationIndex": 334
     },
     {
       "registrationIndex": 358,
-      "method": "GET",
-      "path": "/api/v1/sal/signs",
+      "method": "POST",
+      "path": "/api/v1/sal/outbounds/:id/confirm",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 511
+        "line": 494
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "registered-gated",
-        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
       "policyOperationIndex": 335
@@ -6830,11 +6830,11 @@
     {
       "registrationIndex": 359,
       "method": "POST",
-      "path": "/api/v1/sal/sign-diffs/:id/resolve",
+      "path": "/api/v1/sal/outbounds/:id/sign",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 519
+        "line": 495
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6848,11 +6848,11 @@
     {
       "registrationIndex": 360,
       "method": "GET",
-      "path": "/api/v1/sal/store-daily",
+      "path": "/api/v1/sal/signs",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 531
+        "line": 520
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6865,12 +6865,12 @@
     },
     {
       "registrationIndex": 361,
-      "method": "GET",
-      "path": "/api/v1/ar/receipts",
+      "method": "POST",
+      "path": "/api/v1/sal/sign-diffs/:id/resolve",
       "kind": "http",
       "source": {
-        "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 229
+        "file": "jxc-web/src/mock/handlers/sal.ts",
+        "line": 528
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6883,48 +6883,48 @@
     },
     {
       "registrationIndex": 362,
-      "method": "POST",
-      "path": "/api/v1/ar/receipts",
+      "method": "GET",
+      "path": "/api/v1/sal/store-daily",
       "kind": "http",
       "source": {
-        "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 242
+        "file": "jxc-web/src/mock/handlers/sal.ts",
+        "line": 540
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m2-surface.json"
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
       "policyOperationIndex": 339
     },
     {
       "registrationIndex": 363,
-      "method": "POST",
-      "path": "/api/v1/ar/receipts/:id/confirm",
+      "method": "GET",
+      "path": "/api/v1/ar/receipts/order-context/:id",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 243
+        "line": 229
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m2-surface.json"
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
       "policyOperationIndex": 340
     },
     {
       "registrationIndex": 364,
-      "method": "POST",
-      "path": "/api/v1/ar/receipts/:id/reject",
+      "method": "GET",
+      "path": "/api/v1/ar/receipts",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 244
+        "line": 235
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6938,7 +6938,25 @@
     {
       "registrationIndex": 365,
       "method": "POST",
-      "path": "/api/v1/ar/receipts/:id/void",
+      "path": "/api/v1/ar/receipts",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/ar.ts",
+        "line": 250
+      },
+      "phase": "M2",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m2-surface.json"
+      },
+      "effective": true,
+      "policyOperationIndex": 342
+    },
+    {
+      "registrationIndex": 366,
+      "method": "POST",
+      "path": "/api/v1/ar/receipts/:id/confirm",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
@@ -6947,26 +6965,8 @@
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "registered-gated",
-        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
-      },
-      "effective": true,
-      "policyOperationIndex": 342
-    },
-    {
-      "registrationIndex": 366,
-      "method": "GET",
-      "path": "/api/v1/ar/credit-rules",
-      "kind": "http",
-      "source": {
-        "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 260
-      },
-      "phase": "M2",
-      "mockStatus": "registered",
-      "backend": {
-        "status": "registered-gated",
-        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
       "policyOperationIndex": 343
@@ -6974,11 +6974,11 @@
     {
       "registrationIndex": 367,
       "method": "POST",
-      "path": "/api/v1/ar/credit-rules",
+      "path": "/api/v1/ar/receipts/:id/reject",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 267
+        "line": 252
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -6991,12 +6991,12 @@
     },
     {
       "registrationIndex": 368,
-      "method": "PUT",
-      "path": "/api/v1/ar/credit-rules/:id",
+      "method": "POST",
+      "path": "/api/v1/ar/receipts/:id/void",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 271
+        "line": 259
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7009,12 +7009,12 @@
     },
     {
       "registrationIndex": 369,
-      "method": "POST",
-      "path": "/api/v1/ar/credit-rules/:id/preview-impact",
+      "method": "GET",
+      "path": "/api/v1/ar/credit-rules",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 278
+        "line": 268
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7027,12 +7027,12 @@
     },
     {
       "registrationIndex": 370,
-      "method": "GET",
-      "path": "/api/v1/ar/customers/:id/credit",
+      "method": "POST",
+      "path": "/api/v1/ar/credit-rules",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 285
+        "line": 275
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7045,12 +7045,12 @@
     },
     {
       "registrationIndex": 371,
-      "method": "GET",
-      "path": "/api/v1/ar/customers/:id/balances",
+      "method": "PUT",
+      "path": "/api/v1/ar/credit-rules/:id",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 290
+        "line": 279
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7063,12 +7063,12 @@
     },
     {
       "registrationIndex": 372,
-      "method": "GET",
-      "path": "/api/v1/ar/customers/:id/timeline",
+      "method": "POST",
+      "path": "/api/v1/ar/credit-rules/:id/preview-impact",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 295
+        "line": 286
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7082,11 +7082,11 @@
     {
       "registrationIndex": 373,
       "method": "GET",
-      "path": "/api/v1/ar/receivables",
+      "path": "/api/v1/ar/customers/:id/credit",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 300
+        "line": 293
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7100,11 +7100,11 @@
     {
       "registrationIndex": 374,
       "method": "GET",
-      "path": "/api/v1/ar/credit-notes",
+      "path": "/api/v1/ar/customers/:id/balances",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 309
+        "line": 298
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7117,36 +7117,36 @@
     },
     {
       "registrationIndex": 375,
-      "method": "POST",
-      "path": "/api/v1/ar/writeoffs",
+      "method": "GET",
+      "path": "/api/v1/ar/customers/:id/timeline",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 316
+        "line": 303
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m2-surface.json"
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
       "policyOperationIndex": 352
     },
     {
       "registrationIndex": 376,
-      "method": "POST",
-      "path": "/api/v1/ar/writeoffs/:id/reverse",
+      "method": "GET",
+      "path": "/api/v1/ar/receivables",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 371
+        "line": 308
       },
       "phase": "M2",
       "mockStatus": "registered",
       "backend": {
-        "status": "implemented-business-foundation",
-        "contractSource": "docs/backend/contracts/m2-surface.json"
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
       "policyOperationIndex": 353
@@ -7154,11 +7154,11 @@
     {
       "registrationIndex": 377,
       "method": "GET",
-      "path": "/api/v1/ar/writeoffs",
+      "path": "/api/v1/ar/credit-notes",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 408
+        "line": 317
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7172,11 +7172,11 @@
     {
       "registrationIndex": 378,
       "method": "POST",
-      "path": "/api/v1/ar/statements",
+      "path": "/api/v1/ar/writeoffs",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 412
+        "line": 324
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7189,8 +7189,26 @@
     },
     {
       "registrationIndex": 379,
+      "method": "POST",
+      "path": "/api/v1/ar/writeoffs/:id/reverse",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/ar.ts",
+        "line": 379
+      },
+      "phase": "M2",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m2-surface.json"
+      },
+      "effective": true,
+      "policyOperationIndex": 356
+    },
+    {
+      "registrationIndex": 380,
       "method": "GET",
-      "path": "/api/v1/ar/statements",
+      "path": "/api/v1/ar/writeoffs",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
@@ -7203,16 +7221,34 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 356
+      "policyOperationIndex": 357
     },
     {
-      "registrationIndex": 380,
-      "method": "GET",
-      "path": "/api/v1/ar/store-receipts",
+      "registrationIndex": 381,
+      "method": "POST",
+      "path": "/api/v1/ar/statements",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 421
+        "line": 420
+      },
+      "phase": "M2",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "implemented-business-foundation",
+        "contractSource": "docs/backend/contracts/m2-surface.json"
+      },
+      "effective": true,
+      "policyOperationIndex": 358
+    },
+    {
+      "registrationIndex": 382,
+      "method": "GET",
+      "path": "/api/v1/ar/statements",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/ar.ts",
+        "line": 424
       },
       "phase": "M2",
       "mockStatus": "registered",
@@ -7221,10 +7257,28 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 357
+      "policyOperationIndex": 359
     },
     {
-      "registrationIndex": 381,
+      "registrationIndex": 383,
+      "method": "GET",
+      "path": "/api/v1/ar/store-receipts",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/ar.ts",
+        "line": 429
+      },
+      "phase": "M2",
+      "mockStatus": "registered",
+      "backend": {
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+      },
+      "effective": true,
+      "policyOperationIndex": 360
+    },
+    {
+      "registrationIndex": 384,
       "method": "GET",
       "path": "/api/v1/ap/bills",
       "kind": "http",
@@ -7239,10 +7293,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 358
+      "policyOperationIndex": 361
     },
     {
-      "registrationIndex": 382,
+      "registrationIndex": 385,
       "method": "GET",
       "path": "/api/v1/ap/bills/:id",
       "kind": "http",
@@ -7257,10 +7311,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 359
+      "policyOperationIndex": 362
     },
     {
-      "registrationIndex": 383,
+      "registrationIndex": 386,
       "method": "GET",
       "path": "/api/v1/ap/bill-sources",
       "kind": "http",
@@ -7275,10 +7329,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 360
+      "policyOperationIndex": 363
     },
     {
-      "registrationIndex": 384,
+      "registrationIndex": 387,
       "method": "POST",
       "path": "/api/v1/ap/bills/from-sources",
       "kind": "http",
@@ -7293,10 +7347,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 361
+      "policyOperationIndex": 364
     },
     {
-      "registrationIndex": 385,
+      "registrationIndex": 388,
       "method": "POST",
       "path": "/api/v1/ap/bills/:id/confirm",
       "kind": "http",
@@ -7311,10 +7365,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 362
+      "policyOperationIndex": 365
     },
     {
-      "registrationIndex": 386,
+      "registrationIndex": 389,
       "method": "POST",
       "path": "/api/v1/ap/bills/:id/void",
       "kind": "http",
@@ -7329,10 +7383,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 363
+      "policyOperationIndex": 366
     },
     {
-      "registrationIndex": 387,
+      "registrationIndex": 390,
       "method": "GET",
       "path": "/api/v1/ap/payments",
       "kind": "http",
@@ -7347,10 +7401,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 364
+      "policyOperationIndex": 367
     },
     {
-      "registrationIndex": 388,
+      "registrationIndex": 391,
       "method": "POST",
       "path": "/api/v1/ap/payments",
       "kind": "http",
@@ -7365,10 +7419,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 365
+      "policyOperationIndex": 368
     },
     {
-      "registrationIndex": 389,
+      "registrationIndex": 392,
       "method": "POST",
       "path": "/api/v1/ap/payments/:id/confirm",
       "kind": "http",
@@ -7383,10 +7437,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 366
+      "policyOperationIndex": 369
     },
     {
-      "registrationIndex": 390,
+      "registrationIndex": 393,
       "method": "GET",
       "path": "/api/v1/ap/prepayments",
       "kind": "http",
@@ -7401,10 +7455,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 367
+      "policyOperationIndex": 370
     },
     {
-      "registrationIndex": 391,
+      "registrationIndex": 394,
       "method": "POST",
       "path": "/api/v1/ap/prepayments",
       "kind": "http",
@@ -7419,10 +7473,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 368
+      "policyOperationIndex": 371
     },
     {
-      "registrationIndex": 392,
+      "registrationIndex": 395,
       "method": "POST",
       "path": "/api/v1/ap/prepayments/:id/confirm",
       "kind": "http",
@@ -7437,10 +7491,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 369
+      "policyOperationIndex": 372
     },
     {
-      "registrationIndex": 393,
+      "registrationIndex": 396,
       "method": "GET",
       "path": "/api/v1/ap/settlements",
       "kind": "http",
@@ -7455,10 +7509,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 370
+      "policyOperationIndex": 373
     },
     {
-      "registrationIndex": 394,
+      "registrationIndex": 397,
       "method": "POST",
       "path": "/api/v1/ap/settlements",
       "kind": "http",
@@ -7473,10 +7527,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 371
+      "policyOperationIndex": 374
     },
     {
-      "registrationIndex": 395,
+      "registrationIndex": 398,
       "method": "POST",
       "path": "/api/v1/ap/settlements/:id/reverse",
       "kind": "http",
@@ -7491,10 +7545,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 372
+      "policyOperationIndex": 375
     },
     {
-      "registrationIndex": 396,
+      "registrationIndex": 399,
       "method": "GET",
       "path": "/api/v1/ap/partners/:id/balances",
       "kind": "http",
@@ -7509,10 +7563,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 373
+      "policyOperationIndex": 376
     },
     {
-      "registrationIndex": 397,
+      "registrationIndex": 400,
       "method": "GET",
       "path": "/api/v1/ap/partners/:id/timeline",
       "kind": "http",
@@ -7527,10 +7581,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 374
+      "policyOperationIndex": 377
     },
     {
-      "registrationIndex": 398,
+      "registrationIndex": 401,
       "method": "POST",
       "path": "/api/v1/ap/statements",
       "kind": "http",
@@ -7545,10 +7599,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 375
+      "policyOperationIndex": 378
     },
     {
-      "registrationIndex": 399,
+      "registrationIndex": 402,
       "method": "GET",
       "path": "/api/v1/ap/statements",
       "kind": "http",
@@ -7563,10 +7617,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 376
+      "policyOperationIndex": 379
     },
     {
-      "registrationIndex": 400,
+      "registrationIndex": 403,
       "method": "GET",
       "path": "/api/v1/ap/payables",
       "kind": "http",
@@ -7581,10 +7635,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 377
+      "policyOperationIndex": 380
     },
     {
-      "registrationIndex": 401,
+      "registrationIndex": 404,
       "method": "GET",
       "path": "/api/v1/ap/credit-notes",
       "kind": "http",
@@ -7599,10 +7653,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 378
+      "policyOperationIndex": 381
     },
     {
-      "registrationIndex": 402,
+      "registrationIndex": 405,
       "method": "GET",
       "path": "/api/v1/rtn/sales/returnable",
       "kind": "http",
@@ -7617,10 +7671,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 379
+      "policyOperationIndex": 382
     },
     {
-      "registrationIndex": 403,
+      "registrationIndex": 406,
       "method": "GET",
       "path": "/api/v1/rtn/sales",
       "kind": "http",
@@ -7635,10 +7689,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 380
+      "policyOperationIndex": 383
     },
     {
-      "registrationIndex": 404,
+      "registrationIndex": 407,
       "method": "GET",
       "path": "/api/v1/rtn/sales/:id",
       "kind": "http",
@@ -7653,10 +7707,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 381
+      "policyOperationIndex": 384
     },
     {
-      "registrationIndex": 405,
+      "registrationIndex": 408,
       "method": "POST",
       "path": "/api/v1/rtn/sales",
       "kind": "http",
@@ -7671,10 +7725,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 382
+      "policyOperationIndex": 385
     },
     {
-      "registrationIndex": 406,
+      "registrationIndex": 409,
       "method": "POST",
       "path": "/api/v1/rtn/sales/:id/submit",
       "kind": "http",
@@ -7689,10 +7743,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 383
+      "policyOperationIndex": 386
     },
     {
-      "registrationIndex": 407,
+      "registrationIndex": 410,
       "method": "POST",
       "path": "/api/v1/rtn/sales/:id/receive",
       "kind": "http",
@@ -7707,10 +7761,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 384
+      "policyOperationIndex": 387
     },
     {
-      "registrationIndex": 408,
+      "registrationIndex": 411,
       "method": "POST",
       "path": "/api/v1/rtn/sales/:id/inspect",
       "kind": "http",
@@ -7725,10 +7779,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 385
+      "policyOperationIndex": 388
     },
     {
-      "registrationIndex": 409,
+      "registrationIndex": 412,
       "method": "POST",
       "path": "/api/v1/rtn/sales/:id/settle",
       "kind": "http",
@@ -7743,10 +7797,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 386
+      "policyOperationIndex": 389
     },
     {
-      "registrationIndex": 410,
+      "registrationIndex": 413,
       "method": "GET",
       "path": "/api/v1/rtn/refunds",
       "kind": "http",
@@ -7761,10 +7815,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 387
+      "policyOperationIndex": 390
     },
     {
-      "registrationIndex": 411,
+      "registrationIndex": 414,
       "method": "POST",
       "path": "/api/v1/rtn/refunds",
       "kind": "http",
@@ -7779,10 +7833,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 388
+      "policyOperationIndex": 391
     },
     {
-      "registrationIndex": 412,
+      "registrationIndex": 415,
       "method": "POST",
       "path": "/api/v1/rtn/refunds/:id/pay",
       "kind": "http",
@@ -7797,10 +7851,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 389
+      "policyOperationIndex": 392
     },
     {
-      "registrationIndex": 413,
+      "registrationIndex": 416,
       "method": "GET",
       "path": "/api/v1/rtn/purchase/returnable",
       "kind": "http",
@@ -7815,10 +7869,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 390
+      "policyOperationIndex": 393
     },
     {
-      "registrationIndex": 414,
+      "registrationIndex": 417,
       "method": "GET",
       "path": "/api/v1/rtn/purchase",
       "kind": "http",
@@ -7833,10 +7887,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 391
+      "policyOperationIndex": 394
     },
     {
-      "registrationIndex": 415,
+      "registrationIndex": 418,
       "method": "POST",
       "path": "/api/v1/rtn/purchase",
       "kind": "http",
@@ -7851,10 +7905,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 392
+      "policyOperationIndex": 395
     },
     {
-      "registrationIndex": 416,
+      "registrationIndex": 419,
       "method": "POST",
       "path": "/api/v1/rtn/purchase/:id/ship",
       "kind": "http",
@@ -7869,10 +7923,10 @@
         "contractSource": "docs/backend/contracts/m2-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 393
+      "policyOperationIndex": 396
     },
     {
-      "registrationIndex": 417,
+      "registrationIndex": 420,
       "method": "GET",
       "path": "/api/v1/rtn/claims",
       "kind": "http",
@@ -7887,10 +7941,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 394
+      "policyOperationIndex": 397
     },
     {
-      "registrationIndex": 418,
+      "registrationIndex": 421,
       "method": "POST",
       "path": "/api/v1/rtn/claims",
       "kind": "http",
@@ -7905,10 +7959,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 395
+      "policyOperationIndex": 398
     },
     {
-      "registrationIndex": 419,
+      "registrationIndex": 422,
       "method": "POST",
       "path": "/api/v1/rtn/claims/:id/resolve",
       "kind": "http",
@@ -7923,10 +7977,10 @@
         "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
       },
       "effective": true,
-      "policyOperationIndex": 396
+      "policyOperationIndex": 399
     },
     {
-      "registrationIndex": 420,
+      "registrationIndex": 423,
       "method": "GET",
       "path": "/api/v1/fin/books",
       "kind": "http",
@@ -7941,10 +7995,10 @@
         "contractSource": "docs/backend/contracts/m1-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 397
+      "policyOperationIndex": 400
     },
     {
-      "registrationIndex": 421,
+      "registrationIndex": 424,
       "method": "POST",
       "path": "/api/v1/fin/periods",
       "kind": "http",
@@ -7959,10 +8013,10 @@
         "contractSource": "docs/backend/contracts/m1-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 398
+      "policyOperationIndex": 401
     },
     {
-      "registrationIndex": 422,
+      "registrationIndex": 425,
       "method": "GET",
       "path": "/api/v1/fin/accounts",
       "kind": "http",
@@ -7977,10 +8031,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 399
+      "policyOperationIndex": 402
     },
     {
-      "registrationIndex": 423,
+      "registrationIndex": 426,
       "method": "POST",
       "path": "/api/v1/fin/accounts",
       "kind": "http",
@@ -7995,10 +8049,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 400
+      "policyOperationIndex": 403
     },
     {
-      "registrationIndex": 424,
+      "registrationIndex": 427,
       "method": "GET",
       "path": "/api/v1/fin/opening-balances",
       "kind": "http",
@@ -8013,10 +8067,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 401
+      "policyOperationIndex": 404
     },
     {
-      "registrationIndex": 425,
+      "registrationIndex": 428,
       "method": "POST",
       "path": "/api/v1/fin/opening-balances",
       "kind": "http",
@@ -8031,10 +8085,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 402
+      "policyOperationIndex": 405
     },
     {
-      "registrationIndex": 426,
+      "registrationIndex": 429,
       "method": "POST",
       "path": "/api/v1/fin/opening-balances/confirm",
       "kind": "http",
@@ -8049,10 +8103,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 403
+      "policyOperationIndex": 406
     },
     {
-      "registrationIndex": 427,
+      "registrationIndex": 430,
       "method": "GET",
       "path": "/api/v1/fin/mapping-templates",
       "kind": "http",
@@ -8067,10 +8121,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 404
+      "policyOperationIndex": 407
     },
     {
-      "registrationIndex": 428,
+      "registrationIndex": 431,
       "method": "POST",
       "path": "/api/v1/fin/mapping-templates/:id/review",
       "kind": "http",
@@ -8085,10 +8139,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 405
+      "policyOperationIndex": 408
     },
     {
-      "registrationIndex": 429,
+      "registrationIndex": 432,
       "method": "POST",
       "path": "/api/v1/fin/mapping-templates/:id/simulate",
       "kind": "http",
@@ -8103,10 +8157,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 406
+      "policyOperationIndex": 409
     },
     {
-      "registrationIndex": 430,
+      "registrationIndex": 433,
       "method": "GET",
       "path": "/api/v1/fin/events",
       "kind": "http",
@@ -8121,10 +8175,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 407
+      "policyOperationIndex": 410
     },
     {
-      "registrationIndex": 431,
+      "registrationIndex": 434,
       "method": "POST",
       "path": "/api/v1/fin/events/:id/generate",
       "kind": "http",
@@ -8139,10 +8193,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 408
+      "policyOperationIndex": 411
     },
     {
-      "registrationIndex": 432,
+      "registrationIndex": 435,
       "method": "GET",
       "path": "/api/v1/fin/vouchers",
       "kind": "http",
@@ -8157,10 +8211,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 409
+      "policyOperationIndex": 412
     },
     {
-      "registrationIndex": 433,
+      "registrationIndex": 436,
       "method": "GET",
       "path": "/api/v1/fin/vouchers/:id",
       "kind": "http",
@@ -8175,10 +8229,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 410
+      "policyOperationIndex": 413
     },
     {
-      "registrationIndex": 434,
+      "registrationIndex": 437,
       "method": "POST",
       "path": "/api/v1/fin/vouchers",
       "kind": "http",
@@ -8193,10 +8247,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 411
+      "policyOperationIndex": 414
     },
     {
-      "registrationIndex": 435,
+      "registrationIndex": 438,
       "method": "POST",
       "path": "/api/v1/fin/vouchers/:id/submit",
       "kind": "http",
@@ -8211,10 +8265,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 412
+      "policyOperationIndex": 415
     },
     {
-      "registrationIndex": 436,
+      "registrationIndex": 439,
       "method": "POST",
       "path": "/api/v1/fin/vouchers/:id/audit",
       "kind": "http",
@@ -8229,10 +8283,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 413
+      "policyOperationIndex": 416
     },
     {
-      "registrationIndex": 437,
+      "registrationIndex": 440,
       "method": "POST",
       "path": "/api/v1/fin/vouchers/:id/unaudit",
       "kind": "http",
@@ -8247,10 +8301,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 414
+      "policyOperationIndex": 417
     },
     {
-      "registrationIndex": 438,
+      "registrationIndex": 441,
       "method": "POST",
       "path": "/api/v1/fin/vouchers/:id/post",
       "kind": "http",
@@ -8265,10 +8319,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 415
+      "policyOperationIndex": 418
     },
     {
-      "registrationIndex": 439,
+      "registrationIndex": 442,
       "method": "POST",
       "path": "/api/v1/fin/vouchers/:id/reverse",
       "kind": "http",
@@ -8283,10 +8337,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 416
+      "policyOperationIndex": 419
     },
     {
-      "registrationIndex": 440,
+      "registrationIndex": 443,
       "method": "PUT",
       "path": "/api/v1/fin/vouchers/:id",
       "kind": "http",
@@ -8301,10 +8355,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 417
+      "policyOperationIndex": 420
     },
     {
-      "registrationIndex": 441,
+      "registrationIndex": 444,
       "method": "GET",
       "path": "/api/v1/fin/ledgers/detail",
       "kind": "http",
@@ -8319,10 +8373,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 418
+      "policyOperationIndex": 421
     },
     {
-      "registrationIndex": 442,
+      "registrationIndex": 445,
       "method": "GET",
       "path": "/api/v1/fin/ledgers/general",
       "kind": "http",
@@ -8337,10 +8391,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 419
+      "policyOperationIndex": 422
     },
     {
-      "registrationIndex": 443,
+      "registrationIndex": 446,
       "method": "GET",
       "path": "/api/v1/fin/ledgers/balance",
       "kind": "http",
@@ -8355,10 +8409,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 420
+      "policyOperationIndex": 423
     },
     {
-      "registrationIndex": 444,
+      "registrationIndex": 447,
       "method": "GET",
       "path": "/api/v1/fin/ledgers/journal",
       "kind": "http",
@@ -8373,10 +8427,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 421
+      "policyOperationIndex": 424
     },
     {
-      "registrationIndex": 445,
+      "registrationIndex": 448,
       "method": "GET",
       "path": "/api/v1/fin/trial-balance",
       "kind": "http",
@@ -8391,10 +8445,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 422
+      "policyOperationIndex": 425
     },
     {
-      "registrationIndex": 446,
+      "registrationIndex": 449,
       "method": "GET",
       "path": "/api/v1/fin/reconcile",
       "kind": "http",
@@ -8409,10 +8463,10 @@
         "contractSource": "docs/backend/contracts/m3-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 423
+      "policyOperationIndex": 426
     },
     {
-      "registrationIndex": 447,
+      "registrationIndex": 450,
       "method": "POST",
       "path": "/api/v1/fin/periods/:id/close-check",
       "kind": "http",
@@ -8427,10 +8481,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 424
+      "policyOperationIndex": 427
     },
     {
-      "registrationIndex": 448,
+      "registrationIndex": 451,
       "method": "POST",
       "path": "/api/v1/fin/periods/:id/waive",
       "kind": "http",
@@ -8445,10 +8499,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 425
+      "policyOperationIndex": 428
     },
     {
-      "registrationIndex": 449,
+      "registrationIndex": 452,
       "method": "POST",
       "path": "/api/v1/fin/periods/:id/close",
       "kind": "http",
@@ -8463,10 +8517,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 426
+      "policyOperationIndex": 429
     },
     {
-      "registrationIndex": 450,
+      "registrationIndex": 453,
       "method": "POST",
       "path": "/api/v1/fin/periods/:id/reopen",
       "kind": "http",
@@ -8481,10 +8535,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 427
+      "policyOperationIndex": 430
     },
     {
-      "registrationIndex": 451,
+      "registrationIndex": 454,
       "method": "GET",
       "path": "/api/v1/fin/reports/:type",
       "kind": "http",
@@ -8499,10 +8553,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 428
+      "policyOperationIndex": 431
     },
     {
-      "registrationIndex": 452,
+      "registrationIndex": 455,
       "method": "POST",
       "path": "/api/v1/ai/analysis",
       "kind": "http",
@@ -8517,10 +8571,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 429
+      "policyOperationIndex": 432
     },
     {
-      "registrationIndex": 453,
+      "registrationIndex": 456,
       "method": "GET",
       "path": "/api/v1/ai/analysis/:id",
       "kind": "http",
@@ -8535,10 +8589,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 430
+      "policyOperationIndex": 433
     },
     {
-      "registrationIndex": 454,
+      "registrationIndex": 457,
       "method": "GET",
       "path": "/api/v1/sys/import-templates/:type",
       "kind": "http",
@@ -8553,10 +8607,10 @@
         "contractSource": "docs/backend/contracts/closure-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 431
+      "policyOperationIndex": 434
     },
     {
-      "registrationIndex": 455,
+      "registrationIndex": 458,
       "method": "POST",
       "path": "/api/v1/sys/imports",
       "kind": "http",
@@ -8571,10 +8625,10 @@
         "contractSource": "docs/backend/contracts/closure-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 432
+      "policyOperationIndex": 435
     },
     {
-      "registrationIndex": 456,
+      "registrationIndex": 459,
       "method": "GET",
       "path": "/api/v1/sys/imports/:id",
       "kind": "http",
@@ -8589,10 +8643,10 @@
         "contractSource": "docs/backend/contracts/closure-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 433
+      "policyOperationIndex": 436
     },
     {
-      "registrationIndex": 457,
+      "registrationIndex": 460,
       "method": "POST",
       "path": "/api/v1/sys/imports/:id/confirm",
       "kind": "http",
@@ -8607,10 +8661,10 @@
         "contractSource": "docs/backend/contracts/closure-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 434
+      "policyOperationIndex": 437
     },
     {
-      "registrationIndex": 458,
+      "registrationIndex": 461,
       "method": "GET",
       "path": "/api/v1/sys/jobs",
       "kind": "http",
@@ -8625,10 +8679,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 435
+      "policyOperationIndex": 438
     },
     {
-      "registrationIndex": 459,
+      "registrationIndex": 462,
       "method": "POST",
       "path": "/api/v1/sys/jobs",
       "kind": "http",
@@ -8643,10 +8697,10 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 436
+      "policyOperationIndex": 439
     },
     {
-      "registrationIndex": 460,
+      "registrationIndex": 463,
       "method": "GET",
       "path": "/api/v1/sys/jobs/:id/download",
       "kind": "http",
@@ -8661,7 +8715,7 @@
         "contractSource": "docs/backend/contracts/m4-surface.json"
       },
       "effective": true,
-      "policyOperationIndex": 437
+      "policyOperationIndex": 440
     }
   ],
   "operations": [
@@ -10934,7 +10988,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 543
+        "line": 547
       },
       "auth": "bearer-session",
       "permissions": {
@@ -14120,15 +14174,19 @@
       },
       "facts": {
         "observedCalls": [
+          "String",
           "filter",
           "get",
+          "getTime",
           "handle",
-          "localeCompare",
+          "includes",
           "map",
           "paginate",
           "requireCountry",
           "runPeriodic",
           "sort",
+          "toLowerCase",
+          "trim",
           "visibleTodos"
         ],
         "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
@@ -14138,7 +14196,12 @@
         "response": "unknown; referenced serializers and field access must be reviewed"
       },
       "errors": {
-        "observed": [],
+        "observed": [
+          {
+            "status": 400,
+            "code": "SYS_BAD_REQUEST"
+          }
+        ],
         "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
       },
       "version": {
@@ -14179,7 +14242,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 512
+        "line": 516
       },
       "auth": "bearer-session",
       "permissions": {
@@ -14261,7 +14324,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 523
+        "line": 527
       },
       "auth": "bearer-session",
       "permissions": {
@@ -14339,7 +14402,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sys.ts",
-        "line": 531
+        "line": 535
       },
       "auth": "bearer-session",
       "permissions": {
@@ -26644,7 +26707,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/lgs.ts",
-        "line": 961
+        "line": 997
       },
       "auth": "bearer-session",
       "permissions": {
@@ -26655,7 +26718,7 @@
               "lgs:shipment:view"
             ],
             "file": "jxc-web/src/mock/handlers/lgs.ts",
-            "line": 962
+            "line": 998
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -26729,7 +26792,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/lgs.ts",
-        "line": 966
+        "line": 1002
       },
       "auth": "bearer-session",
       "permissions": {
@@ -29762,7 +29825,9 @@
       },
       "field": {
         "observed": [],
-        "serializerCalls": [],
+        "serializerCalls": [
+          "shipmentOut"
+        ],
         "reviewRequired": true
       },
       "idem": {
@@ -29773,22 +29838,44 @@
       },
       "facts": {
         "observedCalls": [
+          "Number",
           "String",
+          "add",
+          "addFact",
+          "bad",
           "canDocumentDataAccess",
+          "ceil",
+          "delayInfo",
+          "empty",
           "filter",
+          "find",
+          "fromEntries",
           "get",
           "getDb",
           "handle",
           "has",
+          "includes",
+          "isSafeInteger",
+          "localeCompare",
           "map",
+          "max",
+          "min",
           "nameOf",
+          "paged",
+          "product",
+          "productMatches",
           "push",
           "requireCountry",
           "requirePerm",
+          "round",
           "set",
+          "shipmentOut",
+          "slice",
+          "some",
+          "sort",
           "sum",
           "values",
-          "withProduct"
+          "warehouseMatches"
         ],
         "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
       },
@@ -35665,11 +35752,11 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/cst/adjustments",
+      "path": "/api/v1/cst/adjustment-batches",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 182
+        "line": 183
       },
       "auth": "bearer-session",
       "permissions": {
@@ -35677,11 +35764,10 @@
           {
             "guard": "requirePerm",
             "values": [
-              "cst:adjustment:create",
-              "cst:cost:view"
+              "cst:adjustment:create"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 183
+            "line": 184
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -35715,14 +35801,37 @@
       },
       "facts": {
         "observedCalls": [
+          "Number",
+          "String",
+          "bad",
           "canDataAccess",
+          "every",
           "filter",
+          "find",
+          "get",
           "getDb",
           "handle",
+          "has",
+          "includes",
+          "isInteger",
+          "isSafeInteger",
+          "join",
+          "map",
+          "nameOf",
+          "num",
           "paginate",
           "requireCountry",
           "requireFieldAccess",
-          "requirePerm"
+          "requirePerm",
+          "some",
+          "sort",
+          "sum",
+          "test",
+          "toLowerCase",
+          "trim",
+          "unique",
+          "values",
+          "withProduct"
         ],
         "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
       },
@@ -35744,6 +35853,104 @@
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
       "registrationIndex": 333,
+      "mockStatus": "registered",
+      "phase": "M3",
+      "backend": {
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+      },
+      "effective": true,
+      "registrations": [
+        333
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/adjustments",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/cstOps.ts",
+        "line": 207
+      },
+      "auth": "bearer-session",
+      "permissions": {
+        "observed": [
+          {
+            "guard": "requirePerm",
+            "values": [
+              "cst:adjustment:create",
+              "cst:cost:view"
+            ],
+            "file": "jxc-web/src/mock/handlers/cstOps.ts",
+            "line": 208
+          }
+        ],
+        "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
+      },
+      "scope": {
+        "country": "country header authorization; resource requirements need review",
+        "configuredFields": null,
+        "observedGuards": [
+          "canDataAccess",
+          "requireCountry"
+        ],
+        "reviewRequired": true
+      },
+      "field": {
+        "observed": [
+          {
+            "group": "COST",
+            "write": false,
+            "file": "jxc-web/src/mock/handlers/cstOps.ts",
+            "line": 209
+          }
+        ],
+        "serializerCalls": [],
+        "reviewRequired": true
+      },
+      "idem": {
+        "observedHeader": false,
+        "referencedHelpersMayCheck": true,
+        "required": "unknown; verify docs and service implementation",
+        "hashBinding": "not inferred from AST"
+      },
+      "facts": {
+        "observedCalls": [
+          "String",
+          "canDataAccess",
+          "every",
+          "filter",
+          "find",
+          "get",
+          "getDb",
+          "handle",
+          "map",
+          "paginate",
+          "requireCountry",
+          "requireFieldAccess",
+          "requirePerm",
+          "withProduct"
+        ],
+        "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
+      },
+      "dto": {
+        "request": "unknown; Row/body accesses do not define a complete DTO",
+        "response": "unknown; referenced serializers and field access must be reviewed"
+      },
+      "errors": {
+        "observed": [],
+        "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
+      },
+      "version": {
+        "observedCheck": false,
+        "required": "M1 edits require version; current Mock allows omission"
+      },
+      "analysis": {
+        "completeness": "partial",
+        "reviewRequired": true,
+        "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
+      },
+      "registrationIndex": 334,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -35770,7 +35977,7 @@
       },
       "effective": true,
       "registrations": [
-        333
+        334
       ]
     },
     {
@@ -35779,7 +35986,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 188
+        "line": 216
       },
       "auth": "bearer-session",
       "permissions": {
@@ -35790,7 +35997,7 @@
               "cst:adjustment:create"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 189
+            "line": 217
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -35811,7 +36018,7 @@
             "group": "COST",
             "write": false,
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 190
+            "line": 218
           }
         ],
         "serializerCalls": [],
@@ -35865,7 +36072,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 334,
+      "registrationIndex": 335,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -35892,7 +36099,7 @@
       },
       "effective": true,
       "registrations": [
-        334
+        335
       ]
     },
     {
@@ -35901,7 +36108,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 210
+        "line": 238
       },
       "auth": "bearer-session",
       "permissions": {
@@ -35912,7 +36119,7 @@
               "cst:adjustment:create"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 211
+            "line": 239
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -35963,7 +36170,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 335,
+      "registrationIndex": 336,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -35992,7 +36199,7 @@
       },
       "effective": true,
       "registrations": [
-        335
+        336
       ]
     },
     {
@@ -36001,7 +36208,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 216
+        "line": 244
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36013,7 +36220,7 @@
               "cst:profit:view"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 217
+            "line": 245
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36033,7 +36240,7 @@
             "group": "COST",
             "write": false,
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 218
+            "line": 246
           }
         ],
         "serializerCalls": [],
@@ -36077,7 +36284,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 336,
+      "registrationIndex": 337,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -36104,7 +36311,7 @@
       },
       "effective": true,
       "registrations": [
-        336
+        337
       ]
     },
     {
@@ -36113,7 +36320,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 222
+        "line": 250
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36124,7 +36331,7 @@
               "cst:expense:create"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 223
+            "line": 251
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36144,7 +36351,7 @@
             "group": "COST",
             "write": false,
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 224
+            "line": 252
           }
         ],
         "serializerCalls": [],
@@ -36204,7 +36411,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 337,
+      "registrationIndex": 338,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -36231,7 +36438,7 @@
       },
       "effective": true,
       "registrations": [
-        337
+        338
       ]
     },
     {
@@ -36240,7 +36447,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 253
+        "line": 281
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36251,7 +36458,7 @@
               "cst:profit:view"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 254
+            "line": 282
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36270,7 +36477,7 @@
             "group": "PROFIT",
             "write": false,
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 255
+            "line": 283
           }
         ],
         "serializerCalls": [
@@ -36320,7 +36527,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 338,
+      "registrationIndex": 339,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -36340,7 +36547,7 @@
       },
       "effective": true,
       "registrations": [
-        338
+        339
       ]
     },
     {
@@ -36349,7 +36556,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 273
+        "line": 301
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36361,7 +36568,7 @@
               "cst:cost:view"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 274
+            "line": 302
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36413,7 +36620,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 339,
+      "registrationIndex": 340,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -36440,7 +36647,7 @@
       },
       "effective": true,
       "registrations": [
-        339
+        340
       ]
     },
     {
@@ -36449,7 +36656,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/cstOps.ts",
-        "line": 279
+        "line": 307
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36460,7 +36667,7 @@
               "cst:method:config"
             ],
             "file": "jxc-web/src/mock/handlers/cstOps.ts",
-            "line": 280
+            "line": 308
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36523,7 +36730,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 340,
+      "registrationIndex": 341,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -36550,7 +36757,7 @@
       },
       "effective": true,
       "registrations": [
-        340
+        341
       ]
     },
     {
@@ -36559,7 +36766,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 341
+        "line": 344
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36571,7 +36778,7 @@
               "sal:price:view"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 342
+            "line": 345
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36623,7 +36830,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 341,
+      "registrationIndex": 342,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -36632,7 +36839,7 @@
       },
       "effective": true,
       "registrations": [
-        341
+        342
       ]
     },
     {
@@ -36641,7 +36848,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 348
+        "line": 351
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36652,7 +36859,7 @@
               "sal:price:view"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 349
+            "line": 352
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36705,7 +36912,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 342,
+      "registrationIndex": 343,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -36714,7 +36921,7 @@
       },
       "effective": true,
       "registrations": [
-        342
+        343
       ]
     },
     {
@@ -36723,7 +36930,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 357
+        "line": 360
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36771,7 +36978,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 343,
+      "registrationIndex": 344,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -36780,7 +36987,7 @@
       },
       "effective": true,
       "registrations": [
-        343
+        344
       ]
     },
     {
@@ -36789,7 +36996,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 358
+        "line": 361
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36842,7 +37049,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 344,
+      "registrationIndex": 345,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -36851,7 +37058,7 @@
       },
       "effective": true,
       "registrations": [
-        344
+        345
       ]
     },
     {
@@ -36860,7 +37067,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 364
+        "line": 367
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36871,7 +37078,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 365
+            "line": 368
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -36930,7 +37137,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 345,
+      "registrationIndex": 346,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -36939,7 +37146,7 @@
       },
       "effective": true,
       "registrations": [
-        345
+        346
       ]
     },
     {
@@ -36948,7 +37155,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 377
+        "line": 380
       },
       "auth": "bearer-session",
       "permissions": {
@@ -36961,7 +37168,7 @@
               "sal:outbound:confirm"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 378
+            "line": 381
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37012,7 +37219,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 346,
+      "registrationIndex": 347,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37021,7 +37228,7 @@
       },
       "effective": true,
       "registrations": [
-        346
+        347
       ]
     },
     {
@@ -37030,7 +37237,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 381
+        "line": 384
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37081,7 +37288,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 347,
+      "registrationIndex": 348,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37107,7 +37314,7 @@
       },
       "effective": true,
       "registrations": [
-        347
+        348
       ]
     },
     {
@@ -37116,7 +37323,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 382
+        "line": 385
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37128,7 +37335,7 @@
               "sal:order:edit"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 383
+            "line": 386
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37190,7 +37397,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 348,
+      "registrationIndex": 349,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37199,7 +37406,7 @@
       },
       "effective": true,
       "registrations": [
-        348
+        349
       ]
     },
     {
@@ -37208,7 +37415,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 407
+        "line": 410
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37258,7 +37465,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 349,
+      "registrationIndex": 350,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37284,7 +37491,7 @@
       },
       "effective": true,
       "registrations": [
-        349
+        350
       ]
     },
     {
@@ -37293,7 +37500,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 408
+        "line": 411
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37304,7 +37511,7 @@
               "sal:order:submit"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 409
+            "line": 412
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37357,7 +37564,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 350,
+      "registrationIndex": 351,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37366,7 +37573,7 @@
       },
       "effective": true,
       "registrations": [
-        350
+        351
       ]
     },
     {
@@ -37375,7 +37582,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 416
+        "line": 419
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37386,7 +37593,7 @@
               "sal:order:create"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 417
+            "line": 420
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37447,7 +37654,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 351,
+      "registrationIndex": 352,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37456,7 +37663,7 @@
       },
       "effective": true,
       "registrations": [
-        351
+        352
       ]
     },
     {
@@ -37465,7 +37672,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 454
+        "line": 457
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37477,7 +37684,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 455
+            "line": 458
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37490,7 +37697,9 @@
       },
       "field": {
         "observed": [],
-        "serializerCalls": [],
+        "serializerCalls": [
+          "readableBusinessFields"
+        ],
         "reviewRequired": true
       },
       "idem": {
@@ -37509,6 +37718,7 @@
           "handle",
           "map",
           "outboundCheck",
+          "readableBusinessFields",
           "requirePerm"
         ],
         "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
@@ -37530,7 +37740,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 352,
+      "registrationIndex": 353,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37539,7 +37749,91 @@
       },
       "effective": true,
       "registrations": [
-        352
+        353
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sal/orders/:id/outbound-check",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/sal.ts",
+        "line": 464
+      },
+      "auth": "bearer-session",
+      "permissions": {
+        "observed": [
+          {
+            "guard": "requirePerm",
+            "values": [
+              "sal:outbound:create",
+              "sal:order:view"
+            ],
+            "file": "jxc-web/src/mock/handlers/sal.ts",
+            "line": 465
+          }
+        ],
+        "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
+      },
+      "scope": {
+        "country": "country header authorization; resource requirements need review",
+        "configuredFields": null,
+        "observedGuards": [],
+        "reviewRequired": true
+      },
+      "field": {
+        "observed": [],
+        "serializerCalls": [
+          "readableBusinessFields"
+        ],
+        "reviewRequired": true
+      },
+      "idem": {
+        "observedHeader": false,
+        "referencedHelpersMayCheck": true,
+        "required": "unknown; verify docs and service implementation",
+        "hashBinding": "not inferred from AST"
+      },
+      "facts": {
+        "observedCalls": [
+          "Number",
+          "bad",
+          "findOrder",
+          "handle",
+          "isArray",
+          "outboundCheck",
+          "readableBusinessFields",
+          "requirePerm"
+        ],
+        "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
+      },
+      "dto": {
+        "request": "unknown; Row/body accesses do not define a complete DTO",
+        "response": "unknown; referenced serializers and field access must be reviewed"
+      },
+      "errors": {
+        "observed": [],
+        "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
+      },
+      "version": {
+        "observedCheck": false,
+        "required": "M1 edits require version; current Mock allows omission"
+      },
+      "analysis": {
+        "completeness": "partial",
+        "reviewRequired": true,
+        "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
+      },
+      "registrationIndex": 354,
+      "mockStatus": "registered",
+      "phase": "M2",
+      "backend": {
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+      },
+      "effective": true,
+      "registrations": [
+        354
       ]
     },
     {
@@ -37548,7 +37842,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 461
+        "line": 470
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37561,7 +37855,7 @@
               "sal:outbound:confirm"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 462
+            "line": 471
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37624,7 +37918,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 353,
+      "registrationIndex": 355,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37633,7 +37927,7 @@
       },
       "effective": true,
       "registrations": [
-        353
+        355
       ]
     },
     {
@@ -37642,7 +37936,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 472
+        "line": 481
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37655,7 +37949,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 473
+            "line": 482
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37713,7 +38007,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 354,
+      "registrationIndex": 356,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37722,7 +38016,7 @@
       },
       "effective": true,
       "registrations": [
-        354
+        356
       ]
     },
     {
@@ -37731,7 +38025,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 481
+        "line": 490
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37783,7 +38077,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 355,
+      "registrationIndex": 357,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37809,7 +38103,7 @@
       },
       "effective": true,
       "registrations": [
-        355
+        357
       ]
     },
     {
@@ -37818,7 +38112,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 485
+        "line": 494
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37870,7 +38164,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 356,
+      "registrationIndex": 358,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37896,7 +38190,7 @@
       },
       "effective": true,
       "registrations": [
-        356
+        358
       ]
     },
     {
@@ -37905,7 +38199,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 486
+        "line": 495
       },
       "auth": "bearer-session",
       "permissions": {
@@ -37916,7 +38210,7 @@
               "sal:sign:record"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 487
+            "line": 496
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -37981,7 +38275,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 357,
+      "registrationIndex": 359,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -37990,7 +38284,7 @@
       },
       "effective": true,
       "registrations": [
-        357
+        359
       ]
     },
     {
@@ -37999,7 +38293,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 511
+        "line": 520
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38011,7 +38305,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 512
+            "line": 521
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38066,7 +38360,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 358,
+      "registrationIndex": 360,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38075,7 +38369,7 @@
       },
       "effective": true,
       "registrations": [
-        358
+        360
       ]
     },
     {
@@ -38084,7 +38378,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 519
+        "line": 528
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38095,7 +38389,7 @@
               "sal:sign:record"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 520
+            "line": 529
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38149,7 +38443,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 359,
+      "registrationIndex": 361,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38158,7 +38452,7 @@
       },
       "effective": true,
       "registrations": [
-        359
+        361
       ]
     },
     {
@@ -38167,7 +38461,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/sal.ts",
-        "line": 531
+        "line": 540
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38178,7 +38472,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/sal.ts",
-            "line": 532
+            "line": 541
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38239,7 +38533,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 360,
+      "registrationIndex": 362,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38248,12 +38542,12 @@
       },
       "effective": true,
       "registrations": [
-        360
+        362
       ]
     },
     {
       "method": "GET",
-      "path": "/api/v1/ar/receipts",
+      "path": "/api/v1/ar/receipts/order-context/:id",
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
@@ -38266,11 +38560,94 @@
             "guard": "requirePerm",
             "values": [
               "ar:receipt:create",
+              "ar:receipt:confirm"
+            ],
+            "file": "jxc-web/src/mock/handlers/ar.ts",
+            "line": 230
+          }
+        ],
+        "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
+      },
+      "scope": {
+        "country": "country header authorization; resource requirements need review",
+        "configuredFields": null,
+        "observedGuards": [
+          "canDocumentDataAccess"
+        ],
+        "reviewRequired": true
+      },
+      "field": {
+        "observed": [],
+        "serializerCalls": [],
+        "reviewRequired": true
+      },
+      "idem": {
+        "observedHeader": false,
+        "referencedHelpersMayCheck": true,
+        "required": "unknown; verify docs and service implementation",
+        "hashBinding": "not inferred from AST"
+      },
+      "facts": {
+        "observedCalls": [
+          "Number",
+          "canDocumentDataAccess",
+          "find",
+          "getDb",
+          "handle",
+          "notFound",
+          "requirePerm"
+        ],
+        "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
+      },
+      "dto": {
+        "request": "unknown; Row/body accesses do not define a complete DTO",
+        "response": "unknown; referenced serializers and field access must be reviewed"
+      },
+      "errors": {
+        "observed": [],
+        "completeness": "partial; shared wrapper, helpers and domain errors are not expanded"
+      },
+      "version": {
+        "observedCheck": false,
+        "required": "M1 edits require version; current Mock allows omission"
+      },
+      "analysis": {
+        "completeness": "partial",
+        "reviewRequired": true,
+        "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
+      },
+      "registrationIndex": 363,
+      "mockStatus": "registered",
+      "phase": "M2",
+      "backend": {
+        "status": "registered-gated",
+        "note": "Controller exists; exact action/DTO contract is outside the reviewed main-flow surface. Registration alone is not acceptance."
+      },
+      "effective": true,
+      "registrations": [
+        363
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ar/receipts",
+      "kind": "http",
+      "source": {
+        "file": "jxc-web/src/mock/handlers/ar.ts",
+        "line": 235
+      },
+      "auth": "bearer-session",
+      "permissions": {
+        "observed": [
+          {
+            "guard": "requirePerm",
+            "values": [
+              "ar:receipt:create",
               "ar:receipt:confirm",
               "ar:receivable:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 230
+            "line": 236
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38310,6 +38687,7 @@
           "paginate",
           "receiptOut",
           "requirePerm",
+          "some",
           "toLowerCase"
         ],
         "synchronousFacts": "unknown; verify domain command, transaction and outbox explicitly"
@@ -38331,7 +38709,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 361,
+      "registrationIndex": 364,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38340,7 +38718,7 @@
       },
       "effective": true,
       "registrations": [
-        361
+        364
       ]
     },
     {
@@ -38349,7 +38727,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 242
+        "line": 250
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38400,7 +38778,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 362,
+      "registrationIndex": 365,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38426,7 +38804,7 @@
       },
       "effective": true,
       "registrations": [
-        362
+        365
       ]
     },
     {
@@ -38435,7 +38813,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 243
+        "line": 251
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38487,7 +38865,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 363,
+      "registrationIndex": 366,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38513,7 +38891,7 @@
       },
       "effective": true,
       "registrations": [
-        363
+        366
       ]
     },
     {
@@ -38522,7 +38900,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 244
+        "line": 252
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38533,7 +38911,7 @@
               "ar:receipt:confirm"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 245
+            "line": 253
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38588,7 +38966,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 364,
+      "registrationIndex": 367,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38597,7 +38975,7 @@
       },
       "effective": true,
       "registrations": [
-        364
+        367
       ]
     },
     {
@@ -38606,7 +38984,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 251
+        "line": 259
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38617,7 +38995,7 @@
               "ar:receipt:confirm"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 252
+            "line": 260
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38675,7 +39053,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 365,
+      "registrationIndex": 368,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38684,7 +39062,7 @@
       },
       "effective": true,
       "registrations": [
-        365
+        368
       ]
     },
     {
@@ -38693,7 +39071,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 260
+        "line": 268
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38705,7 +39083,7 @@
               "ar:credit-rule:edit"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 261
+            "line": 269
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38756,7 +39134,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 366,
+      "registrationIndex": 369,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38765,7 +39143,7 @@
       },
       "effective": true,
       "registrations": [
-        366
+        369
       ]
     },
     {
@@ -38774,7 +39152,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 267
+        "line": 275
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38785,7 +39163,7 @@
               "ar:credit-rule:edit"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 268
+            "line": 276
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38832,7 +39210,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 367,
+      "registrationIndex": 370,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38841,7 +39219,7 @@
       },
       "effective": true,
       "registrations": [
-        367
+        370
       ]
     },
     {
@@ -38850,7 +39228,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 271
+        "line": 279
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38861,7 +39239,7 @@
               "ar:credit-rule:edit"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 272
+            "line": 280
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38913,7 +39291,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 368,
+      "registrationIndex": 371,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -38922,7 +39300,7 @@
       },
       "effective": true,
       "registrations": [
-        368
+        371
       ]
     },
     {
@@ -38931,7 +39309,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 278
+        "line": 286
       },
       "auth": "bearer-session",
       "permissions": {
@@ -38942,7 +39320,7 @@
               "ar:credit-rule:edit"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 279
+            "line": 287
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -38997,7 +39375,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 369,
+      "registrationIndex": 372,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39006,7 +39384,7 @@
       },
       "effective": true,
       "registrations": [
-        369
+        372
       ]
     },
     {
@@ -39015,7 +39393,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 285
+        "line": 293
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39028,7 +39406,7 @@
               "ar:credit-rule:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 286
+            "line": 294
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39085,7 +39463,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 370,
+      "registrationIndex": 373,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39094,7 +39472,7 @@
       },
       "effective": true,
       "registrations": [
-        370
+        373
       ]
     },
     {
@@ -39103,7 +39481,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 290
+        "line": 298
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39115,7 +39493,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 291
+            "line": 299
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39171,7 +39549,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 371,
+      "registrationIndex": 374,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39180,7 +39558,7 @@
       },
       "effective": true,
       "registrations": [
-        371
+        374
       ]
     },
     {
@@ -39189,7 +39567,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 295
+        "line": 303
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39201,7 +39579,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 296
+            "line": 304
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39254,7 +39632,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 372,
+      "registrationIndex": 375,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39263,7 +39641,7 @@
       },
       "effective": true,
       "registrations": [
-        372
+        375
       ]
     },
     {
@@ -39272,7 +39650,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 300
+        "line": 308
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39283,7 +39661,7 @@
               "ar:receivable:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 301
+            "line": 309
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39341,7 +39719,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 373,
+      "registrationIndex": 376,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39350,7 +39728,7 @@
       },
       "effective": true,
       "registrations": [
-        373
+        376
       ]
     },
     {
@@ -39359,7 +39737,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 309
+        "line": 317
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39371,7 +39749,7 @@
               "ar:receivable:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 310
+            "line": 318
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39431,7 +39809,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 374,
+      "registrationIndex": 377,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39440,7 +39818,7 @@
       },
       "effective": true,
       "registrations": [
-        374
+        377
       ]
     },
     {
@@ -39449,7 +39827,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 316
+        "line": 324
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39460,7 +39838,7 @@
               "ar:writeoff:create"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 317
+            "line": 325
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39528,7 +39906,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 375,
+      "registrationIndex": 378,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39554,7 +39932,7 @@
       },
       "effective": true,
       "registrations": [
-        375
+        378
       ]
     },
     {
@@ -39563,7 +39941,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 371
+        "line": 379
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39574,7 +39952,7 @@
               "ar:writeoff:reverse"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 372
+            "line": 380
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39645,7 +40023,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 376,
+      "registrationIndex": 379,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39671,7 +40049,7 @@
       },
       "effective": true,
       "registrations": [
-        376
+        379
       ]
     },
     {
@@ -39680,7 +40058,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 408
+        "line": 416
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39692,7 +40070,7 @@
               "ar:receivable:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 409
+            "line": 417
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39748,7 +40126,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 377,
+      "registrationIndex": 380,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39757,7 +40135,7 @@
       },
       "effective": true,
       "registrations": [
-        377
+        380
       ]
     },
     {
@@ -39766,7 +40144,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 412
+        "line": 420
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39777,7 +40155,7 @@
               "ar:statement:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 413
+            "line": 421
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39828,7 +40206,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 378,
+      "registrationIndex": 381,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39854,7 +40232,7 @@
       },
       "effective": true,
       "registrations": [
-        378
+        381
       ]
     },
     {
@@ -39863,7 +40241,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 416
+        "line": 424
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39874,7 +40252,7 @@
               "ar:statement:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 417
+            "line": 425
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -39931,7 +40309,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 379,
+      "registrationIndex": 382,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -39940,7 +40318,7 @@
       },
       "effective": true,
       "registrations": [
-        379
+        382
       ]
     },
     {
@@ -39949,7 +40327,7 @@
       "kind": "http",
       "source": {
         "file": "jxc-web/src/mock/handlers/ar.ts",
-        "line": 421
+        "line": 429
       },
       "auth": "bearer-session",
       "permissions": {
@@ -39961,7 +40339,7 @@
               "sal:order:view"
             ],
             "file": "jxc-web/src/mock/handlers/ar.ts",
-            "line": 422
+            "line": 430
           }
         ],
         "interpretation": "Observed guard calls only; conditions and referenced helpers require review."
@@ -40022,7 +40400,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 380,
+      "registrationIndex": 383,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40031,7 +40409,7 @@
       },
       "effective": true,
       "registrations": [
-        380
+        383
       ]
     },
     {
@@ -40111,7 +40489,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 381,
+      "registrationIndex": 384,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40120,7 +40498,7 @@
       },
       "effective": true,
       "registrations": [
-        381
+        384
       ]
     },
     {
@@ -40183,7 +40561,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 382,
+      "registrationIndex": 385,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40192,7 +40570,7 @@
       },
       "effective": true,
       "registrations": [
-        382
+        385
       ]
     },
     {
@@ -40271,7 +40649,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 383,
+      "registrationIndex": 386,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40280,7 +40658,7 @@
       },
       "effective": true,
       "registrations": [
-        383
+        386
       ]
     },
     {
@@ -40340,7 +40718,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 384,
+      "registrationIndex": 387,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40366,7 +40744,7 @@
       },
       "effective": true,
       "registrations": [
-        384
+        387
       ]
     },
     {
@@ -40427,7 +40805,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 385,
+      "registrationIndex": 388,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40453,7 +40831,7 @@
       },
       "effective": true,
       "registrations": [
-        385
+        388
       ]
     },
     {
@@ -40529,7 +40907,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 386,
+      "registrationIndex": 389,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40555,7 +40933,7 @@
       },
       "effective": true,
       "registrations": [
-        386
+        389
       ]
     },
     {
@@ -40634,7 +41012,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 387,
+      "registrationIndex": 390,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40643,7 +41021,7 @@
       },
       "effective": true,
       "registrations": [
-        387
+        390
       ]
     },
     {
@@ -40705,7 +41083,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 388,
+      "registrationIndex": 391,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40731,7 +41109,7 @@
       },
       "effective": true,
       "registrations": [
-        388
+        391
       ]
     },
     {
@@ -40794,7 +41172,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 389,
+      "registrationIndex": 392,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40820,7 +41198,7 @@
       },
       "effective": true,
       "registrations": [
-        389
+        392
       ]
     },
     {
@@ -40900,7 +41278,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 390,
+      "registrationIndex": 393,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -40909,7 +41287,7 @@
       },
       "effective": true,
       "registrations": [
-        390
+        393
       ]
     },
     {
@@ -40989,7 +41367,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 391,
+      "registrationIndex": 394,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41015,7 +41393,7 @@
       },
       "effective": true,
       "registrations": [
-        391
+        394
       ]
     },
     {
@@ -41091,7 +41469,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 392,
+      "registrationIndex": 395,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41117,7 +41495,7 @@
       },
       "effective": true,
       "registrations": [
-        392
+        395
       ]
     },
     {
@@ -41194,7 +41572,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 393,
+      "registrationIndex": 396,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41203,7 +41581,7 @@
       },
       "effective": true,
       "registrations": [
-        393
+        396
       ]
     },
     {
@@ -41263,7 +41641,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 394,
+      "registrationIndex": 397,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41289,7 +41667,7 @@
       },
       "effective": true,
       "registrations": [
-        394
+        397
       ]
     },
     {
@@ -41350,7 +41728,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 395,
+      "registrationIndex": 398,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41376,7 +41754,7 @@
       },
       "effective": true,
       "registrations": [
-        395
+        398
       ]
     },
     {
@@ -41452,7 +41830,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 396,
+      "registrationIndex": 399,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41461,7 +41839,7 @@
       },
       "effective": true,
       "registrations": [
-        396
+        399
       ]
     },
     {
@@ -41538,7 +41916,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 397,
+      "registrationIndex": 400,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41547,7 +41925,7 @@
       },
       "effective": true,
       "registrations": [
-        397
+        400
       ]
     },
     {
@@ -41608,7 +41986,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 398,
+      "registrationIndex": 401,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41617,7 +41995,7 @@
       },
       "effective": true,
       "registrations": [
-        398
+        401
       ]
     },
     {
@@ -41692,7 +42070,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 399,
+      "registrationIndex": 402,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41701,7 +42079,7 @@
       },
       "effective": true,
       "registrations": [
-        399
+        402
       ]
     },
     {
@@ -41778,7 +42156,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 400,
+      "registrationIndex": 403,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41787,7 +42165,7 @@
       },
       "effective": true,
       "registrations": [
-        400
+        403
       ]
     },
     {
@@ -41865,7 +42243,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 401,
+      "registrationIndex": 404,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41874,7 +42252,7 @@
       },
       "effective": true,
       "registrations": [
-        401
+        404
       ]
     },
     {
@@ -41954,7 +42332,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 402,
+      "registrationIndex": 405,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -41963,7 +42341,7 @@
       },
       "effective": true,
       "registrations": [
-        402
+        405
       ]
     },
     {
@@ -42042,7 +42420,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 403,
+      "registrationIndex": 406,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42051,7 +42429,7 @@
       },
       "effective": true,
       "registrations": [
-        403
+        406
       ]
     },
     {
@@ -42114,7 +42492,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 404,
+      "registrationIndex": 407,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42123,7 +42501,7 @@
       },
       "effective": true,
       "registrations": [
-        404
+        407
       ]
     },
     {
@@ -42210,7 +42588,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 405,
+      "registrationIndex": 408,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42236,7 +42614,7 @@
       },
       "effective": true,
       "registrations": [
-        405
+        408
       ]
     },
     {
@@ -42297,7 +42675,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 406,
+      "registrationIndex": 409,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42306,7 +42684,7 @@
       },
       "effective": true,
       "registrations": [
-        406
+        409
       ]
     },
     {
@@ -42388,7 +42766,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 407,
+      "registrationIndex": 410,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42414,7 +42792,7 @@
       },
       "effective": true,
       "registrations": [
-        407
+        410
       ]
     },
     {
@@ -42504,7 +42882,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 408,
+      "registrationIndex": 411,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42530,7 +42908,7 @@
       },
       "effective": true,
       "registrations": [
-        408
+        411
       ]
     },
     {
@@ -42615,7 +42993,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 409,
+      "registrationIndex": 412,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42641,7 +43019,7 @@
       },
       "effective": true,
       "registrations": [
-        409
+        412
       ]
     },
     {
@@ -42718,7 +43096,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 410,
+      "registrationIndex": 413,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42727,7 +43105,7 @@
       },
       "effective": true,
       "registrations": [
-        410
+        413
       ]
     },
     {
@@ -42815,7 +43193,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 411,
+      "registrationIndex": 414,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42841,7 +43219,7 @@
       },
       "effective": true,
       "registrations": [
-        411
+        414
       ]
     },
     {
@@ -42931,7 +43309,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 412,
+      "registrationIndex": 415,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -42957,7 +43335,7 @@
       },
       "effective": true,
       "registrations": [
-        412
+        415
       ]
     },
     {
@@ -43036,7 +43414,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 413,
+      "registrationIndex": 416,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -43045,7 +43423,7 @@
       },
       "effective": true,
       "registrations": [
-        413
+        416
       ]
     },
     {
@@ -43122,7 +43500,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 414,
+      "registrationIndex": 417,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -43131,7 +43509,7 @@
       },
       "effective": true,
       "registrations": [
-        414
+        417
       ]
     },
     {
@@ -43221,7 +43599,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 415,
+      "registrationIndex": 418,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -43247,7 +43625,7 @@
       },
       "effective": true,
       "registrations": [
-        415
+        418
       ]
     },
     {
@@ -43340,7 +43718,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 416,
+      "registrationIndex": 419,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -43366,7 +43744,7 @@
       },
       "effective": true,
       "registrations": [
-        416
+        419
       ]
     },
     {
@@ -43442,7 +43820,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 417,
+      "registrationIndex": 420,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -43451,7 +43829,7 @@
       },
       "effective": true,
       "registrations": [
-        417
+        420
       ]
     },
     {
@@ -43534,7 +43912,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 418,
+      "registrationIndex": 421,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -43543,7 +43921,7 @@
       },
       "effective": true,
       "registrations": [
-        418
+        421
       ]
     },
     {
@@ -43622,7 +44000,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 419,
+      "registrationIndex": 422,
       "mockStatus": "registered",
       "phase": "M2",
       "backend": {
@@ -43631,7 +44009,7 @@
       },
       "effective": true,
       "registrations": [
-        419
+        422
       ]
     },
     {
@@ -43711,7 +44089,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 420,
+      "registrationIndex": 423,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -43734,7 +44112,7 @@
       },
       "effective": true,
       "registrations": [
-        420
+        423
       ]
     },
     {
@@ -43816,7 +44194,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 421,
+      "registrationIndex": 424,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -43857,7 +44235,7 @@
       },
       "effective": true,
       "registrations": [
-        421
+        424
       ]
     },
     {
@@ -43932,7 +44310,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 422,
+      "registrationIndex": 425,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -43959,7 +44337,7 @@
       },
       "effective": true,
       "registrations": [
-        422
+        425
       ]
     },
     {
@@ -44034,7 +44412,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 423,
+      "registrationIndex": 426,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44061,7 +44439,7 @@
       },
       "effective": true,
       "registrations": [
-        423
+        426
       ]
     },
     {
@@ -44137,7 +44515,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 424,
+      "registrationIndex": 427,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44164,7 +44542,7 @@
       },
       "effective": true,
       "registrations": [
-        424
+        427
       ]
     },
     {
@@ -44241,7 +44619,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 425,
+      "registrationIndex": 428,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44268,7 +44646,7 @@
       },
       "effective": true,
       "registrations": [
-        425
+        428
       ]
     },
     {
@@ -44346,7 +44724,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 426,
+      "registrationIndex": 429,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44373,7 +44751,7 @@
       },
       "effective": true,
       "registrations": [
-        426
+        429
       ]
     },
     {
@@ -44447,7 +44825,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 427,
+      "registrationIndex": 430,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44474,7 +44852,7 @@
       },
       "effective": true,
       "registrations": [
-        427
+        430
       ]
     },
     {
@@ -44545,7 +44923,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 428,
+      "registrationIndex": 431,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44572,7 +44950,7 @@
       },
       "effective": true,
       "registrations": [
-        428
+        431
       ]
     },
     {
@@ -44648,7 +45026,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 429,
+      "registrationIndex": 432,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44675,7 +45053,7 @@
       },
       "effective": true,
       "registrations": [
-        429
+        432
       ]
     },
     {
@@ -44753,7 +45131,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 430,
+      "registrationIndex": 433,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44780,7 +45158,7 @@
       },
       "effective": true,
       "registrations": [
-        430
+        433
       ]
     },
     {
@@ -44838,7 +45216,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 431,
+      "registrationIndex": 434,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44865,7 +45243,7 @@
       },
       "effective": true,
       "registrations": [
-        431
+        434
       ]
     },
     {
@@ -44943,7 +45321,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 432,
+      "registrationIndex": 435,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -44970,7 +45348,7 @@
       },
       "effective": true,
       "registrations": [
-        432
+        435
       ]
     },
     {
@@ -45044,7 +45422,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 433,
+      "registrationIndex": 436,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45071,7 +45449,7 @@
       },
       "effective": true,
       "registrations": [
-        433
+        436
       ]
     },
     {
@@ -45159,7 +45537,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 434,
+      "registrationIndex": 437,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45186,7 +45564,7 @@
       },
       "effective": true,
       "registrations": [
-        434
+        437
       ]
     },
     {
@@ -45262,7 +45640,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 435,
+      "registrationIndex": 438,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45289,7 +45667,7 @@
       },
       "effective": true,
       "registrations": [
-        435
+        438
       ]
     },
     {
@@ -45366,7 +45744,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 436,
+      "registrationIndex": 439,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45393,7 +45771,7 @@
       },
       "effective": true,
       "registrations": [
-        436
+        439
       ]
     },
     {
@@ -45469,7 +45847,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 437,
+      "registrationIndex": 440,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45496,7 +45874,7 @@
       },
       "effective": true,
       "registrations": [
-        437
+        440
       ]
     },
     {
@@ -45567,7 +45945,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 438,
+      "registrationIndex": 441,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45594,7 +45972,7 @@
       },
       "effective": true,
       "registrations": [
-        438
+        441
       ]
     },
     {
@@ -45682,7 +46060,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 439,
+      "registrationIndex": 442,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45709,7 +46087,7 @@
       },
       "effective": true,
       "registrations": [
-        439
+        442
       ]
     },
     {
@@ -45794,7 +46172,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 440,
+      "registrationIndex": 443,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45821,7 +46199,7 @@
       },
       "effective": true,
       "registrations": [
-        440
+        443
       ]
     },
     {
@@ -45902,7 +46280,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 441,
+      "registrationIndex": 444,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -45929,7 +46307,7 @@
       },
       "effective": true,
       "registrations": [
-        441
+        444
       ]
     },
     {
@@ -46003,7 +46381,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 442,
+      "registrationIndex": 445,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -46030,7 +46408,7 @@
       },
       "effective": true,
       "registrations": [
-        442
+        445
       ]
     },
     {
@@ -46104,7 +46482,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 443,
+      "registrationIndex": 446,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -46131,7 +46509,7 @@
       },
       "effective": true,
       "registrations": [
-        443
+        446
       ]
     },
     {
@@ -46212,7 +46590,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 444,
+      "registrationIndex": 447,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -46239,7 +46617,7 @@
       },
       "effective": true,
       "registrations": [
-        444
+        447
       ]
     },
     {
@@ -46315,7 +46693,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 445,
+      "registrationIndex": 448,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -46342,7 +46720,7 @@
       },
       "effective": true,
       "registrations": [
-        445
+        448
       ]
     },
     {
@@ -46416,7 +46794,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 446,
+      "registrationIndex": 449,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -46443,7 +46821,7 @@
       },
       "effective": true,
       "registrations": [
-        446
+        449
       ]
     },
     {
@@ -46516,7 +46894,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 447,
+      "registrationIndex": 450,
       "mockStatus": "registered",
       "phase": "M4",
       "backend": {
@@ -46536,7 +46914,7 @@
       },
       "effective": true,
       "registrations": [
-        447
+        450
       ]
     },
     {
@@ -46613,7 +46991,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 448,
+      "registrationIndex": 451,
       "mockStatus": "registered",
       "phase": "M4",
       "backend": {
@@ -46633,7 +47011,7 @@
       },
       "effective": true,
       "registrations": [
-        448
+        451
       ]
     },
     {
@@ -46726,7 +47104,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 449,
+      "registrationIndex": 452,
       "mockStatus": "registered",
       "phase": "M4",
       "backend": {
@@ -46746,7 +47124,7 @@
       },
       "effective": true,
       "registrations": [
-        449
+        452
       ]
     },
     {
@@ -46830,7 +47208,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 450,
+      "registrationIndex": 453,
       "mockStatus": "registered",
       "phase": "M4",
       "backend": {
@@ -46850,7 +47228,7 @@
       },
       "effective": true,
       "registrations": [
-        450
+        453
       ]
     },
     {
@@ -46928,7 +47306,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 451,
+      "registrationIndex": 454,
       "mockStatus": "registered",
       "phase": "M4",
       "backend": {
@@ -46948,7 +47326,7 @@
       },
       "effective": true,
       "registrations": [
-        451
+        454
       ]
     },
     {
@@ -47027,7 +47405,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 452,
+      "registrationIndex": 455,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -47047,7 +47425,7 @@
       },
       "effective": true,
       "registrations": [
-        452
+        455
       ]
     },
     {
@@ -47121,7 +47499,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 453,
+      "registrationIndex": 456,
       "mockStatus": "registered",
       "phase": "M3",
       "backend": {
@@ -47141,7 +47519,7 @@
       },
       "effective": true,
       "registrations": [
-        453
+        456
       ]
     },
     {
@@ -47211,7 +47589,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 454,
+      "registrationIndex": 457,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -47231,7 +47609,7 @@
       },
       "effective": true,
       "registrations": [
-        454
+        457
       ]
     },
     {
@@ -47309,7 +47687,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 455,
+      "registrationIndex": 458,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -47329,7 +47707,7 @@
       },
       "effective": true,
       "registrations": [
-        455
+        458
       ]
     },
     {
@@ -47389,7 +47767,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 456,
+      "registrationIndex": 459,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -47409,7 +47787,7 @@
       },
       "effective": true,
       "registrations": [
-        456
+        459
       ]
     },
     {
@@ -47489,7 +47867,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 457,
+      "registrationIndex": 460,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -47509,7 +47887,7 @@
       },
       "effective": true,
       "registrations": [
-        457
+        460
       ]
     },
     {
@@ -47581,7 +47959,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 458,
+      "registrationIndex": 461,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -47601,7 +47979,7 @@
       },
       "effective": true,
       "registrations": [
-        458
+        461
       ]
     },
     {
@@ -47678,7 +48056,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 459,
+      "registrationIndex": 462,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -47698,7 +48076,7 @@
       },
       "effective": true,
       "registrations": [
-        459
+        462
       ]
     },
     {
@@ -47769,7 +48147,7 @@
         "reviewRequired": true,
         "limitation": "AST registration extraction is complete for supported syntax; policies, DTOs, errors and facts are evidence only, never complete control-flow inference."
       },
-      "registrationIndex": 460,
+      "registrationIndex": 463,
       "mockStatus": "registered",
       "phase": "M1",
       "backend": {
@@ -47789,7 +48167,7 @@
       },
       "effective": true,
       "registrations": [
-        460
+        463
       ]
     }
   ],
@@ -47801,7 +48179,7 @@
       "docs/backend/contracts/m4-surface.json",
       "docs/backend/contracts/closure-surface.json"
     ],
-    "operationCount": 299,
+    "operationCount": 300,
     "note": "Reviewed main-flow declarations are separate from bounded Controller registration and service/HTTP verification evidence."
   }
 }

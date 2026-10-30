@@ -1,0 +1,22 @@
+package com.hs.jxc.pur.service.impl;
+import com.hs.jxc.pur.service.*;
+
+import com.hs.jxc.pur.mapper.*;
+import com.hs.jxc.common.api.*;
+import com.hs.jxc.common.context.RequestContext;
+import com.hs.jxc.sys.api.Access;
+import com.hs.jxc.sys.imports.ImportHandler;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.*;
+
+import org.springframework.stereotype.Component;
+@Component
+public class PurchaseOpeningImportHandler implements ImportHandler {
+ private final PurchaseOpeningMapper mapper;private final PurchaseServiceImpl purchase;private final com.hs.jxc.md.api.MasterProductApi products;
+ public PurchaseOpeningImportHandler(PurchaseOpeningMapper mapper,PurchaseServiceImpl purchase,com.hs.jxc.md.api.MasterProductApi products){this.mapper=mapper;this.purchase=purchase;this.products=products;}
+ public List<String> types(){return List.of("OPENING_PURCHASE");}
+ public List<String> columns(String type){return List.of("bookId","supplierCode","currency","refNo","sourceDate","expectedDate","lines");}
+ @SuppressWarnings("unchecked") public Row validate(Access a,String type,LocalDate cutoff,int number,Map<String,Object> raw){a.require("pur:order:create");if(cutoff==null)throw Inputs.bad("期初采购须填写截止日期");var source=LocalDate.parse(Inputs.required(raw,"sourceDate"));if(source.isAfter(cutoff))throw Inputs.bad("截止日期后采购不能写入期初");long book=Inputs.id(raw.get("bookId"));if(!a.canBook(book))throw ApiException.notFound();var books=mapper.selectBookEntities(a.requireCountry(),book);if(books.size()!=1)throw ApiException.notFound();String ref=Inputs.required(raw,"refNo");if(ref.length()>100)throw Inputs.bad("来源编号过长");if(PurchaseRows.one(mapper.countExistingReferences(a.requireCountry(),ref,ref))>0)throw new ApiException(409,"SYS_IMPORT_REFERENCE_EXISTS","采购来源已有系统单据");var supplier=mapper.selectEnabledSuppliers(a.requireCountry(),Inputs.required(raw,"supplierCode"));if(supplier.size()!=1)throw Inputs.bad("供应商不存在或未启用");String currency=Inputs.required(raw,"currency");if(!currency.matches("[A-Z]{3}"))throw Inputs.bad("币种不合法");if(!(raw.get("lines") instanceof List<?> ls)||ls.isEmpty())throw Inputs.bad("期初采购须包含明确的未完采购行");var lines=new ArrayList<Map<String,Object>>();for(Object value:ls){if(!(value instanceof Map<?,?>))throw Inputs.bad("采购行不合法");var line=(Map<String,Object>)value;var ids=mapper.selectEnabledProducts(Inputs.required(line,"productCode"));if(ids.size()!=1)throw Inputs.bad("商品不存在");long product=ids.getFirst();String unit=Inputs.required(line,"unit");var productSnapshot=products.requireEnabled(a.requireCountry(),product,unit);var qty=Inputs.decimal(line.get("qty"),4,new BigDecimal("999999999999"));var price=Inputs.decimal(line.get("unitPrice"),4,new BigDecimal("999999999999"));if(qty.signum()<=0||price.signum()<0)throw Inputs.bad("未完数量须正数且原单价必须明确");var tax=line.get("taxRate")==null?BigDecimal.ZERO:Inputs.decimal(line.get("taxRate"),4,BigDecimal.ONE);lines.add(Map.of("productId",product,"unit",unit,"qty",qty,"unitPrice",price,"taxRate",tax,"baseUnit",productSnapshot.baseUnit(),"factor",productSnapshot.factorToBase(),"baseQty",products.previewToBase(productSnapshot,qty)));}var v=new LinkedHashMap<String,Object>();v.put("bookId",book);v.put("entityId",books.getFirst());v.put("supplierId",supplier.getFirst());v.put("currency",currency);v.put("refNo",ref);v.put("sourceDate",source.toString());v.put("lines",lines);if(raw.get("expectedDate")!=null)v.put("expectedDate",LocalDate.parse(raw.get("expectedDate").toString()).toString());return new Row(number,v,cutoff+":"+ref);}
+ public Target apply(RequestContext c,Access a,Batch batch,Row row){long source=PurchaseRows.one(mapper.selectImportRowId(a.requireCountry(),batch.id(),row.rowNo()));var result=purchase.importOpening(c,a,row.values(),row.values().get("refNo").toString(),batch.cutoffDate(),LocalDate.parse(row.values().get("sourceDate").toString()),source,ImportHandler.commandKey(batch,row,"purchase"));return new Target("PURCHASE_ORDER",Inputs.id(result.get("id")));}
+}

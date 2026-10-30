@@ -4,6 +4,110 @@ import com.hs.jxc.common.api.ApiException;import com.hs.jxc.common.context.Reque
 /** Real PostgreSQL and object storage business acceptance, without mocked domain modules. */
 @org.springframework.context.annotation.Import(CountryCalendarIT.TimeConfiguration.class)
 class SalesIT extends BasePgIT {
+ @Test void currentAndLegacyOrderProofNamesAreBothAcceptedWithoutExtraReceipts(){
+  var o=approved(5,"CASH");doc(o);
+  var receipt=ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","TRANSFER","amount",100,"referenceNo","bank-reference","bizTime","2026-10-15T12:00:00Z","orders",List.of(Map.of("orderId",id(o),"plannedAmount",100))),key());
+  ar.receiptAction(c(),id(receipt),"confirm",Map.of("arrivalDate","2026-10-15"),key());
+  for(String type:List.of("SALES_ORDER","SAL_ORDER")){
+   var proof=attachments.upload(c(),type,id(o),"PAYMENT_PROOF",type+".txt","text/plain",type.getBytes(StandardCharsets.UTF_8));
+   var response=(Map<?,?>)sales.check(c(),id(o),401);
+   var evidenceCheck=((List<?>)response.get("checks")).stream().map(value->(Map<?,?>)value).filter(value->"收款凭证".equals(value.get("item"))).findFirst().orElseThrow();
+   assertThat(evidenceCheck.get("ok")).isEqualTo(true);
+   attachments.unlink(c(),id(proof),"isolated proof-name scenario");
+  }
+  assertThat(owner.queryForObject("select count(*) from ar_receipt",Integer.class)).isEqualTo(1);
+ }
+ @Test void warehouseOnlyVisibilityDoesNotExposeWholeOrderPaymentTotals(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  seed("delete from sys_user_data_scope where user_id=201");seed("insert into sys_user_data_scope(country_id,user_id,scope_type,warehouse_id,granted_by) values(101,201,'WAREHOUSE',401,201)");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(p).doesNotContainKeys("requiredAmount","confirmedAmount","shortageAmount","shippedAmount","outboundAmount","pendingAmount");
+  assertThat(p.get("amountsVisible")).isEqualTo(false);
+ }
+ @Test void persistedOutboundCheckKeepsResultWithoutEmbeddingNewPaymentTotals(){
+  var o=approved(5,"CASH");doc(o);cash(o,100);
+  sales.confirmOutbound(c(),id(out(o,5)),Map.of("bizDate","2026-10-15"),key());
+  assertThat(owner.queryForObject("select check_result::text from sal_outbound",String.class)).doesNotContain("requiredAmount","confirmedAmount","pendingAmount");
+ }
+ @Test void paymentProofStorageFailureIsNotLackOfPermission()throws Exception{
+  var o=approved(5,"CASH");doc(o);
+  var receipt=ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","TRANSFER","amount",100,"referenceNo","bank-reference","bizTime","2026-10-15T12:00:00Z","orders",List.of(Map.of("orderId",id(o),"plannedAmount",100))),key());
+  ar.receiptAction(c(),id(receipt),"confirm",Map.of("arrivalDate","2026-10-15"),key());
+  var proof=attachments.upload(c(),"SAL_ORDER",id(o),"PAYMENT_PROOF","payment.txt","text/plain","payment proof".getBytes(StandardCharsets.UTF_8));
+  String object=owner.queryForObject("select storage_key from sys_attachment where id=?",String.class,id(proof));
+  try(var client=MinioTestStorage.client()){client.removeObject(io.minio.RemoveObjectArgs.builder().bucket(MinioTestStorage.BUCKET).object(object).build());}
+  assertThatThrownBy(()->sales.check(c(),id(o),401)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("ATTACHMENT_MISSING");
+ }
+ @Test void selectedPrecheckAddsPastOutboundWithoutLosingUsedReceiptCoverage(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  sales.confirmOutbound(c(),id(out(o,2)),Map.of("bizDate","2026-10-15"),key());
+  var p=payment(sales.checkSelection(c(),id(o),Map.of("warehouseId",401,"lines",List.of(Map.of("allocId",id(alloc(o)),"qty",4)))));
+  assertThat(new BigDecimal(p.get("shippedAmount").toString())).isEqualByComparingTo("40");
+  assertThat(new BigDecimal(p.get("outboundAmount").toString())).isEqualByComparingTo("80");
+  assertThat(new BigDecimal(p.get("requiredAmount").toString())).isEqualByComparingTo("120");
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isEqualByComparingTo("100");
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("20");
+ }
+ @Test void pendingReceiptIsExplainedButCannotCountAsConfirmedCash(){
+  var o=approved(10,"CASH");doc(o);
+  ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","CASH","amount",100,"bizTime","2026-10-15T12:00:00Z","orders",List.of(Map.of("orderId",id(o),"plannedAmount",100))),key());
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isZero();
+  assertThat(new BigDecimal(p.get("pendingAmount").toString())).isEqualByComparingTo("100");
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("200");
+  assertThat(p.get("canManageReceipts")).isEqualTo(true);
+ }
+ @Test void confirmedButUnassignedReceiptIsNotCashForThisOrder(){
+  var o=approved(10,"CASH");doc(o);
+  var receipt=ar.createReceipt(c(),Map.of("bookId",601,"customerId",801,"fundAccountId",901,"method","CASH","amount",200,"bizTime","2026-10-15T12:00:00Z"),key());
+  ar.receiptAction(c(),id(receipt),"confirm",Map.of("arrivalDate","2026-10-15"),key());
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isZero();
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("200");
+ }
+ @Test void precheckRejectsForeignDuplicateAndZeroAllocations(){
+  var first=approved(5,"CASH");var second=approved(5,"CASH");doc(first);
+  assertThatThrownBy(()->sales.checkSelection(c(),id(first),Map.of("warehouseId",401,"lines",List.of(Map.of("allocId",id(alloc(second)),"qty",1))))).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SYS_BAD_REQUEST");
+  assertThatThrownBy(()->sales.checkSelection(c(),id(first),Map.of("warehouseId",401,"lines",List.of(Map.of("allocId",id(alloc(first)),"qty",0))))).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_QTY_EXCEEDED");
+  var line=Map.of("allocId",id(alloc(first)),"qty",1);
+  assertThatThrownBy(()->sales.checkSelection(c(),id(first),Map.of("warehouseId",401,"lines",List.of(line,line)))).isInstanceOf(ApiException.class);
+ }
+ @Test void hiddenTotalsAreRemovedByServerAndReceiptEvidenceLackOfAccessIsExplicit(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  seed("update sys_role set permissions='[\"sal:order:view\",\"sal:outbound:create\"]',field_policies='{\"ORDER_TOTAL\":\"HIDDEN\",\"CUSTOMER_PRICE\":\"WRITE\",\"BANK_INFO\":\"HIDDEN\"}' where id=202");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  var result=sales.check(c(),id(o),401);var p=payment(result);
+  assertThat(p).doesNotContainKeys("requiredAmount","confirmedAmount","shortageAmount","shippedAmount","outboundAmount","pendingAmount");
+  assertThat(p.get("canManageReceipts")).isEqualTo(false);
+  assertThat(result.toString()).contains("请有出库确认权限").doesNotContain("缺少有效收款凭证");
+ }
+ @Test void receiptOnlyConfirmerCanReadMinimalOrderContextWithoutSalesAmounts(){
+  var o=order(5,"CASH");
+  seed("update sys_role set permissions='[\"ar:receipt:confirm\"]' where id=202");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  assertThat(ar.receiptOrderContext(c(),id(o))).containsEntry("id",id(o)).containsEntry("bookId",601L).containsEntry("customerId",801L).doesNotContainKeys("totalAmount","lines","paidAmount");
+ }
+ @SuppressWarnings("unchecked") Map<String,Object> payment(Object result){
+  var response=(Map<String,Object>)result;
+  return (Map<String,Object>)((List<Map<String,Object>>)response.get("checks")).stream().filter(x->x.get("item").equals("现款到账")).findFirst().orElseThrow().get("payment");
+ }
+ @Test void cashPrecheckExplainsConfirmedAllocationAndShortageWithoutBusinessWrites(){
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  var before=owner.queryForMap("SELECT (SELECT count(*) FROM sal_outbound) outbounds,(SELECT count(*) FROM ar_receipt) receipts,(SELECT count(*) FROM ar_writeoff) writeoffs");
+  var p=payment(sales.check(c(),id(o),401));
+  assertThat(p).isNotNull();
+  assertThat(new BigDecimal(p.get("requiredAmount").toString())).isEqualByComparingTo("200");
+  assertThat(new BigDecimal(p.get("confirmedAmount").toString())).isEqualByComparingTo("100");
+  assertThat(new BigDecimal(p.get("shortageAmount").toString())).isEqualByComparingTo("100");
+  assertThat(owner.queryForMap("SELECT (SELECT count(*) FROM sal_outbound) outbounds,(SELECT count(*) FROM ar_receipt) receipts,(SELECT count(*) FROM ar_writeoff) writeoffs")).isEqualTo(before);
+ }
+ @Test void postedPrecheckUsesSelectedQuantityAndDoesNotCreateAnOutbound()throws Exception{
+  var o=approved(10,"CASH");doc(o);cash(o,100);
+  String body="{\"warehouseId\":401,\"lines\":[{\"allocId\":"+id(alloc(o))+",\"qty\":4}]}";
+  var request=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/v1/sal/orders/"+id(o)+"/outbound-check")).header("Authorization","Bearer sales-fixture").header("X-Country-Id","101").header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
+  var response=HttpClient.newHttpClient().send(request,HttpResponse.BodyHandlers.ofString());
+  assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+  assertThat(response.body()).contains("\"requiredAmount\":80","\"confirmedAmount\":100","\"shortageAmount\":0");
+  assertThat(owner.queryForObject("select count(*) from sal_outbound",Integer.class)).isZero();
+ }
  @Autowired CountryCalendarIT.BusinessClock clock;
  @Value("${local.server.port}")int port;@Autowired SalesService sales;@Autowired ReceivablesService ar;@Autowired InventoryApi inv;@Autowired AttachmentService attachments;
  static final String HASH=com.hs.jxc.sys.service.SessionService.digest("sales-fixture");RequestContext c(){return new RequestContext(201,101L,"sales-it",HASH);}String key(){return UUID.randomUUID().toString();}long id(Map<String,Object>r){return ((Number)r.get("id")).longValue();}
@@ -40,7 +144,7 @@ class SalesIT extends BasePgIT {
  @Test void anExplicitZeroManualSalesPriceRemainsValidForCreationAndEditing(){
   var body=new LinkedHashMap<String,Object>(body(2,"CASH"));body.put("lines",List.of(Map.of("productId",501,"unit","PCS","qty",2,"warehouseId",401,"manualPriceFlag",true,"price",0)));var original=sales.create(c(),body,key());assertThat(new BigDecimal(first(original).get("price").toString())).isZero();
   var edited=sales.update(c(),id(original),Map.of("version",original.get("version"),"bizDate","2026-10-15","lines",List.of(Map.of("id",id(first(original)),"productId",501,"unit","PCS","qty",3,"warehouseId",401,"manualPriceFlag",true,"price",0))));
-  assertThat(edited).containsEntry("approvalStatus","DRAFT");assertThat(new BigDecimal(first(edited).get("price").toString())).isZero();assertThat(new BigDecimal(edited.get("totalAmount").toString())).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM ar_receivable",Integer.class)).isZero();
+  assertThat(edited).containsEntry("approvalStatus","DRAFT");assertThat(new BigDecimal(first(edited).get("price").toString())).isZero();assertThat(new BigDecimal(edited.get("totalAmount").toString())).isZero();assertThat(owner.queryForObject("SELECT count(*) FROM ar_receivable",Integer.class)).isZero();var submitted=sales.submit(c(),id(edited),Map.of("bizDate","2026-10-15"),key());assertThat(submitted).containsEntry("approvalStatus","APPROVED");assertThat(owner.queryForObject("SELECT reserved_qty FROM inv_stock_summary WHERE warehouse_id=401",BigDecimal.class)).isEqualByComparingTo("3");
  }
  @Test void pricePrecedenceAndVersionSnapshotSurviveLaterPriceChange(){seed("insert into sal_price(country_id,product_id,price_type,level_id,unit,min_qty,price,currency,effective_from) values(101,501,'LEVEL',811,'PCS',1,18,'MXN','2026-10-01')");seed("insert into sal_price(country_id,product_id,price_type,customer_id,unit,min_qty,price,currency,effective_from) values(101,501,'CUSTOMER',801,'PCS',1,16,'MXN','2026-10-01')");var o=order(3,"CASH");assertThat(new BigDecimal(first(o).get("price").toString())).isEqualByComparingTo("16");assertThat(first(o)).containsEntry("priceSource","CUSTOMER_SKU");long source=((Number)first(o).get("priceRefId")).longValue();sales.savePrice(c(),source,Map.of("version",1,"price",30),key());var again=sales.get(c(),id(o));assertThat(new BigDecimal(first(again).get("price").toString())).isEqualByComparingTo("16");assertThat(owner.queryForObject("select count(*) from sal_price where status='RETIRED'",Integer.class)).isEqualTo(1);}
  @Test void approvalReservesThenActualPartialOutboundCreatesOnlyActualReceivableAndCogs(){var o=approved(10,"CREDIT");assertThat(owner.queryForObject("select reserved_qty from inv_stock_summary where warehouse_id=401",BigDecimal.class)).isEqualByComparingTo("10");assertThat(owner.queryForObject("select count(*) from ar_receivable",Integer.class)).isZero();doc(o);var ob=out(o,4);String key=key();var sent=sales.confirmOutbound(c(),id(ob),Map.of("bizDate","2026-10-15"),key);sales.confirmOutbound(c(),id(ob),Map.of("bizDate","2026-10-15"),key);assertThat(sent).containsEntry("status","OUTBOUNDED");assertThat(owner.queryForObject("select amount from ar_receivable",BigDecimal.class)).isEqualByComparingTo("80");assertThat(owner.queryForObject("select on_hand_qty from inv_stock_summary where warehouse_id=401",BigDecimal.class)).isEqualByComparingTo("96");assertThat(owner.queryForObject("select reserved_qty from inv_stock_summary where warehouse_id=401",BigDecimal.class)).isEqualByComparingTo("6");assertThat(owner.queryForObject("select count(*) from cst_cogs",Integer.class)).isEqualTo(1);assertThat(owner.queryForObject("select count(*) from sys_biz_event where event_type='SAL_OUTBOUND_CONFIRMED'",Integer.class)).isEqualTo(1);assertThatThrownBy(()->sales.confirmOutbound(c(),id(ob),Map.of("bizDate","2026-10-15","driver","changed"),key)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SYS_IDEMPOTENCY_CONFLICT");}
@@ -64,6 +168,79 @@ class SalesIT extends BasePgIT {
   @SuppressWarnings("unchecked")var listed=(List<Map<String,Object>>)((Map<?,?>)sales.orders(c(),Map.of())).get("records");assertThat(listed).hasSize(1);assertThat(new BigDecimal(listed.getFirst().get("openQty").toString())).isEqualByComparingTo("1");
   assertThat(owner.queryForMap("select (select count(*) from sys_biz_event) events,(select count(*) from sys_audit_log) audits,(select sum(on_hand_qty) from inv_stock_summary) stock,(select sum(open_amount) from ar_receivable) receivable")).isEqualTo(before);
  }
+ @Test void partiallyCancelledLinesCannotRewriteTheirHistoricUnitOrPrice(){
+  var original=approved(5,"CREDIT");sales.cancel(c(),id(original),Map.of("bizDate","2026-10-15","reason","保留两件取消事实","lines",List.of(Map.of("lineId",id(first(original)),"qty",2))),key(),false);
+  var current=sales.get(c(),id(original));var before=supplyFacts(id(original));
+  for(String field:List.of("price","unit")){
+   var line=new LinkedHashMap<String,Object>(Map.of("id",id(first(current)),"productId",501,"unit","PCS","qty",5,"warehouseId",401,"manualPriceFlag",true,"price",20));line.put(field,field.equals("price")?10:"BOX");
+   assertThatThrownBy(()->sales.update(c(),id(current),Map.of("version",current.get("version"),"bizDate","2026-10-15","lines",List.of(line)))).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SYS_BAD_REQUEST");assertThat(supplyFacts(id(original))).isEqualTo(before);
+  }
+ }
+ @Test void combinedOutboundOnClosedOrderRejectsSupplyBeforeRequiringAttachments(){
+  var original=order(3,"CASH");sales.cancel(c(),id(original),Map.of("bizDate","2026-10-15","reason","终止供货"),key(),true);var before=supplyFacts(id(original));
+  assertThatThrownBy(()->sales.createOutbound(c(),Map.of("orderId",id(original),"warehouseId",401,"bizDate","2026-10-15","confirm",true,"lines",List.of(Map.of("allocId",id(alloc(original)),"qty",1))),key())).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");assertThat(supplyFacts(id(original))).isEqualTo(before);
+ }
+ @Test void terminatedOrdersCannotBeSubmittedEditedOrUsedForNewOutbounds(){
+  for(boolean close:List.of(false,true)){
+   var original=order(5,"CASH");long oid=id(original),line=id(first(original));
+   var command=new LinkedHashMap<String,Object>(Map.of("bizDate","2026-10-15","reason","停止本单供货"));if(!close)command.put("lines",List.of(Map.of("lineId",line,"qty",5)));
+   var ended=sales.cancel(c(),oid,command,key(),close);var before=supplyFacts(oid);
+   assertThatThrownBy(()->sales.submit(c(),oid,Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");
+   assertThatThrownBy(()->sales.update(c(),oid,Map.of("version",ended.get("version"),"lines",List.of(Map.of("id",line,"productId",501,"unit","PCS","qty",6,"warehouseId",401))))).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");
+   assertThatThrownBy(()->sales.allocations(c(),oid,Map.of("version",ended.get("version"),"lines",List.of(Map.of("lineId",line,"allocs",List.of(Map.of("warehouseId",401,"allocQty",5))))))).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");
+   assertThatThrownBy(()->out(ended,1)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");
+   assertThat(supplyFacts(oid)).as("拒绝不得产生审批、明细、库存、事件、审计或幂等记录").isEqualTo(before);
+   seed("UPDATE sal_order SET fulfillment_status='PENDING_PREPARE' WHERE id=?",oid);var corrupted=supplyFacts(oid);
+   assertThatThrownBy(()->sales.submit(c(),oid,Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");
+   assertThat(supplyFacts(oid)).as("即使历史状态错误，也以真实未交数量拒绝空审批").isEqualTo(corrupted);
+  }
+ }
+ @Test void cancellationAndClosureRequireReasonsAndRetriedCommandsReleaseOnlyOnce(){
+  for(boolean close:List.of(false,true)){
+   var original=approved(3,"CREDIT");long oid=id(original);var command=new LinkedHashMap<String,Object>(Map.of("bizDate","2026-10-15"));if(!close)command.put("lines",List.of(Map.of("lineId",id(first(original)),"qty",3)));
+   for(Object invalid:Arrays.asList(null,"   ",7)){
+    if(invalid==null)command.remove("reason");else command.put("reason",invalid);var before=supplyFacts(oid);
+    assertThatThrownBy(()->sales.cancel(c(),oid,command,key(),close)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SYS_BAD_REQUEST");assertThat(supplyFacts(oid)).isEqualTo(before);
+   }
+   command.put("reason","  客户确认不再交付  ");String intent=key();var ended=sales.cancel(c(),oid,command,intent,close);var beforeRetry=supplyFacts(oid);
+   sales.cancel(c(),oid,command,intent,close);assertThat(supplyFacts(oid)).isEqualTo(beforeRetry);
+   assertThat(owner.queryForObject("SELECT reason FROM sys_audit_log WHERE resource_type='SALES_ORDER' AND resource_id=? AND action=?",String.class,oid,close?"CLOSE":"CANCEL_LINES")).isEqualTo("客户确认不再交付");
+   assertThat(owner.queryForObject("SELECT reserved_qty FROM inv_stock_summary WHERE warehouse_id=401",BigDecimal.class)).isZero();assertThat(owner.queryForObject("SELECT sum(amount-released_amount) FROM ar_credit_occupation",BigDecimal.class)).isZero();assertThat(ended).containsEntry("fulfillmentStatus",close?"CLOSED":"CANCELLED");
+  }
+ }
+ @Test void pendingApprovalMustBeWithdrawnBeforeCancellationOrClosure(){
+  var original=order(3,"CASH");long oid=id(original);seed("UPDATE sal_order SET approval_status='PENDING' WHERE id=?",oid);var before=supplyFacts(oid);
+  for(boolean close:List.of(false,true))assertThatThrownBy(()->sales.cancel(c(),oid,Map.of("bizDate","2026-10-15","reason","审批中不可变更","lines",List.of(Map.of("lineId",id(first(original)),"qty",1))),key(),close)).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_APPROVAL_PENDING");
+  assertThat(supplyFacts(oid)).isEqualTo(before);
+ }
+ @Test void signingExistingOutboundAfterClosureKeepsClosedAndLeavesReceivableIntact(){
+  var original=approved(5,"CREDIT");doc(original);var shipped=out(original,2);sales.confirmOutbound(c(),id(shipped),Map.of("bizDate","2026-10-15"),key());var unsent=out(original,1);
+  sales.cancel(c(),id(original),Map.of("bizDate","2026-10-15","reason","关闭剩余三件"),key(),true);var before=supplyFacts(id(original));
+  assertThatThrownBy(()->sales.confirmOutbound(c(),id(unsent),Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");assertThat(supplyFacts(id(original))).isEqualTo(before);
+  sales.sign(c(),id(shipped),Map.of("bizDate","2026-10-15","signerName","真实签收人","signedAt","2026-10-15T18:00:00Z"),key());
+  var closed=sales.get(c(),id(original));assertThat(closed).containsEntry("fulfillmentStatus","CLOSED");assertThat(new BigDecimal(first(closed).get("signedQty").toString())).isEqualByComparingTo("2");assertThat(new BigDecimal(first(closed).get("cancelledQty").toString())).isEqualByComparingTo("3");
+  assertThat(owner.queryForObject("SELECT open_amount FROM ar_receivable WHERE order_id=?",BigDecimal.class,id(original))).isEqualByComparingTo("40");assertThat(owner.queryForObject("SELECT reserved_qty FROM inv_stock_summary WHERE warehouse_id=401",BigDecimal.class)).isZero();
+ }
+ @Test void reapprovalAfterPartialOutboundKeepsActualFulfilmentAndReservesOnlyTheRemainder(){
+  var original=approved(5,"CREDIT");doc(original);var shipped=out(original,2);sales.confirmOutbound(c(),id(shipped),Map.of("bizDate","2026-10-15"),key());var current=sales.get(c(),id(original));
+  var edited=sales.update(c(),id(current),Map.of("version",current.get("version"),"bizDate","2026-10-15","lines",List.of(Map.of("id",id(first(current)),"productId",501,"unit","PCS","qty",6,"warehouseId",401))));
+  var approved=sales.submit(c(),id(edited),Map.of("bizDate","2026-10-15"),key());assertThat(approved).containsEntry("fulfillmentStatus","PARTIAL_OUTBOUND");
+  assertThat(owner.queryForObject("SELECT reserved_qty FROM inv_stock_summary WHERE warehouse_id=401",BigDecimal.class)).isEqualByComparingTo("4");assertThat(owner.queryForObject("SELECT amount FROM ar_receivable WHERE order_id=?",BigDecimal.class,id(original))).isEqualByComparingTo("40");
+ }
+ @Autowired com.hs.jxc.workflow.service.WorkflowService workflow;
+ @Test void finalApprovalRechecksThatTheOrderStillPermitsSupply(){
+  workflow.createRule(c(),Map.of("name","销售供货审批","docType","SALES_ORDER","conditions",List.of(),"nodes",List.of(Map.of("nodeName","销售审核","approverType","USER","approverRef",201,"mode","ANY"))));
+  var original=order(3,"CASH");var pending=sales.submit(c(),id(original),Map.of("bizDate","2026-10-15"),key());assertThat(pending).containsEntry("approvalStatus","PENDING");long task=owner.queryForObject("SELECT id FROM wf_task WHERE instance_id=?",Long.class,pending.get("approvalInstanceId"));
+  seed("UPDATE sal_order SET fulfillment_status='CLOSED' WHERE id=?",id(original));var before=supplyFacts(id(original));
+  assertThatThrownBy(()->workflow.approve(c(),task,"旧审批不能重开供货")).isInstanceOf(ApiException.class).extracting("code").isEqualTo("SAL_ORDER_NOT_OPEN");assertThat(supplyFacts(id(original))).isEqualTo(before);
+ }
+ @Test void concurrentCloseAndSubmitNeverReopensSupply()throws Exception{
+  var original=order(3,"CASH");long oid=id(original);
+  compete(()->sales.cancel(c(),oid,Map.of("bizDate","2026-10-15","reason","终止供货"),key(),true),()->sales.submit(c(),oid,Map.of("bizDate","2026-10-15"),key()));
+  assertThat(sales.get(c(),oid)).containsEntry("fulfillmentStatus","CLOSED");assertThat(owner.queryForObject("SELECT reserved_qty FROM inv_stock_summary WHERE warehouse_id=401",BigDecimal.class)).isZero();var before=supplyFacts(oid);
+  assertThatThrownBy(()->sales.submit(c(),oid,Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class);assertThat(supplyFacts(oid)).isEqualTo(before);
+ }
+ Map<String,Object> supplyFacts(long order){var facts=new LinkedHashMap<String,Object>(allocationFacts(order));for(String table:List.of("sal_order_line","sal_outbound","wf_instance","wf_task","sys_idempotency","ar_receivable"))facts.put(table,owner.queryForList("SELECT * FROM "+table+" ORDER BY id"));return facts;}
  @Autowired java.util.List<com.hs.jxc.fin.api.FinancialSourceProvider> financialSources;
  @Autowired com.hs.jxc.sys.service.AuthorizationService financialAuth;
  List<Map<String,Object>> financialBalance(String type){return inCountry(101,()->{var a=financialAuth.authorize(c());return financialSources.stream().flatMap(p->p.balances(a,601,LocalDate.of(2026,10,15),type).stream()).toList();});}
@@ -159,5 +336,33 @@ class SalesIT extends BasePgIT {
  }
  Map<String,Object> paymentReadFacts(){return Map.of("orders",owner.queryForList("SELECT * FROM sal_order ORDER BY id"),"receipts",owner.queryForList("SELECT * FROM ar_receipt ORDER BY id"),"allocations",owner.queryForList("SELECT * FROM ar_receipt_order ORDER BY id"),"writeoffs",owner.queryForList("SELECT * FROM ar_writeoff ORDER BY id"),"stock",owner.queryForList("SELECT * FROM inv_stock_summary ORDER BY warehouse_id,product_id"),"events",owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class),"audits",owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class),"idempotency",owner.queryForObject("SELECT count(*) FROM sys_idempotency",Integer.class));}
  Map<String,Object> allocationFacts(long order){return Map.of("order",owner.queryForMap("SELECT * FROM sal_order WHERE id=?",order),"allocations",owner.queryForList("SELECT * FROM sal_order_alloc WHERE order_id=? ORDER BY id",order),"reservations",owner.queryForList("SELECT * FROM inv_reservation WHERE order_id=? ORDER BY id",order),"stocks",owner.queryForList("SELECT * FROM inv_stock_summary ORDER BY warehouse_id,product_id"),"credit",owner.queryForList("SELECT * FROM ar_credit_occupation ORDER BY id"),"events",owner.queryForObject("SELECT count(*) FROM sys_biz_event",Integer.class),"audit",owner.queryForObject("SELECT count(*) FROM sys_audit_log",Integer.class));}
- int compete(Callable<?>one,Callable<?>two)throws Exception{var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);try{var futures=List.of(pool.submit(()->{start.await();return one.call();}),pool.submit(()->{start.await();return two.call();}));start.countDown();int success=0;for(var f:futures)try{f.get(30,TimeUnit.SECONDS);success++;}catch(ExecutionException e){if(!(e.getCause() instanceof ApiException))throw e;}return success;}finally{pool.shutdownNow();}}
+ @Test @SuppressWarnings("unchecked") void approvalStockFailureExplainsAllShortagesAndRollsBack(){
+  seed("insert into md_product(id,product_code,name,base_unit) values(502,'SECOND','Second product','PCS')");
+  seed("insert into md_country_sku(country_id,product_id) values(101,502)");seed("insert into md_product_unit(product_id,unit,factor_to_base) values(502,'PCS',1)");
+  seed("insert into sal_price(country_id,product_id,price_type,unit,min_qty,price,currency,effective_from) values(101,502,'BASE','PCS',1,10,'MXN','2026-10-01')");
+  var input=new LinkedHashMap<>(body(120,"CASH"));input.put("lines",List.of(Map.of("productId",501,"unit","PCS","qty",120,"warehouseId",401),Map.of("productId",502,"unit","PCS","qty",20,"warehouseId",401)));
+  var order=sales.create(c(),input,key());var before=allocationFacts(id(order));
+  assertThatThrownBy(()->sales.submit(c(),id(order),Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).satisfies(thrown->{
+   var e=(ApiException)thrown;assertThat(e.getCode()).isEqualTo("INV_INSUFFICIENT_AVAILABLE");assertThat(e.getData()).isInstanceOf(Map.class);
+   var data=(Map<String,Object>)e.getData();assertThat(data).containsEntry("kind","STOCK_SHORTAGE").containsEntry("orderId",id(order)).containsEntry("detailsVisible",true);
+   var rows=(List<Map<String,Object>>)data.get("shortages");assertThat(rows).hasSize(2);
+   assertThat(rows).anySatisfy(row->{assertThat(row).containsEntry("productCode","P").containsEntry("warehouseName","Warehouse");assertThat((BigDecimal)row.get("requiredQty")).isEqualByComparingTo("120");assertThat((BigDecimal)row.get("availableQty")).isEqualByComparingTo("100");assertThat((BigDecimal)row.get("shortageQty")).isEqualByComparingTo("20");});
+   assertThat(rows).anySatisfy(row->{assertThat(row).containsEntry("productCode","SECOND");assertThat((BigDecimal)row.get("shortageQty")).isEqualByComparingTo("20");});
+  });assertThat(allocationFacts(id(order))).isEqualTo(before);
+ }
+ @Test @SuppressWarnings("unchecked") void approvalStockFailureGroupsRepeatedSkuAndRestoresOwnPartialReservation(){
+  var input=new LinkedHashMap<>(body(60,"CASH"));input.put("lines",List.of(Map.of("productId",501,"unit","PCS","qty",60,"warehouseId",401),Map.of("productId",501,"unit","PCS","qty",60,"warehouseId",401)));
+  var order=sales.create(c(),input,key());var before=allocationFacts(id(order));
+  assertThatThrownBy(()->sales.submit(c(),id(order),Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).satisfies(thrown->{
+   var e=(ApiException)thrown;assertThat(e.getData()).isInstanceOf(Map.class);var rows=(List<Map<String,Object>>)((Map<String,Object>)e.getData()).get("shortages");assertThat(rows).hasSize(1);
+   assertThat((BigDecimal)rows.getFirst().get("requiredQty")).isEqualByComparingTo("120");assertThat((BigDecimal)rows.getFirst().get("availableQty")).isEqualByComparingTo("100");assertThat((BigDecimal)rows.getFirst().get("shortageQty")).isEqualByComparingTo("20");
+  });assertThat(allocationFacts(id(order))).isEqualTo(before);
+ }
+ @Test @SuppressWarnings("unchecked") void approvalStockFailureDoesNotDiscloseQuantitiesWithoutInventoryView(){
+  var order=order(120,"CASH");seed("update sys_role set permissions='[\"sal:order:view\",\"sal:order:submit\"]' where id=202");seed("update sys_authz_epoch set epoch=epoch+1 where country_id=101");
+  assertThatThrownBy(()->sales.submit(c(),id(order),Map.of("bizDate","2026-10-15"),key())).isInstanceOf(ApiException.class).satisfies(thrown->{
+   var e=(ApiException)thrown;assertThat(e.getCode()).isEqualTo("INV_INSUFFICIENT_AVAILABLE");assertThat(e.getData()).isInstanceOf(Map.class);var data=(Map<String,Object>)e.getData();assertThat(data).containsEntry("detailsVisible",false);assertThat(data).doesNotContainKeys("shortages","availableQty","requiredQty");
+  });assertThat(owner.queryForObject("select count(*) from inv_reservation where order_id=?",Integer.class,id(order))).isZero();
+ }
+ @Override int compete(Callable<?> one,Callable<?> two)throws Exception{return super.compete(one,two,30);}
 }

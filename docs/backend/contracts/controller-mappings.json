@@ -327,10 +327,17 @@
       "symbol": "receipt"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/ar/receipts/order-context/{id}",
+      "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
+      "line": 11,
+      "symbol": "receiptOrderContext"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/ar/receipts/{id}/confirm",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 11,
+      "line": 12,
       "symbol": "receiptAction",
       "expandedFrom": "/api/v1/ar\"/receipts/{id}/{action:confirm|reject|void}\""
     },
@@ -338,7 +345,7 @@
       "method": "POST",
       "path": "/api/v1/ar/receipts/{id}/reject",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 11,
+      "line": 12,
       "symbol": "receiptAction",
       "expandedFrom": "/api/v1/ar\"/receipts/{id}/{action:confirm|reject|void}\""
     },
@@ -346,7 +353,7 @@
       "method": "POST",
       "path": "/api/v1/ar/receipts/{id}/void",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 11,
+      "line": 12,
       "symbol": "receiptAction",
       "expandedFrom": "/api/v1/ar\"/receipts/{id}/{action:confirm|reject|void}\""
     },
@@ -354,42 +361,42 @@
       "method": "POST",
       "path": "/api/v1/ar/writeoffs",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 12,
+      "line": 13,
       "symbol": "writeoff"
     },
     {
       "method": "POST",
       "path": "/api/v1/ar/writeoffs/{id}/reverse",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 13,
+      "line": 14,
       "symbol": "reverse"
     },
     {
       "method": "POST",
       "path": "/api/v1/ar/credit-rules",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 14,
+      "line": 15,
       "symbol": "createRule"
     },
     {
       "method": "PUT",
       "path": "/api/v1/ar/credit-rules/{id}",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 15,
+      "line": 16,
       "symbol": "editRule"
     },
     {
       "method": "POST",
       "path": "/api/v1/ar/credit-rules/{id}/preview-impact",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 16,
+      "line": 17,
       "symbol": "preview"
     },
     {
       "method": "GET",
       "path": "/api/v1/ar/customers/{id}/credit",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 17,
+      "line": 18,
       "symbol": "customer",
       "expandedFrom": "/api/v1/ar\"/customers/{id}/{view:credit|balances|timeline}\""
     },
@@ -397,7 +404,7 @@
       "method": "GET",
       "path": "/api/v1/ar/customers/{id}/balances",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 17,
+      "line": 18,
       "symbol": "customer",
       "expandedFrom": "/api/v1/ar\"/customers/{id}/{view:credit|balances|timeline}\""
     },
@@ -405,7 +412,7 @@
       "method": "GET",
       "path": "/api/v1/ar/customers/{id}/timeline",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 17,
+      "line": 18,
       "symbol": "customer",
       "expandedFrom": "/api/v1/ar\"/customers/{id}/{view:credit|balances|timeline}\""
     },
@@ -413,15 +420,22 @@
       "method": "POST",
       "path": "/api/v1/ar/statements",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 18,
+      "line": 19,
       "symbol": "statement"
     },
     {
       "method": "GET",
       "path": "/api/v1/ar/store-receipts",
       "file": "jxc-server/jxc-module-ar/src/main/java/com/hs/jxc/ar/ReceivablesController.java",
-      "line": 19,
+      "line": 20,
       "symbol": "store"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cst/adjustment-batches",
+      "file": "jxc-server/jxc-module-cst/src/main/java/com/hs/jxc/cst/controller/AdjustmentBatchController.java",
+      "line": 16,
+      "symbol": "list"
     },
     {
       "method": "GET",
@@ -637,7 +651,7 @@
       "method": "GET",
       "path": "/api/v1/fin/reconcile",
       "file": "jxc-server/jxc-module-fin/src/main/java/com/hs/jxc/fin/accounting/AccountingController.java",
-      "line": 25,
+      "line": 30,
       "symbol": "reconcile"
     },
     {
@@ -3077,87 +3091,94 @@
       "symbol": "check"
     },
     {
+      "method": "POST",
+      "path": "/api/v1/sal/orders/{id}/outbound-check",
+      "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
+      "line": 16,
+      "symbol": "checkSelection"
+    },
+    {
       "method": "GET",
       "path": "/api/v1/sal/orders/{id}/timeline",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 16,
+      "line": 17,
       "symbol": "timeline"
     },
     {
       "method": "GET",
       "path": "/api/v1/sal/prices",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 17,
+      "line": 18,
       "symbol": "prices"
     },
     {
       "method": "GET",
       "path": "/api/v1/sal/prices/resolve",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 18,
+      "line": 19,
       "symbol": "resolve"
     },
     {
       "method": "POST",
       "path": "/api/v1/sal/prices",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 19,
+      "line": 20,
       "symbol": "price"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sal/prices/{id}",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 20,
+      "line": 21,
       "symbol": "priceUpdate"
     },
     {
       "method": "GET",
       "path": "/api/v1/sal/outbounds",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 21,
+      "line": 22,
       "symbol": "outbounds"
     },
     {
       "method": "POST",
       "path": "/api/v1/sal/outbounds",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 22,
+      "line": 23,
       "symbol": "outbound"
     },
     {
       "method": "POST",
       "path": "/api/v1/sal/outbounds/{id}/confirm",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 23,
+      "line": 24,
       "symbol": "confirm"
     },
     {
       "method": "POST",
       "path": "/api/v1/sal/outbounds/{id}/sign",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 24,
+      "line": 25,
       "symbol": "sign"
     },
     {
       "method": "GET",
       "path": "/api/v1/sal/store-daily",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 25,
+      "line": 26,
       "symbol": "daily"
     },
     {
       "method": "GET",
       "path": "/api/v1/sal/signs",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 26,
+      "line": 27,
       "symbol": "signs"
     },
     {
       "method": "POST",
       "path": "/api/v1/sal/sign-diffs/{id}/resolve",
       "file": "jxc-server/jxc-module-sal/src/main/java/com/hs/jxc/sal/SalesController.java",
-      "line": 27,
+      "line": 28,
       "symbol": "diff"
     },
     {
@@ -3642,142 +3663,149 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/sys/users",
+      "path": "/api/v1/sys/business-user-options",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
       "line": 17,
+      "symbol": "businessUserOptions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sys/users",
+      "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
+      "line": 18,
       "symbol": "users"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/users/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 18,
+      "line": 19,
       "symbol": "user"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 19,
+      "line": 20,
       "symbol": "createUser"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 20,
+      "line": 21,
       "symbol": "updateUser"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users/{id}/enable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 21,
+      "line": 22,
       "symbol": "enableUser"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users/{id}/disable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 22,
+      "line": 23,
       "symbol": "disableUser"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/users/{id}/reset-password",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 23,
+      "line": 24,
       "symbol": "resetPassword"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/users/{id}/grants",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 24,
+      "line": 25,
       "symbol": "grants"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}/grants",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 26,
+      "line": 27,
       "symbol": "setGrants"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}/roles",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 28,
+      "line": 29,
       "symbol": "userRoles"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/users/{id}/data-scopes",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 30,
+      "line": 31,
       "symbol": "userScopes"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/roles",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 31,
+      "line": 32,
       "symbol": "roles"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/roles/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 32,
+      "line": 33,
       "symbol": "role"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/roles",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 33,
+      "line": 34,
       "symbol": "createRole"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/roles/{id}",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 34,
+      "line": 35,
       "symbol": "updateRole"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/roles/{id}/enable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 35,
+      "line": 36,
       "symbol": "enableRole"
     },
     {
       "method": "POST",
       "path": "/api/v1/sys/roles/{id}/disable",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 36,
+      "line": 37,
       "symbol": "disableRole"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/roles/{id}/permissions",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 38,
+      "line": 39,
       "symbol": "permissions"
     },
     {
       "method": "PUT",
       "path": "/api/v1/sys/roles/{id}/field-policies",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 40,
+      "line": 41,
       "symbol": "fields"
     },
     {
       "method": "GET",
       "path": "/api/v1/sys/permissions/tree",
       "file": "jxc-server/jxc-module-sys/src/main/java/com/hs/jxc/sys/controller/SystemController.java",
-      "line": 41,
+      "line": 42,
       "symbol": "permissionTree"
     },
     {

@@ -18,6 +18,14 @@ public class InventoryService implements InventoryApi {
  private final JdbcTemplate jdbc;private final PeriodApi periods;private final CostApi costs;private final AuditWriter audit;private final OutboxPublisher outbox;private final com.hs.jxc.sys.service.AuthorizationService auth;private final JsonCodec json;private final MasterProductApi products;
  public InventoryService(JdbcTemplate jdbc,PeriodApi periods,CostApi costs,AuditWriter audit,OutboxPublisher outbox,com.hs.jxc.sys.service.AuthorizationService auth,JsonCodec json,MasterProductApi products){this.jdbc=jdbc;this.periods=periods;this.costs=costs;this.audit=audit;this.outbox=outbox;this.auth=auth;this.json=json;this.products=products;}
  private static final BigDecimal ZERO=BigDecimal.ZERO,MAX=new BigDecimal("999999999999");
+ public BatchReference batchReference(RequestContext c,long book,long wh,long batch){
+  if(!TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Inventory reference requires authorized caller transaction");
+  var a=auth.authorize(c);long country=a.requireCountry();
+  a.requireRow(Map.of("countryId",country,"bookId",book,"warehouseId",wh));
+  var rows=jdbc.queryForList("SELECT b.batch_no,b.source_type,b.source_id,b.source_line_id FROM inv_batch b JOIN inv_batch_balance balance ON balance.country_id=b.country_id AND balance.batch_id=b.id WHERE b.country_id=? AND b.book_id=? AND balance.warehouse_id=? AND b.id=?",country,book,wh,batch);
+  if(rows.isEmpty())throw ApiException.notFound();
+  var row=rows.getFirst();return new BatchReference(row.get("batch_no").toString(),row.get("source_type").toString(),((Number)row.get("source_id")).longValue(),((Number)row.get("source_line_id")).longValue());
+ }
  private void begin(RequestContext c,long book,LocalDate date){if(!TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Inventory requires authorized caller transaction");periods.assertOpen(c.countryId(),book,date);costs.requireMethod(c.countryId(),book);}
  private void guard(RequestContext c,long book,long wh,long product,boolean allowLocked){
   var warehouses=jdbc.queryForList("SELECT w.id FROM org_warehouse w JOIN fin_book b ON b.country_id=w.country_id AND (b.entity_id=w.entity_id OR b.entity_id IS NULL) WHERE w.country_id=? AND w.id=? AND b.id=? AND w.status='ENABLED'",c.countryId(),wh,book);if(warehouses.isEmpty())throw ApiException.notFound();

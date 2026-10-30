@@ -39,6 +39,7 @@ const esMX: DeepPartial<typeof zhCN> = {
   },
   login: { title: 'Iniciar sesión', username: 'Usuario', password: 'Contraseña', submit: 'Entrar', demoAccounts: 'Cuentas demo' },
   menu: {
+    externalServices: 'Servicios externos',
     group: {
       workbench: 'Inicio',
       purchase: 'Compras y logística',
@@ -51,6 +52,7 @@ const esMX: DeepPartial<typeof zhCN> = {
       settings: 'Configuración',
     },
     workbench: 'Inicio',
+    purchaseOrderImport: 'Importar archivo',
     salesOrders: 'Pedidos de venta',
     stocks: 'Existencias',
     customers: 'Clientes',

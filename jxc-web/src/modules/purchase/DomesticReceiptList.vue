@@ -2,11 +2,14 @@
 import { computed, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import type { InputInstance } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { http, createCommandIntent } from '@/api/http'
 import { allRecords } from '@/api/pagination'
 import { useUserStore } from '@/stores/user'
 import { useCountryStore } from '@/stores/country'
 import CrudPage from '@/components/crud/CrudPage.vue'
+import { domesticReceiptAudit } from './domesticReceiptAudit'
 import StatusTag from '@/components/StatusTag.vue'
 import DateTimeText from '@/components/DateTimeText.vue'
 import ProductCell from '@/components/biz/ProductCell.vue'
@@ -46,6 +49,22 @@ const defaultQuery = queryOrderId ? { orderId: queryOrderId } : {}
 // ---------- 登记与编辑 ----------
 const orders = ref<Row[]>([])
 const edit = reactive({ visible: false, id: 0, version: 0, orderId: undefined as number | undefined, receiptDate: '', location: '', remark: '', lines: [] as Row[], saving: false, loadingOrder: false })
+const productSearchInput = ref<InputInstance>()
+const productFilter = reactive({ visible: false, input: '', keyword: '' })
+// 保留原行引用供数量编辑；筛选仅改变显示，校验和保存仍使用完整 edit.lines。
+const filteredLines = computed(() => {
+  const keyword = productFilter.keyword.toLocaleLowerCase()
+  return keyword ? edit.lines.filter(row => [row.productCode, row.productName].some(value => typeof value === 'string' && value.toLocaleLowerCase().includes(keyword))) : edit.lines
+})
+function applyProductFilter() {
+  productFilter.keyword = productFilter.input.trim()
+  productFilter.visible = false
+}
+function clearFilters(closeDropdown: boolean = true, confirm: boolean = true) {
+  productFilter.input = ''
+  if (confirm) productFilter.keyword = ''
+  if (closeDropdown) productFilter.visible = false
+}
 let orderRequest = 0, orderListRequest = 0, editRequest = 0
 const context = () => ({ epoch: country.epoch, countryId: country.currentId, token: user.token })
 const currentContext = (saved: ReturnType<typeof context>) => saved.epoch === country.epoch && saved.countryId === country.currentId && saved.token === user.token
@@ -60,6 +79,7 @@ async function loadOrders() {
 }
 
 async function onOrderChange() {
+  clearFilters()
   const request = ++orderRequest, orderId = edit.orderId, saved = context()
   edit.lines = []
   edit.loadingOrder = !!orderId
@@ -68,7 +88,7 @@ async function onOrderChange() {
     const progress = await http.get<{ order: Row }>(`/pur/orders/${orderId}/progress`)
     if (request !== orderRequest || edit.orderId !== orderId || !currentContext(saved)) return false
     const o = progress.order
-    edit.lines = o.lines.map((l: Row) => ({ orderLineId: l.id, lineNo: l.lineNo, productCode: l.productCode, productName: l.productName, undeliveredQty: l.undeliveredQty, qualifiedQty: 0, pendingInspectQty: 0, damagedQty: 0 }))
+    edit.lines = o.lines.map((l: Row) => ({ orderLineId: l.id, lineNo: l.lineNo, productCode: l.productCode, productName: l.productName, undeliveredQty: l.undeliveredQty, qualifiedQty: edit.id ? 0 : l.undeliveredQty, pendingInspectQty: 0, damagedQty: 0 }))
     orders.value = orders.value.map(row => row.id === o.id ? { ...row, supplierName: o.supplierName } : row)
     return true
   } finally {
@@ -77,6 +97,7 @@ async function onOrderChange() {
 }
 
 async function openCreate() {
+  clearFilters()
   const request = ++editRequest
   ++orderRequest
   edit.visible = false
@@ -87,6 +108,7 @@ async function openCreate() {
 }
 
 async function openEdit(r: Row) {
+  clearFilters()
   const request = ++editRequest
   ++orderRequest
   edit.visible = false
@@ -164,6 +186,7 @@ async function submitConvert() {
 <template>
   <CrudPage
     ref="page"
+    class="domestic-receipts-page"
     title="国内收货"
     resource="/pur/domestic-receipts"
     :columns="columns"
@@ -172,6 +195,7 @@ async function submitConvert() {
     :can-create="false"
     :can-toggle="false"
     audit-type="domestic-receipt"
+    :audit-presentation="domesticReceiptAudit"
     :actions-width="220"
   >
     <template #toolbar>
@@ -209,18 +233,39 @@ async function submitConvert() {
       </el-row>
     </el-form>
     <div class="table-scroll">
-      <el-table v-loading="edit.loadingOrder" :data="edit.lines" border size="small" empty-text="请选择采购单">
+      <el-table v-loading="edit.loadingOrder" :data="filteredLines" row-key="orderLineId" class="receipt-table" border stripe size="small" :empty-text="productFilter.keyword ? '没有匹配的商品，请清除或修改搜索条件' : '请选择采购单'">
         <el-table-column prop="lineNo" label="#" width="44" />
-        <el-table-column label="商品" min-width="180"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template></el-table-column>
+        <el-table-column label="商品" min-width="180">
+          <template #header>
+            <div class="product-column-header">
+              <span>商品</span>
+              <el-popover v-model:visible="productFilter.visible" trigger="click" placement="bottom-start" :width="280" @after-enter="productSearchInput?.focus()">
+                <template #reference>
+                  <el-button link :type="productFilter.keyword ? 'primary' : undefined" :icon="Search" aria-label="搜索商品" :aria-expanded="productFilter.visible" :aria-pressed="!!productFilter.keyword" />
+                </template>
+                <div @keydown.stop>
+                  <el-input ref="productSearchInput" v-model="productFilter.input" placeholder="搜索商品编码或名称" aria-label="商品搜索条件" clearable @keydown.enter.prevent="applyProductFilter" @clear="clearFilters(false)" />
+                  <div class="product-filter-actions">
+                    <el-button type="primary" size="small" :icon="Search" @click="applyProductFilter">搜索</el-button>
+                    <el-button size="small" @click="clearFilters()">清除</el-button>
+                    <el-button size="small" @click="productFilter.visible = false">关闭</el-button>
+                  </div>
+                </div>
+              </el-popover>
+            </div>
+          </template>
+          <template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template>
+        </el-table-column>
         <el-table-column prop="undeliveredQty" label="未交" width="70" align="right" />
-        <el-table-column label="合格" width="110"><template #default="{ row }"><el-input-number v-model="row.qualifiedQty" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
-        <el-table-column label="待检" width="110"><template #default="{ row }"><el-input-number v-model="row.pendingInspectQty" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
-        <el-table-column label="破损" width="110"><template #default="{ row }"><el-input-number v-model="row.damagedQty" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
+        <el-table-column label="合格" width="110"><template #default="{ row }"><el-input-number v-model="row.qualifiedQty" size="small" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
+        <el-table-column label="待检" width="110"><template #default="{ row }"><el-input-number v-model="row.pendingInspectQty" size="small" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
+        <el-table-column label="破损" width="110"><template #default="{ row }"><el-input-number v-model="row.damagedQty" size="small" :min="0" :controls="false" style="width: 100%" /></template></el-table-column>
         <el-table-column width="90">
           <template #default="{ row }"><el-tag v-if="overLine(row)" type="danger" size="small">超出未交</el-tag></template>
         </el-table-column>
       </el-table>
     </div>
+    <p v-if="productFilter.keyword" class="muted">匹配 {{ filteredLines.length }} / {{ edit.lines.length }} 行；保存仍包含全部明细。</p>
     <el-input v-model="edit.remark" class="mt" placeholder="备注" />
     <p class="muted">合格 + 待检不能超过未交；破损单独登记，不抵减未交，可以继续向供应商要求补货。</p>
     <template #footer>
@@ -241,7 +286,7 @@ async function submitConvert() {
         <el-descriptions-item label="登记人">{{ detail.createdByName }}</el-descriptions-item>
       </el-descriptions>
       <h4>明细</h4>
-      <el-table :data="detail.lines" border size="small">
+      <el-table :data="detail.lines" class="receipt-table" border stripe size="small">
         <el-table-column label="商品" min-width="160"><template #default="{ row }"><ProductCell :code="row.productCode" :name="row.productName" /></template></el-table-column>
         <el-table-column prop="qualifiedQty" label="合格" width="60" align="right" />
         <el-table-column prop="pendingInspectQty" label="待检" width="60" align="right" />
@@ -291,6 +336,55 @@ async function submitConvert() {
 </template>
 
 <style scoped>
+.product-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.product-filter-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.domestic-receipts-page :deep(.el-table),
+.receipt-table {
+  --el-table-header-bg-color: var(--el-fill-color);
+  --el-table-header-text-color: var(--el-text-color-regular);
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+  font-size: 13px;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__cell) {
+  padding: 4px 0;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.cell) {
+  padding: 0 8px;
+  line-height: 22px;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body .el-link),
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body .el-button.is-link),
+.receipt-table :deep(.el-input__inner) {
+  font-size: 13px;
+}
+
+.domestic-receipts-page :deep(.el-table__body .el-button + .el-button) {
+  margin-left: 8px;
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body tr.el-table__row--striped > td.el-table__cell) {
+  background-color: var(--el-fill-color-light);
+}
+
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body tr:hover > td.el-table__cell),
+:is(.domestic-receipts-page, .receipt-table) :deep(.el-table__body tr.hover-row > td.el-table__cell) {
+  background-color: var(--el-table-row-hover-bg-color);
+}
+
 .mb {
   margin-bottom: 12px;
 }

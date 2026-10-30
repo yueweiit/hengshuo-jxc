@@ -11,15 +11,15 @@ async function generator() {
   return import(generatorUrl.href)
 }
 
-test('contract artifacts reproduce the frozen route and 111-test baseline without drift', async () => {
+test('contract artifacts reproduce the frozen route and 112-test baseline without drift', async () => {
   const { generateArtifacts } = await generator()
   const artifacts = generateArtifacts()
   for (const [name, value] of Object.entries(artifacts)) assert.deepEqual(value, readJson(name), `${name} drift: regenerate and review the change`)
   const baseline = artifacts['mock-regressions.json']
-  assert.equal(baseline.expandedTestCount, 111)
-  assert.equal(baseline.contracts.flatMap(c => c.expansions).length, 111)
-  assert.equal(new Set(baseline.contracts.flatMap(c => c.expansions.map(e => e.name))).size, 111)
-  assert.ok(baseline.independentContractCount < 111, 'parameter expansions are not new independent contracts')
+  assert.equal(baseline.expandedTestCount, 112)
+  assert.equal(baseline.contracts.flatMap(c => c.expansions).length, 112)
+  assert.equal(new Set(baseline.contracts.flatMap(c => c.expansions.map(e => e.name))).size, 112)
+  assert.ok(baseline.independentContractCount < 112, 'parameter expansions are not new independent contracts')
 })
 
 test('extra and export registration order explain shadowing; read-only CRUD writes stay blocked', async () => {

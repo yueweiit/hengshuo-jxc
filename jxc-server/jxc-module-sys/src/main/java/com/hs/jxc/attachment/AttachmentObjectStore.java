@@ -32,14 +32,26 @@ public class AttachmentObjectStore {
         catch(Exception e) {throw unavailable();}
     }
     public byte[] read(String key) {
+        return read(key,MAX_BYTES);
+    }
+    /** 仅由已提交的业务清理回执调用；MinIO删除不存在对象也是幂等成功。 */
+    public void delete(String key) {
         outsideTransaction();
+        try {client().removeObject(RemoveObjectArgs.builder().bucket(bucket).object(key).build());}
+        catch(ApiException e){throw e;}
+        catch(Exception e){throw unavailable();}
+    }
+    /** 可信资产策略指定上限；普通附件入口继续调用1MiB版本。 */
+    public byte[] read(String key,int maxBytes) {
+        outsideTransaction();
+        if(maxBytes<1||maxBytes>256*1024*1024)throw new IllegalArgumentException("Invalid asset limit");
         try {
             var storage=client();
             long size=storage.statObject(StatObjectArgs.builder().bucket(bucket).object(key).build()).size();
-            if(size<=0||size>MAX_BYTES)throw invalid();
+            if(size<=0||size>maxBytes)throw invalid();
             try(var stream=storage.getObject(GetObjectArgs.builder().bucket(bucket).object(key).build())) {
-                byte[] bytes=stream.readNBytes(MAX_BYTES+1);
-                if(bytes.length!=size||bytes.length>MAX_BYTES)throw invalid();
+                byte[] bytes=stream.readNBytes(maxBytes+1);
+                if(bytes.length!=size||bytes.length>maxBytes)throw invalid();
                 return bytes;
             }
         } catch(ApiException e) {throw e;}

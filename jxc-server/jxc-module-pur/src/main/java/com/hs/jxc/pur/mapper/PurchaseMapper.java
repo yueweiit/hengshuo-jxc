@@ -1,0 +1,64 @@
+package com.hs.jxc.pur.mapper;
+
+import java.util.*;
+import java.math.BigDecimal;
+import org.apache.ibatis.annotations.Param;
+
+/** 采购PurchaseMapper：SQL主体位于同名资源XML，参数全部绑定。 */
+public interface PurchaseMapper {
+    int updateWorkflowStatus(@Param("status") Object status, @Param("countryId") Object countryId, @Param("id") Object id);
+    List<Map<String,Object>> selectDocument(@Param("countryId") Object countryId, @Param("id") Object id, @Param("kind") String kind, @Param("lock") boolean lock);
+    List<Map<String,Object>> selectDocumentLines(@Param("countryId") Object countryId, @Param("documentId") Object documentId, @Param("kind") String kind);
+    List<Map<String,Object>> selectReferenceRow(@Param("countryId") Object countryId, @Param("id") Object id, @Param("table") String table, @Param("lock") boolean lock);
+    int incrementVersion(@Param("countryId") Object countryId, @Param("id") Object id, @Param("version") Object version, @Param("kind") String kind);
+    List<Map<String,Object>> selectDocuments(@Param("countryId") Object countryId, @Param("kind") String kind);
+    List<Long> selectReceiptIds(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("orderId") Object orderId);
+    List<Long> selectExportIds(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("orderId") Object orderId);
+    List<Map<String,Object>> selectCancellations(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("orderId") Object orderId);
+    List<Map<String,Object>> selectInspectionConversions(@Param("countryId") Object countryId, @Param("receiptId") Object receiptId);
+    List<Integer> countEntityBook(@Param("countryId") Object countryId, @Param("id") Object id, @Param("entityId") Object entityId);
+    List<Long> insertOrder(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("entityId") Object entityId, @Param("bizDate") Object bizDate, @Param("docNo") Object docNo, @Param("supplierId") Object supplierId, @Param("sourceCountry") Object sourceCountry, @Param("currency") Object currency, @Param("orderDate") Object orderDate, @Param("expectedDate") Object expectedDate, @Param("paymentTerms") Object paymentTerms, @Param("prepayRatio") Object prepayRatio, @Param("termDays") Object termDays, @Param("remark") Object remark, @Param("createdBy") Object createdBy, @Param("openingRef") Object openingRef, @Param("cutoffDate") Object cutoffDate, @Param("importRowId") Object importRowId);
+    int insertOrderLine(@Param("countryId") Object countryId, @Param("orderId") Object orderId, @Param("lineNo") Object lineNo, @Param("productId") Object productId, @Param("unit") Object unit, @Param("baseUnit") Object baseUnit, @Param("factor") Object factor, @Param("qty") Object qty, @Param("baseQty") Object baseQty, @Param("unitPrice") Object unitPrice, @Param("amount") Object amount, @Param("taxRate") Object taxRate, @Param("deliveryDate") Object deliveryDate, @Param("createdBy") Object createdBy);
+    int updateOrderTotals(@Param("totalQty") Object totalQty, @Param("totalAmount") Object totalAmount, @Param("taxAmount") Object taxAmount, @Param("countryId") Object countryId, @Param("id") Object id);
+    List<Long> insertReceipt(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("entityId") Object entityId, @Param("bizDate") Object bizDate, @Param("docNo") Object docNo, @Param("orderId") Object orderId, @Param("supplierId") Object supplierId, @Param("receiptDate") Object receiptDate, @Param("location") Object location, @Param("remark") Object remark, @Param("createdBy") Object createdBy);
+    int insertReceiptLine(@Param("countryId") Object countryId, @Param("receiptId") Object receiptId, @Param("orderLineId") Object orderLineId, @Param("productId") Object productId, @Param("qualifiedQty") Object qualifiedQty, @Param("pendingInspectQty") Object pendingInspectQty, @Param("damagedQty") Object damagedQty, @Param("createdBy") Object createdBy);
+    List<Long> insertExport(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("entityId") Object entityId, @Param("bizDate") Object bizDate, @Param("docNo") Object docNo, @Param("declarationNo") Object declarationNo, @Param("exportPort") Object exportPort, @Param("exportDate") Object exportDate, @Param("remark") Object remark, @Param("createdBy") Object createdBy);
+    int insertExportLine(@Param("countryId") Object countryId, @Param("exportNodeId") Object exportNodeId, @Param("receiptLineId") Object receiptLineId, @Param("orderLineId") Object orderLineId, @Param("productId") Object productId, @Param("qty") Object qty, @Param("createdBy") Object createdBy);
+    List<Integer> countOrderReceipts(@Param("countryId") Object countryId, @Param("orderId") Object orderId);
+    int deleteOrderLines(@Param("countryId") Object countryId, @Param("orderId") Object orderId);
+    int updateOrder(@Param("supplierId") Object supplierId, @Param("currency") Object currency, @Param("sourceCountry") Object sourceCountry, @Param("orderDate") Object orderDate, @Param("bizDate") Object bizDate, @Param("expectedDate") Object expectedDate, @Param("paymentTerms") Object paymentTerms, @Param("prepayRatio") Object prepayRatio, @Param("termDays") Object termDays, @Param("remark") Object remark, @Param("countryId") Object countryId, @Param("id") Object id);
+    int deleteDocumentLines(@Param("countryId") Object countryId, @Param("documentId") Object documentId, @Param("kind") String kind);
+    int moveDocumentLines(@Param("documentId") Object documentId, @Param("countryId") Object countryId, @Param("temporaryId") Object temporaryId, @Param("kind") String kind);
+    int replaceReceiptHeader(@Param("countryId") Object countryId, @Param("id") Object id, @Param("countryId2") Object countryId2, @Param("id2") Object id2);
+    int replaceExportHeader(@Param("countryId") Object countryId, @Param("id") Object id, @Param("countryId2") Object countryId2, @Param("id2") Object id2);
+    int deleteDocument(@Param("countryId") Object countryId, @Param("id") Object id, @Param("kind") String kind);
+    int voidDocument(@Param("countryId") Object countryId, @Param("id") Object id, @Param("kind") String kind);
+    int insertCancellation(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("bizDate") Object bizDate, @Param("orderLineId") Object orderLineId, @Param("cancelQty") Object cancelQty, @Param("reason") Object reason, @Param("createdBy") Object createdBy);
+    int addCancelledQty(@Param("cancelledQty") Object cancelledQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int closeOrder(@Param("countryId") Object countryId, @Param("id") Object id);
+    int reverseReceiptQty(@Param("qualifiedQty") Object qualifiedQty, @Param("pendingInspectQty") Object pendingInspectQty, @Param("damagedQty") Object damagedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int updateApproval(@Param("status") Object status, @Param("approvalInstanceId") Object approvalInstanceId, @Param("countryId") Object countryId, @Param("id") Object id);
+    int addReceiptQty(@Param("qualifiedQty") Object qualifiedQty, @Param("pendingInspectQty") Object pendingInspectQty, @Param("damagedQty") Object damagedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int addReceiptExportQty(@Param("exportedQty") Object exportedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int addOrderExportQty(@Param("exportedQty") Object exportedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int confirmDocument(@Param("countryId") Object countryId, @Param("id") Object id, @Param("kind") String kind);
+    int refreshOrderStatus(@Param("countryId") Object countryId, @Param("id") Object id);
+    int insertInspectionConversion(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("bizDate") Object bizDate, @Param("receiptLineId") Object receiptLineId, @Param("toQualifiedQty") Object toQualifiedQty, @Param("toDamagedQty") Object toDamagedQty, @Param("remark") Object remark, @Param("createdBy") Object createdBy);
+    int addConvertedQty(@Param("convertedQualifiedQty") Object convertedQualifiedQty, @Param("convertedDamagedQty") Object convertedDamagedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int convertOrderPendingQty(@Param("pendingInspectQty") Object pendingInspectQty, @Param("qualifiedQty") Object qualifiedQty, @Param("damagedQty") Object damagedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    List<Boolean> selectExportRequired(@Param("id") Object id);
+    int addOpeningShippedQty(@Param("shippedQty") Object shippedQty, @Param("openingShippedQty") Object openingShippedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int addSourceShippedQty(@Param("shippedQty") Object shippedQty, @Param("countryId") Object countryId, @Param("id") Object id, @Param("sourceType") String sourceType);
+    int addOrderShippedQty(@Param("shippedQty") Object shippedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int addArrivedQty(@Param("arrivedMxQty") Object arrivedMxQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    List<Long> selectPayableOrderLineIds(@Param("countryId") Object countryId);
+    List<Long> selectPayableReceiptIds(@Param("countryId") Object countryId);
+    List<Map<String,Object>> selectReturnReceiptLines(@Param("countryId") Object countryId, @Param("orderId") Object orderId);
+    List<BigDecimal> selectDomesticReturnableQty(@Param("countryId") Object countryId, @Param("orderLineId") Object orderLineId);
+    int addReceiptReturnedQty(@Param("returnedQty") Object returnedQty, @Param("countryId") Object countryId, @Param("id") Object id);
+    int addOrderReturnedQty(@Param("returnedQty") Object returnedQty, @Param("stageReturnedQty") Object stageReturnedQty, @Param("countryId") Object countryId, @Param("id") Object id, @Param("domestic") boolean domestic);
+    List<Long> selectShippableSourceIds(@Param("countryId") Object countryId, @Param("export") boolean export);
+    List<Map<String,Object>> selectOpeningLogisticsReference(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("id") Object id, @Param("id2") Object id2);
+    List<Map<String,Object>> selectLogisticsReference(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("id") Object id, @Param("id2") Object id2, @Param("sourceType") String sourceType);
+    List<Map<String,Object>> selectOrderReference(@Param("countryId") Object countryId, @Param("bookId") Object bookId, @Param("id") Object id);
+}

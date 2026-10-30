@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { loadVueScript } from './contracts/load-vue-script.mjs'
 import { loadPagination } from './contracts/load-pagination.mjs'
 
@@ -14,13 +14,13 @@ test('purchase create loads complete reference pages with original unit and supp
     return { records: Array.from({ length: Math.max(0, Math.min(200, total - (query.page - 1) * 200)) }, (_, n) => ({ id: (query.page - 1) * 200 + n + 1, units: [{ unit: 'BOX', factorToBase: 24 }], settleCurrency: 'CNY', paymentTerms: 'NET30' })), total }
   }
   const allRecords = existsSync(new URL('../src/api/pagination.ts', import.meta.url)) ? loadPagination(get) : undefined
-  const page = loadVueScript(new URL('../src/modules/purchase/PurchaseOrderForm.vue', import.meta.url), { ref, reactive, computed, http: { get }, allRecords, defineEmits: () => () => {}, defineExpose() {}, createCommandIntent: () => ({}), useCountryStore: () => ({ timezone: 'UTC' }) }, ['loadRefs', 'skus', 'suppliers'])
+  const page = loadVueScript(new URL('../src/modules/purchase/PurchaseOrderForm.vue', import.meta.url), { ref, reactive, computed, watch, useUserStore: () => ({ token: 'test' }), http: { get }, allRecords, defineEmits: () => () => {}, defineExpose() {}, createCommandIntent: () => ({}), useCountryStore: () => ({ timezone: 'UTC' }) }, ['loadRefs', 'skus', 'suppliers'])
   await page.loadRefs()
   assert.equal(page.skus.value.length, 401)
   assert.equal(page.suppliers.value.length, 401)
   assert.equal(page.skus.value[400].units[0].factorToBase, 24)
   assert.equal(page.suppliers.value[400].paymentTerms, 'NET30')
-  assert.equal(calls.length, 6)
+  assert.equal(calls.length, 9)
 })
 
 test('paged reads ignore caller pagination overrides and reject incomplete pages', async () => {
